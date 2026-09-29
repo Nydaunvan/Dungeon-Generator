@@ -39,6 +39,34 @@ static func box(bg: Color, border: Color = BRONZE, border_w: int = 3, radius: in
 	s.set_content_margin_all(6)
 	return s
 
+const UI := "res://assets/ui/"
+static var _tex: Dictionary = {}
+
+static func tex(name: String) -> Texture2D:
+	if not _tex.has(name):
+		var path := UI + name + ".png"
+		_tex[name] = load(path) if ResourceLoader.exists(path) else null
+	return _tex[name]
+
+## Boîte à 9 découpes à partir d'une texture générée (assets/ui). `m` = marges de découpe (g, h, d, b).
+static func tbox(name: String, m: Array, content: Array = [], draw_center: bool = true) -> StyleBox:
+	var t := tex(name)
+	if t == null:
+		return box(BG, BRONZE, 3, 6)   # repli si la texture n'est pas encore importée
+	var s := StyleBoxTexture.new()
+	s.texture = t
+	s.texture_margin_left = m[0]
+	s.texture_margin_top = m[1]
+	s.texture_margin_right = m[2]
+	s.texture_margin_bottom = m[3]
+	s.draw_center = draw_center
+	if content.size() == 4:
+		s.content_margin_left = content[0]
+		s.content_margin_top = content[1]
+		s.content_margin_right = content[2]
+		s.content_margin_bottom = content[3]
+	return s
+
 static func build() -> Theme:
 	var th := Theme.new()
 	th.default_font = font(F_BODY)
@@ -49,28 +77,28 @@ static func build() -> Theme:
 	th.set_font("bold_font", "RichTextLabel", font(F_BODY_BOLD))
 	th.set_font("italics_font", "RichTextLabel", font(F_BODY_ITALIC))
 	th.set_color("font_outline_color", "Label", Color.BLACK)
-	# boutons : plaque de bronze
-	var normal := box(Color("2a2016"), BRONZE, 2, 4)
-	var hover := box(Color("3a2c1c"), GOLD, 2, 4)
-	var pressed := box(Color("140e08"), GOLD, 2, 4)
-	var disabled := box(Color("1a140e"), BRONZE_DARK, 2, 4)
-	th.set_stylebox("normal", "Button", normal)
-	th.set_stylebox("hover", "Button", hover)
-	th.set_stylebox("pressed", "Button", pressed)
-	th.set_stylebox("disabled", "Button", disabled)
+	# boutons : plaques de bronze
+	var cm := [10, 5, 10, 5]
+	th.set_stylebox("normal", "Button", tbox("btn_n", [10, 10, 10, 10], cm))
+	th.set_stylebox("hover", "Button", tbox("btn_h", [10, 10, 10, 10], cm))
+	th.set_stylebox("pressed", "Button", tbox("btn_p", [10, 10, 10, 10], cm))
+	th.set_stylebox("disabled", "Button", tbox("btn_d", [10, 10, 10, 10], cm))
 	th.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 	th.set_font("font", "Button", font(F_TITLE))
 	th.set_font_size("font_size", "Button", 14)
 	th.set_color("font_hover_color", "Button", GOLD)
+	th.set_color("font_pressed_color", "Button", GOLD)
 	th.set_color("font_disabled_color", "Button", DIM)
-	th.set_stylebox("panel", "PanelContainer", box(BG, BRONZE, 3, 6))
-	th.set_stylebox("panel", "TabContainer", box(BG, BRONZE_DARK, 2, 4))
-	th.set_stylebox("tab_selected", "TabContainer", box(Color("2a2016"), GOLD, 2, 4))
-	th.set_stylebox("tab_unselected", "TabContainer", box(BG2, BRONZE_DARK, 2, 4))
-	th.set_stylebox("tab_hovered", "TabContainer", box(Color("3a2c1c"), BRONZE, 2, 4))
+	th.set_stylebox("panel", "PanelContainer", tbox("frame_panel", [12, 12, 12, 12], [14, 12, 14, 12]))
+	th.set_stylebox("panel", "TabContainer", StyleBoxEmpty.new())
+	th.set_stylebox("tab_selected", "TabContainer", tbox("btn_h", [10, 10, 10, 10], [12, 5, 12, 5]))
+	th.set_stylebox("tab_unselected", "TabContainer", tbox("btn_n", [10, 10, 10, 10], [12, 5, 12, 5]))
+	th.set_stylebox("tab_hovered", "TabContainer", tbox("btn_h", [10, 10, 10, 10], [12, 5, 12, 5]))
 	th.set_font("font", "TabContainer", font(F_TITLE))
+	th.set_font_size("font_size", "TabContainer", 13)
 	th.set_color("font_selected_color", "TabContainer", GOLD)
 	th.set_color("font_unselected_color", "TabContainer", DIM)
+	th.set_color("font_hovered_color", "TabContainer", GOLD)
 	return th
 
 ## Bouton rond façon « rivet » (attaque, sorts).
@@ -94,7 +122,7 @@ static func circle_material() -> ShaderMaterial:
 	return _circle
 
 ## Portrait rond dans un anneau. Redimensionner via custom_minimum_size du contrôle renvoyé.
-static func portrait(tex: Texture2D, ring: Color = BRONZE, size: float = 64.0) -> Control:
+static func portrait(img: Texture2D, ring: Color = BRONZE, size: float = 64.0) -> Control:
 	var root := Control.new()
 	root.custom_minimum_size = Vector2(size, size)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -117,7 +145,7 @@ static func portrait(tex: Texture2D, ring: Color = BRONZE, size: float = 64.0) -
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pic.texture = tex
+	pic.texture = img
 	pic.material = circle_material()
 	root.add_child(pic)
 	root.set_meta("ring_style", sb)

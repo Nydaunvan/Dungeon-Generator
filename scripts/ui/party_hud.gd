@@ -1,19 +1,25 @@
 class_name PartyHud
 extends HBoxContainer
-## Cartes de l'équipe en arche : bandeau de classe, portrait rond, nom, PV / endurance / XP,
-## jauge de tour en combat, chronomètre de tour. Cliquer une carte = choisir le personnage / la cible.
+## Cartes de l'équipe en arche : ruban de classe, portrait rond, nom, classe, niveau, PV / endurance / XP,
+## jauge de tour en combat. Cliquer une carte = choisir le personnage / la cible d'un sort.
 
 signal card_pressed(char_id: String)
 
 var gs: GameState
 var ctrl: CombatController
 var _cards: Dictionary = {}
+var _st_normal: StyleBox
+var _st_active: StyleBox
+var _st_target: StyleBox
 
 func setup(state: GameState, controller: CombatController) -> void:
 	gs = state
 	ctrl = controller
-	add_theme_constant_override("separation", 6)
+	add_theme_constant_override("separation", 10)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_st_normal = UiTheme.tbox("card_arch", [62, 62, 62, 14], [12, 8, 12, 10])
+	_st_active = UiTheme.tbox("card_arch_active", [62, 62, 62, 14], [12, 8, 12, 10])
+	_st_target = UiTheme.tbox("card_arch_target", [62, 62, 62, 14], [12, 8, 12, 10])
 	for c in gs.party:
 		_add_card(c)
 	ctrl.changed.connect(refresh)
@@ -28,49 +34,65 @@ func _add_card(c: Dictionary) -> void:
 	var accent := UiTheme.class_color(base)
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.gui_input.connect(_on_card_input.bind(str(c.id)))
-	var style := UiTheme.box(Color("15100b"), UiTheme.BRONZE, 3, 40)
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	style.set_content_margin_all(4)
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", _st_normal)
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_theme_constant_override("separation", 2)
+	v.add_theme_constant_override("separation", 1)
 	panel.add_child(v)
-	var banner := ColorRect.new()
-	banner.color = accent
-	banner.custom_minimum_size = Vector2(0, 5)
-	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(banner)
+	var ribbon := TextureRect.new()
+	ribbon.texture = UiTheme.tex("ribbon")
+	ribbon.modulate = accent
+	ribbon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ribbon.stretch_mode = TextureRect.STRETCH_SCALE
+	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(ribbon)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
 	var tex: Texture2D = load(pp) if pp != "" else IconResolver.texture(str(c.get("icon", "")))
-	var pic := UiTheme.portrait(tex, accent, 64)
+	var pic := UiTheme.portrait(tex, UiTheme.BRONZE_LIGHT.lerp(accent, 0.5), 64)
 	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(pic)
 	var name_lbl := Label.new()
+	name_lbl.text = str(c.name).to_upper()
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.clip_text = true
 	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
 	v.add_child(name_lbl)
 	var cls_lbl := Label.new()
+	cls_lbl.text = cls_name
 	cls_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cls_lbl.clip_text = true
 	cls_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cls_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
-	cls_lbl.add_theme_color_override("font_color", UiTheme.DIM)
+	cls_lbl.add_theme_color_override("font_color", Color("b8843e"))
 	v.add_child(cls_lbl)
+	var lvl_row := HBoxContainer.new()
+	lvl_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	lvl_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lvl_lbl := Label.new()
+	lvl_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lvl_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	var chest := TextureRect.new()
+	chest.texture = UiTheme.tex("chest")
+	chest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	chest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	chest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lvl_row.add_child(lvl_lbl)
+	lvl_row.add_child(chest)
+	v.add_child(lvl_row)
 	var hp := TextBar.new(UiTheme.HP_GREEN, 16, 11)
 	var sta := TextBar.new(UiTheme.STA_CYAN, 14, 10)
-	var xp := TextBar.new(Color("b8963a"), 12, 9)
-	var gauge := TextBar.new(UiTheme.GOLD, 6, 1)
+	var xp := TextBar.new(Color("2b2114"), 14, 10)
+	var gauge := TextBar.new(UiTheme.GOLD, 5, 1)
 	for b in [hp, sta, xp, gauge]:
 		v.add_child(b)
-	_cards[str(c.id)] = {"panel": panel, "style": style, "name": name_lbl, "cls": cls_lbl, "hp": hp, "sta": sta,
-		"xp": xp, "gauge": gauge, "pic": pic, "cls_name": cls_name}
+	_cards[str(c.id)] = {"panel": panel, "name": name_lbl, "cls": cls_lbl, "lvl": lvl_lbl, "chest": chest,
+		"ribbon": ribbon, "hp": hp, "sta": sta, "xp": xp, "gauge": gauge, "pic": pic, "state": "normal"}
 
 func _on_card_input(ev: InputEvent, char_id: String) -> void:
 	if ev is InputEventMouseButton:
@@ -79,35 +101,41 @@ func _on_card_input(ev: InputEvent, char_id: String) -> void:
 			card_pressed.emit(char_id)
 
 func _resize() -> void:
-	var w := maxf(60.0, size.x / maxf(1.0, float(_cards.size())) - 6.0)
-	var cap := clampf(get_viewport_rect().size.y * 0.09, 36.0, 90.0)
-	var pic_size := clampf(w * 0.5, 36.0, cap)
-	var font := int(clampf(w * 0.085, 9.0, 16.0))
+	var h := maxf(100.0, size.y)
+	var w := maxf(80.0, size.x / maxf(1.0, float(_cards.size())) - 10.0)
+	var pic_size := clampf(minf(h * 0.30, w * 0.42), 32.0, 96.0)
+	var name_f := int(clampf(minf(h * 0.085, w * 0.11), 11.0, 22.0))
+	var small_f := int(clampf(name_f * 0.8, 9.0, 17.0))
+	var bar_h := clampf(h * 0.078, 12.0, 22.0)
 	for id in _cards:
 		var cd: Dictionary = _cards[id]
 		cd.pic.custom_minimum_size = Vector2(pic_size, pic_size)
-		cd.name.add_theme_font_size_override("font_size", font + 1)
-		cd.cls.add_theme_font_size_override("font_size", font - 1)
-		cd.hp.set_font_size(font - 1)
-		cd.sta.set_font_size(font - 2)
-		cd.xp.set_font_size(font - 3)
+		cd.ribbon.custom_minimum_size = Vector2(clampf(w * 0.55, 60.0, 130.0), clampf(h * 0.07, 9.0, 18.0))
+		cd.name.add_theme_font_size_override("font_size", name_f)
+		cd.cls.add_theme_font_size_override("font_size", small_f)
+		cd.lvl.add_theme_font_size_override("font_size", small_f)
+		cd.chest.custom_minimum_size = Vector2(small_f + 4, small_f + 4)
+		cd.hp.set_height(bar_h + 2)
+		cd.sta.set_height(bar_h)
+		cd.xp.set_height(bar_h)
 
 func refresh() -> void:
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
-		cd.name.text = str(c.name)
-		cd.cls.text = "%s · Nv.%d" % [cd.cls_name, int(c.level)]
+		cd.lvl.text = "Nv.%d" % int(c.level)
 		cd.hp.set_values(int(c.hp), int(c.maxHp), "%d/%d PV" % [int(c.hp), int(c.maxHp)])
-		cd.sta.set_values(int(c.stamina), int(c.maxStamina), "End. %d/%d" % [int(c.stamina), int(c.maxStamina)])
-		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), "XP %d/%d" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))])
+		cd.sta.set_values(int(c.stamina), int(c.maxStamina), "%d/%d End." % [int(c.stamina), int(c.maxStamina)])
+		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), "%d/%d XP" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))])
 		var dead: bool = int(c.hp) <= 0
 		cd.panel.modulate = Color(0.45, 0.45, 0.45) if dead else Color.WHITE
 		var my_turn: bool = ctrl.in_combat() and gs.active_char_id == str(c.id) \
 				and float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0)) >= 100.0
 		var selected: bool = not ctrl.in_combat() and gs.active_char_id == str(c.id)
 		var targeting: bool = ctrl.pending_spell != "" and not dead
-		cd.style.border_color = UiTheme.GOLD if (my_turn or selected) else (Color("7fd17f") if targeting else UiTheme.BRONZE)
-		cd.style.set_border_width_all(5 if (my_turn or selected or targeting) else 3)
+		var want := "active" if (my_turn or selected) else ("target" if targeting else "normal")
+		if want != cd.state:
+			cd.state = want
+			cd.panel.add_theme_stylebox_override("panel", _st_active if want == "active" else (_st_target if want == "target" else _st_normal))
 
 func _process(_delta: float) -> void:
 	if ctrl.combat == null:
@@ -118,9 +146,7 @@ func _process(_delta: float) -> void:
 		var cd: Dictionary = _cards[str(c.id)]
 		cd.gauge.visible = in_fight
 		if in_fight:
-			var key := "char_" + str(c.id)
-			var g := float(ctrl.combat.gauges.get(key, 0.0))
-			# à son tour : la barre montre le temps restant
+			var g := float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0))
 			if g >= 100.0 and gs.active_char_id == str(c.id) and tf >= 0.0:
 				cd.gauge.set_values(tf * 100.0, 100.0, "")
 			else:

@@ -39,9 +39,11 @@ func _ready() -> void:
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
-	var bg := ColorRect.new()
-	bg.color = UiTheme.BG
+	var bg := TextureRect.new()
+	bg.texture = UiTheme.tex("bg_tile")
+	bg.stretch_mode = TextureRect.STRETCH_TILE
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(bg)
 	layout = GameLayout.new()
 	ui.add_child(layout)

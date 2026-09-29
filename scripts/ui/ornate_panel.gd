@@ -1,25 +1,29 @@
 class_name OrnatePanel
 extends PanelContainer
-## Panneau de bronze avec rivets aux quatre coins, titre en capitales (Cinzel) et corps libre (`body`).
+## Panneau de bronze rivé (texture 9 découpes), médaillon-crâne en haut, titre en capitales (Cinzel), corps libre (`body`).
 
 var body: VBoxContainer
 var title_label: Label
+var header_row: HBoxContainer
 
 func _init(title: String = "") -> void:
-	add_theme_stylebox_override("panel", UiTheme.box(UiTheme.BG, UiTheme.BRONZE, 4, 6))
+	add_theme_stylebox_override("panel", UiTheme.tbox("frame_panel", [12, 12, 12, 12], [14, 20, 14, 12]))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	add_child(v)
 	if title != "":
+		header_row = HBoxContainer.new()
+		header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_child(header_row)
 		title_label = Label.new()
 		title_label.text = title.to_upper()
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		title_label.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+		title_label.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
 		title_label.add_theme_font_size_override("font_size", 15)
-		title_label.add_theme_color_override("font_color", UiTheme.PARCH)
-		v.add_child(title_label)
+		title_label.add_theme_color_override("font_color", Color("e0c48a"))
+		header_row.add_child(title_label)
 		var sep := ColorRect.new()
-		sep.color = UiTheme.BRONZE_DARK
+		sep.color = Color("3a2c1c")
 		sep.custom_minimum_size = Vector2(0, 2)
 		v.add_child(sep)
 	body = VBoxContainer.new()
@@ -28,11 +32,9 @@ func _init(title: String = "") -> void:
 	v.add_child(body)
 
 func _draw() -> void:
-	var r := 4.0
-	for p in [Vector2(6, 6), Vector2(size.x - 6, 6), Vector2(6, size.y - 6), Vector2(size.x - 6, size.y - 6)]:
-		draw_circle(p, r + 1.5, Color.BLACK)
-		draw_circle(p, r, UiTheme.BRONZE_LIGHT)
-		draw_circle(p + Vector2(-1, -1), r * 0.45, Color("d8c090"))
+	var m := UiTheme.tex("medallion")
+	if m != null:
+		draw_texture(m, Vector2(size.x * 0.5 - 20.0, -12.0))
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:

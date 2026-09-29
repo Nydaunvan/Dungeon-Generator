@@ -9,8 +9,8 @@ func _init(fill: Color = Color.WHITE, height: int = 18, font_size: int = 12) -> 
 	custom_minimum_size = Vector2(0, height)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.03, 0.02, 0.02, 0.9)
-	bg.border_color = Color("3a2c1c")
+	bg.bg_color = Color("0a0705")
+	bg.border_color = Color("2a2016")
 	bg.set_border_width_all(1)
 	var fg := StyleBoxFlat.new()
 	fg.bg_color = fill
@@ -30,6 +30,10 @@ func set_values(v: float, max_v: float, text: String) -> void:
 	max_value = maxf(1.0, max_v)
 	value = v
 	_label.text = text
+
+func set_height(px: float) -> void:
+	custom_minimum_size = Vector2(0, px)
+	set_font_size(int(clampf(px * 0.68, 8.0, 22.0)))
 
 func set_font_size(px: int) -> void:
 	_label.add_theme_font_size_override("font_size", px)
