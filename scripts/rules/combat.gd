@@ -151,6 +151,16 @@ func skip_turn(c: Dictionary) -> void:
 
 # ------------------------------------------------------------------ attaque du joueur
 
+## True si ce personnage peut agir maintenant (hors combat : toujours ; en combat : c'est son tour).
+func may_act(c: Dictionary) -> bool:
+	if not in_combat():
+		return true
+	ensure_gauges()
+	return gs.active_char_id == str(c.id) and float(gauges.get("char_" + str(c.id), 0.0)) >= 100.0
+
+func can_act(c: Dictionary) -> bool:
+	return in_combat() and may_act(c)
+
 ## Attaque physique du personnage prêt sur le monstre en face. Renvoie true si l'attaque a eu lieu.
 func player_attack(attacker: Dictionary) -> bool:
 	if gs.game_over or gs.won:
@@ -162,38 +172,177 @@ func player_attack(attacker: Dictionary) -> bool:
 	if not can_act(attacker):
 		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % attacker.name, true)
 		return false
-	var st: Dictionary = lstate().monsters[str(target.id)]
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	var cost := mini(int(sta.get("attackCost", 0)), 2)
 	attacker["stamina"] = maxi(0, int(attacker.get("stamina", 0)) - cost)
-
 	var dmg := randi_range(int(attacker.atkMin), int(attacker.atkMax))
-	var resist := int(target.get("resistPhys", 0))
-	var raw := dmg
+	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
+	_mark_acted(attacker)
+	return true
+
+# ------------------------------------------------------------------ sorts
+
+const SUPPORTED_MODES := ["damage", "damageGroup", "healSingle", "healParty", "staminaRestoreSingle", "shieldSingle"]
+
+func spell_def(spell_id: String) -> Dictionary:
+	for sp in gs.cfg.get("spells", []):
+		if sp.get("id") == spell_id:
+			return sp
+	return {}
+
+func spell_needs_ally(spell: Dictionary) -> bool:
+	return ["healSingle", "staminaRestoreSingle", "shieldSingle"].has(str(spell.get("mode", "")))
+
+## Secondes restantes avant que le sort soit de nouveau lançable.
+func cooldown_left(caster: Dictionary, spell_id: String) -> float:
+	var ready_at := int((caster.get("spellCooldowns", {}) as Dictionary).get(spell_id, 0))
+	return maxf(0.0, (ready_at - Time.get_ticks_msec()) / 1000.0)
+
+## Lance un sort. `ally_id` = cible alliée pour les sorts ciblés. Renvoie true si le sort a été lancé.
+func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "") -> bool:
+	if gs.game_over or gs.won:
+		return false
+	var spell := spell_def(spell_id)
+	if spell.is_empty() or not (caster.get("spellsKnown", []) as Array).has(spell_id):
+		gs.add_log("%s ne connaît pas ce sort." % caster.name)
+		return false
+	var mode := str(spell.get("mode", "damage"))
+	if not SUPPORTED_MODES.has(mode):
+		gs.add_log("✨ %s : effet pas encore disponible dans cette version." % spell.name)
+		return false
+	if int(caster.hp) <= 0:
+		return false
+	if not may_act(caster):
+		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % caster.name, true)
+		return false
+	var left := cooldown_left(caster, spell_id)
+	if left > 0.0:
+		gs.add_log("⏳ %s n'est pas encore prêt (%d s restantes)." % [spell.name, int(ceil(left))])
+		return false
+	var target := {}
+	if mode == "damage" or mode == "damageGroup":
+		target = front_monster()
+		if target.is_empty():
+			gs.add_log("Il n'y a rien à attaquer devant vous.")
+			return false
+	var ally: Dictionary = {}
+	if spell_needs_ally(spell):
+		ally = gs.char_by_id(ally_id)
+		if ally.is_empty():
+			gs.add_log("Choisissez un allié pour %s." % spell.name)
+			return false
+		if int(ally.hp) <= 0:
+			gs.add_log("💀 %s est mort et ne peut pas être ciblé." % ally.name)
+			return false
+	var cost := int(spell.get("staminaCost", 15))
+	if int(caster.get("stamina", 0)) < cost:
+		gs.add_log("😮‍💨 %s n'a plus assez d'endurance pour lancer %s." % [caster.name, spell.name])
+		return false
+	caster["stamina"] = int(caster.stamina) - cost
+	var cds: Dictionary = caster.get("spellCooldowns", {})
+	cds[spell_id] = Time.get_ticks_msec() + int(float(spell.get("cooldownSec", 6)) * 1000.0)
+	caster["spellCooldowns"] = cds
+	var bonus := int(caster.get("bonusSpellDmg", 0)) + int(floor((int(caster.level) - 1) * 0.75))
+	var verb := "lance %s %s sur" % [spell.get("icon", ""), spell.name]
+	match mode:
+		"damage", "damageGroup":
+			var int_bonus := int(floor(int(caster.get("effInt", 10)) / 5.0)) + bonus
+			var dmg := randi_range(int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
+			var magic: bool = str(spell.get("style", "")) != "physical"
+			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)))
+		"healSingle":
+			var amt := randi_range(int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
+			var before := int(ally.hp)
+			ally["hp"] = mini(int(ally.maxHp), before + maxi(0, amt))
+			var healed := int(ally.hp) - before
+			gs.add_log("%s lance %s %s sur %s%s." % [caster.name, spell.get("icon", ""), spell.name, ally.name,
+				(" et soigne %d PV" % healed) if healed > 0 else ""], true)
+			_credit_heal(caster, healed)
+			events.append({"type": "popup", "text": "+%d" % healed, "color": Color("7fd17f")})
+		"healParty":
+			var details: Array[String] = []
+			var total := 0
+			for c in gs.alive_party():
+				var amt := randi_range(int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
+				var before := int(c.hp)
+				c["hp"] = mini(int(c.maxHp), before + amt)
+				var healed := int(c.hp) - before
+				total += healed
+				if healed > 0:
+					details.append("%s +%d" % [c.name, healed])
+			gs.add_log("%s lance %s %s et soigne tout le groupe : %s." % [caster.name, spell.get("icon", ""), spell.name,
+				", ".join(details) if not details.is_empty() else "personne n'avait besoin de soin"], true)
+			_credit_heal(caster, total)
+			events.append({"type": "popup", "text": "✨ Groupe soigné ✨", "color": Color("7fd17f")})
+		"staminaRestoreSingle":
+			var amt := randi_range(int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0)))
+			var before := int(ally.get("stamina", 0))
+			ally["stamina"] = mini(int(ally.get("maxStamina", 100)), before + maxi(0, amt))
+			var got := int(ally.stamina) - before
+			gs.add_log("%s lance %s %s sur %s%s." % [caster.name, spell.get("icon", ""), spell.name, ally.name,
+				(" et restaure %d endurance" % got) if got > 0 else ""], true)
+			events.append({"type": "popup", "text": "+%d ⚡" % got, "color": Color("7fd1c9")})
+		"shieldSingle":
+			var amt := randi_range(int(spell.get("shieldMin", 0)), int(spell.get("shieldMax", 0)))
+			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
+			gs.add_log("%s lance %s %s sur %s et l'entoure d'un bouclier de %d." % [caster.name, spell.get("icon", ""), spell.name, ally.name, amt], true)
+			events.append({"type": "popup", "text": "🛡️ %d" % amt, "color": Color("8fc8e8")})
+	_mark_acted(caster)
+	return true
+
+## Les soins comptent dans la contribution au combat (XP), pondérés par xpSettings.healRatio.
+func _credit_heal(caster: Dictionary, healed: int) -> void:
+	if healed <= 0:
+		return
+	var eng := engaged()
+	var mid := str(lstate().get("last_engaged_id", ""))
+	if not eng.is_empty():
+		mid = str(eng.monster.id)
+	var st: Dictionary = lstate().monsters.get(mid, {})
+	if st.is_empty() or not st.alive:
+		return
+	var ratio := float((gs.cfg.get("xpSettings", {}) as Dictionary).get("healRatio", 0.8))
+	_add_contrib(st, str(caster.id), healed * ratio)
+
+## Applique une attaque (physique ou magique) au monstre visé. `all_members` : frappe tout un groupe.
+func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic: bool, verb: String,
+		all_members: bool, ignore_resist: bool) -> void:
+	var st: Dictionary = lstate().monsters[str(target.id)]
+	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
+	var resist := 0 if ignore_resist else base_resist
+	var dmg := raw_dmg
 	if resist > 0:
-		dmg = 0 if resist >= 100 else maxi(1, int(round(dmg * (1.0 - resist / 100.0))))
+		dmg = 0 if resist >= 100 else maxi(1, int(round(raw_dmg * (1.0 - resist / 100.0))))
 	var crit := false
 	var crit_chance := int(attacker.get("talentCritChance", 0))
 	if crit_chance > 0 and randf() < crit_chance / 100.0:
 		dmg *= 2
 		crit = true
 
-	# cible : premier membre vivant d'un groupe, sinon le monstre lui-même
-	var hp_holder: Dictionary = st
-	if target.get("isGroup", false) and st.has("members"):
+	var is_group: bool = bool(target.get("isGroup", false)) and st.has("members")
+	var holders: Array = []
+	if is_group:
 		for mem in st.members:
 			if mem.alive:
-				hp_holder = mem
-				break
-	hp_holder["hp"] = float(hp_holder.hp) - dmg
-	_add_contrib(st, str(attacker.id), dmg)
+				holders.append(mem)
+				if not all_members:
+					break
+	else:
+		holders.append(st)
+	for h in holders:
+		h["hp"] = float(h.hp) - dmg
+		_add_contrib(st, str(attacker.id), dmg)
 	lstate()["last_engaged_id"] = str(target.id)
-	if target.get("isBoss", false) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
+	if bool(target.get("isBoss", false)) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
 			and st.hp > 0 and st.hp <= st.maxHp * (int(target.enrageThreshold) / 100.0):
 		st["enraged"] = true
 		gs.add_log("😡 %s entre en rage, ses attaques deviennent bien plus violentes !" % _mname(target))
-	var note := (" (%d%% de résistance physique : %d→%d)" % [resist, raw, dmg]) if resist > 0 else ""
-	gs.add_log("%s frappe %s pour %d dégâts%s%s." % [attacker.name, _mname(target), dmg, note, " 💥 Coup critique !" if crit else ""], true)
+	var note := (" (%d%% de résistance : %d→%d)" % [resist, raw_dmg, dmg]) if resist > 0 else ""
+	var who := "tout le groupe" if (all_members and is_group) else _mname(target)
+	if verb == "frappe":
+		gs.add_log("%s frappe %s pour %d dégâts%s%s." % [attacker.name, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
+	else:
+		gs.add_log("%s %s %s pour %d dégâts%s%s." % [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0))
@@ -204,10 +353,11 @@ func player_attack(attacker: Dictionary) -> bool:
 		if int(attacker.hp) > before:
 			gs.add_log("🩸 %s draine %d PV." % [attacker.name, int(attacker.hp) - before], true)
 
-	if float(hp_holder.hp) <= 0.0:
-		hp_holder["alive"] = false
+	for h in holders:
+		if float(h.hp) <= 0.0:
+			h["alive"] = false
 	var all_dead := true
-	if target.get("isGroup", false) and st.has("members"):
+	if is_group:
 		for mem in st.members:
 			if mem.alive:
 				all_dead = false
@@ -216,12 +366,14 @@ func player_attack(attacker: Dictionary) -> bool:
 	if all_dead:
 		st["alive"] = false
 		_handle_death(target, st)
-	elif target.get("isGroup", false) and not hp_holder.alive:
-		gs.add_log("💀 %s perd un membre du groupe !" % _mname(target))
-	_mark_acted(attacker)
-	return true
+	elif is_group:
+		for h in holders:
+			if not h.alive:
+				gs.add_log("💀 %s perd un membre du groupe !" % _mname(target))
 
 func _mark_acted(c: Dictionary) -> void:
+	if not in_combat():
+		return
 	gauges["char_" + str(c.id)] = 0.0
 	turn_seq += 1
 	# gain d'endurance de fin de tour (staminaSettings.turnGain), tant qu'un combat se poursuit

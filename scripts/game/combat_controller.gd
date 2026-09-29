@@ -70,6 +70,38 @@ func attack() -> void:
 	else:
 		changed.emit()
 
+## Sort en attente d'une cible alliée (clic sur une carte de personnage).
+var pending_spell: String = ""
+
+func cast(spell_id: String, ally_id: String = "") -> void:
+	if combat == null or _busy or gs.game_over:
+		return
+	sync_position()
+	var c := gs.char_by_id(gs.active_char_id)
+	if c.is_empty():
+		return
+	var spell := combat.spell_def(spell_id)
+	if spell.is_empty():
+		return
+	if combat.spell_needs_ally(spell) and ally_id == "":
+		pending_spell = spell_id
+		gs.add_log("👆 Choisissez l'allié à cibler pour %s." % spell.name)
+		changed.emit()
+		return
+	pending_spell = ""
+	if combat.cast_spell(c, spell_id, ally_id):
+		_after_action()
+	else:
+		changed.emit()
+
+## Clic sur la carte d'un personnage : cible du sort en attente, sinon sélection du personnage actif (hors combat).
+func card_pressed(char_id: String) -> void:
+	if pending_spell != "":
+		cast(pending_spell, char_id)
+	elif not in_combat():
+		gs.active_char_id = char_id
+		changed.emit()
+
 func flee() -> void:
 	if not in_combat() or _busy:
 		return

@@ -7,6 +7,8 @@ var gs: GameState
 var ctrl: CombatController
 var _row: HBoxContainer
 var _timer_bar: ProgressBar
+signal card_pressed(char_id: String)
+
 var _cards: Dictionary = {}
 
 func setup(state: GameState, controller: CombatController) -> void:
@@ -28,6 +30,12 @@ func setup(state: GameState, controller: CombatController) -> void:
 	_resize()
 	refresh()
 
+func _on_card_input(ev: InputEvent, char_id: String) -> void:
+	if ev is InputEventMouseButton:
+		var mb := ev as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			card_pressed.emit(char_id)
+
 func _make_bar(fill: Color, h: int) -> ProgressBar:
 	var b := ProgressBar.new()
 	b.show_percentage = false
@@ -45,7 +53,8 @@ func _make_bar(fill: Color, h: int) -> ProgressBar:
 func _add_card(c: Dictionary) -> void:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.gui_input.connect(_on_card_input.bind(str(c.id)))
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.04, 0.03, 0.78)
 	style.set_border_width_all(2)
@@ -104,8 +113,10 @@ func refresh() -> void:
 		cd.panel.modulate = Color(0.45, 0.45, 0.45) if dead else Color.WHITE
 		var my_turn: bool = ctrl.in_combat() and gs.active_char_id == str(c.id) \
 				and float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0)) >= 100.0
-		cd.style.border_color = Color("f5d060") if my_turn else Color("5a4630")
-		cd.style.set_border_width_all(4 if my_turn else 2)
+		var selected: bool = not ctrl.in_combat() and gs.active_char_id == str(c.id)
+		var targeting: bool = ctrl.pending_spell != "" and not dead
+		cd.style.border_color = Color("f5d060") if (my_turn or selected) else (Color("7fd17f") if targeting else Color("5a4630"))
+		cd.style.set_border_width_all(4 if (my_turn or selected or targeting) else 2)
 
 func _process(_delta: float) -> void:
 	if ctrl.combat == null:

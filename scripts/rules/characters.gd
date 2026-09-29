@@ -135,5 +135,22 @@ static func award_xp(gs: GameState, c: Dictionary, amount: int) -> void:
 		c["stamina"] = mini(int(c.maxStamina), int(c.get("stamina", 0)) + maxi(0, int(c.maxStamina) - old_max_sta))
 		c["xpToNext"] = int(round(int(c.xpToNext) * 1.6))
 		gs.add_log("🎉 %s monte au niveau %d !" % [c.name, c.level])
+		learn_spells(gs, c)
 	if int(c.level) >= MAX_LEVEL:
 		c["xp"] = 0
+
+const MAX_SPELLS := 6
+
+## Sorts appris automatiquement selon la progression de la classe (niveau atteint).
+static func learn_spells(gs: GameState, c: Dictionary) -> void:
+	var cls := class_def(gs.cfg, str(c.get("classId", "")))
+	var known: Array = c.get("spellsKnown", [])
+	for step in cls.get("spellProgression", []):
+		if int(step.get("level", 99)) <= int(c.level) and not known.has(step.spellId) and known.size() < MAX_SPELLS:
+			known.append(step.spellId)
+			var name := str(step.spellId)
+			for sp in gs.cfg.get("spells", []):
+				if sp.get("id") == step.spellId:
+					name = str(sp.name)
+			gs.add_log("📖 %s apprend %s !" % [c.name, name])
+	c["spellsKnown"] = known
