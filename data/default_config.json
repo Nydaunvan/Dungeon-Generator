@@ -1,0 +1,1984 @@
+{
+ "title": "Les Catacombes Maudites de Vaelthorn",
+ "adminPassword": "admin123",
+ "turnTimerEnabled": true,
+ "turnTimerSeconds": 5,
+ "staminaSettings": {
+  "attackCost": 2,
+  "hitGain": 8,
+  "moveGain": 2,
+  "moveInterval": 1,
+  "turnGain": 1,
+  "victoryGainPct": {
+   "easy": 4,
+   "normal": 6,
+   "hard": 9,
+   "hardcore": 13
+  },
+  "levelTransitionHpPct": 25,
+  "levelTransitionStaPct": 35
+ },
+ "levelUpGrowth": {
+  "statPerLevel": 0.4,
+  "staminaPerLevel": 2
+ },
+ "fountainCooldownMinutes": 10,
+ "trapSettings": {
+  "base": 15,
+  "rogueBonus": 12,
+  "assassinBonus": 6,
+  "dexBonus": 0.5,
+  "dexCap": 10,
+  "min": 10,
+  "max": 95,
+  "critExtraDmg": 50,
+  "dmgPctMin": 15,
+  "dmgPctMax": 30
+ },
+ "legendaryChancePct": 25,
+ "xpSettings": {
+  "healRatio": 0.8
+ },
+ "spells": [
+  {
+   "id": "spell_holy1",
+   "name": "Lumière Sacrée",
+   "icon": "✨",
+   "style": "holy",
+   "mode": "damage",
+   "dmgMin": 5,
+   "dmgMax": 11,
+   "staminaCost": 15,
+   "cooldownSec": 5
+  },
+  {
+   "id": "spell_arc1",
+   "name": "Éclat Arcanique",
+   "icon": "💠",
+   "style": "arcane",
+   "mode": "damage",
+   "dmgMin": 5,
+   "dmgMax": 11,
+   "staminaCost": 15,
+   "cooldownSec": 5
+  },
+  {
+   "id": "spell_fire1",
+   "name": "Boule de Feu",
+   "icon": "🔥",
+   "style": "fire",
+   "mode": "damage",
+   "dmgMin": 6,
+   "dmgMax": 13,
+   "staminaCost": 18,
+   "statusEffect": "burn",
+   "statusChance": 35,
+   "statusDuration": 3,
+   "statusPower": 3,
+   "cooldownSec": 6
+  },
+  {
+   "id": "spell_heal1",
+   "name": "Soin",
+   "icon": "🩹",
+   "style": "holy",
+   "mode": "healSingle",
+   "healMin": 6,
+   "healMax": 12,
+   "staminaCost": 11,
+   "cooldownSec": 5
+  },
+  {
+   "id": "spell_heal2",
+   "name": "Guérison de groupe",
+   "icon": "💫",
+   "style": "holy",
+   "mode": "healParty",
+   "healMin": 8,
+   "healMax": 14,
+   "staminaCost": 26,
+   "cooldownSec": 12
+  },
+  {
+   "id": "spell_haste1",
+   "name": "Célérité",
+   "icon": "💨",
+   "style": "holy",
+   "mode": "healSingle",
+   "healMin": 0,
+   "healMax": 0,
+   "statusEffect": "haste",
+   "statusChance": 100,
+   "statusDuration": 3,
+   "staminaCost": 16,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_bard1",
+   "name": "Souffle du Guerrier",
+   "icon": "🎵",
+   "style": "bard",
+   "mode": "staminaRestoreSingle",
+   "staminaMin": 15,
+   "staminaMax": 15,
+   "staminaCost": 6,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_bard2",
+   "name": "Note Perçante",
+   "icon": "🎶",
+   "style": "bard",
+   "mode": "damage",
+   "dmgMin": 3,
+   "dmgMax": 6,
+   "ignoreAllResist": true,
+   "staminaCost": 9,
+   "cooldownSec": 4
+  },
+  {
+   "id": "spell_skald1",
+   "name": "Frappe Discordante",
+   "icon": "🥁",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 12,
+   "dmgMax": 22,
+   "statusEffect": "weaken",
+   "statusChance": 65,
+   "statusDuration": 1,
+   "staminaCost": 24,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_skald2",
+   "name": "Armure de Vers",
+   "icon": "📯",
+   "style": "bard",
+   "mode": "shieldSingle",
+   "shieldMin": 18,
+   "shieldMax": 28,
+   "staminaCost": 20,
+   "cooldownSec": 14
+  },
+  {
+   "id": "spell_skald3",
+   "name": "Cri de Guerre",
+   "icon": "📣",
+   "style": "bard",
+   "mode": "damageGroup",
+   "dmgMin": 0,
+   "dmgMax": 0,
+   "statusEffect": "warcry",
+   "statusChance": 85,
+   "statusDuration": 3,
+   "staminaCost": 26,
+   "cooldownSec": 16
+  },
+  {
+   "id": "spell_skald4",
+   "name": "Lame de l'Épopée",
+   "icon": "🔥",
+   "style": "bard",
+   "mode": "selfBuff",
+   "statusEffect": "weaponfire",
+   "statusChance": 100,
+   "statusDuration": 5,
+   "staminaCost": 28,
+   "cooldownSec": 18
+  },
+  {
+   "id": "spell_minstrel1",
+   "name": "Berceuse Apaisante",
+   "icon": "😴",
+   "style": "bard",
+   "mode": "sleepGroup",
+   "statusChance": 70,
+   "statusDuration": 4,
+   "staminaCost": 22,
+   "cooldownSec": 14
+  },
+  {
+   "id": "spell_minstrel2",
+   "name": "Ballade Protectrice",
+   "icon": "🎼",
+   "style": "bard",
+   "mode": "shieldSingle",
+   "shieldMin": 24,
+   "shieldMax": 36,
+   "staminaCost": 24,
+   "cooldownSec": 14
+  },
+  {
+   "id": "spell_minstrel3",
+   "name": "Requiem de Vigueur",
+   "icon": "🎺",
+   "style": "bard",
+   "mode": "partyUtility",
+   "cooldownReductionSec": 3,
+   "statusDuration": 4,
+   "staminaCost": 30,
+   "cooldownSec": 20
+  },
+  {
+   "id": "spell_minstrel4",
+   "name": "Mélodie de Dissipation",
+   "icon": "🎐",
+   "style": "bard",
+   "mode": "dispelSingle",
+   "staminaCost": 16,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_slow1",
+   "name": "Ralentissement",
+   "icon": "🐌",
+   "style": "arcane",
+   "mode": "damage",
+   "dmgMin": 2,
+   "dmgMax": 4,
+   "statusEffect": "slow",
+   "statusChance": 100,
+   "statusDuration": 3,
+   "staminaCost": 16,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_frost1",
+   "name": "Éclat de Givre",
+   "icon": "❄️",
+   "style": "ice",
+   "mode": "damage",
+   "dmgMin": 7,
+   "dmgMax": 14,
+   "staminaCost": 18,
+   "statusEffect": "freeze",
+   "statusChance": 30,
+   "statusDuration": 2,
+   "statusPower": 1,
+   "cooldownSec": 6
+  },
+  {
+   "id": "spell_warrior1",
+   "name": "Coup Puissant",
+   "icon": "💥",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 8,
+   "dmgMax": 16,
+   "staminaCost": 20,
+   "cooldownSec": 5
+  },
+  {
+   "id": "spell_archer1",
+   "name": "Tir Précis",
+   "icon": "🎯",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 7,
+   "dmgMax": 15,
+   "staminaCost": 16,
+   "cooldownSec": 5
+  },
+  {
+   "id": "spell_rogue1",
+   "name": "Attaque Sournoise",
+   "icon": "🔪",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 9,
+   "dmgMax": 14,
+   "staminaCost": 18,
+   "cooldownSec": 5
+  },
+  {
+   "id": "spell_berserker1",
+   "name": "Rage Sanguinaire",
+   "icon": "😡",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 14,
+   "dmgMax": 26,
+   "staminaCost": 30,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_paladin1",
+   "name": "Châtiment Sacré",
+   "icon": "⚡",
+   "style": "holy",
+   "mode": "damage",
+   "dmgMin": 12,
+   "dmgMax": 22,
+   "staminaCost": 24,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_magearcher1",
+   "name": "Flèche Arcanique",
+   "icon": "🏹",
+   "style": "arcane",
+   "mode": "damage",
+   "dmgMin": 12,
+   "dmgMax": 20,
+   "staminaCost": 22,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_bladedancer1",
+   "name": "Danse des Lames",
+   "icon": "⚔️",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 13,
+   "dmgMax": 22,
+   "staminaCost": 24,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_thief1",
+   "name": "Coup Bas",
+   "icon": "🗝️",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 10,
+   "dmgMax": 18,
+   "staminaCost": 18,
+   "statusEffect": "stun",
+   "statusChance": 25,
+   "statusDuration": 1,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_assassin1",
+   "name": "Frappe Fatale",
+   "icon": "🥷",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 16,
+   "dmgMax": 28,
+   "staminaCost": 28,
+   "statusEffect": "poison",
+   "statusChance": 40,
+   "statusDuration": 3,
+   "statusPower": 4,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_elementalist1",
+   "name": "Météore",
+   "icon": "☄️",
+   "style": "fire",
+   "mode": "damageGroup",
+   "dmgMin": 16,
+   "dmgMax": 28,
+   "staminaCost": 30,
+   "statusEffect": "burn",
+   "statusChance": 50,
+   "statusDuration": 3,
+   "statusPower": 4,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_warlock1",
+   "name": "Drain de Vie",
+   "icon": "🖤",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 12,
+   "dmgMax": 20,
+   "staminaCost": 22,
+   "spellLifestealPct": 40,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_crusader1",
+   "name": "Jugement",
+   "icon": "⚜️",
+   "style": "holy",
+   "mode": "damage",
+   "dmgMin": 13,
+   "dmgMax": 23,
+   "staminaCost": 24,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_berserker2",
+   "name": "Frénésie",
+   "icon": "🔴",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 18,
+   "dmgMax": 30,
+   "staminaCost": 34,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_berserker3",
+   "name": "Coup Décisif",
+   "icon": "🪓",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 22,
+   "dmgMax": 36,
+   "staminaCost": 38,
+   "statusEffect": "stun",
+   "statusChance": 20,
+   "statusDuration": 1,
+   "cooldownSec": 11
+  },
+  {
+   "id": "spell_berserker4",
+   "name": "Fureur Sanglante",
+   "icon": "💢",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 28,
+   "dmgMax": 44,
+   "staminaCost": 42,
+   "cooldownSec": 12
+  },
+  {
+   "id": "spell_paladin2",
+   "name": "Aura de Rédemption",
+   "icon": "🌟",
+   "style": "holy",
+   "mode": "damage",
+   "dmgMin": 18,
+   "dmgMax": 30,
+   "staminaCost": 30,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_magearcher2",
+   "name": "Volée Perçante",
+   "icon": "🌠",
+   "style": "arcane",
+   "mode": "damage",
+   "dmgMin": 16,
+   "dmgMax": 26,
+   "staminaCost": 26,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_magearcher3",
+   "name": "Flèches Stellaires",
+   "icon": "⭐",
+   "style": "arcane",
+   "mode": "damage",
+   "dmgMin": 22,
+   "dmgMax": 34,
+   "staminaCost": 32,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_bladedancer2",
+   "name": "Tourbillon",
+   "icon": "🌀",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 16,
+   "dmgMax": 26,
+   "staminaCost": 26,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_bladedancer3",
+   "name": "Pas de la Lame",
+   "icon": "🩸",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 20,
+   "dmgMax": 32,
+   "staminaCost": 30,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_bladedancer4",
+   "name": "Danse Mortelle",
+   "icon": "💃",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 26,
+   "dmgMax": 40,
+   "staminaCost": 36,
+   "cooldownSec": 11
+  },
+  {
+   "id": "spell_thief2",
+   "name": "Poison de Lame",
+   "icon": "🧪",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 12,
+   "dmgMax": 20,
+   "staminaCost": 20,
+   "statusEffect": "poison",
+   "statusChance": 40,
+   "statusDuration": 3,
+   "statusPower": 3,
+   "cooldownSec": 7
+  },
+  {
+   "id": "spell_thief3",
+   "name": "Ombre Fugace",
+   "icon": "👤",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 18,
+   "dmgMax": 28,
+   "staminaCost": 26,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_thief4",
+   "name": "Exécution",
+   "icon": "🗡️",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 24,
+   "dmgMax": 38,
+   "staminaCost": 32,
+   "cooldownSec": 11
+  },
+  {
+   "id": "spell_assassin2",
+   "name": "Lame Silencieuse",
+   "icon": "🔇",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 18,
+   "dmgMax": 28,
+   "staminaCost": 26,
+   "statusEffect": "stun",
+   "statusChance": 20,
+   "statusDuration": 1,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_assassin3",
+   "name": "Coup dans l'Ombre",
+   "icon": "🌑",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 24,
+   "dmgMax": 36,
+   "staminaCost": 32,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_assassin4",
+   "name": "Mille Entailles",
+   "icon": "✂️",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 30,
+   "dmgMax": 44,
+   "staminaCost": 38,
+   "cooldownSec": 12
+  },
+  {
+   "id": "spell_elementalist2",
+   "name": "Tempête de Grêle",
+   "icon": "🌨️",
+   "style": "ice",
+   "mode": "damage",
+   "dmgMin": 18,
+   "dmgMax": 28,
+   "staminaCost": 28,
+   "statusEffect": "freeze",
+   "statusChance": 25,
+   "statusDuration": 2,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_elementalist3",
+   "name": "Colonne de Feu",
+   "icon": "🌋",
+   "style": "fire",
+   "mode": "damage",
+   "dmgMin": 22,
+   "dmgMax": 34,
+   "staminaCost": 32,
+   "statusEffect": "burn",
+   "statusChance": 40,
+   "statusDuration": 3,
+   "statusPower": 4,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_warlock2",
+   "name": "Malédiction",
+   "icon": "💀",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 14,
+   "dmgMax": 22,
+   "staminaCost": 24,
+   "statusEffect": "poison",
+   "statusChance": 45,
+   "statusDuration": 4,
+   "statusPower": 3,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_warlock3",
+   "name": "Pacte Obscur",
+   "icon": "📖",
+   "style": "shadow",
+   "mode": "damage",
+   "dmgMin": 20,
+   "dmgMax": 30,
+   "staminaCost": 30,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_warlock4",
+   "name": "Apocalypse Sombre",
+   "icon": "🌌",
+   "style": "shadow",
+   "mode": "damageGroup",
+   "dmgMin": 26,
+   "dmgMax": 40,
+   "staminaCost": 36,
+   "cooldownSec": 12
+  },
+  {
+   "id": "spell_cleric2",
+   "name": "Bénédiction Curative",
+   "icon": "🕊️",
+   "style": "holy",
+   "mode": "healSingle",
+   "healMin": 18,
+   "healMax": 28,
+   "staminaCost": 22,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_cleric3",
+   "name": "Lumière Purificatrice",
+   "icon": "🔆",
+   "style": "holy",
+   "mode": "damage",
+   "dmgMin": 16,
+   "dmgMax": 26,
+   "staminaCost": 24,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_cleric4",
+   "name": "Sanctuaire",
+   "icon": "⛪",
+   "style": "holy",
+   "mode": "healParty",
+   "healMin": 16,
+   "healMax": 24,
+   "staminaCost": 34,
+   "cooldownSec": 14
+  },
+  {
+   "id": "spell_crusader2",
+   "name": "Frappe du Croisé",
+   "icon": "🛡️",
+   "style": "physical",
+   "mode": "damage",
+   "dmgMin": 14,
+   "dmgMax": 24,
+   "staminaCost": 22,
+   "statusEffect": "stun",
+   "statusChance": 20,
+   "statusDuration": 1,
+   "cooldownSec": 8
+  },
+  {
+   "id": "spell_crusader3",
+   "name": "Anathème",
+   "icon": "☠️",
+   "style": "holy",
+   "mode": "damage",
+   "dmgMin": 22,
+   "dmgMax": 34,
+   "staminaCost": 30,
+   "cooldownSec": 11
+  }
+ ],
+ "itemLibrary": [
+  {
+   "id": "lib_sword",
+   "name": "Épée de fer",
+   "icon": "@icon:sword_broad",
+   "type": "weapon",
+   "weaponType": "sword",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_axe",
+   "name": "Hache de fer",
+   "icon": "@icon:axe_war",
+   "type": "weapon",
+   "weaponType": "axe",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_mace",
+   "name": "Masse de fer",
+   "icon": "@icon:mace_basic",
+   "type": "weapon",
+   "weaponType": "mace",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_staff",
+   "name": "Bâton en bois",
+   "icon": "@icon:staff_basic",
+   "type": "weapon",
+   "weaponType": "staff",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_dagger",
+   "name": "Dague simple",
+   "icon": "@icon:dagger_basic",
+   "type": "weapon",
+   "weaponType": "dagger",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_bow",
+   "name": "Arc court",
+   "icon": "@icon:bow_short",
+   "type": "weapon",
+   "weaponType": "bow",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_leather_cap",
+   "name": "Capuche en cuir",
+   "icon": "@icon:helm_cap",
+   "type": "armor",
+   "slot": "head",
+   "bonusHp": 3
+  },
+  {
+   "id": "lib_leather_armor",
+   "name": "Tunique en cuir",
+   "icon": "@icon:chest_leather",
+   "type": "armor",
+   "slot": "body",
+   "bonusHp": 6
+  },
+  {
+   "id": "lib_boots",
+   "name": "Bottes de voyage",
+   "icon": "@icon:boots_leather",
+   "type": "armor",
+   "slot": "feet",
+   "bonusHp": 2
+  },
+  {
+   "id": "lib_gauntlets",
+   "name": "Gantelets de force",
+   "icon": "@icon:spr_163",
+   "type": "armor",
+   "slot": "hands",
+   "bonusHp": 1,
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2
+  },
+  {
+   "id": "lib_apprentice_robe",
+   "name": "Robe d'apprenti",
+   "icon": "@icon:chest_robe",
+   "type": "armor",
+   "slot": "body",
+   "bonusSpellDmg": 2
+  },
+  {
+   "id": "lib_swift_boots",
+   "name": "Bottes agiles",
+   "icon": "@icon:boots_iron",
+   "type": "armor",
+   "slot": "feet",
+   "bonusSpeed": 3
+  },
+  {
+   "id": "lib_haste_ring",
+   "name": "Anneau de vivacité",
+   "icon": "@icon:ring_gold",
+   "type": "armor",
+   "slot": "accessory",
+   "bonusSpeed": 4
+  },
+  {
+   "id": "lib_light_dagger",
+   "name": "Dague effilée",
+   "icon": "@icon:dagger_wavy",
+   "type": "weapon",
+   "weaponType": "dagger",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 1,
+   "bonusSpeed": 2
+  },
+  {
+   "id": "lib_balanced_sword",
+   "name": "Épée équilibrée",
+   "icon": "@icon:sword_long",
+   "type": "weapon",
+   "weaponType": "sword",
+   "bonusAtkMin": 1,
+   "bonusAtkMax": 2,
+   "bonusSpeed": 1
+  },
+  {
+   "id": "lib_light_plate",
+   "name": "Plastron allégé",
+   "icon": "@icon:chest_plate",
+   "type": "armor",
+   "slot": "body",
+   "bonusHp": 5,
+   "bonusSpeed": 1
+  },
+  {
+   "id": "lib_potion",
+   "name": "Petite potion de soin",
+   "icon": "@icon:potion_heal",
+   "type": "potion",
+   "heal": 6
+  },
+  {
+   "id": "lib_potion_end",
+   "name": "Petite potion d'endurance",
+   "icon": "@icon:potion_endurance",
+   "type": "potion",
+   "staminaRestore": 15
+  }
+ ],
+ "classes": [
+  {
+   "id": "class_warrior",
+   "name": "Guerrier",
+   "icon": "@icon:misc_shield",
+   "baseSpeed": 7,
+   "allowedWeaponTypes": [
+    "sword",
+    "axe",
+    "mace",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_warrior1"
+   ],
+   "spellProgression": [
+    {
+     "level": 3,
+     "spellId": "spell_warrior1"
+    }
+   ],
+   "evolvesTo": [
+    "class_berserker",
+    "class_paladin"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_archer",
+   "name": "Archer",
+   "icon": "@icon:bow_short",
+   "baseSpeed": 12,
+   "allowedWeaponTypes": [
+    "bow",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_archer1"
+   ],
+   "spellProgression": [
+    {
+     "level": 3,
+     "spellId": "spell_archer1"
+    }
+   ],
+   "evolvesTo": [
+    "class_magearcher",
+    "class_bladedancer"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_rogue",
+   "name": "Roublard",
+   "icon": "@icon:dagger_basic",
+   "baseSpeed": 14,
+   "allowedWeaponTypes": [
+    "dagger",
+    "sword"
+   ],
+   "allowedSpellIds": [
+    "spell_rogue1"
+   ],
+   "spellProgression": [
+    {
+     "level": 3,
+     "spellId": "spell_rogue1"
+    }
+   ],
+   "evolvesTo": [
+    "class_thief",
+    "class_assassin"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_mage",
+   "name": "Mage",
+   "icon": "@icon:misc_crystalball",
+   "baseSpeed": 9,
+   "allowedWeaponTypes": [
+    "staff",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_arc1",
+    "spell_fire1",
+    "spell_slow1"
+   ],
+   "spellProgression": [
+    {
+     "level": 1,
+     "spellId": "spell_arc1"
+    },
+    {
+     "level": 3,
+     "spellId": "spell_fire1"
+    },
+    {
+     "level": 6,
+     "spellId": "spell_slow1"
+    }
+   ],
+   "evolvesTo": [
+    "class_elementalist",
+    "class_warlock"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_priest",
+   "name": "Prêtre",
+   "icon": "@icon:mace_holy",
+   "baseSpeed": 8,
+   "allowedWeaponTypes": [
+    "mace",
+    "staff"
+   ],
+   "allowedSpellIds": [
+    "spell_heal1",
+    "spell_holy1",
+    "spell_haste1"
+   ],
+   "spellProgression": [
+    {
+     "level": 1,
+     "spellId": "spell_heal1"
+    },
+    {
+     "level": 3,
+     "spellId": "spell_holy1"
+    },
+    {
+     "level": 6,
+     "spellId": "spell_haste1"
+    }
+   ],
+   "evolvesTo": [
+    "class_cleric",
+    "class_crusader"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_bard",
+   "name": "Barde",
+   "icon": "🪕",
+   "baseSpeed": 11,
+   "allowedWeaponTypes": [
+    "sword",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_bard2",
+    "spell_bard1"
+   ],
+   "spellProgression": [
+    {
+     "level": 1,
+     "spellId": "spell_bard2"
+    },
+    {
+     "level": 3,
+     "spellId": "spell_bard1"
+    }
+   ],
+   "evolvesTo": [
+    "class_skald",
+    "class_minstrel"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_skald",
+   "name": "Skalde",
+   "icon": "🪓",
+   "baseSpeed": 10,
+   "evolvesFrom": "Barde",
+   "descFr": "Guerrier-barde offensif : chants de combat et attaques renforcées.",
+   "descEn": "Offensive warrior-bard: battle chants and boosted attacks.",
+   "allowedWeaponTypes": [
+    "sword",
+    "axe",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_skald1",
+    "spell_skald2",
+    "spell_skald3",
+    "spell_skald4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_skald1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_skald2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_skald3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_skald4"
+    }
+   ]
+  },
+  {
+   "id": "class_minstrel",
+   "name": "Ménestrel",
+   "icon": "🎼",
+   "baseSpeed": 11,
+   "evolvesFrom": "Barde",
+   "descFr": "Barde de soutien : chants d'altération et bonus pour le groupe.",
+   "descEn": "Support bard: buff/debuff songs and party bonuses.",
+   "allowedWeaponTypes": [
+    "sword",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_minstrel1",
+    "spell_minstrel2",
+    "spell_minstrel3",
+    "spell_minstrel4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_minstrel1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_minstrel2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_minstrel3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_minstrel4"
+    }
+   ]
+  },
+  {
+   "id": "class_berserker",
+   "name": "Berserker",
+   "icon": "@icon:axe_double",
+   "baseSpeed": 7,
+   "evolvesFrom": "Guerrier",
+   "descFr": "Combat brutal et sans relâche : dégâts croissants et rage au fil des coups, au prix de la défense.",
+   "descEn": "Relentless brute-force melee: damage and rage build with every hit, at the cost of defense.",
+   "allowedWeaponTypes": [
+    "axe",
+    "sword",
+    "mace"
+   ],
+   "allowedSpellIds": [
+    "spell_berserker1",
+    "spell_berserker2",
+    "spell_berserker3",
+    "spell_berserker4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_berserker1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_berserker2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_berserker3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_berserker4"
+    }
+   ]
+  },
+  {
+   "id": "class_paladin",
+   "name": "Paladin",
+   "icon": "@icon:sword_holy",
+   "baseSpeed": 7,
+   "evolvesFrom": "Guerrier",
+   "descFr": "Guerrier sacré polyvalent : mêlée solide, soins et protection pour le groupe.",
+   "descEn": "Versatile holy warrior: solid melee, healing and protection for the party.",
+   "allowedWeaponTypes": [
+    "sword",
+    "mace"
+   ],
+   "allowedSpellIds": [
+    "spell_holy1",
+    "spell_heal1",
+    "spell_paladin1",
+    "spell_paladin2"
+   ],
+   "spellProgression": [
+    {
+     "level": 6,
+     "spellId": "spell_holy1"
+    },
+    {
+     "level": 9,
+     "spellId": "spell_heal1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_paladin1"
+    },
+    {
+     "level": 22,
+     "spellId": "spell_paladin2"
+    }
+   ]
+  },
+  {
+   "id": "class_magearcher",
+   "name": "Mage-Archer",
+   "icon": "@icon:bow_elf",
+   "baseSpeed": 12,
+   "evolvesFrom": "Archer",
+   "descFr": "Tir à distance enrichi de sorts arcaniques : dégâts magiques ajoutés aux flèches, contrôle à portée.",
+   "descEn": "Ranged shots enhanced with arcane spells: magic damage added to arrows, ranged control.",
+   "allowedWeaponTypes": [
+    "bow"
+   ],
+   "allowedSpellIds": [
+    "spell_arc1",
+    "spell_magearcher1",
+    "spell_magearcher2",
+    "spell_magearcher3"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_arc1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_magearcher1"
+    },
+    {
+     "level": 19,
+     "spellId": "spell_magearcher2"
+    },
+    {
+     "level": 25,
+     "spellId": "spell_magearcher3"
+    }
+   ]
+  },
+  {
+   "id": "class_bladedancer",
+   "name": "Danselame",
+   "icon": "@icon:sword_rapier",
+   "baseSpeed": 12,
+   "evolvesFrom": "Archer",
+   "descFr": "Combattant hybride mêlée/distance, rapide et mobile, enchaînant les attaques rapprochées.",
+   "descEn": "Hybrid melee/ranged fighter, fast and mobile, chaining close-range strikes.",
+   "allowedWeaponTypes": [
+    "dagger",
+    "sword",
+    "bow"
+   ],
+   "allowedSpellIds": [
+    "spell_bladedancer1",
+    "spell_bladedancer2",
+    "spell_bladedancer3",
+    "spell_bladedancer4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_bladedancer1"
+    },
+    {
+     "level": 14,
+     "spellId": "spell_bladedancer2"
+    },
+    {
+     "level": 21,
+     "spellId": "spell_bladedancer3"
+    },
+    {
+     "level": 28,
+     "spellId": "spell_bladedancer4"
+    }
+   ]
+  },
+  {
+   "id": "class_thief",
+   "name": "Voleur",
+   "icon": "@icon:dagger_wavy",
+   "baseSpeed": 14,
+   "evolvesFrom": "Roublard",
+   "descFr": "Spécialiste de la dague et du vol : dégâts critiques élevés et talents d'évasion/butin.",
+   "descEn": "Dagger and theft specialist: high critical damage plus evasion and loot skills.",
+   "allowedWeaponTypes": [
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_thief1",
+    "spell_thief2",
+    "spell_thief3",
+    "spell_thief4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_thief1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_thief2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_thief3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_thief4"
+    }
+   ]
+  },
+  {
+   "id": "class_assassin",
+   "name": "Assassin",
+   "icon": "@icon:dagger_void",
+   "baseSpeed": 14,
+   "evolvesFrom": "Roublard",
+   "descFr": "Tueur furtif : embuscades dévastatrices et dégâts explosifs en un coup.",
+   "descEn": "Stealthy killer: devastating ambushes and explosive one-hit damage.",
+   "allowedWeaponTypes": [
+    "dagger",
+    "sword"
+   ],
+   "allowedSpellIds": [
+    "spell_assassin1",
+    "spell_assassin2",
+    "spell_assassin3",
+    "spell_assassin4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_assassin1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_assassin2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_assassin3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_assassin4"
+    }
+   ]
+  },
+  {
+   "id": "class_elementalist",
+   "name": "Élémentaliste",
+   "icon": "@icon:staff_fire",
+   "baseSpeed": 9,
+   "evolvesFrom": "Mage",
+   "descFr": "Maîtrise des éléments (feu, glace) : dégâts de zone et effets de contrôle puissants.",
+   "descEn": "Master of the elements (fire, ice): powerful area damage and control effects.",
+   "allowedWeaponTypes": [
+    "staff"
+   ],
+   "allowedSpellIds": [
+    "spell_frost1",
+    "spell_elementalist2",
+    "spell_elementalist1",
+    "spell_elementalist3"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_frost1"
+    },
+    {
+     "level": 14,
+     "spellId": "spell_elementalist2"
+    },
+    {
+     "level": 21,
+     "spellId": "spell_elementalist1"
+    },
+    {
+     "level": 28,
+     "spellId": "spell_elementalist3"
+    }
+   ]
+  },
+  {
+   "id": "class_warlock",
+   "name": "Sorcier",
+   "icon": "@icon:staff_demon",
+   "baseSpeed": 9,
+   "evolvesFrom": "Mage",
+   "descFr": "Magie sombre et malédictions : dégâts sur la durée et affaiblissement des ennemis.",
+   "descEn": "Dark magic and curses: damage over time and enemy debuffs.",
+   "allowedWeaponTypes": [
+    "staff",
+    "dagger"
+   ],
+   "allowedSpellIds": [
+    "spell_warlock1",
+    "spell_warlock2",
+    "spell_warlock3",
+    "spell_warlock4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_warlock1"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_warlock2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_warlock3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_warlock4"
+    }
+   ]
+  },
+  {
+   "id": "class_cleric",
+   "name": "Clerc",
+   "icon": "@icon:helm_winged",
+   "baseSpeed": 8,
+   "evolvesFrom": "Prêtre",
+   "descFr": "Soigneur avancé tourné vers le soin de groupe et la survie.",
+   "descEn": "Advanced healer focused on group healing and survival.",
+   "allowedWeaponTypes": [
+    "mace",
+    "staff"
+   ],
+   "allowedSpellIds": [
+    "spell_heal2",
+    "spell_cleric2",
+    "spell_cleric3",
+    "spell_cleric4"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_heal2"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_cleric2"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_cleric3"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_cleric4"
+    }
+   ]
+  },
+  {
+   "id": "class_crusader",
+   "name": "Croisé",
+   "icon": "@icon:misc_banner",
+   "baseSpeed": 8,
+   "evolvesFrom": "Prêtre",
+   "descFr": "Combattant sacré offensif : mêlée puissante soutenue par la foi.",
+   "descEn": "Offensive holy fighter: powerful melee backed by faith.",
+   "allowedWeaponTypes": [
+    "sword",
+    "mace"
+   ],
+   "allowedSpellIds": [
+    "spell_crusader2",
+    "spell_crusader1",
+    "spell_crusader3"
+   ],
+   "spellProgression": [
+    {
+     "level": 8,
+     "spellId": "spell_crusader2"
+    },
+    {
+     "level": 18,
+     "spellId": "spell_crusader1"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_crusader3"
+    }
+   ]
+  }
+ ],
+ "party": [
+  {
+   "id": "c1",
+   "name": "Thane",
+   "icon": "@icon:misc_shield",
+   "classId": "class_warrior",
+   "force": 16,
+   "dex": 11,
+   "con": 14,
+   "int": 7,
+   "maxStamina": 110,
+   "inventorySlots": 8,
+   "spellsKnown": [],
+   "startEquipment": {
+    "weapon": "lib_sword"
+   }
+  },
+  {
+   "id": "c2",
+   "name": "Sable",
+   "icon": "@icon:bow_short",
+   "classId": "class_archer",
+   "force": 10,
+   "dex": 17,
+   "con": 11,
+   "int": 8,
+   "maxStamina": 100,
+   "inventorySlots": 8,
+   "spellsKnown": [],
+   "startEquipment": {
+    "weapon": "lib_bow"
+   }
+  },
+  {
+   "id": "c3",
+   "name": "Mira",
+   "icon": "@icon:mace_holy",
+   "classId": "class_priest",
+   "force": 10,
+   "dex": 10,
+   "con": 11,
+   "int": 15,
+   "maxStamina": 100,
+   "inventorySlots": 6,
+   "spellsKnown": [
+    "spell_heal1"
+   ],
+   "startEquipment": {
+    "weapon": "lib_mace"
+   }
+  },
+  {
+   "id": "c4",
+   "name": "Zael",
+   "icon": "@icon:misc_crystalball",
+   "classId": "class_mage",
+   "force": 8,
+   "dex": 11,
+   "con": 9,
+   "int": 17,
+   "maxStamina": 95,
+   "inventorySlots": 6,
+   "spellsKnown": [
+    "spell_arc1"
+   ],
+   "startEquipment": {
+    "weapon": "lib_staff"
+   }
+  }
+ ],
+ "levels": [
+  {
+   "id": "lvl1",
+   "name": "Les Caves Supérieures",
+   "theme": "stone",
+   "mapRows": [
+    "#############",
+    "#.....#.....#",
+    "#####.#.###.#",
+    "#...#.#.#.#.#",
+    "#.#.#.#.#.#.#",
+    "#.#...#.#...#",
+    "#.#####.#.###",
+    "#.......#.DS#",
+    "#############"
+   ],
+   "startX": 1,
+   "startY": 1,
+   "startDir": 1,
+   "stairs": [
+    {
+     "id": "st_lvl1",
+     "x": 11,
+     "y": 7,
+     "action": {
+      "type": "level",
+      "targetId": "lvl2"
+     }
+    }
+   ],
+   "doors": [
+    {
+     "id": "doorA",
+     "x": 10,
+     "y": 7,
+     "locked": true
+    }
+   ],
+   "monsters": [
+    {
+     "id": "g2",
+     "name": "Chef Gobelin",
+     "icon": "@icon:boss_troll",
+     "isBoss": true,
+     "x": 9,
+     "y": 7,
+     "force": 13,
+     "dex": 11,
+     "con": 9,
+     "resistPhys": 5,
+     "resistMagic": 0,
+     "xpReward": 26,
+     "goldReward": 14,
+     "enrageThreshold": 45,
+     "enrageBonusPct": 30,
+     "opensDoorId": "doorA",
+     "patrolRadius": 2,
+     "attackSpeed": 1.6
+    },
+    {
+     "id": "ratgroup1",
+     "name": "Rat",
+     "icon": "@icon:mon_rat",
+     "isGroup": true,
+     "groupSize": 2,
+     "x": 2,
+     "y": 7,
+     "force": 6,
+     "dex": 9,
+     "con": 4,
+     "xpReward": 8,
+     "goldReward": 3,
+     "opensDoorId": "",
+     "patrolRadius": 2,
+     "attackSpeed": 2.4
+    }
+   ],
+   "items": [
+    {
+     "id": "potion1",
+     "name": "Potion de soin",
+     "icon": "@icon:potion_heal",
+     "x": 1,
+     "y": 5,
+     "type": "potion",
+     "heal": 8
+    },
+    {
+     "id": "potion_end1",
+     "name": "Potion d'endurance",
+     "icon": "@icon:potion_endurance",
+     "x": 4,
+     "y": 7,
+     "type": "potion",
+     "staminaRestore": 15
+    },
+    {
+     "id": "trap1",
+     "name": "Pointes au sol",
+     "icon": "🔺",
+     "x": 1,
+     "y": 3,
+     "type": "trap",
+     "trapKind": "spikes",
+     "permanent": true,
+     "trapDmgMin": 2,
+     "trapDmgMax": 5
+    },
+    {
+     "id": "parchemin1",
+     "name": "Parchemin de la Boule de Feu",
+     "icon": "@icon:misc_scroll",
+     "x": 6,
+     "y": 7,
+     "type": "scroll",
+     "spellId": "spell_fire1"
+    },
+    {
+     "id": "epee1",
+     "name": "Épée courte",
+     "icon": "@icon:sword_short",
+     "x": 9,
+     "y": 1,
+     "type": "weapon",
+     "weaponType": "sword",
+     "bonusAtkMin": 2,
+     "bonusAtkMax": 3
+    },
+    {
+     "id": "casque1",
+     "name": "Casque en cuir",
+     "icon": "@icon:helm_cap",
+     "x": 11,
+     "y": 3,
+     "type": "armor",
+     "slot": "head",
+     "bonusHp": 5
+    },
+    {
+     "id": "trap2",
+     "name": "Fléchettes dissimulées",
+     "icon": "🎯",
+     "x": 10,
+     "y": 5,
+     "type": "trap",
+     "trapKind": "dart",
+     "permanent": false,
+     "trapDmgMin": 2,
+     "trapDmgMax": 4
+    }
+   ]
+  },
+  {
+   "id": "lvl2",
+   "name": "La Crypte Profonde",
+   "theme": "damp",
+   "mapRows": [
+    "###############",
+    "#.....#.......#",
+    "#####.#.#####.#",
+    "#...#.#.#.....#",
+    "#.#.#.#.#.#####",
+    "#.#...#.#...#S#",
+    "#.#####.###.#D#",
+    "#.......#.....#",
+    "###############"
+   ],
+   "startX": 1,
+   "startY": 1,
+   "startDir": 1,
+   "stairs": [
+    {
+     "id": "st_lvl2",
+     "x": 13,
+     "y": 5,
+     "action": {
+      "type": "level",
+      "targetId": "lvl3"
+     }
+    }
+   ],
+   "doors": [
+    {
+     "id": "doorB",
+     "x": 13,
+     "y": 6,
+     "locked": true
+    }
+   ],
+   "travelingMerchant": {
+    "x": 3,
+    "y": 7,
+    "patrolRadius": 2,
+    "lootSlotCount": 6,
+    "lootItemIds": []
+   },
+   "monsters": [
+    {
+     "id": "g3",
+     "name": "Golem de pierre",
+     "icon": "@icon:boss_golem",
+     "isBoss": true,
+     "x": 11,
+     "y": 3,
+     "force": 16,
+     "dex": 5,
+     "con": 14,
+     "resistPhys": 20,
+     "resistMagic": 0,
+     "xpReward": 38,
+     "goldReward": 20,
+     "enrageThreshold": 50,
+     "enrageBonusPct": 30,
+     "opensDoorId": "doorB",
+     "patrolRadius": 1,
+     "attackSpeed": 1.4
+    },
+    {
+     "id": "g4",
+     "name": "Homme-lézard",
+     "icon": "@icon:mon_lizardman",
+     "x": 1,
+     "y": 5,
+     "force": 11,
+     "dex": 11,
+     "con": 8,
+     "xpReward": 22,
+     "goldReward": 10,
+     "opensDoorId": "",
+     "patrolRadius": 2,
+     "attackSpeed": 1.8
+    },
+    {
+     "id": "g4b",
+     "name": "Homme-lézard",
+     "icon": "@icon:mon_lizardman",
+     "x": 5,
+     "y": 7,
+     "force": 11,
+     "dex": 11,
+     "con": 8,
+     "xpReward": 22,
+     "goldReward": 10,
+     "opensDoorId": "",
+     "patrolRadius": 2,
+     "attackSpeed": 1.8
+    }
+   ],
+   "items": [
+    {
+     "id": "fontaine1",
+     "name": "Fontaine",
+     "icon": "@icon:misc_fountain",
+     "x": 5,
+     "y": 3,
+     "type": "fountain"
+    },
+    {
+     "id": "trap5",
+     "name": "Fléchettes dissimulées",
+     "icon": "🎯",
+     "x": 7,
+     "y": 7,
+     "type": "trap",
+     "trapKind": "dart",
+     "permanent": false,
+     "trapDmgMin": 2,
+     "trapDmgMax": 5
+    },
+    {
+     "id": "trap3",
+     "name": "Vapeurs toxiques",
+     "icon": "☠️",
+     "x": 9,
+     "y": 5,
+     "type": "trap",
+     "trapKind": "gas",
+     "permanent": false,
+     "trapDmgMin": 3,
+     "trapDmgMax": 6
+    },
+    {
+     "id": "bottes1",
+     "name": "Bottes de la crypte",
+     "icon": "@icon:boots_dark",
+     "x": 13,
+     "y": 7,
+     "type": "armor",
+     "slot": "feet",
+     "bonusHp": 3
+    }
+   ]
+  },
+  {
+   "id": "lvl3",
+   "name": "Le Sanctuaire Interdit",
+   "theme": "ruins",
+   "mapRows": [
+    "#############",
+    "#S..D.......#",
+    "###########.#",
+    "#.....#.....#",
+    "#.###.#.#####",
+    "#.#.#.#.....#",
+    "#.#.#.#####.#",
+    "#...#.......#",
+    "#############"
+   ],
+   "startX": 1,
+   "startY": 7,
+   "startDir": 0,
+   "stairs": [
+    {
+     "id": "st_lvl3",
+     "x": 1,
+     "y": 1,
+     "action": {
+      "type": "victory"
+     }
+    }
+   ],
+   "doors": [
+    {
+     "id": "doorC",
+     "x": 4,
+     "y": 1,
+     "locked": true
+    }
+   ],
+   "monsters": [
+    {
+     "id": "z1",
+     "name": "Zombie",
+     "icon": "@icon:mon_zombie",
+     "x": 5,
+     "y": 3,
+     "force": 12,
+     "dex": 6,
+     "con": 10,
+     "xpReward": 24,
+     "goldReward": 12,
+     "opensDoorId": "",
+     "patrolRadius": 2,
+     "attackSpeed": 2.2
+    },
+    {
+     "id": "z2",
+     "name": "Zombie",
+     "icon": "@icon:mon_zombie",
+     "x": 9,
+     "y": 7,
+     "force": 12,
+     "dex": 6,
+     "con": 10,
+     "xpReward": 24,
+     "goldReward": 12,
+     "opensDoorId": "",
+     "patrolRadius": 2,
+     "attackSpeed": 2.2
+    },
+    {
+     "id": "boss1",
+     "name": "Seigneur Ossuaire",
+     "icon": "@icon:boss_lich",
+     "isBoss": true,
+     "x": 5,
+     "y": 1,
+     "force": 20,
+     "dex": 10,
+     "con": 16,
+     "resistPhys": 15,
+     "resistMagic": 10,
+     "xpReward": 60,
+     "goldReward": 40,
+     "enrageThreshold": 40,
+     "enrageBonusPct": 35,
+     "opensDoorId": "doorC",
+     "patrolRadius": 2,
+     "attackSpeed": 1.5
+    }
+   ],
+   "items": [
+    {
+     "id": "potion2",
+     "name": "Potion de soin",
+     "icon": "@icon:potion_heal",
+     "x": 3,
+     "y": 3,
+     "type": "potion",
+     "heal": 12
+    },
+    {
+     "id": "trap4",
+     "name": "Pointes au sol",
+     "icon": "🔺",
+     "x": 9,
+     "y": 5,
+     "type": "trap",
+     "trapKind": "spikes",
+     "permanent": true,
+     "trapDmgMin": 4,
+     "trapDmgMax": 8
+    },
+    {
+     "id": "parchemin2",
+     "name": "Parchemin de la Guérison de groupe",
+     "icon": "@icon:misc_scroll",
+     "x": 11,
+     "y": 7,
+     "type": "scroll",
+     "spellId": "spell_heal2"
+    },
+    {
+     "id": "amulette1",
+     "name": "Amulette ancienne",
+     "icon": "@icon:medallion_gold",
+     "x": 11,
+     "y": 3,
+     "type": "jewelry",
+     "bonusHp": 4,
+     "bonusAtkMin": 1,
+     "bonusAtkMax": 1
+    },
+    {
+     "id": "legendaire1",
+     "name": "Croc du Néant",
+     "icon": "@icon:sword_black",
+     "x": 2,
+     "y": 1,
+     "type": "weapon",
+     "weaponType": "sword",
+     "bonusAtkMin": 5,
+     "bonusAtkMax": 8,
+     "legendary": true,
+     "legendaryPerk": "lifesteal",
+     "legendaryValue": 15
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,96 @@
+{
+ "icons": {
+  "mon_skeleton": "assets/icons/mon_skeleton.webp",
+  "mon_spider": "assets/icons/mon_spider.webp",
+  "mon_wolf": "assets/icons/mon_wolf.webp",
+  "mon_zombie": "assets/icons/mon_zombie.webp",
+  "mon_rat": "assets/icons/mon_rat.webp",
+  "mon_ghost": "assets/icons/mon_ghost.webp",
+  "mon_imp": "assets/icons/mon_imp.webp",
+  "mon_ogre": "assets/icons/mon_ogre.webp",
+  "mon_slime": "assets/icons/mon_slime.webp",
+  "mon_orc": "assets/icons/mon_orc.webp",
+  "mon_mimic": "assets/icons/mon_mimic.webp",
+  "mon_harpy": "assets/icons/mon_harpy.webp",
+  "mon_minotaur": "assets/icons/mon_minotaur.webp",
+  "mon_elemental": "assets/icons/mon_elemental.webp",
+  "mon_iceelemental": "assets/icons/mon_iceelemental.webp",
+  "mon_beholder": "assets/icons/mon_beholder.webp",
+  "mon_skeletonarcher": "assets/icons/mon_skeletonarcher.webp",
+  "mon_lizardman": "assets/icons/mon_lizardman.webp",
+  "mon_gnoll": "assets/icons/mon_gnoll.webp",
+  "mon_mummy": "assets/icons/mon_mummy.webp",
+  "mon_darkpanther": "assets/icons/mon_darkpanther.webp",
+  "mon_stonegolem": "assets/icons/mon_stonegolem.webp",
+  "mon_drake": "assets/icons/mon_drake.webp",
+  "boss_dragon": "assets/icons/boss_dragon.webp",
+  "boss_demonlord": "assets/icons/boss_demonlord.webp",
+  "boss_troll": "assets/icons/boss_troll.webp",
+  "boss_lich": "assets/icons/boss_lich.webp",
+  "boss_kraken": "assets/icons/boss_kraken.webp",
+  "boss_golem": "assets/icons/boss_golem.webp",
+  "boss_spider": "assets/icons/boss_spider.webp",
+  "boss_wraith": "assets/icons/boss_wraith.webp"
+ },
+ "portraits": {
+  "Guerrier": [
+   "assets/portraits/guerrier_0.webp",
+   "assets/portraits/guerrier_1.webp",
+   "assets/portraits/guerrier_2.webp",
+   "assets/portraits/guerrier_3.webp",
+   "assets/portraits/guerrier_4.webp",
+   "assets/portraits/guerrier_5.webp",
+   "assets/portraits/guerrier_6.webp"
+  ],
+  "Mage": [
+   "assets/portraits/mage_0.webp",
+   "assets/portraits/mage_1.webp",
+   "assets/portraits/mage_2.webp",
+   "assets/portraits/mage_3.webp",
+   "assets/portraits/mage_4.webp",
+   "assets/portraits/mage_5.webp",
+   "assets/portraits/mage_6.webp",
+   "assets/portraits/mage_7.webp"
+  ],
+  "Roublard": [
+   "assets/portraits/roublard_0.webp",
+   "assets/portraits/roublard_1.webp",
+   "assets/portraits/roublard_2.webp",
+   "assets/portraits/roublard_3.webp",
+   "assets/portraits/roublard_4.webp",
+   "assets/portraits/roublard_5.webp"
+  ],
+  "Archer": [
+   "assets/portraits/archer_0.webp",
+   "assets/portraits/archer_1.webp",
+   "assets/portraits/archer_2.webp",
+   "assets/portraits/archer_3.webp",
+   "assets/portraits/archer_4.webp",
+   "assets/portraits/archer_5.webp",
+   "assets/portraits/archer_6.webp",
+   "assets/portraits/archer_7.webp"
+  ],
+  "Barde": [
+   "assets/portraits/barde_0.webp",
+   "assets/portraits/barde_1.webp",
+   "assets/portraits/barde_2.webp",
+   "assets/portraits/barde_3.webp"
+  ],
+  "Prêtre": [
+   "assets/portraits/prêtre_0.webp",
+   "assets/portraits/prêtre_1.webp",
+   "assets/portraits/prêtre_2.webp",
+   "assets/portraits/prêtre_3.webp",
+   "assets/portraits/prêtre_4.webp",
+   "assets/portraits/prêtre_5.webp"
+  ]
+ },
+ "sheets": {
+  "wall_torches": "assets/sheets/wall_torches.webp",
+  "items_sheet": "assets/sheets/items_sheet.webp",
+  "monsters_sheet": "assets/sheets/monsters_sheet.webp"
+ },
+ "misc": {
+  "40": "assets/misc/unknown_39.webp"
+ }
+}

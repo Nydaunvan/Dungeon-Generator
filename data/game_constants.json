@@ -1,0 +1,1384 @@
+{
+ "TALENT_LEVELS": [
+  5,
+  10,
+  15,
+  20,
+  25
+ ],
+ "TALENT_SCALE": {
+  "conRes": [
+   1,
+   2,
+   3,
+   3,
+   4
+  ],
+  "resPhys": [
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "forceAtk": [
+   1,
+   2,
+   2,
+   3,
+   3
+  ],
+  "atk": [
+   1,
+   1,
+   2,
+   2,
+   3
+  ],
+  "pct": [
+   4,
+   6,
+   8,
+   10,
+   12
+  ],
+  "dex": [
+   1,
+   2,
+   3,
+   3,
+   4
+  ],
+  "sta": [
+   4,
+   6,
+   8,
+   10,
+   12
+  ],
+  "spellInt": [
+   1,
+   1,
+   2,
+   2,
+   3
+  ],
+  "intR": [
+   1,
+   2,
+   2,
+   3,
+   3
+  ],
+  "spellSolo": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "resMagic": [
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "hp": [
+   4,
+   6,
+   8,
+   10,
+   12
+  ]
+ },
+ "STATUS_DEFS": {
+  "poison": {
+   "icon": "🧪",
+   "label": "Poison",
+   "dot": true
+  },
+  "burn": {
+   "icon": "🔥",
+   "label": "Brûlure",
+   "dot": true
+  },
+  "lifedrain": {
+   "icon": "🖤",
+   "label": "Vol de vie",
+   "dot": true,
+   "heals": true
+  },
+  "stun": {
+   "icon": "😵",
+   "label": "Étourdissement",
+   "dot": false,
+   "disables": true
+  },
+  "freeze": {
+   "icon": "❄️",
+   "label": "Gel",
+   "dot": false,
+   "disables": true
+  },
+  "haste": {
+   "icon": "💨",
+   "label": "Célérité",
+   "dot": false,
+   "speedBonus": 5
+  },
+  "slow": {
+   "icon": "🐌",
+   "label": "Ralentissement",
+   "dot": false,
+   "speedBonus": -4
+  },
+  "weaken": {
+   "icon": "📉",
+   "label": "Affaibli",
+   "dot": false,
+   "dmgReductionPct": 35
+  },
+  "warcry": {
+   "icon": "😣",
+   "label": "Vulnérable",
+   "dot": false,
+   "dmgReductionPct": 20,
+   "resistReductionPct": 25
+  },
+  "vigor": {
+   "icon": "🎶",
+   "label": "Vigueur",
+   "dot": false,
+   "statusDurationCutPct": 50
+  },
+  "weaponfire": {
+   "icon": "🔥",
+   "label": "Lame Ardente",
+   "dot": false,
+   "bonusDmgFlat": 4
+  }
+ },
+ "RUN_MODIFIERS": [
+  {
+   "id": "mod_horde",
+   "icon": "⚡",
+   "labelFr": "Horde rapide",
+   "labelEn": "Swift Horde",
+   "descFr": "Monstres 30% plus rapides à attaquer, mais or et XP gagnés +50%.",
+   "descEn": "Monsters attack 30% faster, but gold and XP earned +50%.",
+   "attackSpeedMult": 0.7,
+   "xpMult": 1.5,
+   "goldMult": 1.5
+  },
+  {
+   "id": "mod_norest",
+   "icon": "🔥",
+   "labelFr": "Sans repos",
+   "labelEn": "No Rest",
+   "descFr": "Aucune fontaine dans ce donjon, mais XP gagnée +35%.",
+   "descEn": "No fountains in this dungeon, but XP earned +35%.",
+   "noFountains": true,
+   "xpMult": 1.35
+  },
+  {
+   "id": "mod_horde2",
+   "icon": "👹",
+   "labelFr": "Nid de monstres",
+   "labelEn": "Monster Den",
+   "descFr": "40% de monstres en plus par niveau et davantage de groupes, mais butin du boss toujours légendaire.",
+   "descEn": "40% more monsters per level and more groups, but boss loot is always legendary.",
+   "monsterCountMult": 1.4,
+   "groupChanceMult": 1.6,
+   "forceLegendary": true
+  },
+  {
+   "id": "mod_fog",
+   "icon": "🌫️",
+   "labelFr": "Brouillard épais",
+   "labelEn": "Thick Fog",
+   "descFr": "Mini-carte très réduite (zone visible minimale), mais butin d'objets +40%.",
+   "descEn": "Very reduced minimap (minimal visible area), but item loot +40%.",
+   "fogMinimap": true,
+   "itemMult": 1.4
+  },
+  {
+   "id": "mod_lowsta",
+   "icon": "💀",
+   "labelFr": "Endurance limitée",
+   "labelEn": "Limited Stamina",
+   "descFr": "Endurance maximale du groupe réduite de 30%, mais or gagné +50%.",
+   "descEn": "Party max stamina reduced by 30%, but gold earned +50%.",
+   "staminaMult": 0.7,
+   "goldMult": 1.5
+  },
+  {
+   "id": "mod_crit",
+   "icon": "🎯",
+   "labelFr": "Précision fatale",
+   "labelEn": "Fatal Precision",
+   "descFr": "Chances de coup critique du groupe +15%, mais PV max du groupe -20%.",
+   "descEn": "Party critical hit chance +15%, but party max HP -20%.",
+   "critChanceBonus": 15,
+   "hpMult": 0.8
+  }
+ ],
+ "MON_HEIGHTS": [
+  [
+   {},
+   0.8
+  ],
+  [
+   {},
+   0.9
+  ],
+  [
+   {},
+   1
+  ],
+  [
+   {},
+   1.2
+  ],
+  [
+   {},
+   1.1
+  ],
+  [
+   {},
+   1.4
+  ],
+  [
+   {},
+   1.55
+  ],
+  [
+   {},
+   1.7
+  ],
+  [
+   {},
+   1.6
+  ],
+  [
+   {},
+   1.9
+  ],
+  [
+   {},
+   2.1
+  ],
+  [
+   {},
+   1.75
+  ]
+ ],
+ "BOSS_HEIGHTS": {
+  "dragon": 1.85,
+  "demonlord": 1.65,
+  "troll": 1.55,
+  "lich": 1.3,
+  "kraken": 1.6,
+  "golem": 1.7,
+  "spider": 1.45,
+  "wraith": 1.2
+ },
+ "ITEM_HEIGHT_OVERRIDE": {
+  "misc_key": 0.72
+ },
+ "ANCHOR_OFFSET": {
+  "misc_fountain": -0.16,
+  "misc_key": -0.06
+ },
+ "MONSTER_SPRITE_LABELS": {
+  "0": "Troll des cavernes",
+  "1": "Gargouille",
+  "2": "Loup-garou",
+  "3": "Naga",
+  "4": "Golem de boue",
+  "5": "Cultiste",
+  "6": "Gobelin des cavernes",
+  "7": "Rat géant",
+  "8": "Loup sauvage",
+  "9": "Araignée venimeuse",
+  "10": "Orc pillard",
+  "11": "Squelette",
+  "12": "Zombie",
+  "13": "Gnoll",
+  "14": "Homme-lézard",
+  "15": "Momie",
+  "16": "Gluant",
+  "17": "Mimique",
+  "18": "Fantôme",
+  "19": "Diablotin",
+  "20": "Harpie",
+  "21": "Minotaure",
+  "22": "Ogre",
+  "23": "Élémentaire de feu",
+  "24": "Élémentaire de glace",
+  "25": "Béholder",
+  "26": "Squelette archer",
+  "27": "Panthère infernale",
+  "28": "Golem de pierre",
+  "29": "Drake"
+ },
+ "ITEM_SPRITE_LEGACY": {
+  "sword_short": 3,
+  "sword_long": 2,
+  "sword_broad": 0,
+  "sword_rapier": 1,
+  "sword_black": 23,
+  "sword_void": 23,
+  "axe_hand": 6,
+  "axe_war": 4,
+  "axe_double": 5,
+  "axe_royal": 7,
+  "bow_short": 20,
+  "bow_long": 22,
+  "bow_elf": 22,
+  "staff_basic": 16,
+  "staff_rune": 17,
+  "staff_holy": 18,
+  "staff_shadow": 19,
+  "staff_royal": 21,
+  "mace_basic": 8,
+  "mace_spiked": 9,
+  "mace_flail": 9,
+  "mace_war": 10,
+  "mace_holy": 11,
+  "dagger_basic": 12,
+  "dagger_wavy": 13,
+  "dagger_poison": 15,
+  "dagger_void": 14,
+  "helm_cap": 24,
+  "helm_horned": 25,
+  "helm_royal": 26,
+  "helm_wizard": 27,
+  "helm_winged": 28,
+  "helm_crown": 59,
+  "helm_druid": 60,
+  "chest_leather": 30,
+  "chest_chain": 31,
+  "chest_plate": 32,
+  "chest_royal": 33,
+  "chest_robe": 34,
+  "boots_leather": 35,
+  "boots_iron": 36,
+  "boots_fur": 37,
+  "boots_dark": 38,
+  "ring_gold": 40,
+  "ring_ruby": 41,
+  "ring_sapphire": 42,
+  "amulet_green": 55,
+  "amulet_ruby": 48,
+  "amulet_purple": 54,
+  "medallion_gold": 49,
+  "medallion_holy": 57,
+  "pendant_sapphire": 50,
+  "pendant_shadow": 53,
+  "potion_heal": 64,
+  "potion_endurance": 68,
+  "potion_mana": 70,
+  "potion_stamina": 69,
+  "potion_poison": 110,
+  "potion_strength": 66,
+  "potion_antidote": 65,
+  "potion_speed": 71,
+  "potion_superior": 67,
+  "misc_key": 84,
+  "misc_chest": 100,
+  "misc_scroll": 72,
+  "misc_coins": 97,
+  "misc_gem": 104,
+  "misc_mirror": 99,
+  "misc_crystalball": 101,
+  "decor_mirror": 99,
+  "decor_crystalball": 101,
+  "decor_cage": 108,
+  "decor_skeleton": 111,
+  "decor_statue": 109
+ },
+ "REMAKE_MAP": {
+  "mon_rat": 7,
+  "mon_wolf": 8,
+  "mon_spider": 9,
+  "mon_orc": 10,
+  "mon_skeleton": 11,
+  "mon_zombie": 12,
+  "mon_gnoll": 13,
+  "mon_lizardman": 14,
+  "mon_mummy": 15,
+  "mon_slime": 16,
+  "mon_mimic": 17,
+  "mon_ghost": 18,
+  "mon_imp": 19,
+  "mon_harpy": 20,
+  "mon_minotaur": 21,
+  "mon_ogre": 22,
+  "mon_elemental": 23,
+  "mon_iceelemental": 24,
+  "mon_beholder": 25,
+  "mon_skeletonarcher": 26,
+  "mon_darkpanther": 27,
+  "mon_stonegolem": 28,
+  "mon_drake": 29
+ },
+ "DECOR_LIBRARY": [
+  {
+   "id": "decor_statue",
+   "name": "Statue de gardien",
+   "icon": "@icon:decor_statue",
+   "mount": "floor",
+   "status": "vigor",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Une présence protectrice émane de la pierre."
+  },
+  {
+   "id": "decor_banner",
+   "name": "Bannière ancienne",
+   "icon": "@icon:decor_banner",
+   "mount": "wall",
+   "status": "haste",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Les couleurs d'un ordre oublié flottent encore."
+  },
+  {
+   "id": "decor_brazier",
+   "name": "Brasero rituel",
+   "icon": "@icon:decor_brazier",
+   "mount": "floor",
+   "status": "weaponfire",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Les flammes s'accrochent aux lames à proximité."
+  },
+  {
+   "id": "decor_cauldron",
+   "name": "Chaudron bouillonnant",
+   "icon": "@icon:decor_cauldron",
+   "mount": "floor",
+   "status": "weaponfire",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Une vapeur âcre enveloppe vos armes."
+  },
+  {
+   "id": "decor_bell",
+   "name": "Cloche bénie",
+   "icon": "@icon:decor_bell",
+   "mount": "wall",
+   "status": "vigor",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Un tintement apaisant renforce votre résolve."
+  },
+  {
+   "id": "decor_mirror",
+   "name": "Miroir enchanté",
+   "icon": "@icon:decor_mirror",
+   "mount": "wall",
+   "status": "vigor",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Votre reflet semble plus assuré."
+  },
+  {
+   "id": "decor_crystalball",
+   "name": "Boule de cristal",
+   "icon": "@icon:decor_crystalball",
+   "mount": "floor",
+   "status": "haste",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Une vision fugace accélère vos réflexes."
+  },
+  {
+   "id": "decor_armor",
+   "name": "Présentoir d'armure",
+   "icon": "@icon:decor_armor",
+   "mount": "floor",
+   "status": "haste",
+   "duration": 8,
+   "power": 4,
+   "flavor": "Une armure fantôme salue votre passage."
+  },
+  {
+   "id": "decor_tombstone",
+   "name": "Pierre tombale",
+   "icon": "@icon:decor_tombstone",
+   "mount": "floor",
+   "status": null,
+   "flavor": "Un nom oublié, gravé dans la pierre froide."
+  },
+  {
+   "id": "decor_anvil",
+   "name": "Enclume runique",
+   "icon": "@icon:decor_anvil",
+   "mount": "floor",
+   "status": null,
+   "flavor": "Le métal froid porte encore des marques de forge."
+  },
+  {
+   "id": "decor_cobweb",
+   "name": "Toile d'araignée",
+   "icon": "@icon:decor_cobweb",
+   "mount": "wall",
+   "status": null,
+   "flavor": "Une toile épaisse tapisse le recoin."
+  },
+  {
+   "id": "decor_rug",
+   "name": "Tapis usé",
+   "icon": "@icon:decor_rug",
+   "mount": "floor",
+   "status": null,
+   "flavor": "Un tapis élimé recouvre la pierre froide."
+  },
+  {
+   "id": "decor_barrel",
+   "name": "Tonneau défoncé",
+   "icon": "@icon:decor_barrel",
+   "mount": "floor",
+   "status": null,
+   "flavor": "Un vieux tonneau vide, abandonné là."
+  },
+  {
+   "id": "decor_cage",
+   "name": "Cage rouillée",
+   "icon": "@icon:decor_cage",
+   "mount": "floor",
+   "status": null,
+   "flavor": "Une cage vide grince doucement."
+  },
+  {
+   "id": "decor_skeleton",
+   "name": "Ossements épars",
+   "icon": "@icon:decor_skeleton",
+   "mount": "floor",
+   "status": null,
+   "flavor": "Des ossements jonchent le sol depuis longtemps."
+  }
+ ],
+ "SLOT_TYPES": [
+  {
+   "id": "weapon",
+   "label": "Arme",
+   "icon": "⚔️"
+  },
+  {
+   "id": "head",
+   "label": "Casque",
+   "icon": "🎩"
+  },
+  {
+   "id": "body",
+   "label": "Armure",
+   "icon": "🧥"
+  },
+  {
+   "id": "hands",
+   "label": "Gants",
+   "icon": "🧤"
+  },
+  {
+   "id": "feet",
+   "label": "Bottes",
+   "icon": "👢"
+  },
+  {
+   "id": "accessory",
+   "label": "Bijou",
+   "icon": "💍"
+  }
+ ],
+ "WEAPON_TYPES": [
+  {
+   "id": "sword",
+   "label": "⚔️ Épée"
+  },
+  {
+   "id": "axe",
+   "label": "🪓 Hache"
+  },
+  {
+   "id": "dagger",
+   "label": "🗡️ Dague"
+  },
+  {
+   "id": "staff",
+   "label": "🔱 Bâton"
+  },
+  {
+   "id": "bow",
+   "label": "🏹 Arc"
+  },
+  {
+   "id": "mace",
+   "label": "🔨 Masse"
+  }
+ ],
+ "SPELL_STYLES": [
+  {
+   "id": "fire",
+   "label": "🔥 Feu"
+  },
+  {
+   "id": "holy",
+   "label": "✨ Sacré"
+  },
+  {
+   "id": "arcane",
+   "label": "💠 Arcane"
+  },
+  {
+   "id": "ice",
+   "label": "❄️ Givre"
+  },
+  {
+   "id": "nature",
+   "label": "🌿 Nature"
+  },
+  {
+   "id": "shadow",
+   "label": "🌑 Ombre"
+  },
+  {
+   "id": "physical",
+   "label": "💪 Physique (compétence)"
+  },
+  {
+   "id": "bard",
+   "label": "🎵 Sonique (Barde)"
+  }
+ ],
+ "WEAPON_SWING_FREQ": {
+  "sword": 1600,
+  "axe": 1000,
+  "dagger": 2000,
+  "staff": 700,
+  "bow": 1800,
+  "mace": 800,
+  "unarmed": 600
+ },
+ "SPELL_SFX": {},
+ "THEME_AMBIENT": {
+  "stone": {
+   "freqs": [
+    65.4,
+    98
+   ],
+   "type": "sine",
+   "gain": 0.16,
+   "shimmer": false
+  },
+  "dirt": {
+   "freqs": [
+    55,
+    82.4
+   ],
+   "type": "triangle",
+   "gain": 0.15,
+   "shimmer": false
+  },
+  "damp": {
+   "freqs": [
+    49,
+    73.4,
+    110
+   ],
+   "type": "sine",
+   "gain": 0.17,
+   "shimmer": "drip"
+  },
+  "ruins": {
+   "freqs": [
+    73.4,
+    110
+   ],
+   "type": "sine",
+   "gain": 0.14,
+   "shimmer": "wind"
+  },
+  "ice": {
+   "freqs": [
+    220,
+    330,
+    440
+   ],
+   "type": "sine",
+   "gain": 0.12,
+   "shimmer": "shimmer"
+  },
+  "lava": {
+   "freqs": [
+    41.2,
+    61.7
+   ],
+   "type": "triangle",
+   "gain": 0.13,
+   "shimmer": "crackle"
+  },
+  "temple": {
+   "freqs": [
+    130.8,
+    196,
+    261.6
+   ],
+   "type": "sine",
+   "gain": 0.14,
+   "shimmer": "bell"
+  }
+ },
+ "BOSS_MUSIC": {
+  "root": 73.42,
+  "fifth": 110,
+  "octave": 146.8,
+  "melody1": [
+   220,
+   196,
+   174.6,
+   220,
+   261.6,
+   220,
+   196,
+   164.8
+  ],
+  "melody2": [
+   293.6,
+   329.6,
+   349.2,
+   392,
+   440,
+   392,
+   349.2,
+   293.6,
+   261.6,
+   220
+  ]
+ },
+ "ICON_LIBRARY": [
+  {
+   "i": "⚔️",
+   "n": "Épées croisées"
+  },
+  {
+   "i": "🗡️",
+   "n": "Dague"
+  },
+  {
+   "i": "🪓",
+   "n": "Hache"
+  },
+  {
+   "i": "🔨",
+   "n": "Marteau"
+  },
+  {
+   "i": "⚒️",
+   "n": "Marteau et pioche"
+  },
+  {
+   "i": "🛡️",
+   "n": "Bouclier"
+  },
+  {
+   "i": "🏹",
+   "n": "Arc"
+  },
+  {
+   "i": "🎯",
+   "n": "Cible"
+  },
+  {
+   "i": "🔱",
+   "n": "Trident"
+  },
+  {
+   "i": "🪄",
+   "n": "Baguette magique"
+  },
+  {
+   "i": "🔫",
+   "n": "Arbalète (icône proche)"
+  },
+  {
+   "i": "📿",
+   "n": "Amulette"
+  },
+  {
+   "i": "💍",
+   "n": "Anneau"
+  },
+  {
+   "i": "👑",
+   "n": "Couronne"
+  },
+  {
+   "i": "👒",
+   "n": "Chapeau"
+  },
+  {
+   "i": "🎩",
+   "n": "Casque"
+  },
+  {
+   "i": "🧢",
+   "n": "Capuche"
+  },
+  {
+   "i": "👢",
+   "n": "Bottes"
+  },
+  {
+   "i": "🥾",
+   "n": "Bottes de marche"
+  },
+  {
+   "i": "🧤",
+   "n": "Gants"
+  },
+  {
+   "i": "🧥",
+   "n": "Manteau"
+  },
+  {
+   "i": "👘",
+   "n": "Robe"
+  },
+  {
+   "i": "🎽",
+   "n": "Tunique"
+  },
+  {
+   "i": "🦺",
+   "n": "Armure légère"
+  },
+  {
+   "i": "🥋",
+   "n": "Tenue de combat"
+  },
+  {
+   "i": "🧦",
+   "n": "Chaussettes"
+  },
+  {
+   "i": "💎",
+   "n": "Gemme"
+  },
+  {
+   "i": "💰",
+   "n": "Bourse d'or"
+  },
+  {
+   "i": "🪙",
+   "n": "Pièce"
+  },
+  {
+   "i": "🏆",
+   "n": "Trophée"
+  },
+  {
+   "i": "🗝️",
+   "n": "Clé rouillée"
+  },
+  {
+   "i": "🔑",
+   "n": "Clé dorée"
+  },
+  {
+   "i": "🚪",
+   "n": "Porte"
+  },
+  {
+   "i": "📦",
+   "n": "Coffre"
+  },
+  {
+   "i": "🎒",
+   "n": "Sac à dos"
+  },
+  {
+   "i": "🧳",
+   "n": "Malle"
+  },
+  {
+   "i": "📜",
+   "n": "Parchemin"
+  },
+  {
+   "i": "📖",
+   "n": "Livre"
+  },
+  {
+   "i": "🔮",
+   "n": "Boule de cristal"
+  },
+  {
+   "i": "⚗️",
+   "n": "Alambic"
+  },
+  {
+   "i": "🧪",
+   "n": "Potion"
+  },
+  {
+   "i": "🧫",
+   "n": "Fiole"
+  },
+  {
+   "i": "🍷",
+   "n": "Élixir"
+  },
+  {
+   "i": "🍯",
+   "n": "Miel magique"
+  },
+  {
+   "i": "🌿",
+   "n": "Herbe"
+  },
+  {
+   "i": "🍄",
+   "n": "Champignon"
+  },
+  {
+   "i": "🌹",
+   "n": "Rose"
+  },
+  {
+   "i": "🥀",
+   "n": "Fleur fanée"
+  },
+  {
+   "i": "🌵",
+   "n": "Cactus"
+  },
+  {
+   "i": "🔥",
+   "n": "Feu"
+  },
+  {
+   "i": "❄️",
+   "n": "Givre"
+  },
+  {
+   "i": "⚡",
+   "n": "Foudre"
+  },
+  {
+   "i": "🌪️",
+   "n": "Tornade"
+  },
+  {
+   "i": "🌊",
+   "n": "Vague"
+  },
+  {
+   "i": "🌑",
+   "n": "Ombre"
+  },
+  {
+   "i": "☀️",
+   "n": "Lumière"
+  },
+  {
+   "i": "✨",
+   "n": "Étincelles"
+  },
+  {
+   "i": "💫",
+   "n": "Éclat"
+  },
+  {
+   "i": "⭐",
+   "n": "Étoile"
+  },
+  {
+   "i": "🌟",
+   "n": "Étoile brillante"
+  },
+  {
+   "i": "💥",
+   "n": "Explosion"
+  },
+  {
+   "i": "💢",
+   "n": "Colère"
+  },
+  {
+   "i": "💀",
+   "n": "Crâne"
+  },
+  {
+   "i": "☠️",
+   "n": "Tête de mort"
+  },
+  {
+   "i": "👻",
+   "n": "Fantôme"
+  },
+  {
+   "i": "🧟",
+   "n": "Zombie"
+  },
+  {
+   "i": "🧛",
+   "n": "Vampire"
+  },
+  {
+   "i": "🧙",
+   "n": "Sorcier"
+  },
+  {
+   "i": "🧝",
+   "n": "Elfe"
+  },
+  {
+   "i": "🧚",
+   "n": "Fée"
+  },
+  {
+   "i": "🧞",
+   "n": "Génie"
+  },
+  {
+   "i": "👹",
+   "n": "Ogre/Troll"
+  },
+  {
+   "i": "👺",
+   "n": "Gobelin"
+  },
+  {
+   "i": "🐉",
+   "n": "Dragon"
+  },
+  {
+   "i": "🐲",
+   "n": "Bébé dragon"
+  },
+  {
+   "i": "🦇",
+   "n": "Chauve-souris"
+  },
+  {
+   "i": "🕷️",
+   "n": "Araignée"
+  },
+  {
+   "i": "🕸️",
+   "n": "Toile"
+  },
+  {
+   "i": "🐍",
+   "n": "Serpent"
+  },
+  {
+   "i": "🦂",
+   "n": "Scorpion"
+  },
+  {
+   "i": "🐺",
+   "n": "Loup"
+  },
+  {
+   "i": "🐗",
+   "n": "Sanglier"
+  },
+  {
+   "i": "🦅",
+   "n": "Aigle"
+  },
+  {
+   "i": "🦉",
+   "n": "Hibou"
+  },
+  {
+   "i": "🐢",
+   "n": "Tortue"
+  },
+  {
+   "i": "🐸",
+   "n": "Grenouille"
+  },
+  {
+   "i": "🦴",
+   "n": "Os"
+  },
+  {
+   "i": "🩸",
+   "n": "Sang"
+  },
+  {
+   "i": "⛓️",
+   "n": "Chaînes"
+  },
+  {
+   "i": "🔗",
+   "n": "Maillon"
+  },
+  {
+   "i": "🧱",
+   "n": "Brique"
+  },
+  {
+   "i": "🏰",
+   "n": "Château"
+  },
+  {
+   "i": "⛩️",
+   "n": "Sanctuaire"
+  },
+  {
+   "i": "🗿",
+   "n": "Golem"
+  },
+  {
+   "i": "⚱️",
+   "n": "Urne"
+  },
+  {
+   "i": "🕯️",
+   "n": "Bougie"
+  },
+  {
+   "i": "🏮",
+   "n": "Lanterne"
+  },
+  {
+   "i": "🧭",
+   "n": "Boussole"
+  },
+  {
+   "i": "🗺️",
+   "n": "Carte"
+  },
+  {
+   "i": "⚓",
+   "n": "Ancre"
+  },
+  {
+   "i": "🐴",
+   "n": "Cheval"
+  },
+  {
+   "i": "🦄",
+   "n": "Licorne"
+  },
+  {
+   "i": "🦁",
+   "n": "Lion"
+  },
+  {
+   "i": "🐻",
+   "n": "Ours"
+  },
+  {
+   "i": "🦊",
+   "n": "Renard"
+  },
+  {
+   "i": "🐀",
+   "n": "Rat"
+  },
+  {
+   "i": "🦋",
+   "n": "Papillon"
+  },
+  {
+   "i": "🪨",
+   "n": "Rocher"
+  },
+  {
+   "i": "⚙️",
+   "n": "Engrenage"
+  },
+  {
+   "i": "🩹",
+   "n": "Bandage"
+  },
+  {
+   "i": "💉",
+   "n": "Seringue"
+  },
+  {
+   "i": "🎭",
+   "n": "Masque"
+  }
+ ],
+ "RARITY_TINTS": {
+  "commun": {
+   "bg": [
+    "#4a4a4a",
+    "#1a1a1a"
+   ],
+   "stroke": "#71717a",
+   "glow": "rgba(255,255,255,0.08)"
+  },
+  "rare": {
+   "bg": [
+    "#1d4ed8",
+    "#0f172a"
+   ],
+   "stroke": "#3b82f6",
+   "glow": "rgba(59,130,246,0.25)"
+  },
+  "epique": {
+   "bg": [
+    "#6d28d9",
+    "#1e1b4b"
+   ],
+   "stroke": "#a855f7",
+   "glow": "rgba(168,85,247,0.3)"
+  },
+  "legendaire": {
+   "bg": [
+    "#b45309",
+    "#1c1917"
+   ],
+   "stroke": "#f59e0b",
+   "glow": "rgba(245,158,11,0.4)"
+  }
+ },
+ "MAX_CHARACTER_LEVEL": 30,
+ "MAX_INVENTORY_PER_TAB": 12,
+ "MAX_SPELLS_PER_CHARACTER": 6,
+ "TURN_TIMER_MS_DEFAULT": 5000,
+ "DOOR_TINTS": {
+  "stone": {
+   "metal": "#7a7a78",
+   "metalDark": "#3a3a38",
+   "glow": "#8a8a8a"
+  },
+  "dirt": {
+   "metal": "#7a6a55",
+   "metalDark": "#3a3020",
+   "glow": "#8a7a60"
+  },
+  "damp": {
+   "metal": "#5a6a5a",
+   "metalDark": "#2a3a2a",
+   "glow": "#5a7a5a"
+  },
+  "ruins": {
+   "metal": "#9a9488",
+   "metalDark": "#4a4438",
+   "glow": "#a09880"
+  },
+  "ice": {
+   "metal": "#b8ccd8",
+   "metalDark": "#4a5a68",
+   "glow": "#c8dae8"
+  },
+  "lava": {
+   "metal": "#a85838",
+   "metalDark": "#301810",
+   "glow": "#e07040"
+  },
+  "temple": {
+   "metal": "#d0b458",
+   "metalDark": "#5a4a20",
+   "glow": "#e0c868"
+  }
+ },
+ "CANDELABRA_THEME": {
+  "stone": {
+   "metal": 2760728,
+   "flame": 16756816,
+   "glow": 16756832,
+   "glowOpacity": 0.75
+  },
+  "dirt": {
+   "metal": 3811864,
+   "flame": 16767136,
+   "glow": 16751168,
+   "glowOpacity": 0.7
+  },
+  "damp": {
+   "metal": 2042402,
+   "flame": 10158016,
+   "glow": 4259744,
+   "glowOpacity": 0.6
+  },
+  "ruins": {
+   "metal": 4867126,
+   "flame": 10157992,
+   "glow": 5308288,
+   "glowOpacity": 0.65
+  },
+  "ice": {
+   "metal": 3820116,
+   "flame": 12577023,
+   "glow": 6340863,
+   "glowOpacity": 0.75
+  },
+  "lava": {
+   "metal": 2364432,
+   "flame": 16734752,
+   "glow": 16723984,
+   "glowOpacity": 0.9
+  },
+  "temple": {
+   "metal": 14202976,
+   "flame": 16773824,
+   "glow": 16769168,
+   "glowOpacity": 0.8
+  },
+  "village_forward": {
+   "metal": 2760728,
+   "flame": 16752688,
+   "glow": 16744480,
+   "glowOpacity": 0.85
+  },
+  "village_return": {
+   "metal": 2760728,
+   "flame": 6342911,
+   "glow": 3184895,
+   "glowOpacity": 0.85
+  }
+ },
+ "FX_ANIM": {
+  "sword": "fxSlash",
+  "dagger": "fxStab",
+  "axe": "fxChop",
+  "mace": "fxChop",
+  "staff": "fxPoke",
+  "bow": "fxArrow",
+  "unarmed": "fxStab",
+  "spellfire": "fxBurst",
+  "spellholy": "fxBurst",
+  "spellarcane": "fxBurst",
+  "spellice": "fxBurst",
+  "spellnature": "fxBurst",
+  "spellshadow": "fxBurst",
+  "spellphysical": "fxSlash",
+  "spellbard": "fxBurst",
+  "trap": "fxBurst",
+  "hit": "fxBurst",
+  "switch": "fxPoke",
+  "fountain": "fxBurst"
+ },
+ "FX_COLOR": {
+  "spellfire": "#ff6a2f",
+  "spellholy": "#ffd88a",
+  "spellarcane": "#b46bff",
+  "spellice": "#8fd0f0",
+  "spellnature": "#7fd17f",
+  "spellshadow": "#9b7fd4",
+  "spellphysical": "#e0d0a8",
+  "spellbard": "#e878c0",
+  "trap": "#ff4d4d",
+  "hit": "#ffffff",
+  "sword": "#dfe6ee",
+  "axe": "#e0a860",
+  "dagger": "#dfe6ee",
+  "staff": "#c9a8ff",
+  "bow": "#c8e0a0",
+  "mace": "#e0a860",
+  "unarmed": "#dfc9a8",
+  "switch": "#c9a86a",
+  "fountain": "#3aa8c8"
+ }
+}

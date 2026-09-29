@@ -1,0 +1,2671 @@
+{
+ "class_warrior": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🛡️",
+     "labelFr": "Endurance de fer",
+     "labelEn": "Iron Endurance",
+     "descFr": "+1 Constitution, +3 résistance physique",
+     "descEn": "+1 Constitution, +3 physical resistance",
+     "effects": {
+      "bonusCon": 1,
+      "resistPhys": 3
+     },
+     "id": "class_warrior_lv5_A"
+    },
+    {
+     "icon": "💪",
+     "labelFr": "Bras puissant",
+     "labelEn": "Mighty Arm",
+     "descFr": "+1 Force, +1 dégâts min, +1 dégâts max",
+     "descEn": "+1 Strength, +1 min damage, +1 max damage",
+     "effects": {
+      "bonusForce": 1,
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_warrior_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🩹",
+     "labelFr": "Carrure renforcée",
+     "labelEn": "Reinforced Frame",
+     "descFr": "+2 Constitution, +6 PV max",
+     "descEn": "+2 Constitution, +6 max HP",
+     "effects": {
+      "bonusHp": 6,
+      "bonusCon": 2
+     },
+     "id": "class_warrior_lv10_A"
+    },
+    {
+     "icon": "⚡",
+     "labelFr": "Riposte cinglante",
+     "labelEn": "Stinging Riposte",
+     "descFr": "+3 % chances de coup critique, +2 dégâts max",
+     "descEn": "+3 % critical hit chance, +2 max damage",
+     "effects": {
+      "bonusAtkMax": 2,
+      "critChance": 3
+     },
+     "id": "class_warrior_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🧱",
+     "labelFr": "Aplomb du vétéran",
+     "labelEn": "Veteran's Composure",
+     "descFr": "+5 résistance physique, +3 résistance magique",
+     "descEn": "+5 physical resistance, +3 magic resistance",
+     "effects": {
+      "resistPhys": 5,
+      "resistMagic": 3
+     },
+     "id": "class_warrior_lv15_A"
+    },
+    {
+     "icon": "🔨",
+     "labelFr": "Assaut implacable",
+     "labelEn": "Relentless Assault",
+     "descFr": "+3 dégâts min, +4 dégâts max",
+     "descEn": "+3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4
+     },
+     "id": "class_warrior_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🏰",
+     "labelFr": "Muraille vivante",
+     "labelEn": "Living Wall",
+     "descFr": "+6 résistance physique, +12 PV max",
+     "descEn": "+6 physical resistance, +12 max HP",
+     "effects": {
+      "bonusHp": 12,
+      "resistPhys": 6
+     },
+     "id": "class_warrior_lv20_A"
+    },
+    {
+     "icon": "😤",
+     "labelFr": "Colère montante",
+     "labelEn": "Rising Wrath",
+     "descFr": "+3 Force, +5 % chances de coup critique",
+     "descEn": "+3 Strength, +5 % critical hit chance",
+     "effects": {
+      "bonusForce": 3,
+      "critChance": 5
+     },
+     "id": "class_warrior_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🦾",
+     "labelFr": "Corps d'acier",
+     "labelEn": "Body of Steel",
+     "descFr": "+4 Constitution, +4 résistance physique, +12 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +12 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 12,
+      "resistPhys": 4
+     },
+     "id": "class_warrior_lv25_A"
+    },
+    {
+     "icon": "👑",
+     "labelFr": "Instinct du champion",
+     "labelEn": "Champion's Instinct",
+     "descFr": "+4 Force, +4 % chances de coup critique, +5 dégâts max",
+     "descEn": "+4 Strength, +4 % critical hit chance, +5 max damage",
+     "effects": {
+      "bonusForce": 4,
+      "bonusAtkMax": 5,
+      "critChance": 4
+     },
+     "id": "class_warrior_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_berserker": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🪓",
+     "labelFr": "Rage brute",
+     "labelEn": "Raw Rage",
+     "descFr": "+1 Force, +1 dégâts min, +1 dégâts max",
+     "descEn": "+1 Strength, +1 min damage, +1 max damage",
+     "effects": {
+      "bonusForce": 1,
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_berserker_lv5_A"
+    },
+    {
+     "icon": "🦴",
+     "labelFr": "Peau tannée",
+     "labelEn": "Thick Hide",
+     "descFr": "+1 Constitution, +3 résistance physique",
+     "descEn": "+1 Constitution, +3 physical resistance",
+     "effects": {
+      "bonusCon": 1,
+      "resistPhys": 3
+     },
+     "id": "class_berserker_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🩹",
+     "labelFr": "Carrure renforcée",
+     "labelEn": "Reinforced Frame",
+     "descFr": "+2 Constitution, +6 PV max",
+     "descEn": "+2 Constitution, +6 max HP",
+     "effects": {
+      "bonusHp": 6,
+      "bonusCon": 2
+     },
+     "id": "class_berserker_lv10_A"
+    },
+    {
+     "icon": "⚡",
+     "labelFr": "Riposte cinglante",
+     "labelEn": "Stinging Riposte",
+     "descFr": "+3 % chances de coup critique, +2 dégâts max",
+     "descEn": "+3 % critical hit chance, +2 max damage",
+     "effects": {
+      "bonusAtkMax": 2,
+      "critChance": 3
+     },
+     "id": "class_berserker_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🧱",
+     "labelFr": "Aplomb du vétéran",
+     "labelEn": "Veteran's Composure",
+     "descFr": "+5 résistance physique, +3 résistance magique",
+     "descEn": "+5 physical resistance, +3 magic resistance",
+     "effects": {
+      "resistPhys": 5,
+      "resistMagic": 3
+     },
+     "id": "class_berserker_lv15_A"
+    },
+    {
+     "icon": "🔨",
+     "labelFr": "Assaut implacable",
+     "labelEn": "Relentless Assault",
+     "descFr": "+3 dégâts min, +4 dégâts max",
+     "descEn": "+3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4
+     },
+     "id": "class_berserker_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🏰",
+     "labelFr": "Muraille vivante",
+     "labelEn": "Living Wall",
+     "descFr": "+6 résistance physique, +12 PV max",
+     "descEn": "+6 physical resistance, +12 max HP",
+     "effects": {
+      "bonusHp": 12,
+      "resistPhys": 6
+     },
+     "id": "class_berserker_lv20_A"
+    },
+    {
+     "icon": "😤",
+     "labelFr": "Colère montante",
+     "labelEn": "Rising Wrath",
+     "descFr": "+3 Force, +5 % chances de coup critique",
+     "descEn": "+3 Strength, +5 % critical hit chance",
+     "effects": {
+      "bonusForce": 3,
+      "critChance": 5
+     },
+     "id": "class_berserker_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🦾",
+     "labelFr": "Corps d'acier",
+     "labelEn": "Body of Steel",
+     "descFr": "+4 Constitution, +4 résistance physique, +12 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +12 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 12,
+      "resistPhys": 4
+     },
+     "id": "class_berserker_lv25_A"
+    },
+    {
+     "icon": "👑",
+     "labelFr": "Instinct du champion",
+     "labelEn": "Champion's Instinct",
+     "descFr": "+4 Force, +4 % chances de coup critique, +5 dégâts max",
+     "descEn": "+4 Strength, +4 % critical hit chance, +5 max damage",
+     "effects": {
+      "bonusForce": 4,
+      "bonusAtkMax": 5,
+      "critChance": 4
+     },
+     "id": "class_berserker_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_paladin": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🌟",
+     "labelFr": "Aura sacrée",
+     "labelEn": "Sacred Aura",
+     "descFr": "+1 Intelligence, +3 résistance magique",
+     "descEn": "+1 Intelligence, +3 magic resistance",
+     "effects": {
+      "resistMagic": 3,
+      "bonusInt": 1
+     },
+     "id": "class_paladin_lv5_A"
+    },
+    {
+     "icon": "🛡️",
+     "labelFr": "Rempart",
+     "labelEn": "Bulwark",
+     "descFr": "+1 Constitution, +3 résistance physique",
+     "descEn": "+1 Constitution, +3 physical resistance",
+     "effects": {
+      "bonusCon": 1,
+      "resistPhys": 3
+     },
+     "id": "class_paladin_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🩹",
+     "labelFr": "Carrure renforcée",
+     "labelEn": "Reinforced Frame",
+     "descFr": "+2 Constitution, +6 PV max",
+     "descEn": "+2 Constitution, +6 max HP",
+     "effects": {
+      "bonusHp": 6,
+      "bonusCon": 2
+     },
+     "id": "class_paladin_lv10_A"
+    },
+    {
+     "icon": "⚡",
+     "labelFr": "Riposte cinglante",
+     "labelEn": "Stinging Riposte",
+     "descFr": "+3 % chances de coup critique, +2 dégâts max",
+     "descEn": "+3 % critical hit chance, +2 max damage",
+     "effects": {
+      "bonusAtkMax": 2,
+      "critChance": 3
+     },
+     "id": "class_paladin_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🧱",
+     "labelFr": "Aplomb du vétéran",
+     "labelEn": "Veteran's Composure",
+     "descFr": "+5 résistance physique, +3 résistance magique",
+     "descEn": "+5 physical resistance, +3 magic resistance",
+     "effects": {
+      "resistPhys": 5,
+      "resistMagic": 3
+     },
+     "id": "class_paladin_lv15_A"
+    },
+    {
+     "icon": "🔨",
+     "labelFr": "Assaut implacable",
+     "labelEn": "Relentless Assault",
+     "descFr": "+3 dégâts min, +4 dégâts max",
+     "descEn": "+3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4
+     },
+     "id": "class_paladin_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🏰",
+     "labelFr": "Muraille vivante",
+     "labelEn": "Living Wall",
+     "descFr": "+6 résistance physique, +12 PV max",
+     "descEn": "+6 physical resistance, +12 max HP",
+     "effects": {
+      "bonusHp": 12,
+      "resistPhys": 6
+     },
+     "id": "class_paladin_lv20_A"
+    },
+    {
+     "icon": "😤",
+     "labelFr": "Colère montante",
+     "labelEn": "Rising Wrath",
+     "descFr": "+3 Force, +5 % chances de coup critique",
+     "descEn": "+3 Strength, +5 % critical hit chance",
+     "effects": {
+      "bonusForce": 3,
+      "critChance": 5
+     },
+     "id": "class_paladin_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🦾",
+     "labelFr": "Corps d'acier",
+     "labelEn": "Body of Steel",
+     "descFr": "+4 Constitution, +4 résistance physique, +12 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +12 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 12,
+      "resistPhys": 4
+     },
+     "id": "class_paladin_lv25_A"
+    },
+    {
+     "icon": "👑",
+     "labelFr": "Instinct du champion",
+     "labelEn": "Champion's Instinct",
+     "descFr": "+4 Force, +4 % chances de coup critique, +5 dégâts max",
+     "descEn": "+4 Strength, +4 % critical hit chance, +5 max damage",
+     "effects": {
+      "bonusForce": 4,
+      "bonusAtkMax": 5,
+      "critChance": 4
+     },
+     "id": "class_paladin_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_crusader": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🔥",
+     "labelFr": "Ferveur",
+     "labelEn": "Fervor",
+     "descFr": "+1 Force, +1 dégâts min, +1 dégâts max",
+     "descEn": "+1 Strength, +1 min damage, +1 max damage",
+     "effects": {
+      "bonusForce": 1,
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_crusader_lv5_A"
+    },
+    {
+     "icon": "🛡️",
+     "labelFr": "Bouclier de foi",
+     "labelEn": "Shield of Faith",
+     "descFr": "+3 résistance physique, +3 résistance magique",
+     "descEn": "+3 physical resistance, +3 magic resistance",
+     "effects": {
+      "resistPhys": 3,
+      "resistMagic": 3
+     },
+     "id": "class_crusader_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🩹",
+     "labelFr": "Carrure renforcée",
+     "labelEn": "Reinforced Frame",
+     "descFr": "+2 Constitution, +6 PV max",
+     "descEn": "+2 Constitution, +6 max HP",
+     "effects": {
+      "bonusHp": 6,
+      "bonusCon": 2
+     },
+     "id": "class_crusader_lv10_A"
+    },
+    {
+     "icon": "⚡",
+     "labelFr": "Riposte cinglante",
+     "labelEn": "Stinging Riposte",
+     "descFr": "+3 % chances de coup critique, +2 dégâts max",
+     "descEn": "+3 % critical hit chance, +2 max damage",
+     "effects": {
+      "bonusAtkMax": 2,
+      "critChance": 3
+     },
+     "id": "class_crusader_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🧱",
+     "labelFr": "Aplomb du vétéran",
+     "labelEn": "Veteran's Composure",
+     "descFr": "+5 résistance physique, +3 résistance magique",
+     "descEn": "+5 physical resistance, +3 magic resistance",
+     "effects": {
+      "resistPhys": 5,
+      "resistMagic": 3
+     },
+     "id": "class_crusader_lv15_A"
+    },
+    {
+     "icon": "🔨",
+     "labelFr": "Assaut implacable",
+     "labelEn": "Relentless Assault",
+     "descFr": "+3 dégâts min, +4 dégâts max",
+     "descEn": "+3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4
+     },
+     "id": "class_crusader_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🏰",
+     "labelFr": "Muraille vivante",
+     "labelEn": "Living Wall",
+     "descFr": "+6 résistance physique, +12 PV max",
+     "descEn": "+6 physical resistance, +12 max HP",
+     "effects": {
+      "bonusHp": 12,
+      "resistPhys": 6
+     },
+     "id": "class_crusader_lv20_A"
+    },
+    {
+     "icon": "😤",
+     "labelFr": "Colère montante",
+     "labelEn": "Rising Wrath",
+     "descFr": "+3 Force, +5 % chances de coup critique",
+     "descEn": "+3 Strength, +5 % critical hit chance",
+     "effects": {
+      "bonusForce": 3,
+      "critChance": 5
+     },
+     "id": "class_crusader_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🦾",
+     "labelFr": "Corps d'acier",
+     "labelEn": "Body of Steel",
+     "descFr": "+4 Constitution, +4 résistance physique, +12 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +12 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 12,
+      "resistPhys": 4
+     },
+     "id": "class_crusader_lv25_A"
+    },
+    {
+     "icon": "👑",
+     "labelFr": "Instinct du champion",
+     "labelEn": "Champion's Instinct",
+     "descFr": "+4 Force, +4 % chances de coup critique, +5 dégâts max",
+     "descEn": "+4 Strength, +4 % critical hit chance, +5 max damage",
+     "effects": {
+      "bonusForce": 4,
+      "bonusAtkMax": 5,
+      "critChance": 4
+     },
+     "id": "class_crusader_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_archer": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Œil de faucon",
+     "labelEn": "Hawk Eye",
+     "descFr": "+4 % chances de coup critique",
+     "descEn": "+4 % critical hit chance",
+     "effects": {
+      "critChance": 4
+     },
+     "id": "class_archer_lv5_A"
+    },
+    {
+     "icon": "🏹",
+     "labelFr": "Souffle du chasseur",
+     "labelEn": "Hunter's Breath",
+     "descFr": "+1 Dextérité, +4 Endurance max",
+     "descEn": "+1 Dexterity, +4 max stamina",
+     "effects": {
+      "bonusDex": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_archer_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🦶",
+     "labelFr": "Esquive vive",
+     "labelEn": "Nimble Dodge",
+     "descFr": "+2 Dextérité, +2 résistance physique",
+     "descEn": "+2 Dexterity, +2 physical resistance",
+     "effects": {
+      "bonusDex": 2,
+      "resistPhys": 2
+     },
+     "id": "class_archer_lv10_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Frappe précise",
+     "labelEn": "Precise Strike",
+     "descFr": "+1 dégâts min, +1 dégâts max",
+     "descEn": "+1 min damage, +1 max damage",
+     "effects": {
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_archer_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Précision chirurgicale",
+     "labelEn": "Surgical Precision",
+     "descFr": "+4 % chances de coup critique, +1 dégâts min",
+     "descEn": "+4 % critical hit chance, +1 min damage",
+     "effects": {
+      "critChance": 4,
+      "bonusAtkMin": 1
+     },
+     "id": "class_archer_lv15_A"
+    },
+    {
+     "icon": "🐾",
+     "labelFr": "Foulée assassine",
+     "labelEn": "Assassin's Stride",
+     "descFr": "+3 Dextérité, +4 % des dégâts infligés restaurés en PV",
+     "descEn": "+3 Dexterity, +4 % of damage dealt restored as HP",
+     "effects": {
+      "bonusDex": 3,
+      "lifestealPct": 4
+     },
+     "id": "class_archer_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "⚡",
+     "labelFr": "Réflexes aiguisés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 Dextérité, +5 % chances de coup critique",
+     "descEn": "+4 Dexterity, +5 % critical hit chance",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 5
+     },
+     "id": "class_archer_lv20_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Coup fourbe",
+     "labelEn": "Cunning Blow",
+     "descFr": "+5 % des dégâts infligés restaurés en PV, +3 dégâts max",
+     "descEn": "+5 % of damage dealt restored as HP, +3 max damage",
+     "effects": {
+      "bonusAtkMax": 3,
+      "lifestealPct": 5
+     },
+     "id": "class_archer_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Grâce mortelle",
+     "labelEn": "Deadly Grace",
+     "descFr": "+4 Dextérité, +12 % chances de coup critique, +1 dégâts max",
+     "descEn": "+4 Dexterity, +12 % critical hit chance, +1 max damage",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 12,
+      "bonusAtkMax": 1
+     },
+     "id": "class_archer_lv25_A"
+    },
+    {
+     "icon": "🌪️",
+     "labelFr": "Frénésie silencieuse",
+     "labelEn": "Silent Frenzy",
+     "descFr": "+6 % des dégâts infligés restaurés en PV, +3 dégâts min, +4 dégâts max",
+     "descEn": "+6 % of damage dealt restored as HP, +3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_archer_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_rogue": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🗡️",
+     "labelFr": "Réflexes affûtés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 % chances de coup critique",
+     "descEn": "+4 % critical hit chance",
+     "effects": {
+      "critChance": 4
+     },
+     "id": "class_rogue_lv5_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Sang-froid",
+     "labelEn": "Cold Blood",
+     "descFr": "+4 % des dégâts infligés restaurés en PV",
+     "descEn": "+4 % of damage dealt restored as HP",
+     "effects": {
+      "lifestealPct": 4
+     },
+     "id": "class_rogue_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🦶",
+     "labelFr": "Esquive vive",
+     "labelEn": "Nimble Dodge",
+     "descFr": "+2 Dextérité, +2 résistance physique",
+     "descEn": "+2 Dexterity, +2 physical resistance",
+     "effects": {
+      "bonusDex": 2,
+      "resistPhys": 2
+     },
+     "id": "class_rogue_lv10_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Frappe précise",
+     "labelEn": "Precise Strike",
+     "descFr": "+1 dégâts min, +1 dégâts max",
+     "descEn": "+1 min damage, +1 max damage",
+     "effects": {
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_rogue_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Précision chirurgicale",
+     "labelEn": "Surgical Precision",
+     "descFr": "+4 % chances de coup critique, +1 dégâts min",
+     "descEn": "+4 % critical hit chance, +1 min damage",
+     "effects": {
+      "critChance": 4,
+      "bonusAtkMin": 1
+     },
+     "id": "class_rogue_lv15_A"
+    },
+    {
+     "icon": "🐾",
+     "labelFr": "Foulée assassine",
+     "labelEn": "Assassin's Stride",
+     "descFr": "+3 Dextérité, +4 % des dégâts infligés restaurés en PV",
+     "descEn": "+3 Dexterity, +4 % of damage dealt restored as HP",
+     "effects": {
+      "bonusDex": 3,
+      "lifestealPct": 4
+     },
+     "id": "class_rogue_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "⚡",
+     "labelFr": "Réflexes aiguisés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 Dextérité, +5 % chances de coup critique",
+     "descEn": "+4 Dexterity, +5 % critical hit chance",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 5
+     },
+     "id": "class_rogue_lv20_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Coup fourbe",
+     "labelEn": "Cunning Blow",
+     "descFr": "+5 % des dégâts infligés restaurés en PV, +3 dégâts max",
+     "descEn": "+5 % of damage dealt restored as HP, +3 max damage",
+     "effects": {
+      "bonusAtkMax": 3,
+      "lifestealPct": 5
+     },
+     "id": "class_rogue_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Grâce mortelle",
+     "labelEn": "Deadly Grace",
+     "descFr": "+4 Dextérité, +12 % chances de coup critique, +1 dégâts max",
+     "descEn": "+4 Dexterity, +12 % critical hit chance, +1 max damage",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 12,
+      "bonusAtkMax": 1
+     },
+     "id": "class_rogue_lv25_A"
+    },
+    {
+     "icon": "🌪️",
+     "labelFr": "Frénésie silencieuse",
+     "labelEn": "Silent Frenzy",
+     "descFr": "+6 % des dégâts infligés restaurés en PV, +3 dégâts min, +4 dégâts max",
+     "descEn": "+6 % of damage dealt restored as HP, +3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_rogue_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_thief": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🔪",
+     "labelFr": "Coup dans le dos",
+     "labelEn": "Backstab",
+     "descFr": "+4 % chances de coup critique",
+     "descEn": "+4 % critical hit chance",
+     "effects": {
+      "critChance": 4
+     },
+     "id": "class_thief_lv5_A"
+    },
+    {
+     "icon": "🤏",
+     "labelFr": "Doigts agiles",
+     "labelEn": "Nimble Fingers",
+     "descFr": "+1 Dextérité, +4 Endurance max",
+     "descEn": "+1 Dexterity, +4 max stamina",
+     "effects": {
+      "bonusDex": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_thief_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🦶",
+     "labelFr": "Esquive vive",
+     "labelEn": "Nimble Dodge",
+     "descFr": "+2 Dextérité, +2 résistance physique",
+     "descEn": "+2 Dexterity, +2 physical resistance",
+     "effects": {
+      "bonusDex": 2,
+      "resistPhys": 2
+     },
+     "id": "class_thief_lv10_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Frappe précise",
+     "labelEn": "Precise Strike",
+     "descFr": "+1 dégâts min, +1 dégâts max",
+     "descEn": "+1 min damage, +1 max damage",
+     "effects": {
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_thief_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Précision chirurgicale",
+     "labelEn": "Surgical Precision",
+     "descFr": "+4 % chances de coup critique, +1 dégâts min",
+     "descEn": "+4 % critical hit chance, +1 min damage",
+     "effects": {
+      "critChance": 4,
+      "bonusAtkMin": 1
+     },
+     "id": "class_thief_lv15_A"
+    },
+    {
+     "icon": "🐾",
+     "labelFr": "Foulée assassine",
+     "labelEn": "Assassin's Stride",
+     "descFr": "+3 Dextérité, +4 % des dégâts infligés restaurés en PV",
+     "descEn": "+3 Dexterity, +4 % of damage dealt restored as HP",
+     "effects": {
+      "bonusDex": 3,
+      "lifestealPct": 4
+     },
+     "id": "class_thief_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "⚡",
+     "labelFr": "Réflexes aiguisés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 Dextérité, +5 % chances de coup critique",
+     "descEn": "+4 Dexterity, +5 % critical hit chance",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 5
+     },
+     "id": "class_thief_lv20_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Coup fourbe",
+     "labelEn": "Cunning Blow",
+     "descFr": "+5 % des dégâts infligés restaurés en PV, +3 dégâts max",
+     "descEn": "+5 % of damage dealt restored as HP, +3 max damage",
+     "effects": {
+      "bonusAtkMax": 3,
+      "lifestealPct": 5
+     },
+     "id": "class_thief_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Grâce mortelle",
+     "labelEn": "Deadly Grace",
+     "descFr": "+4 Dextérité, +12 % chances de coup critique, +1 dégâts max",
+     "descEn": "+4 Dexterity, +12 % critical hit chance, +1 max damage",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 12,
+      "bonusAtkMax": 1
+     },
+     "id": "class_thief_lv25_A"
+    },
+    {
+     "icon": "🌪️",
+     "labelFr": "Frénésie silencieuse",
+     "labelEn": "Silent Frenzy",
+     "descFr": "+6 % des dégâts infligés restaurés en PV, +3 dégâts min, +4 dégâts max",
+     "descEn": "+6 % of damage dealt restored as HP, +3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_thief_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_bladedancer": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Danse rapide",
+     "labelEn": "Swift Dance",
+     "descFr": "+1 Dextérité, +4 Endurance max",
+     "descEn": "+1 Dexterity, +4 max stamina",
+     "effects": {
+      "bonusDex": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_bladedancer_lv5_A"
+    },
+    {
+     "icon": "⚔️",
+     "labelFr": "Lames tournoyantes",
+     "labelEn": "Whirling Blades",
+     "descFr": "+4 % chances de coup critique",
+     "descEn": "+4 % critical hit chance",
+     "effects": {
+      "critChance": 4
+     },
+     "id": "class_bladedancer_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🦶",
+     "labelFr": "Esquive vive",
+     "labelEn": "Nimble Dodge",
+     "descFr": "+2 Dextérité, +2 résistance physique",
+     "descEn": "+2 Dexterity, +2 physical resistance",
+     "effects": {
+      "bonusDex": 2,
+      "resistPhys": 2
+     },
+     "id": "class_bladedancer_lv10_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Frappe précise",
+     "labelEn": "Precise Strike",
+     "descFr": "+1 dégâts min, +1 dégâts max",
+     "descEn": "+1 min damage, +1 max damage",
+     "effects": {
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_bladedancer_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Précision chirurgicale",
+     "labelEn": "Surgical Precision",
+     "descFr": "+4 % chances de coup critique, +1 dégâts min",
+     "descEn": "+4 % critical hit chance, +1 min damage",
+     "effects": {
+      "critChance": 4,
+      "bonusAtkMin": 1
+     },
+     "id": "class_bladedancer_lv15_A"
+    },
+    {
+     "icon": "🐾",
+     "labelFr": "Foulée assassine",
+     "labelEn": "Assassin's Stride",
+     "descFr": "+3 Dextérité, +4 % des dégâts infligés restaurés en PV",
+     "descEn": "+3 Dexterity, +4 % of damage dealt restored as HP",
+     "effects": {
+      "bonusDex": 3,
+      "lifestealPct": 4
+     },
+     "id": "class_bladedancer_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "⚡",
+     "labelFr": "Réflexes aiguisés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 Dextérité, +5 % chances de coup critique",
+     "descEn": "+4 Dexterity, +5 % critical hit chance",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 5
+     },
+     "id": "class_bladedancer_lv20_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Coup fourbe",
+     "labelEn": "Cunning Blow",
+     "descFr": "+5 % des dégâts infligés restaurés en PV, +3 dégâts max",
+     "descEn": "+5 % of damage dealt restored as HP, +3 max damage",
+     "effects": {
+      "bonusAtkMax": 3,
+      "lifestealPct": 5
+     },
+     "id": "class_bladedancer_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Grâce mortelle",
+     "labelEn": "Deadly Grace",
+     "descFr": "+4 Dextérité, +12 % chances de coup critique, +1 dégâts max",
+     "descEn": "+4 Dexterity, +12 % critical hit chance, +1 max damage",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 12,
+      "bonusAtkMax": 1
+     },
+     "id": "class_bladedancer_lv25_A"
+    },
+    {
+     "icon": "🌪️",
+     "labelFr": "Frénésie silencieuse",
+     "labelEn": "Silent Frenzy",
+     "descFr": "+6 % des dégâts infligés restaurés en PV, +3 dégâts min, +4 dégâts max",
+     "descEn": "+6 % of damage dealt restored as HP, +3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_bladedancer_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_assassin": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "☠️",
+     "labelFr": "Poison mortel",
+     "labelEn": "Deadly Poison",
+     "descFr": "+4 % des dégâts infligés restaurés en PV",
+     "descEn": "+4 % of damage dealt restored as HP",
+     "effects": {
+      "lifestealPct": 4
+     },
+     "id": "class_assassin_lv5_A"
+    },
+    {
+     "icon": "🎯",
+     "labelFr": "Frappe fatale",
+     "labelEn": "Fatal Strike",
+     "descFr": "+4 % chances de coup critique",
+     "descEn": "+4 % critical hit chance",
+     "effects": {
+      "critChance": 4
+     },
+     "id": "class_assassin_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🦶",
+     "labelFr": "Esquive vive",
+     "labelEn": "Nimble Dodge",
+     "descFr": "+2 Dextérité, +2 résistance physique",
+     "descEn": "+2 Dexterity, +2 physical resistance",
+     "effects": {
+      "bonusDex": 2,
+      "resistPhys": 2
+     },
+     "id": "class_assassin_lv10_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Frappe précise",
+     "labelEn": "Precise Strike",
+     "descFr": "+1 dégâts min, +1 dégâts max",
+     "descEn": "+1 min damage, +1 max damage",
+     "effects": {
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_assassin_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Précision chirurgicale",
+     "labelEn": "Surgical Precision",
+     "descFr": "+4 % chances de coup critique, +1 dégâts min",
+     "descEn": "+4 % critical hit chance, +1 min damage",
+     "effects": {
+      "critChance": 4,
+      "bonusAtkMin": 1
+     },
+     "id": "class_assassin_lv15_A"
+    },
+    {
+     "icon": "🐾",
+     "labelFr": "Foulée assassine",
+     "labelEn": "Assassin's Stride",
+     "descFr": "+3 Dextérité, +4 % des dégâts infligés restaurés en PV",
+     "descEn": "+3 Dexterity, +4 % of damage dealt restored as HP",
+     "effects": {
+      "bonusDex": 3,
+      "lifestealPct": 4
+     },
+     "id": "class_assassin_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "⚡",
+     "labelFr": "Réflexes aiguisés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 Dextérité, +5 % chances de coup critique",
+     "descEn": "+4 Dexterity, +5 % critical hit chance",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 5
+     },
+     "id": "class_assassin_lv20_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Coup fourbe",
+     "labelEn": "Cunning Blow",
+     "descFr": "+5 % des dégâts infligés restaurés en PV, +3 dégâts max",
+     "descEn": "+5 % of damage dealt restored as HP, +3 max damage",
+     "effects": {
+      "bonusAtkMax": 3,
+      "lifestealPct": 5
+     },
+     "id": "class_assassin_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Grâce mortelle",
+     "labelEn": "Deadly Grace",
+     "descFr": "+4 Dextérité, +12 % chances de coup critique, +1 dégâts max",
+     "descEn": "+4 Dexterity, +12 % critical hit chance, +1 max damage",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 12,
+      "bonusAtkMax": 1
+     },
+     "id": "class_assassin_lv25_A"
+    },
+    {
+     "icon": "🌪️",
+     "labelFr": "Frénésie silencieuse",
+     "labelEn": "Silent Frenzy",
+     "descFr": "+6 % des dégâts infligés restaurés en PV, +3 dégâts min, +4 dégâts max",
+     "descEn": "+6 % of damage dealt restored as HP, +3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_assassin_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_magearcher": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🏹",
+     "labelFr": "Flèches enchantées",
+     "labelEn": "Enchanted Arrows",
+     "descFr": "+1 Dextérité, +1 dégâts/soin de sort",
+     "descEn": "+1 Dexterity, +1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusDex": 1
+     },
+     "id": "class_magearcher_lv5_A"
+    },
+    {
+     "icon": "🎯",
+     "labelFr": "Tir perçant",
+     "labelEn": "Piercing Shot",
+     "descFr": "+4 % chances de coup critique",
+     "descEn": "+4 % critical hit chance",
+     "effects": {
+      "critChance": 4
+     },
+     "id": "class_magearcher_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🦶",
+     "labelFr": "Esquive vive",
+     "labelEn": "Nimble Dodge",
+     "descFr": "+2 Dextérité, +2 résistance physique",
+     "descEn": "+2 Dexterity, +2 physical resistance",
+     "effects": {
+      "bonusDex": 2,
+      "resistPhys": 2
+     },
+     "id": "class_magearcher_lv10_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Frappe précise",
+     "labelEn": "Precise Strike",
+     "descFr": "+1 dégâts min, +1 dégâts max",
+     "descEn": "+1 min damage, +1 max damage",
+     "effects": {
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_magearcher_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎯",
+     "labelFr": "Précision chirurgicale",
+     "labelEn": "Surgical Precision",
+     "descFr": "+4 % chances de coup critique, +1 dégâts min",
+     "descEn": "+4 % critical hit chance, +1 min damage",
+     "effects": {
+      "critChance": 4,
+      "bonusAtkMin": 1
+     },
+     "id": "class_magearcher_lv15_A"
+    },
+    {
+     "icon": "🐾",
+     "labelFr": "Foulée assassine",
+     "labelEn": "Assassin's Stride",
+     "descFr": "+3 Dextérité, +4 % des dégâts infligés restaurés en PV",
+     "descEn": "+3 Dexterity, +4 % of damage dealt restored as HP",
+     "effects": {
+      "bonusDex": 3,
+      "lifestealPct": 4
+     },
+     "id": "class_magearcher_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "⚡",
+     "labelFr": "Réflexes aiguisés",
+     "labelEn": "Sharpened Reflexes",
+     "descFr": "+4 Dextérité, +5 % chances de coup critique",
+     "descEn": "+4 Dexterity, +5 % critical hit chance",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 5
+     },
+     "id": "class_magearcher_lv20_A"
+    },
+    {
+     "icon": "🩸",
+     "labelFr": "Coup fourbe",
+     "labelEn": "Cunning Blow",
+     "descFr": "+5 % des dégâts infligés restaurés en PV, +3 dégâts max",
+     "descEn": "+5 % of damage dealt restored as HP, +3 max damage",
+     "effects": {
+      "bonusAtkMax": 3,
+      "lifestealPct": 5
+     },
+     "id": "class_magearcher_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "💃",
+     "labelFr": "Grâce mortelle",
+     "labelEn": "Deadly Grace",
+     "descFr": "+4 Dextérité, +12 % chances de coup critique, +1 dégâts max",
+     "descEn": "+4 Dexterity, +12 % critical hit chance, +1 max damage",
+     "effects": {
+      "bonusDex": 4,
+      "critChance": 12,
+      "bonusAtkMax": 1
+     },
+     "id": "class_magearcher_lv25_A"
+    },
+    {
+     "icon": "🌪️",
+     "labelFr": "Frénésie silencieuse",
+     "labelEn": "Silent Frenzy",
+     "descFr": "+6 % des dégâts infligés restaurés en PV, +3 dégâts min, +4 dégâts max",
+     "descEn": "+6 % of damage dealt restored as HP, +3 min damage, +4 max damage",
+     "effects": {
+      "bonusAtkMin": 3,
+      "bonusAtkMax": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_magearcher_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_mage": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "✨",
+     "labelFr": "Puissance arcanique",
+     "labelEn": "Arcane Power",
+     "descFr": "+1 Intelligence, +1 dégâts/soin de sort",
+     "descEn": "+1 Intelligence, +1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusInt": 1
+     },
+     "id": "class_mage_lv5_A"
+    },
+    {
+     "icon": "🧠",
+     "labelFr": "Concentration",
+     "labelEn": "Focus",
+     "descFr": "+1 Intelligence, +4 Endurance max",
+     "descEn": "+1 Intelligence, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusInt": 1
+     },
+     "id": "class_mage_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🔰",
+     "labelFr": "Savoir protecteur",
+     "labelEn": "Protective Knowledge",
+     "descFr": "+2 Intelligence, +2 résistance magique",
+     "descEn": "+2 Intelligence, +2 magic resistance",
+     "effects": {
+      "bonusInt": 2,
+      "resistMagic": 2
+     },
+     "id": "class_mage_lv10_A"
+    },
+    {
+     "icon": "💠",
+     "labelFr": "Flux arcanique",
+     "labelEn": "Arcane Flow",
+     "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+     "descEn": "+1 spell damage/power, +3 max stamina",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusStamina": 3
+     },
+     "id": "class_mage_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🌬️",
+     "labelFr": "Canalisation stable",
+     "labelEn": "Steady Channeling",
+     "descFr": "+1 Intelligence, +4 Endurance max",
+     "descEn": "+1 Intelligence, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusInt": 1
+     },
+     "id": "class_mage_lv15_A"
+    },
+    {
+     "icon": "🔥",
+     "labelFr": "Flamme intérieure",
+     "labelEn": "Inner Flame",
+     "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+4 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 4
+     },
+     "id": "class_mage_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🛡️",
+     "labelFr": "Rempart arcanique",
+     "labelEn": "Arcane Bulwark",
+     "descFr": "+6 résistance magique, +5 PV max",
+     "descEn": "+6 magic resistance, +5 max HP",
+     "effects": {
+      "resistMagic": 6,
+      "bonusHp": 5
+     },
+     "id": "class_mage_lv20_A"
+    },
+    {
+     "icon": "💥",
+     "labelFr": "Surcharge",
+     "labelEn": "Overload",
+     "descFr": "+4 dégâts/soin de sort",
+     "descEn": "+4 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 4
+     },
+     "id": "class_mage_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🌌",
+     "labelFr": "Convergence des arcanes",
+     "labelEn": "Arcane Convergence",
+     "descFr": "+4 résistance magique, +6 PV max, +6 Endurance max",
+     "descEn": "+4 magic resistance, +6 max HP, +6 max stamina",
+     "effects": {
+      "bonusHp": 6,
+      "bonusStamina": 6,
+      "resistMagic": 4
+     },
+     "id": "class_mage_lv25_A"
+    },
+    {
+     "icon": "🌟",
+     "labelFr": "Second souffle",
+     "labelEn": "Second Wind",
+     "descFr": "+1 Intelligence, +3 dégâts/soin de sort, +4 Endurance max",
+     "descEn": "+1 Intelligence, +3 spell damage/power, +4 max stamina",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusInt": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_mage_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_priest": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🕯️",
+     "labelFr": "Lumière bienfaisante",
+     "labelEn": "Beneficent Light",
+     "descFr": "+1 Intelligence, +1 dégâts/soin de sort",
+     "descEn": "+1 Intelligence, +1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusInt": 1
+     },
+     "id": "class_priest_lv5_A"
+    },
+    {
+     "icon": "❤️",
+     "labelFr": "Vitalité partagée",
+     "labelEn": "Shared Vitality",
+     "descFr": "+1 Constitution, +4 PV max",
+     "descEn": "+1 Constitution, +4 max HP",
+     "effects": {
+      "bonusCon": 1,
+      "bonusHp": 4
+     },
+     "id": "class_priest_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🔰",
+     "labelFr": "Savoir protecteur",
+     "labelEn": "Protective Knowledge",
+     "descFr": "+2 Intelligence, +2 résistance magique",
+     "descEn": "+2 Intelligence, +2 magic resistance",
+     "effects": {
+      "bonusInt": 2,
+      "resistMagic": 2
+     },
+     "id": "class_priest_lv10_A"
+    },
+    {
+     "icon": "💠",
+     "labelFr": "Flux arcanique",
+     "labelEn": "Arcane Flow",
+     "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+     "descEn": "+1 spell damage/power, +3 max stamina",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusStamina": 3
+     },
+     "id": "class_priest_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🌬️",
+     "labelFr": "Canalisation stable",
+     "labelEn": "Steady Channeling",
+     "descFr": "+1 Intelligence, +4 Endurance max",
+     "descEn": "+1 Intelligence, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusInt": 1
+     },
+     "id": "class_priest_lv15_A"
+    },
+    {
+     "icon": "🔥",
+     "labelFr": "Flamme intérieure",
+     "labelEn": "Inner Flame",
+     "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+4 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 4
+     },
+     "id": "class_priest_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🛡️",
+     "labelFr": "Rempart arcanique",
+     "labelEn": "Arcane Bulwark",
+     "descFr": "+6 résistance magique, +5 PV max",
+     "descEn": "+6 magic resistance, +5 max HP",
+     "effects": {
+      "resistMagic": 6,
+      "bonusHp": 5
+     },
+     "id": "class_priest_lv20_A"
+    },
+    {
+     "icon": "💥",
+     "labelFr": "Surcharge",
+     "labelEn": "Overload",
+     "descFr": "+4 dégâts/soin de sort",
+     "descEn": "+4 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 4
+     },
+     "id": "class_priest_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🌌",
+     "labelFr": "Convergence des arcanes",
+     "labelEn": "Arcane Convergence",
+     "descFr": "+4 résistance magique, +6 PV max, +6 Endurance max",
+     "descEn": "+4 magic resistance, +6 max HP, +6 max stamina",
+     "effects": {
+      "bonusHp": 6,
+      "bonusStamina": 6,
+      "resistMagic": 4
+     },
+     "id": "class_priest_lv25_A"
+    },
+    {
+     "icon": "🌟",
+     "labelFr": "Second souffle",
+     "labelEn": "Second Wind",
+     "descFr": "+1 Intelligence, +3 dégâts/soin de sort, +4 Endurance max",
+     "descEn": "+1 Intelligence, +3 spell damage/power, +4 max stamina",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusInt": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_priest_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_cleric": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "✝️",
+     "labelFr": "Lumière guérisseuse",
+     "labelEn": "Healing Light",
+     "descFr": "+1 dégâts/soin de sort",
+     "descEn": "+1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1
+     },
+     "id": "class_cleric_lv5_A"
+    },
+    {
+     "icon": "💗",
+     "labelFr": "Robustesse divine",
+     "labelEn": "Divine Resilience",
+     "descFr": "+1 Constitution, +4 PV max",
+     "descEn": "+1 Constitution, +4 max HP",
+     "effects": {
+      "bonusCon": 1,
+      "bonusHp": 4
+     },
+     "id": "class_cleric_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🔰",
+     "labelFr": "Savoir protecteur",
+     "labelEn": "Protective Knowledge",
+     "descFr": "+2 Intelligence, +2 résistance magique",
+     "descEn": "+2 Intelligence, +2 magic resistance",
+     "effects": {
+      "bonusInt": 2,
+      "resistMagic": 2
+     },
+     "id": "class_cleric_lv10_A"
+    },
+    {
+     "icon": "💠",
+     "labelFr": "Flux arcanique",
+     "labelEn": "Arcane Flow",
+     "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+     "descEn": "+1 spell damage/power, +3 max stamina",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusStamina": 3
+     },
+     "id": "class_cleric_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🌬️",
+     "labelFr": "Canalisation stable",
+     "labelEn": "Steady Channeling",
+     "descFr": "+1 Intelligence, +4 Endurance max",
+     "descEn": "+1 Intelligence, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusInt": 1
+     },
+     "id": "class_cleric_lv15_A"
+    },
+    {
+     "icon": "🔥",
+     "labelFr": "Flamme intérieure",
+     "labelEn": "Inner Flame",
+     "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+4 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 4
+     },
+     "id": "class_cleric_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🛡️",
+     "labelFr": "Rempart arcanique",
+     "labelEn": "Arcane Bulwark",
+     "descFr": "+6 résistance magique, +5 PV max",
+     "descEn": "+6 magic resistance, +5 max HP",
+     "effects": {
+      "resistMagic": 6,
+      "bonusHp": 5
+     },
+     "id": "class_cleric_lv20_A"
+    },
+    {
+     "icon": "💥",
+     "labelFr": "Surcharge",
+     "labelEn": "Overload",
+     "descFr": "+4 dégâts/soin de sort",
+     "descEn": "+4 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 4
+     },
+     "id": "class_cleric_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🌌",
+     "labelFr": "Convergence des arcanes",
+     "labelEn": "Arcane Convergence",
+     "descFr": "+4 résistance magique, +6 PV max, +6 Endurance max",
+     "descEn": "+4 magic resistance, +6 max HP, +6 max stamina",
+     "effects": {
+      "bonusHp": 6,
+      "bonusStamina": 6,
+      "resistMagic": 4
+     },
+     "id": "class_cleric_lv25_A"
+    },
+    {
+     "icon": "🌟",
+     "labelFr": "Second souffle",
+     "labelEn": "Second Wind",
+     "descFr": "+1 Intelligence, +3 dégâts/soin de sort, +4 Endurance max",
+     "descEn": "+1 Intelligence, +3 spell damage/power, +4 max stamina",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusInt": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_cleric_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_elementalist": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🔥",
+     "labelFr": "Maîtrise élémentaire",
+     "labelEn": "Elemental Mastery",
+     "descFr": "+1 dégâts/soin de sort",
+     "descEn": "+1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1
+     },
+     "id": "class_elementalist_lv5_A"
+    },
+    {
+     "icon": "❄️",
+     "labelFr": "Bouclier de givre",
+     "labelEn": "Frost Shield",
+     "descFr": "+1 Constitution, +3 résistance magique",
+     "descEn": "+1 Constitution, +3 magic resistance",
+     "effects": {
+      "resistMagic": 3,
+      "bonusCon": 1
+     },
+     "id": "class_elementalist_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🔰",
+     "labelFr": "Savoir protecteur",
+     "labelEn": "Protective Knowledge",
+     "descFr": "+2 Intelligence, +2 résistance magique",
+     "descEn": "+2 Intelligence, +2 magic resistance",
+     "effects": {
+      "bonusInt": 2,
+      "resistMagic": 2
+     },
+     "id": "class_elementalist_lv10_A"
+    },
+    {
+     "icon": "💠",
+     "labelFr": "Flux arcanique",
+     "labelEn": "Arcane Flow",
+     "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+     "descEn": "+1 spell damage/power, +3 max stamina",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusStamina": 3
+     },
+     "id": "class_elementalist_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🌬️",
+     "labelFr": "Canalisation stable",
+     "labelEn": "Steady Channeling",
+     "descFr": "+1 Intelligence, +4 Endurance max",
+     "descEn": "+1 Intelligence, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusInt": 1
+     },
+     "id": "class_elementalist_lv15_A"
+    },
+    {
+     "icon": "🔥",
+     "labelFr": "Flamme intérieure",
+     "labelEn": "Inner Flame",
+     "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+4 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 4
+     },
+     "id": "class_elementalist_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🛡️",
+     "labelFr": "Rempart arcanique",
+     "labelEn": "Arcane Bulwark",
+     "descFr": "+6 résistance magique, +5 PV max",
+     "descEn": "+6 magic resistance, +5 max HP",
+     "effects": {
+      "resistMagic": 6,
+      "bonusHp": 5
+     },
+     "id": "class_elementalist_lv20_A"
+    },
+    {
+     "icon": "💥",
+     "labelFr": "Surcharge",
+     "labelEn": "Overload",
+     "descFr": "+4 dégâts/soin de sort",
+     "descEn": "+4 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 4
+     },
+     "id": "class_elementalist_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🌌",
+     "labelFr": "Convergence des arcanes",
+     "labelEn": "Arcane Convergence",
+     "descFr": "+4 résistance magique, +6 PV max, +6 Endurance max",
+     "descEn": "+4 magic resistance, +6 max HP, +6 max stamina",
+     "effects": {
+      "bonusHp": 6,
+      "bonusStamina": 6,
+      "resistMagic": 4
+     },
+     "id": "class_elementalist_lv25_A"
+    },
+    {
+     "icon": "🌟",
+     "labelFr": "Second souffle",
+     "labelEn": "Second Wind",
+     "descFr": "+1 Intelligence, +3 dégâts/soin de sort, +4 Endurance max",
+     "descEn": "+1 Intelligence, +3 spell damage/power, +4 max stamina",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusInt": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_elementalist_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_warlock": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "👻",
+     "labelFr": "Vol d'âme",
+     "labelEn": "Soul Siphon",
+     "descFr": "+4 % des dégâts infligés restaurés en PV",
+     "descEn": "+4 % of damage dealt restored as HP",
+     "effects": {
+      "lifestealPct": 4
+     },
+     "id": "class_warlock_lv5_A"
+    },
+    {
+     "icon": "💀",
+     "labelFr": "Malédiction",
+     "labelEn": "Curse",
+     "descFr": "+1 dégâts/soin de sort",
+     "descEn": "+1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1
+     },
+     "id": "class_warlock_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🔰",
+     "labelFr": "Savoir protecteur",
+     "labelEn": "Protective Knowledge",
+     "descFr": "+2 Intelligence, +2 résistance magique",
+     "descEn": "+2 Intelligence, +2 magic resistance",
+     "effects": {
+      "bonusInt": 2,
+      "resistMagic": 2
+     },
+     "id": "class_warlock_lv10_A"
+    },
+    {
+     "icon": "💠",
+     "labelFr": "Flux arcanique",
+     "labelEn": "Arcane Flow",
+     "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+     "descEn": "+1 spell damage/power, +3 max stamina",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusStamina": 3
+     },
+     "id": "class_warlock_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🌬️",
+     "labelFr": "Canalisation stable",
+     "labelEn": "Steady Channeling",
+     "descFr": "+1 Intelligence, +4 Endurance max",
+     "descEn": "+1 Intelligence, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusInt": 1
+     },
+     "id": "class_warlock_lv15_A"
+    },
+    {
+     "icon": "🔥",
+     "labelFr": "Flamme intérieure",
+     "labelEn": "Inner Flame",
+     "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+4 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 4
+     },
+     "id": "class_warlock_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🛡️",
+     "labelFr": "Rempart arcanique",
+     "labelEn": "Arcane Bulwark",
+     "descFr": "+6 résistance magique, +5 PV max",
+     "descEn": "+6 magic resistance, +5 max HP",
+     "effects": {
+      "resistMagic": 6,
+      "bonusHp": 5
+     },
+     "id": "class_warlock_lv20_A"
+    },
+    {
+     "icon": "💥",
+     "labelFr": "Surcharge",
+     "labelEn": "Overload",
+     "descFr": "+4 dégâts/soin de sort",
+     "descEn": "+4 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 4
+     },
+     "id": "class_warlock_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🌌",
+     "labelFr": "Convergence des arcanes",
+     "labelEn": "Arcane Convergence",
+     "descFr": "+4 résistance magique, +6 PV max, +6 Endurance max",
+     "descEn": "+4 magic resistance, +6 max HP, +6 max stamina",
+     "effects": {
+      "bonusHp": 6,
+      "bonusStamina": 6,
+      "resistMagic": 4
+     },
+     "id": "class_warlock_lv25_A"
+    },
+    {
+     "icon": "🌟",
+     "labelFr": "Second souffle",
+     "labelEn": "Second Wind",
+     "descFr": "+1 Intelligence, +3 dégâts/soin de sort, +4 Endurance max",
+     "descEn": "+1 Intelligence, +3 spell damage/power, +4 max stamina",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusInt": 1,
+      "bonusStamina": 4
+     },
+     "id": "class_warlock_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_bard": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "🎵",
+     "labelFr": "Écho vibrant",
+     "labelEn": "Vibrant Echo",
+     "descFr": "+1 Dextérité, +1 dégâts/soin de sort",
+     "descEn": "+1 Dexterity, +1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusDex": 1
+     },
+     "id": "class_bard_lv5_A"
+    },
+    {
+     "icon": "💨",
+     "labelFr": "Souffle rythmé",
+     "labelEn": "Rhythmic Breath",
+     "descFr": "+1 Constitution, +4 Endurance max",
+     "descEn": "+1 Constitution, +4 max stamina",
+     "effects": {
+      "bonusStamina": 4,
+      "bonusCon": 1
+     },
+     "id": "class_bard_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🎶",
+     "labelFr": "Refrain protecteur",
+     "labelEn": "Protective Refrain",
+     "descFr": "+2 Constitution, +2 résistance magique",
+     "descEn": "+2 Constitution, +2 magic resistance",
+     "effects": {
+      "bonusCon": 2,
+      "resistMagic": 2
+     },
+     "id": "class_bard_lv10_A"
+    },
+    {
+     "icon": "🥁",
+     "labelFr": "Rythme vif",
+     "labelEn": "Lively Rhythm",
+     "descFr": "+2 Dextérité, +3 % chances de coup critique",
+     "descEn": "+2 Dexterity, +3 % critical hit chance",
+     "effects": {
+      "bonusDex": 2,
+      "critChance": 3
+     },
+     "id": "class_bard_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎺",
+     "labelFr": "Souffle endurant",
+     "labelEn": "Enduring Breath",
+     "descFr": "+3 résistance physique, +8 Endurance max",
+     "descEn": "+3 physical resistance, +8 max stamina",
+     "effects": {
+      "bonusStamina": 8,
+      "resistPhys": 3
+     },
+     "id": "class_bard_lv15_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Cadence tranchante",
+     "labelEn": "Cutting Cadence",
+     "descFr": "+2 dégâts min, +2 dégâts max",
+     "descEn": "+2 min damage, +2 max damage",
+     "effects": {
+      "bonusAtkMin": 2,
+      "bonusAtkMax": 2
+     },
+     "id": "class_bard_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🔔",
+     "labelFr": "Harmonie vitale",
+     "labelEn": "Vital Harmony",
+     "descFr": "+3 résistance magique, +10 PV max",
+     "descEn": "+3 magic resistance, +10 max HP",
+     "effects": {
+      "bonusHp": 10,
+      "resistMagic": 3
+     },
+     "id": "class_bard_lv20_A"
+    },
+    {
+     "icon": "✨",
+     "labelFr": "Écho arcanique",
+     "labelEn": "Arcane Echo",
+     "descFr": "+5 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+5 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 5
+     },
+     "id": "class_bard_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🎼",
+     "labelFr": "Symphonie résiliente",
+     "labelEn": "Resilient Symphony",
+     "descFr": "+4 Constitution, +4 résistance physique, +6 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +6 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 6,
+      "resistPhys": 4
+     },
+     "id": "class_bard_lv25_A"
+    },
+    {
+     "icon": "🎻",
+     "labelFr": "Crescendo fatal",
+     "labelEn": "Fatal Crescendo",
+     "descFr": "+4 Dextérité, +6 % des dégâts infligés restaurés en PV, +3 dégâts/soin de sort",
+     "descEn": "+4 Dexterity, +6 % of damage dealt restored as HP, +3 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusDex": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_bard_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_skald": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "⚔️",
+     "labelFr": "Chant de bataille",
+     "labelEn": "Battle Chant",
+     "descFr": "+1 Force, +1 dégâts min, +1 dégâts max",
+     "descEn": "+1 Strength, +1 min damage, +1 max damage",
+     "effects": {
+      "bonusForce": 1,
+      "bonusAtkMin": 1,
+      "bonusAtkMax": 1
+     },
+     "id": "class_skald_lv5_A"
+    },
+    {
+     "icon": "🛡️",
+     "labelFr": "Peau de saga",
+     "labelEn": "Saga-Hardened Skin",
+     "descFr": "+1 Constitution, +3 résistance physique",
+     "descEn": "+1 Constitution, +3 physical resistance",
+     "effects": {
+      "bonusCon": 1,
+      "resistPhys": 3
+     },
+     "id": "class_skald_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🎶",
+     "labelFr": "Refrain protecteur",
+     "labelEn": "Protective Refrain",
+     "descFr": "+2 Constitution, +2 résistance magique",
+     "descEn": "+2 Constitution, +2 magic resistance",
+     "effects": {
+      "bonusCon": 2,
+      "resistMagic": 2
+     },
+     "id": "class_skald_lv10_A"
+    },
+    {
+     "icon": "🥁",
+     "labelFr": "Rythme vif",
+     "labelEn": "Lively Rhythm",
+     "descFr": "+2 Dextérité, +3 % chances de coup critique",
+     "descEn": "+2 Dexterity, +3 % critical hit chance",
+     "effects": {
+      "bonusDex": 2,
+      "critChance": 3
+     },
+     "id": "class_skald_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎺",
+     "labelFr": "Souffle endurant",
+     "labelEn": "Enduring Breath",
+     "descFr": "+3 résistance physique, +8 Endurance max",
+     "descEn": "+3 physical resistance, +8 max stamina",
+     "effects": {
+      "bonusStamina": 8,
+      "resistPhys": 3
+     },
+     "id": "class_skald_lv15_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Cadence tranchante",
+     "labelEn": "Cutting Cadence",
+     "descFr": "+2 dégâts min, +2 dégâts max",
+     "descEn": "+2 min damage, +2 max damage",
+     "effects": {
+      "bonusAtkMin": 2,
+      "bonusAtkMax": 2
+     },
+     "id": "class_skald_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🔔",
+     "labelFr": "Harmonie vitale",
+     "labelEn": "Vital Harmony",
+     "descFr": "+3 résistance magique, +10 PV max",
+     "descEn": "+3 magic resistance, +10 max HP",
+     "effects": {
+      "bonusHp": 10,
+      "resistMagic": 3
+     },
+     "id": "class_skald_lv20_A"
+    },
+    {
+     "icon": "✨",
+     "labelFr": "Écho arcanique",
+     "labelEn": "Arcane Echo",
+     "descFr": "+5 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+5 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 5
+     },
+     "id": "class_skald_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🎼",
+     "labelFr": "Symphonie résiliente",
+     "labelEn": "Resilient Symphony",
+     "descFr": "+4 Constitution, +4 résistance physique, +6 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +6 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 6,
+      "resistPhys": 4
+     },
+     "id": "class_skald_lv25_A"
+    },
+    {
+     "icon": "🎻",
+     "labelFr": "Crescendo fatal",
+     "labelEn": "Fatal Crescendo",
+     "descFr": "+4 Dextérité, +6 % des dégâts infligés restaurés en PV, +3 dégâts/soin de sort",
+     "descEn": "+4 Dexterity, +6 % of damage dealt restored as HP, +3 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusDex": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_skald_lv25_B"
+    }
+   ]
+  }
+ ],
+ "class_minstrel": [
+  {
+   "level": 5,
+   "options": [
+    {
+     "icon": "💫",
+     "labelFr": "Résonance curative",
+     "labelEn": "Healing Resonance",
+     "descFr": "+1 Intelligence, +1 dégâts/soin de sort",
+     "descEn": "+1 Intelligence, +1 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 1,
+      "bonusInt": 1
+     },
+     "id": "class_minstrel_lv5_A"
+    },
+    {
+     "icon": "🕊️",
+     "labelFr": "Harmonie protectrice",
+     "labelEn": "Protective Harmony",
+     "descFr": "+3 résistance magique, +4 PV max",
+     "descEn": "+3 magic resistance, +4 max HP",
+     "effects": {
+      "bonusHp": 4,
+      "resistMagic": 3
+     },
+     "id": "class_minstrel_lv5_B"
+    }
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+    {
+     "icon": "🎶",
+     "labelFr": "Refrain protecteur",
+     "labelEn": "Protective Refrain",
+     "descFr": "+2 Constitution, +2 résistance magique",
+     "descEn": "+2 Constitution, +2 magic resistance",
+     "effects": {
+      "bonusCon": 2,
+      "resistMagic": 2
+     },
+     "id": "class_minstrel_lv10_A"
+    },
+    {
+     "icon": "🥁",
+     "labelFr": "Rythme vif",
+     "labelEn": "Lively Rhythm",
+     "descFr": "+2 Dextérité, +3 % chances de coup critique",
+     "descEn": "+2 Dexterity, +3 % critical hit chance",
+     "effects": {
+      "bonusDex": 2,
+      "critChance": 3
+     },
+     "id": "class_minstrel_lv10_B"
+    }
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+    {
+     "icon": "🎺",
+     "labelFr": "Souffle endurant",
+     "labelEn": "Enduring Breath",
+     "descFr": "+3 résistance physique, +8 Endurance max",
+     "descEn": "+3 physical resistance, +8 max stamina",
+     "effects": {
+      "bonusStamina": 8,
+      "resistPhys": 3
+     },
+     "id": "class_minstrel_lv15_A"
+    },
+    {
+     "icon": "🗡️",
+     "labelFr": "Cadence tranchante",
+     "labelEn": "Cutting Cadence",
+     "descFr": "+2 dégâts min, +2 dégâts max",
+     "descEn": "+2 min damage, +2 max damage",
+     "effects": {
+      "bonusAtkMin": 2,
+      "bonusAtkMax": 2
+     },
+     "id": "class_minstrel_lv15_B"
+    }
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+    {
+     "icon": "🔔",
+     "labelFr": "Harmonie vitale",
+     "labelEn": "Vital Harmony",
+     "descFr": "+3 résistance magique, +10 PV max",
+     "descEn": "+3 magic resistance, +10 max HP",
+     "effects": {
+      "bonusHp": 10,
+      "resistMagic": 3
+     },
+     "id": "class_minstrel_lv20_A"
+    },
+    {
+     "icon": "✨",
+     "labelFr": "Écho arcanique",
+     "labelEn": "Arcane Echo",
+     "descFr": "+5 % chances de coup critique, +2 dégâts/soin de sort",
+     "descEn": "+5 % critical hit chance, +2 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 2,
+      "critChance": 5
+     },
+     "id": "class_minstrel_lv20_B"
+    }
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+    {
+     "icon": "🎼",
+     "labelFr": "Symphonie résiliente",
+     "labelEn": "Resilient Symphony",
+     "descFr": "+4 Constitution, +4 résistance physique, +6 PV max",
+     "descEn": "+4 Constitution, +4 physical resistance, +6 max HP",
+     "effects": {
+      "bonusCon": 4,
+      "bonusHp": 6,
+      "resistPhys": 4
+     },
+     "id": "class_minstrel_lv25_A"
+    },
+    {
+     "icon": "🎻",
+     "labelFr": "Crescendo fatal",
+     "labelEn": "Fatal Crescendo",
+     "descFr": "+4 Dextérité, +6 % des dégâts infligés restaurés en PV, +3 dégâts/soin de sort",
+     "descEn": "+4 Dexterity, +6 % of damage dealt restored as HP, +3 spell damage/power",
+     "effects": {
+      "bonusSpellDmg": 3,
+      "bonusDex": 4,
+      "lifestealPct": 6
+     },
+     "id": "class_minstrel_lv25_B"
+    }
+   ]
+  }
+ ]
+}
