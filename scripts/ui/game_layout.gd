@@ -60,7 +60,7 @@ func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void
 	bgr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_parts()
 	resized.connect(_update_mode)
-	call_deferred("_update_mode")
+	_update_mode()
 
 # ------------------------------------------------------------------ pièces
 
@@ -302,3 +302,13 @@ func set_level_name(text: String) -> void:
 func _process(_d: float) -> void:
 	if rig != null:
 		compass.text = ["N", "E", "S", "O"][rig.dir]
+
+## Diagnostic : tailles et visibilité des éléments principaux.
+func debug_report() -> String:
+	var parts: Array[String] = []
+	parts.append("layout size=%s pos=%s visible=%s" % [size, position, visible_in_tree()])
+	for pair in [["header", header], ["frame", frame], ["stage", stage], ["sub_container", sub_container], ["hud", hud], ["spell_bar", spell_bar], ["minimap", minimap]]:
+		var c: Control = pair[1]
+		parts.append("%s size=%s in_tree=%s parent=%s" % [pair[0], c.size, c.is_inside_tree(), c.get_parent().name if c.get_parent() else "AUCUN"])
+	parts.append("root children=%d, viewport=%s" % [_root.get_child_count() if _root else -1, get_viewport().get_visible_rect().size])
+	return "\n".join(parts)
