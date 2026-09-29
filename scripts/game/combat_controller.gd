@@ -94,6 +94,38 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 	else:
 		changed.emit()
 
+## Lit un parchemin de la besace (sort gratuit, usage unique). Le lecteur est aussi la cible des sorts alliés.
+func read_scroll(char_id: String, inv_idx: int) -> void:
+	if combat == null or _busy or gs.game_over:
+		return
+	if inv_idx < 0 or inv_idx >= gs.inventory.size():
+		return
+	var it: Dictionary = gs.inventory[inv_idx]
+	var c := gs.char_by_id(char_id)
+	if c.is_empty() or int(c.hp) <= 0 or str(it.get("type", "")) != "scroll":
+		return
+	sync_position()
+	var spell := combat.spell_def(str(it.get("spellId", "")))
+	if spell.is_empty():
+		gs.add_log("📜 %s est illisible, son contenu s'est effacé..." % it.get("name", "le parchemin"))
+		changed.emit()
+		return
+	gs.active_char_id = char_id
+	gs.add_log("📜 %s lit le parchemin et invoque %s %s !" % [c.name, spell.get("icon", ""), spell.name], true)
+	if combat.cast_spell(c, str(spell.id), char_id, true):
+		gs.inventory.remove_at(inv_idx)
+		_after_action()
+	else:
+		changed.emit()
+
+## Un potion a été bue : les soins comptent dans la contribution au combat.
+func potion_drunk(char_id: String, healed: int) -> void:
+	if combat != null and healed > 0:
+		var c := gs.char_by_id(char_id)
+		if not c.is_empty():
+			combat._credit_heal(c, healed)
+	changed.emit()
+
 ## Clic sur la carte d'un personnage : cible du sort en attente, sinon sélection du personnage actif (hors combat).
 func card_pressed(char_id: String) -> void:
 	if pending_spell != "":

@@ -4,6 +4,7 @@ extends HBoxContainer
 ## jauge de tour en combat. Cliquer une carte = choisir le personnage / la cible d'un sort.
 
 signal card_pressed(char_id: String)
+signal card_opened(char_id: String)
 
 var gs: GameState
 var ctrl: CombatController
@@ -98,7 +99,12 @@ func _on_card_input(ev: InputEvent, char_id: String) -> void:
 	if ev is InputEventMouseButton:
 		var mb := ev as InputEventMouseButton
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			card_pressed.emit(char_id)
+			if mb.double_click:
+				card_opened.emit(char_id)
+			else:
+				card_pressed.emit(char_id)
+		elif mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+			card_opened.emit(char_id)
 
 func _resize() -> void:
 	var h := maxf(100.0, size.y)

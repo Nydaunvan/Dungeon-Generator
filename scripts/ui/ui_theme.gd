@@ -67,6 +67,14 @@ static func tbox(name: String, m: Array, content: Array = [], draw_center: bool 
 		s.content_margin_bottom = content[3]
 	return s
 
+static var _shared: Theme = null
+
+## Thème partagé (construit une seule fois).
+static func shared() -> Theme:
+	if _shared == null:
+		_shared = build()
+	return _shared
+
 static func build() -> Theme:
 	var th := Theme.new()
 	th.default_font = font(F_BODY)

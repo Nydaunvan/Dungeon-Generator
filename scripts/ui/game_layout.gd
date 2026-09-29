@@ -5,6 +5,8 @@ extends MarginContainer
 
 signal command(cmd: String)
 signal menu_pressed(name: String)
+signal item_pressed(index: int)
+signal card_opened(char_id: String)
 
 const PORTRAIT_RATIO := 1.05   # largeur / hauteur en dessous : mode portrait
 
@@ -215,6 +217,7 @@ func _build_parts() -> void:
 	hud = PartyHud.new()
 	hud.setup(gs, ctrl)
 	hud.card_pressed.connect(ctrl.card_pressed)
+	hud.card_opened.connect(func(id): card_opened.emit(id))
 
 	# panneaux latéraux
 	panel_map = OrnatePanel.new("Carte")
@@ -230,6 +233,7 @@ func _build_parts() -> void:
 	panel_bag.name = "Besace"
 	bag = BagPanel.new()
 	bag.setup(gs)
+	bag.item_pressed.connect(func(i): item_pressed.emit(i))
 	panel_bag.body.add_child(bag)
 	panel_log = OrnatePanel.new("Grimoire des événements")
 	panel_log.name = "Journal"

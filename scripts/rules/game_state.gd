@@ -50,6 +50,12 @@ func level_state(level: Dictionary) -> Dictionary:
 		level_states[id] = {"monsters": monsters, "taken_items": {}, "last_engaged_id": ""}
 	return level_states[id]
 
+## État d'un objet de niveau : taken, disarmed, usedAt, triggered, hidden…
+func item_state(level_id: String, item_id: String) -> Dictionary:
+	var ls: Dictionary = level_states.get(level_id, {})
+	var d: Dictionary = ls.get_or_add("items_state", {})
+	return d.get_or_add(item_id, {})
+
 func _monster_state(m: Dictionary) -> Dictionary:
 	var d := Stats.monster_derived(m)
 	var st := {"hp": d.maxHp, "maxHp": d.maxHp, "atkMin": d.atkMin, "atkMax": d.atkMax, "alive": true,

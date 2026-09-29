@@ -209,11 +209,11 @@ func cooldown_left(caster: Dictionary, spell_id: String) -> float:
 	return maxf(0.0, (ready_at - Time.get_ticks_msec()) / 1000.0)
 
 ## Lance un sort. `ally_id` = cible alliée pour les sorts ciblés. Renvoie true si le sort a été lancé.
-func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "") -> bool:
+func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free: bool = false) -> bool:
 	if gs.game_over or gs.won:
 		return false
 	var spell := spell_def(spell_id)
-	if spell.is_empty() or not (caster.get("spellsKnown", []) as Array).has(spell_id):
+	if spell.is_empty() or (not free and not (caster.get("spellsKnown", []) as Array).has(spell_id)):
 		gs.add_log("%s ne connaît pas ce sort." % caster.name)
 		return false
 	var mode := str(spell.get("mode", "damage"))
@@ -225,7 +225,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "") -> b
 	if not may_act(caster):
 		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % caster.name, true)
 		return false
-	var left := cooldown_left(caster, spell_id)
+	var left := 0.0 if free else cooldown_left(caster, spell_id)
 	if left > 0.0:
 		gs.add_log("⏳ %s n'est pas encore prêt (%d s restantes)." % [spell.name, int(ceil(left))])
 		return false
@@ -244,14 +244,15 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "") -> b
 		if int(ally.hp) <= 0:
 			gs.add_log("💀 %s est mort et ne peut pas être ciblé." % ally.name)
 			return false
-	var cost := int(spell.get("staminaCost", 15))
+	var cost := 0 if free else int(spell.get("staminaCost", 15))
 	if int(caster.get("stamina", 0)) < cost:
 		gs.add_log("😮‍💨 %s n'a plus assez d'endurance pour lancer %s." % [caster.name, spell.name])
 		return false
 	caster["stamina"] = int(caster.stamina) - cost
-	var cds: Dictionary = caster.get("spellCooldowns", {})
-	cds[spell_id] = Time.get_ticks_msec() + int(float(spell.get("cooldownSec", 6)) * 1000.0)
-	caster["spellCooldowns"] = cds
+	if not free:
+		var cds: Dictionary = caster.get("spellCooldowns", {})
+		cds[spell_id] = Time.get_ticks_msec() + int(float(spell.get("cooldownSec", 6)) * 1000.0)
+		caster["spellCooldowns"] = cds
 	var bonus := int(caster.get("bonusSpellDmg", 0)) + int(floor((int(caster.level) - 1) * 0.75))
 	var verb := "lance %s %s sur" % [spell.get("icon", ""), spell.name]
 	match mode:

@@ -2,8 +2,11 @@ class_name BagPanel
 extends VBoxContainer
 ## Besace commune : or, capacité et trois onglets (équipement / potions / clés).
 
-const CAPACITY := 12
-const TABS := [["Équipement", "Aucun objet équipable."], ["Potions", "Aucune potion."], ["Clés", "Aucune clé."]]
+signal item_pressed(index: int)
+
+const CAPACITY := Inventory.MAX_PER_TAB
+const TAB_IDS := ["items", "potions", "keys"]
+const TABS := [["Équipement", "Aucun objet équipable."], ["Potions", "Aucune potion."], ["Clés", "Aucune clé ni parchemin."]]
 var gs: GameState
 var _gold: Label
 var _count: Label
@@ -59,33 +62,45 @@ func _select(i: int) -> void:
 	_tab = i
 	refresh()
 
-func _category(it: Dictionary) -> int:
-	match str(it.get("type", "")):
-		"weapon", "armor": return 0
-		"potion": return 1
-		"key": return 2
-	return 0
-
 func refresh() -> void:
 	_gold.text = "%d pièces d'or" % gs.gold
-	_count.text = "%d/%d" % [gs.inventory.size(), CAPACITY]
+	_count.text = "%d/%d" % [Inventory.tab_count(gs, TAB_IDS[_tab]), CAPACITY]
 	for i in _tab_buttons.size():
 		_tab_buttons[i].set_pressed_no_signal(i == _tab)
 	for ch in _grid.get_children():
 		ch.queue_free()
+	var stacks := {}   # clé de pile -> {btn, n}
 	var shown := 0
-	for it in gs.inventory:
-		if _category(it) != _tab:
+	for idx in gs.inventory.size():
+		var it: Dictionary = gs.inventory[idx]
+		if Inventory.tab_of(it) != TAB_IDS[_tab]:
 			continue
-		var slot := PanelContainer.new()
-		slot.custom_minimum_size = Vector2(44, 44)
-		slot.add_theme_stylebox_override("panel", UiTheme.tbox("btn_d", [10, 10, 10, 10], [4, 4, 4, 4]))
-		var pic := TextureRect.new()
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.texture = IconResolver.texture(str(it.get("icon", "")))
-		pic.tooltip_text = str(it.get("name", ""))
-		slot.add_child(pic)
-		_grid.add_child(slot)
+		var k := Inventory.stack_key(it)
+		if k != "" and stacks.has(k):
+			stacks[k].n += 1
+			stacks[k].badge.text = "×%d" % stacks[k].n
+			continue
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(46, 46)
+		b.icon = IconResolver.texture(str(it.get("icon", "")))
+		b.expand_icon = true
+		b.tooltip_text = str(it.get("name", ""))
+		var i2 := idx
+		b.pressed.connect(func(): item_pressed.emit(i2))
+		var badge := Label.new()
+		badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		badge.offset_left = -28
+		badge.offset_top = -18
+		badge.offset_right = -3
+		badge.offset_bottom = -1
+		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		badge.add_theme_font_size_override("font_size", 12)
+		badge.add_theme_constant_override("outline_size", 4)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(badge)
+		_grid.add_child(b)
+		if k != "":
+			stacks[k] = {"n": 1, "badge": badge}
 		shown += 1
 	_empty.text = "" if shown > 0 else str(TABS[_tab][1])

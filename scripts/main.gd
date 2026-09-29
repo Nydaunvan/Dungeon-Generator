@@ -12,6 +12,7 @@ var rig: PlayerRig
 var ctrl: CombatController
 var env: Environment
 var layout: GameLayout
+var inter: Interactions
 var _we: WorldEnvironment
 var message_label: Label
 var _message_tween: Tween
@@ -54,6 +55,16 @@ func _ready() -> void:
 	layout.world.add_child(rig)
 	rig.camera.current = true
 	layout.world.add_child(_we)
+	var modal_layer := CanvasLayer.new()
+	modal_layer.layer = 20
+	add_child(modal_layer)
+	inter = Interactions.new()
+	add_child(inter)
+	inter.setup(gs, ctrl, rig, layout, modal_layer)
+	inter.message.connect(func(t): show_message(t))
+	inter.bag_changed.connect(layout.bag.refresh)
+	layout.item_pressed.connect(inter.open_item_menu)
+	layout.card_opened.connect(inter.open_sheet)
 	_popup_layer = layout.popup_layer
 	message_label = layout.message_label
 
@@ -71,8 +82,12 @@ func load_level(index: int) -> void:
 	layout.world.add_child(level_node)
 	rig.place(grid, int(level.get("startX", 1)), int(level.get("startY", 1)), int(level.get("startDir", 0)))
 	ctrl.bind_level(level, grid, level_node)
+	inter.bind_level(level, grid, level_node)
 	for id in ls.get("opened_doors", {}):
 		level_node.open_door(str(id), true)
+	for it in level.get("items", []):
+		if gs.item_state(str(level.id), str(it.id)).get("taken", false):
+			level_node.entities.remove_item(str(it.id))
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig)
 	show_message(str(level.name))
@@ -111,6 +126,8 @@ func _setup_input() -> void:
 			InputMap.action_add_event(action, ev)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not get_tree().get_nodes_in_group("modal").is_empty():
+		return
 	for action in ["forward", "back", "left", "right", "turn_left", "turn_right", "attack", "interact", "flee"]:
 		if event.is_action_pressed(action):
 			_on_command(action)
@@ -152,27 +169,17 @@ func _interact() -> void:
 	var f := _front()
 	var ch := grid.cell(f.x, f.y)
 	if ch == "D":
-		var d := grid.door_at(f.x, f.y)
-		if not d.is_empty() and not grid.opened.has(str(d.id)):
-			_open_door(str(d.id))   # provisoire : sera déclenché par clé / ennemi vaincu
-			show_message("La porte s'ouvre")
+		if grid.opened.has(str(grid.door_at(f.x, f.y).get("id", ""))):
+			show_message("La porte est déjà ouverte")
+		else:
+			inter.try_door(f.x, f.y)
 	elif ch == "S":
 		_use_stairs(f)
 	else:
 		show_message("Rien à faire ici")
 
-func _open_door(id: String) -> void:
-	level_node.open_door(id)
-	gs.level_state(Data.config.levels[level_index]).get_or_add("opened_doors", {})[id] = true
-
 func _on_moved() -> void:
-	# provisoire : l'inventaire n'est pas encore porté, on retire simplement l'objet
-	var ls := gs.level_state(Data.config.levels[level_index])
-	for it in level_node.entities.take_items_at(rig.gx, rig.gy):
-		ls.taken_items[str(it.id)] = true
-		gs.inventory.append(it)
-		layout.bag.refresh()
-		show_message("Ramassé : %s" % it.get("name", "objet"))
+	inter.on_step()
 	layout.minimap.reveal()
 	ctrl.refresh()
 
@@ -182,12 +189,14 @@ func _on_blocked(x: int, y: int) -> void:
 		ctrl.refresh()   # engage le combat
 		return
 	match grid.cell(x, y):
-		"D": show_message("Porte fermée — touche F / ✋ pour l'ouvrir (provisoire)")
+		"D": inter.try_door(x, y)
 		"S": _use_stairs(Vector2i(x, y))
 
 func _use_stairs(p: Vector2i) -> void:
 	var st := grid.stairs_at(p.x, p.y)
 	if st.is_empty():
+		return
+	if not inter.stairs_open(st):
 		return
 	var action: Dictionary = st.get("action", {})
 	match str(action.get("type", "")):
