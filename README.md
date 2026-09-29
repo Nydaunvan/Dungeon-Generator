@@ -13,4 +13,7 @@ Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu GL C
 Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène principale (F5) : la console affiche le donjon chargé et les stats des 4 personnages.
 
 ## Plan de migration
-1. Données en JSON ✔ 2. Moteur de règles 3. Couloir 3D 4. Interface adaptative 5. Boutique/forge/talents 6. Audio 7. Éditeur intégré + sauvegardes + export Web
+1. Données en JSON ✔ 2. Moteur de règles 3. Couloir 3D (premier jet ✔ : niveau 1, déplacement case par case) 4. Interface adaptative 5. Boutique/forge/talents 6. Audio 7. Éditeur intégré + sauvegardes + export Web
+
+## Commandes (couloir 3D)
+Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner (libellés AZERTY).
