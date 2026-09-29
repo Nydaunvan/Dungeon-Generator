@@ -125,6 +125,7 @@ func _drain() -> void:
 			"monster_died":
 				view.entities.remove_monster(str(e.id))
 			"door_open":
+				combat.lstate().get_or_add("opened_doors", {})[str(e.id)] = true
 				view.open_door(str(e.id))
 			"game_over":
 				game_over.emit()
