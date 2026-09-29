@@ -12,6 +12,7 @@ var rig: PlayerRig
 var ctrl: CombatController
 var env: Environment
 var hud: PartyHud
+var spell_bar: SpellBar
 var message_label: Label
 var log_label: Label
 var _message_tween: Tween
@@ -49,6 +50,11 @@ func _ready() -> void:
 	hud = PartyHud.new()
 	ui.add_child(hud)
 	hud.setup(gs, ctrl)
+	hud.card_pressed.connect(ctrl.card_pressed)
+	spell_bar = SpellBar.new()
+	ui.add_child(spell_bar)
+	spell_bar.setup(gs, ctrl)
+	spell_bar.spell_pressed.connect(func(id): ctrl.cast(id))
 	var pad := TouchControls.new()
 	pad.command.connect(_on_command)
 	ui.add_child(pad)
@@ -76,7 +82,9 @@ func _ready() -> void:
 func _layout_labels() -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var hud_h := clampf(vp.y * 0.16, 96.0, 170.0) + 16.0
-	log_label.position = Vector2(8, hud_h)
+	spell_bar.position = Vector2(0, hud_h)
+	spell_bar.size = Vector2(vp.x, 56)
+	log_label.position = Vector2(8, hud_h + 60)
 	message_label.position = Vector2(vp.x * 0.5 - message_label.size.x * 0.5, vp.y * 0.30)
 	message_label.custom_minimum_size = Vector2(vp.x * 0.9, 0)
 	message_label.size = Vector2(vp.x * 0.9, 40)
