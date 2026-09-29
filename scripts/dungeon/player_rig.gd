@@ -16,6 +16,7 @@ var dir: int = 0
 var camera: Camera3D
 var torch: OmniLight3D
 var _yaw: float = 0.0
+var extra_block: Callable = Callable()   # (x, y) -> bool : case occupée (monstre…)
 var _busy: bool = false
 
 func _init() -> void:
@@ -52,7 +53,7 @@ func step(rel: int) -> void:
 	var v: Vector2i = DungeonGrid.DIRS[d]
 	var nx := gx + v.x
 	var ny := gy + v.y
-	if not grid.is_walkable(nx, ny):
+	if not grid.is_walkable(nx, ny) or (extra_block.is_valid() and extra_block.call(nx, ny)):
 		blocked.emit(nx, ny)
 		return
 	gx = nx

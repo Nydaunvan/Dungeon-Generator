@@ -25,6 +25,8 @@ func _ready() -> void:
 	add_child(rig)
 	rig.camera.current = true
 	rig.blocked.connect(_on_blocked)
+	rig.moved.connect(_on_moved)
+	rig.extra_block = func(x, y): return level_node != null and not level_node.entities.monster_at(x, y).is_empty()
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
@@ -119,7 +121,16 @@ func _interact() -> void:
 	elif ch == "S":
 		_use_stairs(f)
 
+func _on_moved() -> void:
+	# provisoire : l'inventaire n'est pas encore porté, on se contente de retirer l'objet
+	for it in level_node.entities.take_items_at(rig.gx, rig.gy):
+		show_message("Ramassé : %s" % it.get("name", "objet"))
+
 func _on_blocked(x: int, y: int) -> void:
+	var mon := level_node.entities.monster_at(x, y)
+	if not mon.is_empty():
+		show_message("%s vous barre la route (combat à venir)" % mon.get("name", "Un monstre"))
+		return
 	match grid.cell(x, y):
 		"D": show_message("Porte fermée — touche F / ✋ pour l'ouvrir (provisoire)")
 		"S": _use_stairs(Vector2i(x, y))

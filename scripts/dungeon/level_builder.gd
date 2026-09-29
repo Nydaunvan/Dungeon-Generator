@@ -58,6 +58,11 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	mi.name = "LevelMesh"
 	mi.mesh = mesh
 	view.add_child(mi)
+	var ents := EntityLayer.new()
+	ents.name = "Entities"
+	view.add_child(ents)
+	ents.populate(level)
+	view.entities = ents
 	return view
 
 ## Rotation Y d'un plan qui regarde vers l'intérieur de la case (même valeur que `rot` du JS).
