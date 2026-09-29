@@ -155,12 +155,6 @@ func advance() -> Dictionary:
 		return {"kind": "monster", "key": key}
 	return {"kind": "none"}
 
-func can_act(c: Dictionary) -> bool:
-	if not in_combat():
-		return false
-	ensure_gauges()
-	return gs.active_char_id == str(c.id) and float(gauges.get("char_" + str(c.id), 0.0)) >= 100.0
-
 func skip_turn(c: Dictionary) -> void:
 	gauges["char_" + str(c.id)] = 0.0
 	turn_seq += 1
