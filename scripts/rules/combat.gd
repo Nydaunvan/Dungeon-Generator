@@ -74,7 +74,7 @@ func participant_speed(key: String) -> float:
 	if mi >= 0 and (not st.has("members") or mi >= st.members.size() or not st.members[mi].alive):
 		return 0.0
 	var base := float(def.get("speed", 8))
-	var count := (st.members.size() if (mi >= 0 and st.has("members")) else 1)
+	var count: int = st.members.size() if (mi >= 0 and st.has("members")) else 1
 	return maxf(1.0, round(base / count))
 
 func ensure_gauges() -> void:
@@ -249,7 +249,7 @@ func monster_act(key: String) -> void:
 	var mi := -1 if hash_idx < 0 else int(rest.substr(hash_idx + 1))
 	var def := monster_def(mid)
 	var st: Dictionary = lstate().monsters.get(mid, {})
-	var member_alive := mi < 0 or (st.has("members") and mi < st.members.size() and st.members[mi].alive)
+	var member_alive: bool = mi < 0 or (st.has("members") and mi < st.members.size() and bool(st.members[mi].alive))
 	if not def.is_empty() and not st.is_empty() and st.alive and member_alive:
 		_monster_attack_party(def, st)
 	gauges[key] = 0.0
