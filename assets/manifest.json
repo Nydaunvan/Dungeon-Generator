@@ -77,12 +77,12 @@
    "assets/portraits/barde_3.webp"
   ],
   "Prêtre": [
-   "assets/portraits/prêtre_0.webp",
-   "assets/portraits/prêtre_1.webp",
-   "assets/portraits/prêtre_2.webp",
-   "assets/portraits/prêtre_3.webp",
-   "assets/portraits/prêtre_4.webp",
-   "assets/portraits/prêtre_5.webp"
+   "assets/portraits/pretre_0.webp",
+   "assets/portraits/pretre_1.webp",
+   "assets/portraits/pretre_2.webp",
+   "assets/portraits/pretre_3.webp",
+   "assets/portraits/pretre_4.webp",
+   "assets/portraits/pretre_5.webp"
   ]
  },
  "sheets": {

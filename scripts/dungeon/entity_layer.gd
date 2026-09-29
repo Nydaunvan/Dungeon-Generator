@@ -70,6 +70,26 @@ func take_items_at(x: int, y: int) -> Array:
 	items.erase(p)
 	return out
 
+func remove_monster(id: String) -> void:
+	for p in monsters.keys():
+		var keep: Array = []
+		for e in monsters[p]:
+			if str(e.def.id) == id:
+				e.node.queue_free()
+			else:
+				keep.append(e)
+		monsters[p] = keep
+
+func remove_item(id: String) -> void:
+	for p in items.keys():
+		var keep: Array = []
+		for e in items[p]:
+			if str(e.def.id) == id:
+				e.node.queue_free()
+			else:
+				keep.append(e)
+		items[p] = keep
+
 # ---------------------------------------------------------------- sprites
 
 func _icon_id(icon: String) -> String:

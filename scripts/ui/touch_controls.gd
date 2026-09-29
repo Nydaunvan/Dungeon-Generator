@@ -1,7 +1,7 @@
 class_name TouchControls
 extends MarginContainer
 ## Pavé de commandes tactile, adaptatif (mobile portrait / paysage / PC).
-## Émet `command` avec : "turn_left", "forward", "turn_right", "left", "back", "right", "interact".
+## Émet `command` avec : "turn_left", "forward", "turn_right", "left", "back", "right", "interact", "attack", "flee".
 
 signal command(cmd: String)
 
@@ -23,7 +23,7 @@ func _ready() -> void:
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(_grid)
 	var layout := [
-		["", ""], ["✋", "interact"], ["", ""],
+		["⚔", "attack"], ["✋", "interact"], ["🏃", "flee"],
 		["↶", "turn_left"], ["↑", "forward"], ["↷", "turn_right"],
 		["←", "left"], ["↓", "back"], ["→", "right"],
 	]

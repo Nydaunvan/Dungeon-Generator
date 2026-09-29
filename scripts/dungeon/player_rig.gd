@@ -76,3 +76,21 @@ func turn(right: bool) -> void:
 func _on_step_done() -> void:
 	_busy = false
 	moved.emit()
+
+## Se tourne vers la direction `d` (0..3) en une seule animation (utilisé quand un combat s'engage).
+func face(d: int) -> void:
+	d = posmod(d, 4)
+	if d == dir:
+		return
+	var diff := posmod(d - dir, 4)   # 1 = quart de tour à droite, 2 = demi-tour, 3 = à gauche
+	var delta_yaw := -PI * 0.5 * (diff if diff != 3 else -1)
+	dir = d
+	_yaw += delta_yaw
+	var t := create_tween()
+	t.tween_property(self, "rotation:y", _yaw, TURN_TIME * (1.5 if diff == 2 else 1.0)).set_trans(Tween.TRANS_SINE)
+
+## Déplacement instantané (fuite).
+func teleport(cell: Vector2i) -> void:
+	gx = cell.x
+	gy = cell.y
+	position = _cell_pos(gx, gy)
