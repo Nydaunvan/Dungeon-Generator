@@ -39,6 +39,10 @@ func _ready() -> void:
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
+	var bg := ColorRect.new()
+	bg.color = UiTheme.BG
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(bg)
 	layout = GameLayout.new()
 	ui.add_child(layout)
 	layout.setup(gs, ctrl, rig)

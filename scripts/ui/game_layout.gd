@@ -51,13 +51,6 @@ func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
 		add_theme_constant_override("margin_" + side, 8)
-	var bgr := ColorRect.new()   # fond opaque derrière toute l'interface
-	bgr.color = UiTheme.BG
-	bgr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bgr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bgr.top_level = true
-	add_child(bgr)
-	bgr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_parts()
 	resized.connect(_update_mode)
 	_update_mode()
