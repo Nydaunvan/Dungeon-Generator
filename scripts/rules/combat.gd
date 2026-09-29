@@ -101,23 +101,39 @@ func ensure_gauges() -> void:
 
 ## Fait avancer les jauges jusqu'au prochain participant prêt ; renvoie sa clé ("" si personne).
 func advance_gauges_once() -> String:
+	return _advance(gauges)
+
+## Prochains participants (clés) dans l'ordre, sans modifier l'état réel (frise d'initiative).
+func upcoming(n: int) -> Array:
+	ensure_gauges()
+	var g: Dictionary = gauges.duplicate()
+	var out: Array = []
+	for i in n:
+		var key := _advance(g)
+		if key == "":
+			break
+		out.append(key)
+		g[key] = 0.0
+	return out
+
+func _advance(g: Dictionary) -> String:
 	var min_time := INF
 	var ready := ""
-	for k in gauges:
+	for k in g:
 		var speed := participant_speed(k)
 		if speed <= 0.0:
 			continue
-		var t := maxf(0.0, 100.0 - float(gauges[k])) / speed
+		var t := maxf(0.0, 100.0 - float(g[k])) / speed
 		if t < min_time - 1e-9:
 			min_time = t
 			ready = k
 	if ready == "":
 		return ""
-	for k in gauges:
+	for k in g:
 		var speed := participant_speed(k)
 		if speed > 0.0:
-			gauges[k] = float(gauges[k]) + speed * min_time
-	gauges[ready] = 100.0
+			g[k] = float(g[k]) + speed * min_time
+	g[ready] = 100.0
 	return ready
 
 ## Prochain à agir : {"kind":"char","id"} | {"kind":"monster","key"} | {"kind":"none"}.

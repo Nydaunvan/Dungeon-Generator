@@ -1,67 +1,81 @@
 class_name SpellBar
 extends HBoxContainer
-## Sorts du personnage actif : un bouton par sort, avec le temps de recharge restant.
+## Emplacements de sorts ronds (1 à 6) du personnage actif + bouton d'attaque rouge.
 
 signal spell_pressed(spell_id: String)
+signal attack_pressed
 
+const SLOTS := 6
 var gs: GameState
 var ctrl: CombatController
-var _buttons: Dictionary = {}   # spell_id -> Button
-var _shown_char: String = ""
-var _shown_spells: Array = []
+var slot_size: float = 52.0
+var _slots: Array[Button] = []
+var _attack: Button
+var _ids: Array = []
 
 func setup(state: GameState, controller: CombatController) -> void:
 	gs = state
 	ctrl = controller
 	alignment = BoxContainer.ALIGNMENT_CENTER
+	add_theme_constant_override("separation", 8)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_theme_constant_override("separation", 6)
-	ctrl.changed.connect(rebuild)
-
-func rebuild() -> void:
-	var c := gs.char_by_id(gs.active_char_id)
-	var spells: Array = [] if c.is_empty() else c.get("spellsKnown", [])
-	var cid := "" if c.is_empty() else str(c.id)
-	if c.is_empty() or ctrl.combat == null:
-		return
-	if cid == _shown_char and spells == _shown_spells:
-		return
-	_shown_char = cid
-	_shown_spells = spells.duplicate()
-	for b in _buttons.values():
-		b.queue_free()
-	_buttons.clear()
-	for sid in spells:
-		var sp := ctrl.combat.spell_def(str(sid))
-		if sp.is_empty():
-			continue
+	_attack = Button.new()
+	_attack.text = "⚔"
+	_attack.focus_mode = Control.FOCUS_NONE
+	for st in ["normal", "hover", "pressed"]:
+		_attack.add_theme_stylebox_override(st, UiTheme.round_button_style(Color("e0a040"), Color("8a1c14") if st != "pressed" else Color("5a0e0a")))
+	_attack.pressed.connect(func(): attack_pressed.emit())
+	add_child(_attack)
+	for i in SLOTS:
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(64, 52)
-		b.add_theme_font_size_override("font_size", 12)
-		b.pressed.connect(func(): spell_pressed.emit(str(sid)))
+		b.clip_text = true
+		for st in ["normal", "hover", "pressed", "disabled"]:
+			b.add_theme_stylebox_override(st, UiTheme.round_button_style(UiTheme.BRONZE, Color("1a140e")))
+		var idx := i
+		b.pressed.connect(func(): _slot_pressed(idx))
 		add_child(b)
-		_buttons[str(sid)] = b
-	_refresh_texts()
+		_slots.append(b)
+	resized.connect(_apply_size)
+	ctrl.changed.connect(_refresh)
+	_apply_size()
 
-func _process(_delta: float) -> void:
-	if ctrl == null or ctrl.combat == null:
-		return
-	rebuild()
-	_refresh_texts()
+func _slot_pressed(i: int) -> void:
+	if i < _ids.size():
+		spell_pressed.emit(str(_ids[i]))
 
-func _refresh_texts() -> void:
+func _apply_size() -> void:
+	var s := clampf((size.x - 8.0 * SLOTS) / (SLOTS + 1.4), 34.0, 64.0)
+	slot_size = s
+	_attack.custom_minimum_size = Vector2(s * 1.3, s * 1.3)
+	_attack.add_theme_font_size_override("font_size", int(s * 0.6))
+	for b in _slots:
+		b.custom_minimum_size = Vector2(s, s)
+		b.add_theme_font_size_override("font_size", int(s * 0.36))
+
+func _process(_d: float) -> void:
+	if ctrl != null and ctrl.combat != null:
+		_refresh()
+
+func _refresh() -> void:
 	var c := gs.char_by_id(gs.active_char_id)
-	if c.is_empty():
-		return
-	for sid in _buttons:
+	_ids = [] if c.is_empty() else c.get("spellsKnown", [])
+	for i in SLOTS:
+		var b := _slots[i]
+		if c.is_empty() or i >= _ids.size() or ctrl.combat == null:
+			b.text = str(i + 1)
+			b.modulate = Color(1, 1, 1, 0.35)
+			b.tooltip_text = ""
+			continue
+		var sid := str(_ids[i])
 		var sp := ctrl.combat.spell_def(sid)
 		var left := ctrl.combat.cooldown_left(c, sid)
-		var b: Button = _buttons[sid]
-		var icon := str(sp.get("icon", ""))
+		var icon := str(sp.get("icon", "✨"))
 		if icon.begins_with("@icon:"):
 			icon = "✨"
-		b.text = "%s\n%s" % [icon, (("%d s" % int(ceil(left))) if left > 0.0 else str(sp.get("name", "")).left(9))]
+		b.text = ("%d" % int(ceil(left))) if left > 0.0 else icon
 		var not_ready := left > 0.0 or int(c.get("stamina", 0)) < int(sp.get("staminaCost", 0))
 		b.modulate = Color(1, 1, 1, 0.5) if not_ready else Color.WHITE
-		b.tooltip_text = "%s — endurance %d, recharge %d s" % [sp.get("name", ""), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))]
+		if ctrl.pending_spell == sid:
+			b.modulate = Color(1.3, 1.2, 0.7)
+		b.tooltip_text = "%d. %s — endurance %d, recharge %d s" % [i + 1, sp.get("name", ""), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))]
