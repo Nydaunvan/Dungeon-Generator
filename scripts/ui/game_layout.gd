@@ -306,7 +306,7 @@ func _process(_d: float) -> void:
 ## Diagnostic : tailles et visibilité des éléments principaux.
 func debug_report() -> String:
 	var parts: Array[String] = []
-	parts.append("layout size=%s pos=%s visible=%s" % [size, position, visible_in_tree()])
+	parts.append("layout size=%s pos=%s visible=%s" % [size, position, is_visible_in_tree()])
 	for pair in [["header", header], ["frame", frame], ["stage", stage], ["sub_container", sub_container], ["hud", hud], ["spell_bar", spell_bar], ["minimap", minimap]]:
 		var c: Control = pair[1]
 		parts.append("%s size=%s in_tree=%s parent=%s" % [pair[0], c.size, c.is_inside_tree(), c.get_parent().name if c.get_parent() else "AUCUN"])
