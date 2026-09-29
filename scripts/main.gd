@@ -52,9 +52,6 @@ func _ready() -> void:
 	message_label = layout.message_label
 
 	load_level(level_index)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	print(layout.debug_report())
 
 func load_level(index: int) -> void:
 	var level: Dictionary = Data.config.levels[index]

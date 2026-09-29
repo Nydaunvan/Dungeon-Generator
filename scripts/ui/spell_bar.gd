@@ -45,7 +45,7 @@ func _slot_pressed(i: int) -> void:
 		spell_pressed.emit(str(_ids[i]))
 
 func _apply_size() -> void:
-	var s := clampf((size.x - 8.0 * SLOTS) / (SLOTS + 1.4), 34.0, 64.0)
+	var s := clampf((size.x - 8.0 * SLOTS) / (SLOTS + 1.4), 30.0, clampf(get_viewport_rect().size.y * 0.065, 30.0, 56.0))
 	slot_size = s
 	_attack.custom_minimum_size = Vector2(s * 1.3, s * 1.3)
 	_attack.add_theme_font_size_override("font_size", int(s * 0.6))

@@ -268,8 +268,7 @@ func _rebuild() -> void:
 		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		panel_bag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		panel_menu.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	spell_bar.custom_minimum_size = Vector2(0, 60)
-	call_deferred("_size_widgets")
+		call_deferred("_size_widgets")
 
 func _size_widgets() -> void:
 	var w := size.x
@@ -309,6 +308,6 @@ func debug_report() -> String:
 	parts.append("layout size=%s pos=%s visible=%s" % [size, position, is_visible_in_tree()])
 	for pair in [["header", header], ["frame", frame], ["stage", stage], ["sub_container", sub_container], ["hud", hud], ["spell_bar", spell_bar], ["minimap", minimap]]:
 		var c: Control = pair[1]
-		parts.append("%s size=%s in_tree=%s parent=%s" % [pair[0], c.size, c.is_inside_tree(), c.get_parent().name if c.get_parent() else "AUCUN"])
+		parts.append("%s size=%s in_tree=%s parent=%s" % [pair[0], c.size, c.is_inside_tree(), str(c.get_parent().name) if c.get_parent() else "AUCUN"])
 	parts.append("root children=%d, viewport=%s" % [_root.get_child_count() if _root else -1, get_viewport().get_visible_rect().size])
 	return "\n".join(parts)

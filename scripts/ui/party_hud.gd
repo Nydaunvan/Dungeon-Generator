@@ -80,7 +80,8 @@ func _on_card_input(ev: InputEvent, char_id: String) -> void:
 
 func _resize() -> void:
 	var w := maxf(60.0, size.x / maxf(1.0, float(_cards.size())) - 6.0)
-	var pic_size := clampf(w * 0.5, 36.0, 96.0)
+	var cap := clampf(get_viewport_rect().size.y * 0.09, 36.0, 90.0)
+	var pic_size := clampf(w * 0.5, 36.0, cap)
 	var font := int(clampf(w * 0.085, 9.0, 16.0))
 	for id in _cards:
 		var cd: Dictionary = _cards[id]
