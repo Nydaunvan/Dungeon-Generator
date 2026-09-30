@@ -32,7 +32,7 @@ var pad: TouchControls
 var act_box: VBoxContainer
 var btn_interact: Button
 var btn_flee: Button
-var initiative: InitiativeBar
+var queue: QueueBar
 var banner: CombatBanner
 var fx_layer: FxLayer
 var strip: PanelContainer
@@ -161,14 +161,9 @@ func _build_parts() -> void:
 		compass_letters.append(lb)
 	stage.add_child(comp)
 
-	# chaîne d'initiative (sous la boussole)
-	initiative = InitiativeBar.new()
-	initiative.setup(gs, ctrl)
-	initiative.anchor_left = 0.5
-	initiative.anchor_right = 0.5
-	initiative.offset_top = 46
-	initiative.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	stage.add_child(initiative)
+	# file d'initiative : chaîne sous la vue 3D (placée par _rebuild)
+	queue = QueueBar.new()
+	queue.setup(gs, ctrl)
 
 	banner = CombatBanner.new()
 	banner.setup(ctrl)
@@ -303,7 +298,7 @@ func _detach(n: Node) -> void:
 		n.get_parent().remove_child(n)
 
 func _rebuild() -> void:
-	for n in [header, frame, strip, rail, hud, panel_map, panel_bag, panel_log, panel_menu]:
+	for n in [header, frame, queue, strip, rail, hud, panel_map, panel_bag, panel_log, panel_menu]:
 		_detach(n)
 	if _root != null:
 		_root.queue_free()
@@ -320,6 +315,7 @@ func _rebuild() -> void:
 	if _portrait:
 		frame.size_flags_stretch_ratio = 3.0
 		v.add_child(frame)
+		v.add_child(queue)
 		v.add_child(strip)
 		v.add_child(rail)
 		v.add_child(hud)
@@ -342,6 +338,7 @@ func _rebuild() -> void:
 		left.add_theme_constant_override("separation", 6)
 		h.add_child(left)
 		left.add_child(frame)
+		left.add_child(queue)
 		left.add_child(strip)
 		left.add_child(rail)
 		left.add_child(hud)
@@ -370,6 +367,7 @@ func _size_widgets() -> void:
 	var hh := clampf(h * 0.225, 120.0, 300.0)
 	hud.custom_minimum_size = Vector2(0, hh if not _portrait else clampf(h * 0.2, 110.0, 220.0))
 	strip.custom_minimum_size = Vector2(0, clampf(h * 0.07, 36.0, 64.0))
+	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
 	header.custom_minimum_size = Vector2(0, clampf(h * 0.07, 38.0, 60.0))
 	_title.add_theme_font_size_override("font_size", int(clampf(h * 0.034, 15.0, 28.0)))
 	var right: Node = _root.get_node_or_null("Main/Right")
@@ -387,7 +385,6 @@ func _size_overlays() -> void:
 		b.add_theme_font_size_override("font_size", int(side * 0.5))
 	pad.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 10)
 	act_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 10)
-	initiative.icon_size = clampf(fs.x * 0.035, 24.0, 42.0)
 
 # ------------------------------------------------------------------ mises à jour
 
