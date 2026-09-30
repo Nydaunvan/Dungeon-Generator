@@ -26,7 +26,7 @@ func _on_action(name: String) -> void:
 			Dialogs.confirm(_modal_layer, "Le Donjon d'Origine",
 				"Ce donjon sert de démonstration : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, portes verrouillées, fontaine, objets, montée de niveau…).\n\nPour explorer tout ce que le jeu propose, lancez plutôt un donjon aléatoire depuis l'accueil.\n\nCommencer cette démonstration ?",
 				func(): Data.launch_original(), "Commencer")
-		"random": _soon("Donjon aléatoire")
+		"random": GeneratorDialog.open(_modal_layer, func(cfg): Data.launch(cfg, "random"))
 		"create": _soon("Création de donjon")
 		"saves": _soon("Sauvegardes")
 		"load-code": _soon("Chargement par code")

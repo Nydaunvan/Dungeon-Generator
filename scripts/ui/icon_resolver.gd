@@ -7,6 +7,9 @@ const ITEM_SHEET := "res://assets/sheets/items_sheet.webp"
 static var _cache: Dictionary = {}
 
 static func portrait_path(c: Dictionary, cfg: Dictionary) -> String:
+	var own := str(c.get("portrait", ""))
+	if own.begins_with("res://") and ResourceLoader.exists(own):
+		return own
 	var cls := Characters.class_def(cfg, str(c.get("classId", "")))
 	var base := str(cls.get("evolvesFrom", cls.get("name", "guerrier")))
 	base = base.to_lower().replace("ê", "e").replace("é", "e").replace("è", "e")

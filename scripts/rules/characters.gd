@@ -86,7 +86,9 @@ static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	var co := int(c.get("con", 10)) + int(eq["bonusCon"])
 	var i := int(c.get("int", 10)) + int(eq["bonusInt"])
 	var b := Stats.char_base({"force": f, "dex": d, "con": co, "level": c.get("level", 1)})
-	c["maxHp"] = maxi(1, int(round(b.maxHp + eq["bonusHp"])))
+	var run := DungeonGenerator.combine_mods(cfg.get("runModifierIds", []))
+	var hp_mult: float = float(run.hpMult) * (2.0 if c.get("hpDoubleStart", false) else 1.0)   # mode Hardcore : PV doublés
+	c["maxHp"] = maxi(1, int(round((b.maxHp + eq["bonusHp"]) * hp_mult)))
 	c["baseAtkMin"] = b.baseAtkMin
 	c["baseAtkMax"] = b.baseAtkMax
 	c["atkMin"] = int(b.baseAtkMin) + int(eq["bonusAtkMin"])
@@ -101,7 +103,7 @@ static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	c["effSpeed"] = maxi(1, base_speed + int(eq["bonusSpeed"]) + Statuses.speed_bonus(c))
 	if not c.has("baseMaxStamina"):
 		c["baseMaxStamina"] = int(c.get("maxStamina", 100))
-	c["maxStamina"] = maxi(10, int(round(c["baseMaxStamina"])))
+	c["maxStamina"] = maxi(10, int(round(float(c["baseMaxStamina"]) * float(run.staminaMult))))
 	c["talentCritChance"] = 0
 	c["talentLifestealPct"] = 0
 	c["resistPhys"] = 0
