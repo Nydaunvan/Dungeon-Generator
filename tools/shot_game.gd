@@ -47,6 +47,15 @@ func _init() -> void:
 					await create_timer(0.42).timeout
 					root.get_texture().get_image().save_png(out + "_fx_" + sid + ".png")
 					await create_timer(0.8).timeout
+			"sheet", "sheet2":
+				main.inter.open_sheet(str(main.gs.party[3].id))
+				await create_timer(0.6).timeout
+				if step == "sheet2":
+					for b in root.find_children("*", "Button", true, false):
+						if (b as Button).text.contains("Sorts"):
+							(b as Button).pressed.emit()
+							break
+					await create_timer(0.4).timeout
 			"dock":
 				main.dock.open_for(str(main.gs.party[0].id))
 				await create_timer(1.0).timeout

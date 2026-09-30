@@ -497,58 +497,9 @@ func open_item_menu(idx: int) -> void:
 # ------------------------------------------------------------------ fiche de personnage
 
 func open_sheet(char_id: String) -> void:
-	var c := gs.char_by_id(char_id)
-	if c.is_empty():
+	if gs.char_by_id(char_id).is_empty():
 		return
-	var cls := Characters.class_def(gs.cfg, str(c.get("classId", "")))
-	var m := Modal.open(host, str(c.name), 460)
-	var pp := IconResolver.portrait_path(c, gs.cfg)
-	m.add_row(load(pp) if pp != "" else null, "%s — niveau %d\nXP %d / %d" % [cls.get("name", ""), int(c.level), int(c.get("xp", 0)), int(c.get("xpToNext", 1))], UiTheme.GOLD)
-	m.add_text("PV %d/%d   ·   Endurance %d/%d   ·   Vitesse %d" % [int(c.hp), int(c.maxHp), int(c.get("stamina", 0)), int(c.get("maxStamina", 100)), int(c.get("effSpeed", 10))])
-	m.add_text("Force %d   Dextérité %d   Constitution %d   Intelligence %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))])
-	m.add_text("Attaque %d – %d   ·   Dégâts de sort +%d" % [int(c.atkMin), int(c.atkMax), int(c.get("bonusSpellDmg", 0))])
-	m.add_text("Équipement (toucher pour retirer)", UiTheme.DIM, 14, true)
-	var eq: Dictionary = c.get("equipment", {})
-	for slot in Characters.SLOTS:
-		var item = eq.get(slot)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		var lab := Label.new()
-		lab.text = str(Inventory.SLOT_LABELS[slot])
-		lab.custom_minimum_size = Vector2(70, 0)
-		lab.add_theme_color_override("font_color", UiTheme.DIM)
-		row.add_child(lab)
-		var b := Button.new()
-		b.focus_mode = Control.FOCUS_NONE
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		if item == null:
-			b.text = "— vide —"
-			b.disabled = true
-		else:
-			b.text = "%s   (%s)" % [item.get("name", ""), ", ".join(Inventory.describe(item, gs.cfg))]
-			b.icon = IconResolver.texture(str(item.get("icon", "")))
-			b.expand_icon = true
-			b.clip_text = true
-			var sl: String = slot
-			b.pressed.connect(func():
-				if Inventory.unequip(gs, gs.char_by_id(char_id), sl):
-					ctrl.changed.emit()
-					bag_changed.emit()
-					m.close()
-					open_sheet(char_id))
-		row.add_child(b)
-		m.content.add_child(row)
-	m.add_text("Compétences", UiTheme.DIM, 14, true)
-	var known: Array = c.get("spellsKnown", [])
-	if known.is_empty():
-		m.add_text("Aucune compétence apprise.", UiTheme.DIM, 14, true)
-	for sid in known:
-		for sp in gs.cfg.get("spells", []):
-			if sp.get("id") == sid:
-				var ic := str(sp.get("icon", ""))
-				m.add_text("%s %s — %s, endurance %d, recharge %d s" % [("" if ic.begins_with("@icon:") else ic), sp.name, spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))], UiTheme.PARCH, 14)
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	PartyModal.open(host, gs, char_id)
 
 static func spell_effect(sp: Dictionary) -> String:
 	match str(sp.get("mode", "")):
