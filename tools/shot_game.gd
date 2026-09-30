@@ -122,6 +122,23 @@ func _init() -> void:
 				await create_timer(0.6).timeout
 				main.dock._toggle_details()
 				await create_timer(1.0).timeout
+			"tip":
+				main.dock.open_for(str(main.gs.party[0].id))
+				await create_timer(0.8).timeout
+				var cand: Array = []
+				for n in main.dock.find_children("*", "Control", true, false):
+					if n.tooltip_text != "" and n.is_visible_in_tree():
+						cand.append(n)
+				print("tip candidates: ", cand.size())
+				if not cand.is_empty():
+					var c: Control = cand[0]
+					var pos := c.get_global_rect().get_center()
+					var ev := InputEventMouseMotion.new()
+					ev.position = pos
+					ev.global_position = pos
+					root.warp_mouse(pos)
+					Input.parse_input_event(ev)
+				await create_timer(0.6).timeout
 			"closedock":
 				main.dock.close()
 				await create_timer(0.5).timeout

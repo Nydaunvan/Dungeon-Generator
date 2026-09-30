@@ -32,6 +32,7 @@ func set_lang(l: String) -> void:
 signal lang_changed(l: String)
 
 func _ready() -> void:
+	add_child(FloatingTip.new())
 	var cf := ConfigFile.new()
 	if cf.load(USER_PREFS) == OK:
 		lang = str(cf.get_value("ui", "lang", "fr"))

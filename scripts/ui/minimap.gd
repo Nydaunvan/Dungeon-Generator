@@ -7,6 +7,10 @@ var grid: DungeonGrid
 var rig: PlayerRig
 var gs: GameState
 var zoom: int = 1
+var _o_origin := Vector2.ZERO
+var _o_cs := 1.0
+var _o_ox := 0
+var _o_oy := 0
 var full: bool = false   # carte plein écran : tout le niveau, sans zoom
 var merchant_cell: Callable = Callable()   # () -> Vector2i, (-1, -1) tant que le marchand n'est pas découvert
 
@@ -57,8 +61,42 @@ func reveal() -> void:
 func _max_zoom() -> int:
 	return maxi(1, int(floor(maxi(grid.width, grid.height) / 10.0)))
 
+## Infobulle d'une case (porte, escalier, position du groupe) — comme #minimapTooltip de l'original.
+func _cell_tip(p: Vector2) -> void:
+	var cx := int(floor((p.x - _o_origin.x) / _o_cs)) + _o_ox
+	var cy := int(floor((p.y - _o_origin.y) / _o_cs)) + _o_oy
+	tooltip_text = ""
+	remove_meta("tip_rect")
+	if cx < 0 or cy < 0 or cx >= grid.width or cy >= grid.height:
+		return
+	var ls := _ls()
+	var k := _k(cx, cy)
+	if not (ls.get("seen", {}).has(k) or ls.get("visited", {}).has(k)):
+		return
+	var text := ""
+	match grid.cell(cx, cy):
+		"D":
+			var d := grid.door_at(cx, cy)
+			var locked: bool = not d.is_empty() and bool(d.get("locked", true)) and not ls.get("door_unlocked", {}).has(str(d.id)) and not grid.opened.has(str(d.id))
+			text = "🚪 Porte %s" % ("(verrouillée)" if locked else "(déverrouillée)")
+		"S":
+			text = "✨ Escalier"
+		_:
+			if cx == rig.gx and cy == rig.gy:
+				text = "🚩 Vous êtes ici"
+	if text == "":
+		return
+	tooltip_text = text
+	var gp := get_global_transform() * (_o_origin + Vector2(cx - _o_ox, cy - _o_oy) * _o_cs)
+	set_meta("tip_rect", Rect2(gp, Vector2(_o_cs, _o_cs)))
+
 func _gui_input(event: InputEvent) -> void:
-	if grid == null or full:
+	if grid == null:
+		return
+	if event is InputEventMouseMotion:
+		_cell_tip((event as InputEventMouseMotion).position)
+		return
+	if full:
 		return
 	var step := 0
 	if event is InputEventMouseButton and event.pressed:
@@ -99,6 +137,10 @@ func _draw() -> void:
 	var oy := clampi(rig.gy - vh / 2, 0, H - vh)
 	var cs := minf(size.x / vw, size.y / vh)
 	var origin := (size - Vector2(vw, vh) * cs) * 0.5
+	_o_origin = origin
+	_o_cs = cs
+	_o_ox = ox
+	_o_oy = oy
 	draw_rect(Rect2(origin, Vector2(vw, vh) * cs), Color("080604"))
 	for y in range(oy, oy + vh):
 		for x in range(ox, ox + vw):

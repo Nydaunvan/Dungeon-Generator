@@ -10,6 +10,8 @@ func _init() -> void:
 		for lvl in cfg.levels:
 			var seen := {}
 			for it in lvl.items:
+				if it.get("startHidden", false):
+					continue
 				total += 1
 				var k := "%d,%d" % [it.x, it.y]
 				if seen.has(k):
