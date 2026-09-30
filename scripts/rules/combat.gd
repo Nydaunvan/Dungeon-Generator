@@ -75,7 +75,7 @@ func participant_speed(key: String) -> float:
 		return 0.0
 	var base := float(def.get("speed", 8))
 	var count: int = st.members.size() if (mi >= 0 and st.has("members")) else 1
-	return maxf(1.0, round(base / count))
+	return maxf(1.0, round(base / count) + Statuses.speed_bonus(st))
 
 func ensure_gauges() -> void:
 	var wanted := {}
@@ -150,12 +150,27 @@ func advance() -> Dictionary:
 				gauges[key] = 0.0
 				safety += 1
 				continue
+			if Statuses.is_disabled(c):
+				var sd: Dictionary = {}
+				for e in Statuses.active(c):
+					if bool(Statuses.def(str(e.type)).get("disables", false)):
+						sd = Statuses.def(str(e.type))
+						break
+				gs.add_log("%s %s est incapable d'agir ce tour-ci et doit laisser passer son tour." % [sd.get("icon", "😵"), c.name], true)
+				tick_char(c)
+				gauges[key] = 0.0
+				turn_seq += 1
+				safety += 1
+				if gs.game_over:
+					return {"kind": "none"}
+				continue
 			gs.active_char_id = str(c.id)
 			return {"kind": "char", "id": c.id}
 		return {"kind": "monster", "key": key}
 	return {"kind": "none"}
 
 func skip_turn(c: Dictionary) -> void:
+	tick_char(c)
 	gauges["char_" + str(c.id)] = 0.0
 	turn_seq += 1
 
@@ -182,17 +197,35 @@ func player_attack(attacker: Dictionary) -> bool:
 	if not can_act(attacker):
 		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % attacker.name, true)
 		return false
+	if _blocked_by_status(attacker):
+		return false
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	var cost := mini(int(sta.get("attackCost", 0)), 2)
 	attacker["stamina"] = maxi(0, int(attacker.get("stamina", 0)) - cost)
-	var dmg := randi_range(int(attacker.atkMin), int(attacker.atkMax))
+	var dmg := randi_range(int(attacker.atkMin), int(attacker.atkMax)) + Statuses.flat_damage_bonus(attacker)
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
 	_mark_acted(attacker)
 	return true
 
 # ------------------------------------------------------------------ sorts
 
-const SUPPORTED_MODES := ["damage", "damageGroup", "healSingle", "healParty", "staminaRestoreSingle", "shieldSingle"]
+const SUPPORTED_MODES := ["damage", "damageGroup", "healSingle", "healParty", "staminaRestoreSingle", "shieldSingle",
+	"dispelSingle", "sleepGroup", "selfBuff", "partyUtility"]
+
+## Un personnage étourdi ou gelé ne peut ni attaquer ni lancer de sort.
+func _blocked_by_status(c: Dictionary) -> bool:
+	if not Statuses.is_disabled(c):
+		return false
+	var icon := "😵"
+	var label := "un statut"
+	for e in Statuses.active(c):
+		var d := Statuses.def(str(e.type))
+		if bool(d.get("disables", false)):
+			icon = str(d.icon)
+			label = str(d.label)
+			break
+	gs.add_log("%s %s est affecté par %s et ne peut pas agir !" % [icon, c.name, label], true)
+	return true
 
 func spell_def(spell_id: String) -> Dictionary:
 	for sp in gs.cfg.get("spells", []):
@@ -201,7 +234,7 @@ func spell_def(spell_id: String) -> Dictionary:
 	return {}
 
 func spell_needs_ally(spell: Dictionary) -> bool:
-	return ["healSingle", "staminaRestoreSingle", "shieldSingle"].has(str(spell.get("mode", "")))
+	return ["healSingle", "staminaRestoreSingle", "shieldSingle", "dispelSingle"].has(str(spell.get("mode", "")))
 
 ## Secondes restantes avant que le sort soit de nouveau lançable.
 func cooldown_left(caster: Dictionary, spell_id: String) -> float:
@@ -225,12 +258,14 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	if not may_act(caster):
 		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % caster.name, true)
 		return false
+	if _blocked_by_status(caster):
+		return false
 	var left := 0.0 if free else cooldown_left(caster, spell_id)
 	if left > 0.0:
 		gs.add_log("⏳ %s n'est pas encore prêt (%d s restantes)." % [spell.name, int(ceil(left))])
 		return false
 	var target := {}
-	if mode == "damage" or mode == "damageGroup":
+	if mode == "damage" or mode == "damageGroup" or mode == "sleepGroup":
 		target = front_monster()
 		if target.is_empty():
 			gs.add_log("Il n'y a rien à attaquer devant vous.")
@@ -260,7 +295,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var int_bonus := int(floor(int(caster.get("effInt", 10)) / 5.0)) + bonus
 			var dmg := randi_range(int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
 			var magic: bool = str(spell.get("style", "")) != "physical"
-			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)))
+			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)), spell)
 		"healSingle":
 			var amt := randi_range(int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
 			var before := int(ally.hp)
@@ -270,6 +305,8 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				(" et soigne %d PV" % healed) if healed > 0 else ""], true)
 			_credit_heal(caster, healed)
 			events.append({"type": "popup", "text": "+%d" % healed, "color": Color("7fd17f")})
+			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
+			Characters.recompute(ally, gs.cfg)
 		"healParty":
 			var details: Array[String] = []
 			var total := 0
@@ -293,11 +330,45 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			gs.add_log("%s lance %s %s sur %s%s." % [caster.name, spell.get("icon", ""), spell.name, ally.name,
 				(" et restaure %d endurance" % got) if got > 0 else ""], true)
 			events.append({"type": "popup", "text": "+%d ⚡" % got, "color": Color("7fd1c9")})
+			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 		"shieldSingle":
 			var amt := randi_range(int(spell.get("shieldMin", 0)), int(spell.get("shieldMax", 0)))
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
 			gs.add_log("%s lance %s %s sur %s et l'entoure d'un bouclier de %d." % [caster.name, spell.get("icon", ""), spell.name, ally.name, amt], true)
 			events.append({"type": "popup", "text": "🛡️ %d" % amt, "color": Color("8fc8e8")})
+		"dispelSingle":
+			var removed := Statuses.dispel(ally)
+			Characters.recompute(ally, gs.cfg)
+			if removed.is_empty():
+				gs.add_log("%s lance %s %s sur %s, qui n'était affecté par rien de négatif." % [caster.name, spell.get("icon", ""), spell.name, ally.name], true)
+			else:
+				gs.add_log("%s lance %s %s sur %s et dissipe %s." % [caster.name, spell.get("icon", ""), spell.name, ally.name, ", ".join(removed)], true)
+			events.append({"type": "popup", "text": "✨ Purifié", "color": Color("8fc8e8")})
+		"sleepGroup":
+			var tst: Dictionary = lstate().monsters[str(target.id)]
+			var boss := bool(target.get("isBoss", false))
+			var eff_spell: Dictionary = spell.duplicate()
+			eff_spell["statusEffect"] = "slow" if boss else "stun"
+			eff_spell["statusDuration"] = int(spell.get("statusDuration", 3)) if boss else maxi(1, int(round(int(spell.get("statusDuration", 3)) / 2.0)))
+			gs.add_log("%s lance %s %s sur %s." % [caster.name, spell.get("icon", ""), spell.name, _mname(target)], true)
+			if not Statuses.apply_from_spell(gs, eff_spell, tst, _mname(target), str(caster.id), false):
+				gs.add_log("💤 %s résiste à la berceuse." % _mname(target))
+			events.append({"type": "popup", "text": "💤", "color": Color("b9a0ff")})
+		"selfBuff":
+			gs.add_log("%s lance %s %s." % [caster.name, spell.get("icon", ""), spell.name], true)
+			Statuses.apply_from_spell(gs, spell, caster, str(caster.name), str(caster.id), true)
+			Characters.recompute(caster, gs.cfg)
+		"partyUtility":
+			var cut_ms := int(float(spell.get("cooldownReductionSec", 0)) * 1000.0)
+			var now := Time.get_ticks_msec()
+			for c in gs.alive_party():
+				var cds: Dictionary = c.get("spellCooldowns", {})
+				for sid in cds.keys():
+					cds[sid] = maxi(now, int(cds[sid]) - cut_ms)
+				Statuses.give(c, "vigor", int(spell.get("statusDuration", 4)), str(caster.id))
+				Characters.recompute(c, gs.cfg)
+			gs.add_log("%s lance %s %s sur tout le groupe, qui se sent revigoré !" % [caster.name, spell.get("icon", ""), spell.name], true)
+			events.append({"type": "popup", "text": "🎶 Vigueur", "color": Color("ffd88a")})
 	_mark_acted(caster)
 	return true
 
@@ -317,10 +388,10 @@ func _credit_heal(caster: Dictionary, healed: int) -> void:
 
 ## Applique une attaque (physique ou magique) au monstre visé. `all_members` : frappe tout un groupe.
 func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic: bool, verb: String,
-		all_members: bool, ignore_resist: bool) -> void:
+		all_members: bool, ignore_resist: bool, spell: Dictionary = {}) -> void:
 	var st: Dictionary = lstate().monsters[str(target.id)]
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
-	var resist := 0 if ignore_resist else base_resist
+	var resist := 0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st))
 	var dmg := raw_dmg
 	if resist > 0:
 		dmg = 0 if resist >= 100 else maxi(1, int(round(raw_dmg * (1.0 - resist / 100.0))))
@@ -356,7 +427,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		gs.add_log("%s %s %s pour %d dégâts%s%s." % [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
 
-	var lifesteal := int(attacker.get("talentLifestealPct", 0))
+	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0))
 	if lifesteal > 0 and dmg > 0:
 		var heal := maxi(1, int(round(dmg * lifesteal / 100.0)))
 		var before := int(attacker.hp)
@@ -381,8 +452,11 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		for h in holders:
 			if not h.alive:
 				gs.add_log("💀 %s perd un membre du groupe !" % _mname(target))
+	if not all_dead and not spell.is_empty():
+		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
 
 func _mark_acted(c: Dictionary) -> void:
+	tick_char(c)
 	if not in_combat():
 		return
 	gauges["char_" + str(c.id)] = 0.0
@@ -414,7 +488,9 @@ func monster_act(key: String) -> void:
 	var st: Dictionary = lstate().monsters.get(mid, {})
 	var member_alive: bool = mi < 0 or (st.has("members") and mi < st.members.size() and bool(st.members[mi].alive))
 	if not def.is_empty() and not st.is_empty() and st.alive and member_alive:
-		_monster_attack_party(def, st)
+		var stunned := tick_monster(def, st)
+		if st.alive and not stunned:
+			_monster_attack_party(def, st)
 	gauges[key] = 0.0
 	turn_seq += 1
 	ensure_gauges()
@@ -430,6 +506,9 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	var dmg := randi_range(int(st.atkMin), int(st.atkMax))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
+	var reduction := Statuses.damage_reduction_pct(st)
+	if reduction > 0:
+		dmg = maxi(0, int(round(dmg * (1.0 - reduction / 100.0))))
 	if int(victim.get("shieldAmount", 0)) > 0 and dmg > 0:
 		var absorbed := mini(int(victim.shieldAmount), dmg)
 		victim["shieldAmount"] = int(victim.shieldAmount) - absorbed
@@ -448,6 +527,73 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 			gs.game_over = true
 			gs.add_log("☠️ Toute l'équipe a péri…")
 			events.append({"type": "game_over"})
+
+# ------------------------------------------------------------------ statuts (tick)
+
+## Fait avancer les statuts d'un personnage d'un tour : dégâts sur la durée, durée restante, fin.
+func tick_char(c: Dictionary) -> void:
+	if int(c.hp) <= 0 or (c.get("statusEffects", []) as Array).is_empty():
+		return
+	var remaining: Array = []
+	for eff in c.statusEffects:
+		var sdef := Statuses.def(str(eff.type))
+		if sdef.is_empty():
+			continue
+		if bool(sdef.get("dot", false)) and int(c.hp) > 0:
+			var dmg := maxi(1, int(eff.get("power", 3)))
+			c["hp"] = maxi(0, int(c.hp) - dmg)
+			gs.add_log("%s %s subit %d dégâts de %s." % [sdef.icon, c.name, dmg, sdef.label], true)
+			events.append({"type": "popup", "text": "%s -%d" % [c.name, dmg], "color": Color("c98bff")})
+			events.append({"type": "hit", "char": c.id})
+			if int(c.hp) <= 0:
+				gs.add_log("💀 %s succombe à %s." % [c.name, sdef.label])
+				if gs.alive_party().is_empty() and not gs.game_over:
+					gs.game_over = true
+					gs.add_log("☠️ Toute l'équipe a péri…")
+					events.append({"type": "game_over"})
+		eff["remaining"] = int(eff.remaining) - 1
+		if int(eff.remaining) > 0:
+			remaining.append(eff)
+		else:
+			gs.add_log("%s %s n'est plus affecté par %s." % [sdef.icon, c.name, sdef.label], true)
+	c["statusEffects"] = remaining
+	Characters.recompute(c, gs.cfg)
+
+## Statuts d'un monstre au début de son action. Renvoie true s'il est étourdi / gelé (il perd son action).
+func tick_monster(def: Dictionary, st: Dictionary) -> bool:
+	var stunned := false
+	if (st.get("statusEffects", []) as Array).is_empty():
+		return false
+	var remaining: Array = []
+	for eff in st.statusEffects:
+		var sdef := Statuses.def(str(eff.type))
+		if sdef.is_empty():
+			continue
+		if bool(sdef.get("dot", false)) and float(st.hp) > 0.0:
+			var dmg := maxi(1, int(eff.get("power", 3)))
+			st["hp"] = maxf(0.0, float(st.hp) - dmg)
+			gs.add_log("%s %s subit %d dégâts de %s." % [sdef.icon, _mname(def), dmg, sdef.label])
+			events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("c98bff")})
+			if bool(sdef.get("heals", false)) and str(eff.get("casterId", "")) != "":
+				var caster := gs.char_by_id(str(eff.casterId))
+				if not caster.is_empty() and int(caster.hp) > 0:
+					var before := int(caster.hp)
+					caster["hp"] = mini(int(caster.maxHp), before + dmg)
+					if int(caster.hp) > before:
+						gs.add_log("🩸 %s draine %d PV." % [caster.name, int(caster.hp) - before], true)
+			if float(st.hp) <= 0.0 and st.alive:
+				st["alive"] = false
+				_handle_death(def, st)
+		elif bool(sdef.get("disables", false)):
+			stunned = true
+			gs.add_log("%s %s est %s et ne peut agir !" % [sdef.icon, _mname(def), "gelé" if str(eff.type) == "freeze" else "étourdi"])
+		eff["remaining"] = int(eff.remaining) - 1
+		if int(eff.remaining) > 0:
+			remaining.append(eff)
+		else:
+			gs.add_log("%s %s n'est plus affecté par %s." % [sdef.icon, _mname(def), sdef.label])
+	st["statusEffects"] = remaining
+	return stunned
 
 # ------------------------------------------------------------------ mort d'un monstre
 

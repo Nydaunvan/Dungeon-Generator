@@ -58,6 +58,17 @@ func _add_card(c: Dictionary) -> void:
 	var pic := UiTheme.portrait(tex, UiTheme.BRONZE_LIGHT.lerp(accent, 0.5), 64)
 	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(pic)
+	var badge := Label.new()
+	badge.visible = false
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	badge.add_theme_font_size_override("font_size", 10)
+	badge.add_theme_stylebox_override("normal", UiTheme.box(Color(0.05, 0.03, 0.02, 0.85), Color("6b4a24"), 1, 6))
+	badge.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	badge.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	pic.add_child(badge)
 	var name_lbl := Label.new()
 	name_lbl.text = str(c.name).to_upper()
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -94,7 +105,7 @@ func _add_card(c: Dictionary) -> void:
 	for b in [hp, sta, xp, gauge]:
 		v.add_child(b)
 	_cards[str(c.id)] = {"panel": panel, "name": name_lbl, "cls": cls_lbl, "lvl": lvl_lbl, "chest": chest,
-		"ribbon": ribbon, "hp": hp, "sta": sta, "xp": xp, "gauge": gauge, "pic": pic, "state": "normal"}
+		"ribbon": ribbon, "badge": badge, "ring": UiTheme.BRONZE_LIGHT.lerp(accent, 0.5), "hp": hp, "sta": sta, "xp": xp, "gauge": gauge, "pic": pic, "state": "normal"}
 
 func _on_card_input(ev: InputEvent, char_id: String) -> void:
 	if ev is InputEventMouseButton:
@@ -138,6 +149,7 @@ func refresh() -> void:
 		cd.sta.set_values(int(c.stamina), int(c.maxStamina), "%d/%d End." % [int(c.stamina), int(c.maxStamina)])
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), "%d/%d XP" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))])
 		var dead: bool = int(c.hp) <= 0
+		_refresh_status(c, cd, dead)
 		cd.panel.modulate = Color(0.45, 0.45, 0.45) if dead else Color.WHITE
 		var my_turn: bool = ctrl.in_combat() and gs.active_char_id == str(c.id) \
 				and float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0)) >= 100.0
@@ -162,3 +174,22 @@ func _process(_delta: float) -> void:
 				cd.gauge.set_values(tf * 100.0, 100.0, "")
 			else:
 				cd.gauge.set_values(g, 100.0, "")
+
+const STATUS_COLORS := {"freeze": "7fd0ff", "stun": "e6d36b", "burn": "ff8a3d", "poison": "7fd17f", "lifedrain": "b06be0",
+	"weaken": "c9a27a", "warcry": "d67a7a", "slow": "8fa8c9", "haste": "ffe27a", "vigor": "ffd88a", "weaponfire": "ff9a4d"}
+
+## Pastille de statut sur le portrait (statut prioritaire + tours restants) et anneau teinté.
+func _refresh_status(c: Dictionary, cd: Dictionary, dead: bool) -> void:
+	var effs: Array = [] if dead else Statuses.active(c)
+	var ring: StyleBoxFlat = cd.pic.get_meta("ring_style")
+	if effs.is_empty():
+		cd.badge.visible = false
+		ring.border_color = cd.ring
+		return
+	var e: Dictionary = effs[0]
+	var sdef := Statuses.def(str(e.type))
+	var col := Color(str(STATUS_COLORS.get(str(e.type), "ffd88a")))
+	cd.badge.text = "%s %d" % [str(sdef.label), int(e.remaining)] + (" +%d" % (effs.size() - 1) if effs.size() > 1 else "")
+	cd.badge.add_theme_color_override("font_color", col)
+	cd.badge.visible = true
+	ring.border_color = col

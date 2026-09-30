@@ -58,6 +58,18 @@ func refresh() -> void:
 		sync_position()
 	_run_turns()
 
+## À chaque pas hors combat, les statuts des personnages avancent d'un tour (poison, brûlure…).
+func step_tick() -> void:
+	if combat == null or gs.game_over:
+		return
+	sync_position()
+	if in_combat():
+		return
+	for c in gs.party:
+		combat.tick_char(c)
+	_drain()
+	changed.emit()
+
 func attack() -> void:
 	if combat == null or _busy:
 		return
@@ -166,6 +178,7 @@ func _run_turns() -> void:
 	_busy = true
 	while in_combat():
 		var r := combat.advance()
+		_drain()
 		if r.kind != "monster":
 			break
 		changed.emit()

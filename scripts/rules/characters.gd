@@ -98,7 +98,7 @@ static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	c["effInt"] = i
 	var cls := class_def(cfg, str(c.get("classId", "")))
 	var base_speed: int = int(c["baseSpeed"]) if c.has("baseSpeed") else int(cls.get("baseSpeed", 10))
-	c["effSpeed"] = maxi(1, base_speed + int(eq["bonusSpeed"]))
+	c["effSpeed"] = maxi(1, base_speed + int(eq["bonusSpeed"]) + Statuses.speed_bonus(c))
 	if not c.has("baseMaxStamina"):
 		c["baseMaxStamina"] = int(c.get("maxStamina", 100))
 	c["maxStamina"] = maxi(10, int(round(c["baseMaxStamina"])))

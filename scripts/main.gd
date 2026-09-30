@@ -215,6 +215,7 @@ func _on_bag_item(idx: int) -> void:
 func _on_moved() -> void:
 	inter.on_step()
 	layout.minimap.reveal()
+	ctrl.step_tick()
 	ctrl.refresh()
 
 func _on_blocked(x: int, y: int) -> void:

@@ -389,4 +389,8 @@ static func spell_effect(sp: Dictionary) -> String:
 		"healParty": return "soin de groupe %d–%d" % [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))]
 		"staminaRestoreSingle": return "endurance +%d–%d" % [int(sp.get("staminaMin", 0)), int(sp.get("staminaMax", 0))]
 		"shieldSingle": return "bouclier %d–%d" % [int(sp.get("shieldMin", 0)), int(sp.get("shieldMax", 0))]
+		"dispelSingle": return "retire les statuts négatifs d'un allié"
+		"sleepGroup": return "endort l'ennemi engagé (%d%% de chance)" % int(sp.get("statusChance", 0))
+		"selfBuff": return "améliore le lanceur (%d tours)" % int(sp.get("statusDuration", 0))
+		"partyUtility": return "recharges −%d s et vigueur pour tout le groupe" % int(sp.get("cooldownReductionSec", 0))
 	return str(sp.get("mode", "effet spécial"))
