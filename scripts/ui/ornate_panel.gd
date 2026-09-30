@@ -17,8 +17,8 @@ var hooks: bool = false:
 var _box: FrameBox
 var _v: VBoxContainer
 
-func _init(title: String = "") -> void:
-	_box = FrameBox.new(18.0, Vector4(12, 10, 12, 10))
+func _init(title: String = "", modal: bool = false) -> void:
+	_box = FrameBox.new(18.0, Vector4(24, 22, 24, 22) if modal else Vector4(12, 10, 12, 10))
 	add_theme_stylebox_override("panel", _box)
 	clip_contents = false
 	var v := VBoxContainer.new()
@@ -30,14 +30,15 @@ func _init(title: String = "") -> void:
 		header_row.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_child(header_row)
 		title_label = Label.new()
-		title_label.text = title.to_upper()
+		title_label.text = title if modal else title.to_upper()
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var fv := FontVariation.new()
 		fv.base_font = UiTheme.font(UiTheme.F_TITLE_BOLD)
-		fv.spacing_glyph = 2
+		fv.spacing_glyph = 0 if modal else 2
 		title_label.add_theme_font_override("font", fv)
-		title_label.add_theme_font_size_override("font_size", 13)
-		title_label.add_theme_color_override("font_color", Color("d9b56e"))
+		title_label.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.15)) if modal else 13)
+		title_label.add_theme_color_override("font_color", Color("ffd88a") if modal else Color("d9b56e"))
+		title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if modal else TextServer.AUTOWRAP_OFF
 		title_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
 		title_label.add_theme_constant_override("outline_size", 2)
 		header_row.add_child(title_label)

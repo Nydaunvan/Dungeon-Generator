@@ -76,3 +76,29 @@ static func button_styles(glow_hover := Color("e8b45c"), variant := "iron") -> D
 			b.ring = Color("070504")
 		h.top = Color("5a1d14")
 	return {"normal": n, "hover": h, "pressed": p, "focus": n, "disabled": n}
+
+## Boutons de fenêtre (.modal-actions>button) : fer riveté ; « primary » = filet or et texte or vif.
+static func modal_styles(primary: bool) -> Dictionary:
+	var n := IronBox.new()
+	var h := IronBox.new()
+	var p := IronBox.new()
+	if primary:
+		for b in [n, h, p]:
+			b.top = Color("5a4526")
+			b.mid = Color("3f3018")
+			b.bottom = Color("2a1f10")
+			b.ring = Color("a9793a")
+		h.top = Color("6c5530")
+		h.mid = Color("4a3a1e")
+		p.top = Color("2a1f10")
+		p.mid = Color("3a2c16")
+		p.bottom = Color("5a4526")
+	else:
+		h.top = Color("43352a")
+		h.mid = Color("2c221a")
+		h.bottom = Color("221a12")
+		p.top = Color("120d09")
+		p.mid = Color("1a140f")
+		p.bottom = Color("2a2018")
+	h.glow = Color(0.91, 0.7, 0.36, 0.25)
+	return {"normal": n, "hover": h, "pressed": p, "focus": n, "disabled": n}

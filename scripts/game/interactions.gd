@@ -43,18 +43,25 @@ func _log(msg: String, hit: bool = false) -> void:
 
 # ------------------------------------------------------------------ déplacement
 
+var last_bump: String = ""
+
+## Un mur barre la route : le message n'est écrit qu'une fois tant qu'on insiste sur la même case (lastWallBump de l'original).
+func bump_wall(x: int, y: int) -> void:
+	var k := "%d,%d" % [x, y]
+	if last_bump != k:
+		_log("Un mur de pierre froide bloque le passage.")
+	last_bump = k
+
 ## Après chaque pas : gain d'endurance puis objet éventuel sur la case.
 func on_step() -> void:
+	last_bump = ""
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	gs.stats["moves"] = int(gs.stats.get("moves", 0)) + 1
 	var interval := maxi(1, int(sta.get("moveInterval", 1)))
 	if int(gs.stats.moves) % interval == 0:
 		for c in gs.alive_party():
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(sta.get("moveGain", 0)))
-	var mm: Dictionary = wand.merchant() if wand != null else {}
-	if not mm.is_empty() and int(mm.x) == rig.gx and int(mm.y) == rig.gy:
-		_meet_merchant(mm)
-		return
+	# un seul objet par pas (le premier de la case), puis le marchand ambulant s'il est là (hors village)
 	for it in level.get("items", []):
 		if int(it.x) != rig.gx or int(it.y) != rig.gy:
 			continue
@@ -69,7 +76,10 @@ func on_step() -> void:
 			_:
 				if PICKUP_TYPES.has(str(it.get("type", ""))):
 					_pickup(it)
-		return
+		break
+	var mm: Dictionary = wand.merchant() if wand != null else {}
+	if not mm.is_empty() and int(mm.x) == rig.gx and int(mm.y) == rig.gy and not bool(level.get("outdoor", false)):
+		_meet_merchant(mm)
 
 # ------------------------------------------------------------------ village
 
@@ -101,7 +111,9 @@ func bump_village(x: int, y: int) -> bool:
 		bag_changed.emit()
 		ctrl.changed.emit()
 	if (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]):
-		_log("Un arbre bloque le passage.")
+		if last_bump != "%d,%d" % [x, y]:
+			_log("Un arbre bloque le passage.")
+		last_bump = "%d,%d" % [x, y]
 		message.emit("Un arbre bloque le passage")
 		return true
 	match npc_at(x, y):
@@ -296,13 +308,13 @@ func _prompt_fountain(it: Dictionary) -> void:
 	if st.has("usedAt") and now < ready_at:
 		_log("💧 %s est tarie pour l'instant. Elle se rechargera dans environ %d minute(s)." % [it.get("name", "La fontaine"), int(ceil((ready_at - now) / 60000.0))])
 		return
-	var m := Modal.open(host, "Fontaine", 400)
-	m.add_text("Voulez-vous utiliser cette fontaine ? Elle restaure PV et endurance de tout le groupe (et ressuscite les personnages tombés), puis se tarit un moment.")
+	var m := Modal.open(host, "⛲ Fontaine", 400)
+	m.add_text("Voulez-vous utiliser cette fontaine ? Elle restaure PV et endurance de tout le groupe (et ressuscite les personnages tombés), puis se recharge pendant un certain temps.", UiTheme.PARCH, 14, true)
 	m.set_buttons([
-		{"text": "Utiliser", "cb": func():
+		{"text": "✨ Utiliser la fontaine", "primary": true, "cb": func():
 			m.close()
 			_use_fountain(it)},
-		{"text": "Laisser", "cb": func(): m.close()},
+		{"text": "Passer sans l'utiliser", "primary": false, "cb": func(): m.close()},
 	])
 
 func _use_fountain(it: Dictionary) -> void:

@@ -38,7 +38,7 @@ static func open(host: Node, snapshot: Callable, on_load: Callable, on_saved: Ca
 			m.close()
 			on_load.call(data))})
 	btns.append({"text": "Fermer", "cb": func(): m.close()})
-	m.set_buttons(btns)
+	m.set_buttons(btns, true)
 	return m
 
 static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, m: Modal, fill: Callable, status: Label, on_saved: Callable) -> Control:
@@ -75,7 +75,9 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 		if Saves.write_slot(i, snap.config, snap.save, snap.origin):
 			status.text = "Partie sauvegardée dans l'emplacement %d." % (i + 1)
 			if on_saved.is_valid():
+				m.close()
 				on_saved.call(i)
+				return
 		else:
 			status.text = "La sauvegarde a échoué."
 		fill.call()

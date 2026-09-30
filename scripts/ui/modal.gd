@@ -7,7 +7,7 @@ signal closed
 var panel: OrnatePanel
 var content: VBoxContainer
 var _scroll: ScrollContainer
-var _buttons_row: HBoxContainer
+var _buttons_row: BoxContainer
 var _width: float = 380.0
 ## Échap ferme la fenêtre (sauf choix obligatoire : talent, évolution, piège, victoire…).
 var esc_closes: bool = true
@@ -44,7 +44,7 @@ func _build(title: String) -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
-	panel = OrnatePanel.new(title)
+	panel = OrnatePanel.new(title, _framed_title == "")
 	if _framed_title != "":
 		panel.use_framed_header(_framed_title, close)
 	var vp := get_viewport_rect().size if is_inside_tree() else Vector2(1280, 720)
@@ -58,9 +58,7 @@ func _build(title: String) -> void:
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 6)
 	_scroll.add_child(content)
-	_buttons_row = HBoxContainer.new()
-	_buttons_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_buttons_row.add_theme_constant_override("separation", 8)
+	_buttons_row = VBoxContainer.new()
 	panel.body.add_child(_buttons_row)
 	call_deferred("_fit")
 	call_deferred("_animate_in")
@@ -89,7 +87,8 @@ func add_text(text: String, color: Color = UiTheme.PARCH, size: int = 16, italic
 	var l := Label.new()
 	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(_width - 60.0, 0)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size = Vector2(_width - 100.0, 0)
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
 	if italic:
@@ -119,21 +118,40 @@ func add_row(icon: Texture2D, text: String, color: Color = UiTheme.PARCH) -> HBo
 	call_deferred("_fit")
 	return h
 
-## Boutons du bas : [{"text", "cb", "disabled"}]. `cb` est un Callable (sans argument).
-func set_buttons(specs: Array) -> void:
-	for ch in _buttons_row.get_children():
-		ch.queue_free()
+## Boutons du bas : [{"text", "cb", "disabled", "primary"}]. `cb` est un Callable (sans argument).
+## Par défaut en colonne pleine largeur (2 ou 3 boutons), comme `.modal-actions` de l'original ; `row` force une rangée.
+func set_buttons(specs: Array, row: bool = false) -> void:
+	var as_row := row or specs.size() > 3
+	var parent := _buttons_row.get_parent()
+	var idx := _buttons_row.get_index()
+	_buttons_row.queue_free()
+	_buttons_row = HBoxContainer.new() if as_row else VBoxContainer.new()
+	_buttons_row.add_theme_constant_override("separation", int(UiMetrics.css(10.0)) if not as_row else int(UiMetrics.css(10.0)))
+	parent.add_child(_buttons_row)
+	parent.move_child(_buttons_row, idx)
+	var first := true
 	for sp in specs:
 		var b := Button.new()
 		b.text = str(sp.get("text", ""))
 		b.focus_mode = Control.FOCUS_NONE
 		b.disabled = bool(sp.get("disabled", false))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, UiMetrics.css(40.0))
+		var primary: bool = bool(sp.get("primary", first and specs.size() > 1))
+		first = false
+		var st := IronBox.modal_styles(primary)
+		for k in st:
+			b.add_theme_stylebox_override(k, st[k])
+		b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.9)))
+		b.add_theme_color_override("font_color", Color("ffd88a") if primary else Color("e2d2b0"))
+		b.add_theme_color_override("font_hover_color", Color("fff0c8") if primary else Color("f4e6c6"))
+		b.add_theme_color_override("font_disabled_color", Color("7a6a50"))
 		var cb: Callable = sp.get("cb", Callable())
 		b.pressed.connect(func():
 			if cb.is_valid():
 				cb.call())
 		_buttons_row.add_child(b)
+	call_deferred("_fit")
 
 ## Bouton dans le corps (liste d'actions).
 func add_button(text: String, cb: Callable, disabled: bool = false) -> Button:

@@ -434,6 +434,8 @@ func _refresh_when_free() -> void:
 func _on_blocked(x: int, y: int) -> void:
 	var mon := ctrl.monster_at(x, y)
 	if not mon.is_empty():
+		gs.add_log("%s vous barre la route !" % str(mon.get("name", "Un monstre")))
+		Sound.sfx("blocked")
 		ctrl.refresh()   # engage le combat
 		return
 	if inter.bump_village(x, y):
@@ -441,6 +443,7 @@ func _on_blocked(x: int, y: int) -> void:
 		return
 	if grid.cell(x, y) == "#":
 		Sound.sfx("blocked")
+		inter.bump_wall(x, y)
 	match grid.cell(x, y):
 		"D": inter.try_door(x, y)
 		"S": _use_stairs(Vector2i(x, y))
@@ -513,9 +516,7 @@ func _prompt_save_on_level(target: Dictionary) -> void:
 
 func _on_menu(name: String) -> void:
 	match name:
-		"Accueil":
-			Dialogs.confirm(_modals(), "Retour à l'accueil", "Quitter la partie en cours ? La progression non sauvegardée sera perdue.",
-				Data.go_home, "Quitter")
+		"Accueil": _leave_game()
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
 		"Lang": pass   # la préférence est enregistrée ; les textes suivent la langue choisie
@@ -535,6 +536,32 @@ func _on_menu(name: String) -> void:
 		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save)
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message("« %s » : à venir" % name)
+
+## « Quitter la partie en cours » (leaveGameOverlay de l'original).
+func _leave_game() -> void:
+	if gs.game_over or gs.won:
+		Data.go_home()
+		return
+	var m := Modal.open(_modals(), "🚪 Quitter la partie en cours", 440.0)
+	m.add_text("Voulez-vous sauvegarder votre progression avant de continuer ?", UiTheme.PARCH, 14, true)
+	var origin: String = Data.play_origin
+	if origin == "custom":
+		m.add_text("🎲 Cette création repartira d'une toute nouvelle base aléatoire la prochaine fois : exportez-la si vous voulez la conserver.", UiTheme.PARCH, 14, true)
+	var btns: Array = [
+		{"text": "💾 Sauvegarder et quitter", "primary": true, "cb": func():
+			m.close()
+			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home())},
+	]
+	if origin != "original":
+		btns.append({"text": "📤 Exporter le donjon (fichier JSON) et quitter", "primary": false, "cb": func():
+			m.close()
+			var snap := snapshot()
+			Files.save_text(_modals(), "sauvegarde.json", Saves.export_text(snap.config, snap.save, snap.origin), func(_t): Data.go_home())})
+	btns.append({"text": "Quitter sans sauvegarder", "primary": false, "cb": func():
+		m.close()
+		Data.go_home()})
+	btns.append({"text": "Annuler, rester dans la partie", "primary": false, "cb": func(): m.close()})
+	m.set_buttons(btns)
 
 ## Instantané de la partie pour une sauvegarde.
 func snapshot() -> Dictionary:
