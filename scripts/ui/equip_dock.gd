@@ -437,9 +437,9 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 	stage.custom_minimum_size = Vector2(290, 300)
 	stage.draw.connect(func():
 		# halo doré derrière la figure
-		for i in 8:
-			var k := float(i) / 8.0
-			stage.draw_circle(stage.size * 0.5, 130.0 * (1.0 - k), Color(0.91, 0.7, 0.36, 0.028)))
+		for i in 28:
+			var k := float(i) / 28.0
+			stage.draw_circle(stage.size * 0.5, 130.0 * (1.0 - k), Color(0.91, 0.7, 0.36, 0.0095)))
 	col.add_child(stage)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
 	var port := _round_medal(124.0, UiTheme.BRONZE_LIGHT, 3, load(pp) if pp != "" else null, "?")

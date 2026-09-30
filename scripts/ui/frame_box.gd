@@ -58,15 +58,31 @@ static func _shade_tex(rev: bool = false) -> Texture2D:
 		_shade_rev = ImageTexture.create_from_image(img2)
 	return _shade_rev if rev else _shade
 
+## Grain fin : motif 512 px posé à 1 texel = 1 pixel écran réel (et non étiré avec l'interface), donc net à toute échelle.
+static func draw_grime(ci: RID, area: Rect2, alpha: float = 1.0) -> void:
+	if _grime == null:
+		_grime = load("res://assets/ui/orig/grime_hd.png")
+	var tile := float(_grime.get_width()) / maxf(0.01, UiMetrics.s)
+	var id := _grime.get_rid()
+	var col := Color(1, 1, 1, alpha)
+	var y := 0.0
+	while y < area.size.y:
+		var h := minf(tile, area.size.y - y)
+		var x := 0.0
+		while x < area.size.x:
+			var w := minf(tile, area.size.x - x)
+			RenderingServer.canvas_item_add_texture_rect_region(ci, Rect2(area.position + Vector2(x, y), Vector2(w, h)), id,
+					Rect2(0, 0, w / tile * _grime.get_width(), h / tile * _grime.get_height()), col)
+			x += tile
+		y += tile
+
 func _draw(ci: RID, rect: Rect2) -> void:
 	var b := _b
 	var inner := Rect2(rect.position + Vector2(b, b), rect.size - Vector2(b, b) * 2.0)
 	if inner.size.x > 0.0 and inner.size.y > 0.0:
 		RenderingServer.canvas_item_add_rect(ci, inner, fill)
 		if use_grime:
-			if _grime == null:
-				_grime = load("res://assets/ui/orig/grime.png")
-			RenderingServer.canvas_item_add_texture_rect(ci, inner, _grime.get_rid(), true, Color(1, 1, 1, 1))
+			draw_grime(ci, inner)
 		# léger éclaircissement en haut : linear-gradient(rgba(255,230,190,.04), transparent 40%)
 		var hh := inner.size.y * 0.4
 		for i in 10:

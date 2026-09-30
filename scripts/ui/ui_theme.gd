@@ -80,6 +80,38 @@ static func tbox(name: String, m: Array, content: Array = [], draw_center: bool 
 static var _shared: Theme = null
 
 ## Thème partagé (construit une seule fois).
+## Ascenseurs de l'original : 8 px, piste #070504, poignée en dégradé #4a3a28 → #2a2119 cernée de #070504, coins de 2 px.
+static func _scrollbars(th: Theme) -> void:
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color("070504")
+	track.content_margin_left = 4.0
+	track.content_margin_right = 4.0
+	track.content_margin_top = 4.0
+	track.content_margin_bottom = 4.0
+	var grab := func(a: Color, b: Color) -> StyleBoxTexture:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.125, 0.875, 1.0])
+		g.colors = PackedColorArray([Color("070504"), a, b, Color("070504")])
+		var gt := GradientTexture2D.new()
+		gt.gradient = g
+		gt.width = 16
+		gt.height = 4
+		gt.fill_from = Vector2(0, 0)
+		gt.fill_to = Vector2(1, 0)
+		var sb := StyleBoxTexture.new()
+		sb.texture = gt
+		sb.content_margin_left = 4.0
+		sb.content_margin_right = 4.0
+		sb.content_margin_top = 12.0
+		sb.content_margin_bottom = 12.0
+		return sb
+	for bar in ["VScrollBar", "HScrollBar"]:
+		th.set_stylebox("scroll", bar, track)
+		th.set_stylebox("scroll_focus", bar, track)
+		th.set_stylebox("grabber", bar, grab.call(Color("4a3a28"), Color("2a2119")))
+		th.set_stylebox("grabber_highlight", bar, grab.call(Color("5e4a32"), Color("352a1e")))
+		th.set_stylebox("grabber_pressed", bar, grab.call(Color("6e5638"), Color("3c2f22")))
+
 static func shared() -> Theme:
 	if _shared == null:
 		_shared = build()
@@ -122,6 +154,7 @@ static func build() -> Theme:
 	th.set_stylebox("focus", "TextEdit", field_focus)
 	th.set_color("font_color", "TextEdit", PARCH)
 	th.set_color("caret_color", "TextEdit", GOLD)
+	_scrollbars(th)
 	var popup := box(Color("1a130d"), BRONZE, 2, 4)
 	popup.set_content_margin_all(4)
 	th.set_stylebox("panel", "PopupMenu", popup)

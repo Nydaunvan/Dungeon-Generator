@@ -216,7 +216,7 @@ func _draw() -> void:
 	for p in face:
 		cols.append(Color("1d1610").lerp(Color("0a0705"), clampf(p.y / size.y, 0.0, 1.0)))
 	draw_polygon(face, cols)
-	var grime := load("res://assets/ui/orig/grime.png") as Texture2D
+	var grime := load("res://assets/ui/orig/grime_hd.png") as Texture2D
 	if grime != null:
 		var uv := PackedVector2Array()
 		for p in face:
