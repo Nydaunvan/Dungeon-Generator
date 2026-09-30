@@ -93,9 +93,9 @@ func _build_parts() -> void:
 	_title.add_theme_color_override("font_color", Color("e0b070"))
 	_title.add_theme_constant_override("outline_size", 4)
 	hrow.add_child(_title)
-	for n in ["Accueil", "Admin", "Guide"]:
+	for n in ["Accueil", "Admin", "Guide", "Son"]:
 		var b := Button.new()
-		b.text = n.to_upper()
+		b.text = "🔊" if n == "Son" else n.to_upper()
 		b.focus_mode = Control.FOCUS_NONE
 		var nn: String = n
 		b.pressed.connect(func(): menu_pressed.emit(nn))

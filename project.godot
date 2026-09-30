@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 Data="*res://scripts/core/data.gd"
+Sound="*res://scripts/core/sound.gd"
 
 [display]
 

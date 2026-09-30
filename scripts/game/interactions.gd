@@ -154,6 +154,7 @@ func _pickup(it: Dictionary) -> void:
 			Inventory.TAB_LABELS[Inventory.tab_of(inst)], Inventory.MAX_PER_TAB, Inventory.MAX_PER_TAB, it.get("name", "l'objet")])
 		return
 	Inventory.add(gs, inst)
+	Sound.sfx("pickup")
 	gs.item_state(_lid(), str(it.id))["taken"] = true
 	_lstate().taken_items[str(it.id)] = true
 	view.entities.remove_item(str(it.id))
@@ -175,6 +176,7 @@ func try_door(x: int, y: int) -> bool:
 	if locked:
 		var k := Inventory.find_key(gs, str(d.id))
 		if k < 0:
+			Sound.sfx("door_locked")
 			_log("🔒 Cette porte est verrouillée.")
 			message.emit("🔒 Porte verrouillée")
 			return false
@@ -183,6 +185,7 @@ func try_door(x: int, y: int) -> bool:
 		gs.inventory.remove_at(k)
 		unlocked[str(d.id)] = true
 		bag_changed.emit()
+	Sound.sfx("door_creak")
 	open_door(str(d.id))
 	return true
 
@@ -199,6 +202,7 @@ func stairs_open(st: Dictionary) -> bool:
 		return true
 	var k := Inventory.find_key(gs, str(st.id))
 	if k < 0:
+		Sound.sfx("door_locked")
 		_log("🔒 Une grille de fer ferme cette arche — il faut trouver la clé.")
 		message.emit("🔒 Arche verrouillée")
 		return false
@@ -254,6 +258,7 @@ func _use_fountain(it: Dictionary) -> void:
 			revived.append(str(c.name))
 		c["hp"] = c.maxHp
 		c["stamina"] = c.get("maxStamina", 100)
+	Sound.sfx("fountain")
 	_log("⛲ %s redonne toutes ses forces au groupe ! PV et endurance entièrement restaurés." % it.get("name", "La fontaine"))
 	if not revived.is_empty():
 		_log("✝️ %s %s ramené(s) à la vie par la fontaine !" % [", ".join(revived), "est" if revived.size() == 1 else "sont"])

@@ -137,6 +137,7 @@ static func award_xp(gs: GameState, c: Dictionary, amount: int) -> void:
 		c["hp"] = int(c.hp) + (int(c.maxHp) - old_max)
 		c["stamina"] = mini(int(c.maxStamina), int(c.get("stamina", 0)) + maxi(0, int(c.maxStamina) - old_max_sta))
 		c["xpToNext"] = int(round(int(c.xpToNext) * 1.6))
+		Sound.sfx("level_up")
 		gs.add_log("🎉 %s monte au niveau %d !" % [c.name, c.level])
 		learn_spells(gs, c)
 		Talents.check_unlock(gs, c)

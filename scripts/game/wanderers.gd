@@ -165,6 +165,9 @@ func _tick() -> void:
 		e.st["x"] = target.x
 		e.st["y"] = target.y
 		view.entities.move_monster(id, target.x, target.y)
+		if id == lead:
+			var dist_after := absi(target.x - player.x) + absi(target.y - player.y)
+			Sound.sfx("monster_approach", maxf(0.15, 1.0 - (dist_after - 1) / 6.0))
 		if absi(target.x - player.x) + absi(target.y - player.y) <= 1:
 			engaged = true
 	_tick_merchant()

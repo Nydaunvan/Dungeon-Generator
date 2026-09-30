@@ -219,6 +219,10 @@ func player_attack(attacker: Dictionary) -> bool:
 	var cost := mini(int(sta.get("attackCost", 0)), 2)
 	attacker["stamina"] = maxi(0, int(attacker.get("stamina", 0)) - cost)
 	var dmg := randi_range(int(attacker.atkMin), int(attacker.atkMax)) + Statuses.flat_damage_bonus(attacker)
+	var wpn_v = (attacker.get("equipment", {}) as Dictionary).get("weapon")
+	var wtype := str(wpn_v.get("weaponType", "sword")) if wpn_v is Dictionary else "fist"
+	Sound.sfx("swing", wtype)
+	Sound.sfx_later(0.09, "hit")
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
 	_mark_acted(attacker)
 	return true
@@ -304,6 +308,10 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		var cds: Dictionary = caster.get("spellCooldowns", {})
 		cds[spell_id] = Time.get_ticks_msec() + int(float(spell.get("cooldownSec", 6)) * 1000.0)
 		caster["spellCooldowns"] = cds
+	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
+		Sound.sfx("heal")
+	else:
+		Sound.sfx("spell", str(spell.get("style", "arcane")))
 	var bonus := int(caster.get("bonusSpellDmg", 0)) + int(floor((int(caster.level) - 1) * 0.75))
 	var verb := "lance %s %s sur" % [spell.get("icon", ""), spell.name]
 	match mode:
@@ -549,13 +557,16 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.last_attacker_id = str(victim.id)
 	gs.add_log("%s attaque et blesse %s (%d dégâts)%s." % [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""], true)
+	Sound.sfx("monster_attack")
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) <= 0:
+		Sound.sfx_later(0.15, "down")
 		gs.add_log("💀 %s tombe au combat." % victim.name)
 		if gs.alive_party().is_empty():
 			gs.game_over = true
 			gs.add_log("☠️ Toute l'équipe a péri…")
+			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
 
 ## Capacité spéciale d'un monstre (sort de dégâts) lancée à la place de son attaque.
@@ -568,6 +579,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.add_log("%s utilise %s %s sur %s (%d dégâts)%s." % [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""], true)
+	Sound.sfx("monster_attack")
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) > 0:
@@ -577,6 +589,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 		if gs.alive_party().is_empty():
 			gs.game_over = true
 			gs.add_log("☠️ Toute l'équipe a péri…")
+			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
 
 # ------------------------------------------------------------------ statuts (tick)

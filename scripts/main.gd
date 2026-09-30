@@ -91,6 +91,7 @@ func _ready() -> void:
 	message_label = layout.message_label
 
 	ctrl.changed.connect(_check_choices)
+	ctrl.changed.connect(_update_music)
 	load_level(level_index, resume)
 	if resume:
 		gs.add_log("📂 Partie chargée.")
@@ -128,6 +129,7 @@ func load_level(index: int, at_saved: bool = false) -> void:
 		wand.monsters_moved.connect(layout.minimap.queue_redraw)
 		ctrl.changed.connect(layout.minimap.queue_redraw)
 	show_message(str(level.name))
+	_update_music()
 
 ## Ciel, brouillard clair et pas de torche dans le village ; ténèbres dans les donjons.
 func _apply_outdoor(outdoor: bool) -> void:
@@ -250,6 +252,7 @@ func _on_bag_item(idx: int) -> void:
 	dock.open_for(who, gs.inventory[idx])
 
 func _on_moved() -> void:
+	Sound.sfx("footstep")
 	inter.on_step()
 	layout.minimap.mark_visited()
 	layout.minimap.reveal()
@@ -262,7 +265,10 @@ func _on_blocked(x: int, y: int) -> void:
 		ctrl.refresh()   # engage le combat
 		return
 	if inter.bump_village(x, y):
+		Sound.sfx("blocked")
 		return
+	if grid.cell(x, y) == "#":
+		Sound.sfx("blocked")
 	match grid.cell(x, y):
 		"D": inter.try_door(x, y)
 		"S": _use_stairs(Vector2i(x, y))
@@ -274,6 +280,7 @@ func _use_stairs(p: Vector2i) -> void:
 	if not inter.stairs_open(st):
 		return
 	var action: Dictionary = st.get("action", {})
+	Sound.sfx("stairs", str(action.get("type", "")) == "villageReturn")
 	match str(action.get("type", "")):
 		"level":
 			var levels: Array = gs.cfg.levels
@@ -304,6 +311,7 @@ func _on_menu(name: String) -> void:
 			Dialogs.confirm(_modals(), "Retour à l'accueil", "Quitter la partie en cours ? La progression non sauvegardée sera perdue.",
 				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
+		"Son": SoundModal.open(_modals())
 		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save)
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message("« %s » : à venir" % name)
@@ -328,6 +336,7 @@ func _on_game_over() -> void:
 	Dialogs.defeat(_modals(), gs, _restart, Data.go_home)
 
 func _show_victory() -> void:
+	Sound.sfx("victory")
 	show_message("Victoire !", 3.0)
 	await get_tree().create_timer(0.8).timeout
 	var maxed := gs.party.all(func(c): return int(c.level) >= Characters.MAX_LEVEL)
@@ -374,6 +383,22 @@ func _check_choices() -> void:
 	TalentModals.process_queue.call_deferred(_modals(), gs, func():
 		ctrl.changed.emit()
 		layout.bag.refresh())
+
+## Ambiance du thème du niveau ; musique de boss pendant un combat contre un boss.
+var _was_combat := false
+
+func _update_music() -> void:
+	var lvl: Dictionary = gs.cfg.levels[level_index]
+	var theme := "ruins" if bool(lvl.get("outdoor", false)) else str(lvl.get("theme", "stone"))
+	var combat := ctrl.in_combat()
+	var boss := false
+	if combat:
+		var eng := ctrl.combat.engaged()
+		boss = bool(eng.monster.get("isBoss", false))
+	if combat and not _was_combat:
+		Sound.sfx("combat_start")
+	_was_combat = combat
+	Sound.ambient(theme, boss)
 
 func show_message(text: String, seconds: float = 1.8) -> void:
 	message_label.text = text

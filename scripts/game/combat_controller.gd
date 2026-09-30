@@ -133,6 +133,7 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 ## Un potion a été bue : les soins comptent dans la contribution au combat.
 func potion_drunk(char_id: String, healed: int) -> void:
 	if combat != null and healed > 0:
+		Sound.sfx("heal")
 		var c := gs.char_by_id(char_id)
 		if not c.is_empty():
 			combat._credit_heal(c, healed)

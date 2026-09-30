@@ -110,5 +110,6 @@ static func evolve(gs: GameState, c: Dictionary, class_id: String) -> void:
 	c["icon"] = cls.get("icon", c.get("icon", ""))
 	c["_evolutionPending"] = false
 	Characters.recompute(c, gs.cfg)
+	Sound.sfx("evolve")
 	gs.add_log("⭐ %s évolue en %s %s !" % [c.name, cls.get("icon", ""), cls.get("name", "")])
 	check_unlock(gs, c)

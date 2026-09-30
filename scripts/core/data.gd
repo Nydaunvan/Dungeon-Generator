@@ -144,4 +144,5 @@ func open_admin() -> void:
 	get_tree().change_scene_to_file("res://scenes/admin.tscn")
 
 func go_home() -> void:
+	Sound.stop_ambient()
 	get_tree().change_scene_to_file("res://scenes/home.tscn")
