@@ -95,8 +95,28 @@ func _add_card(c: Dictionary) -> void:
 	chest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	chest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	chest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var cls_ico := TextureRect.new()
+	cls_ico.texture = IconResolver.texture(str(c.get("icon", "")))
+	cls_ico.visible = cls_ico.texture != null
+	cls_ico.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	cls_ico.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	cls_ico.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lvl_row.add_child(cls_ico)
 	lvl_row.add_child(lvl_lbl)
 	lvl_row.add_child(chest)
+	var dead_lbl := Label.new()
+	dead_lbl.text = "MORT"
+	dead_lbl.visible = false
+	dead_lbl.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	dead_lbl.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	dead_lbl.grow_vertical = Control.GROW_DIRECTION_BOTH
+	dead_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dead_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	dead_lbl.add_theme_font_size_override("font_size", 26)
+	dead_lbl.add_theme_color_override("font_color", Color("ffffff"))
+	dead_lbl.add_theme_color_override("font_outline_color", Color(0.4, 0.05, 0.05))
+	dead_lbl.add_theme_constant_override("outline_size", 8)
+	panel.add_child(dead_lbl)
 	v.add_child(lvl_row)
 	var hp := TextBar.new(UiTheme.HP_GREEN, 16, 11)
 	var sta := TextBar.new(UiTheme.STA_CYAN, 14, 10)
@@ -104,7 +124,7 @@ func _add_card(c: Dictionary) -> void:
 	var gauge := TextBar.new(UiTheme.GOLD, 5, 1)
 	for b in [hp, sta, xp, gauge]:
 		v.add_child(b)
-	_cards[str(c.id)] = {"panel": panel, "name": name_lbl, "cls": cls_lbl, "lvl": lvl_lbl, "chest": chest,
+	_cards[str(c.id)] = {"panel": panel, "name": name_lbl, "cls": cls_lbl, "lvl": lvl_lbl, "chest": chest, "cls_ico": cls_ico, "dead": dead_lbl,
 		"ribbon": ribbon, "badge": badge, "ring": UiTheme.BRONZE_LIGHT.lerp(accent, 0.5), "hp": hp, "sta": sta, "xp": xp, "gauge": gauge, "pic": pic, "state": "normal"}
 
 func _on_card_input(ev: InputEvent, char_id: String) -> void:
@@ -135,6 +155,8 @@ func _resize() -> void:
 		cd.lvl.custom_minimum_size = Vector2(0, small_h)
 		cd.lvl.add_theme_font_size_override("font_size", int(clampf(small_h / 1.5, 8.0, 17.0)))
 		cd.chest.custom_minimum_size = Vector2(small_h * 0.8, small_h * 0.8)
+		cd.cls_ico.custom_minimum_size = Vector2(small_h * 1.1, small_h * 1.1)
+		cd.dead.add_theme_font_size_override("font_size", int(clampf(w * 0.12, 14.0, 30.0)))
 		cd.hp.set_height(bar_h * 1.05)
 		cd.sta.set_height(bar_h * 0.95)
 		cd.xp.set_height(bar_h * 0.95)
@@ -150,7 +172,9 @@ func refresh() -> void:
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), "%d/%d XP" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))])
 		var dead: bool = int(c.hp) <= 0
 		_refresh_status(c, cd, dead)
-		cd.panel.modulate = Color(0.45, 0.45, 0.45) if dead else Color.WHITE
+		var cant_act: bool = not dead and ctrl.in_combat() and ctrl.combat != null and not ctrl.combat.can_act(c)
+		cd.panel.modulate = Color(0.45, 0.45, 0.45) if dead else (Color(0.58, 0.56, 0.54) if cant_act else Color.WHITE)
+		cd.dead.visible = dead
 		var my_turn: bool = ctrl.in_combat() and gs.active_char_id == str(c.id) \
 				and float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0)) >= 100.0
 		var selected: bool = not ctrl.in_combat() and gs.active_char_id == str(c.id)
