@@ -43,6 +43,7 @@ func _ready() -> void:
 	rig = PlayerRig.new()
 	rig.blocked.connect(_on_blocked)
 	rig.moved.connect(_on_moved)
+	rig.turned.connect(_on_turned)
 	rig.extra_block = func(x, y): return (ctrl != null and not ctrl.monster_at(x, y).is_empty()) or (inter != null and inter.blocks_cell(x, y))
 
 	ctrl = CombatController.new()
@@ -357,6 +358,11 @@ func _on_bag_item(idx: int) -> void:
 			return
 		who = str(alive[0].id)
 	dock.open_for(who, gs.inventory[idx])
+
+func _on_turned() -> void:
+	# Un simple quart de tour ne déclenche ni objet, ni tour de jeu (comme l'original).
+	layout.minimap.queue_redraw()
+	ctrl.refresh()
 
 func _on_moved() -> void:
 	Sound.sfx("footstep")

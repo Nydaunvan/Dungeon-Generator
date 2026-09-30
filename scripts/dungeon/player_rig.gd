@@ -4,6 +4,7 @@ extends Node3D
 ## dir : 0 = Nord (-z), 1 = Est (+x), 2 = Sud (+z), 3 = Ouest (-x).
 
 signal moved
+signal turned
 signal blocked(x: int, y: int)
 
 const MOVE_TIME := 0.18
@@ -71,7 +72,11 @@ func turn(right: bool) -> void:
 	_busy = true
 	var t := create_tween()
 	t.tween_property(self, "rotation:y", _yaw, TURN_TIME).set_trans(Tween.TRANS_SINE)
-	t.finished.connect(_on_step_done)
+	t.finished.connect(_on_turn_done)
+
+func _on_turn_done() -> void:
+	_busy = false
+	turned.emit()
 
 func _on_step_done() -> void:
 	_busy = false

@@ -169,7 +169,7 @@ func _pickup(it: Dictionary) -> void:
 ## Le groupe se heurte à une porte fermée. Renvoie true si elle vient de s'ouvrir.
 func try_door(x: int, y: int) -> bool:
 	var d := grid.door_at(x, y)
-	if d.is_empty() or grid.opened.has(str(d.id)):
+	if d.is_empty() or grid.opened.has(str(d.id)) or view.opening.has(str(d.id)):
 		return false
 	var ls := _lstate()
 	var unlocked: Dictionary = ls.get_or_add("door_unlocked", {})
@@ -199,6 +199,8 @@ func stairs_open(st: Dictionary) -> bool:
 	if not bool(st.get("locked", false)):
 		return true
 	var unlocked: Dictionary = _lstate().get_or_add("door_unlocked", {})
+	if view.opening.has(str(st.id)):
+		return false      # la grille est en train de remonter
 	if unlocked.has(str(st.id)):
 		return true
 	var k := Inventory.find_key(gs, str(st.id))
@@ -211,8 +213,8 @@ func stairs_open(st: Dictionary) -> bool:
 	gs.inventory.remove_at(k)
 	unlocked[str(st.id)] = true
 	bag_changed.emit()
-	open_door(str(st.id))     # la grille de l'arche remonte
-	return true
+	open_door(str(st.id))     # la grille de l'arche remonte ; on ne passe qu'une fois ouverte
+	return false
 
 # ------------------------------------------------------------------ décor
 

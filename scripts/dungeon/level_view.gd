@@ -7,14 +7,18 @@ var doors: Dictionary = {}   # id de porte -> Array[MeshInstance3D]
 var entities: EntityLayer
 var stage: CombatStage
 
+var opening: Dictionary = {}  # id -> true pendant l'animation : la porte reste infranchissable
 var locks: Dictionary = {}   # id de porte -> Sprite3D (cadenas)
 
 ## Ouvre une porte / grille : le cadenas disparaît, le vantail remonte toujours vers le haut
 ## (750 ms, décélération, hauteur CELL × 1,15 — comme updateDoorStates de l'original).
 func open_door(id: String, instant: bool = false) -> void:
-	if grid.opened.has(id) and not instant:
+	if (grid.opened.has(id) or opening.has(id)) and not instant:
 		return
-	grid.opened[id] = true
+	if instant:
+		grid.opened[id] = true
+	else:
+		opening[id] = true
 	if locks.has(id) and is_instance_valid(locks[id]):
 		(locks[id] as Node3D).hide()
 	for leaf in doors.get(id, []):
@@ -28,3 +32,7 @@ func open_door(id: String, instant: bool = false) -> void:
 		t.tween_property(leaf, "position:y", y0 + LevelBuilder.CELL * 1.15, 0.75) \
 				.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		t.finished.connect(leaf.hide)
+	if not instant:
+		get_tree().create_timer(0.75).timeout.connect(func():
+			opening.erase(id)
+			grid.opened[id] = true)
