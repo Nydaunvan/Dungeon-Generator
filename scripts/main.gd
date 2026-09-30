@@ -46,6 +46,7 @@ func _ready() -> void:
 	ctrl.setup(gs, rig)
 	ctrl.popup.connect(_show_popup)
 	ctrl.game_over.connect(_on_game_over)
+	ctrl.combat_won.connect(_show_combat_summary)
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
@@ -387,6 +388,13 @@ func _on_menu(name: String) -> void:
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
 		"Carte": _toggle_map()
+		"Journal":
+			var lm := Modal.open(_modals(), "📜 Historique du journal", 640.0)
+			if gs.log_lines.is_empty():
+				lm.add_text("Rien à afficher pour le moment.", UiTheme.DIM, 14)
+			for line in gs.log_lines:
+				lm.add_text(_strip_tags(str(line)), UiTheme.PARCH, 13)
+			lm.set_buttons([{"text": "Fermer", "cb": func(): lm.close()}])
 		"Stats": StatsModal.open(_modals(), gs)
 		"Admin":
 			Data.resume_game = snapshot()
@@ -409,6 +417,34 @@ func _modals() -> Node:
 
 func _restart() -> void:
 	Data.launch(Data.active(), Data.play_origin)
+
+static func _strip_tags(s: String) -> String:
+	var re := RegEx.new()
+	re.compile("<[^>]+>|\\[/?[a-z_]+[^\\]]*\\]")
+	return re.sub(s, "", true)
+
+## Bilan affiché à la fin d'un combat gagné.
+func _show_combat_summary(s: Dictionary) -> void:
+	if gs.won:
+		return
+	Sound.sfx("victory")
+	var m := Modal.open(_modals(), "⚔️ Victoire !", 420.0)
+	var names: Array = []
+	for n in s.order:
+		var c := int(s.counts[n])
+		names.append("%s ×%d" % [n, c] if c > 1 else str(n))
+	m.add_text(", ".join(names), UiTheme.GOLD, 17)
+	if int(s.xp) > 0:
+		m.add_text("⭐ +%d XP" % int(s.xp), UiTheme.PARCH, 15)
+	if int(s.gold) > 0:
+		m.add_text("💰 +%d or" % int(s.gold), UiTheme.PARCH, 15)
+	if not (s.loot as Array).is_empty():
+		m.add_text("🎁 " + ", ".join(s.loot), UiTheme.PARCH, 15)
+	var recap: Array = []
+	for c in gs.party:
+		recap.append("%s %d/%d" % [c.name, int(c.hp), int(c.maxHp)])
+	m.add_text("❤️ " + " · ".join(recap), UiTheme.DIM, 13)
+	m.set_buttons([{"text": "Continuer", "cb": func(): m.close()}])
 
 func _on_game_over() -> void:
 	show_message("☠️ Toute l'équipe a péri…", 4.0)

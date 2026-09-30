@@ -19,6 +19,24 @@ func _init(state: GameState, lvl: Dictionary, g: DungeonGrid) -> void:
 	level = lvl
 	grid = g
 
+## Bilan du combat en cours (monstres vaincus, XP, or, butin) ; vidé par take_summary().
+var summary: Dictionary = {}
+
+func take_summary() -> Dictionary:
+	var s := summary
+	summary = {}
+	return s
+
+func _note_summary(def: Dictionary, xp: int, gold: int) -> void:
+	if summary.is_empty():
+		summary = {"order": [], "counts": {}, "xp": 0, "gold": 0, "loot": []}
+	var nm := str(def.get("name", "Monstre"))
+	if not summary.counts.has(nm):
+		summary.order.append(nm)
+	summary.counts[nm] = int(summary.counts.get(nm, 0)) + 1
+	summary.xp = int(summary.xp) + xp
+	summary.gold = int(summary.gold) + gold
+
 func lstate() -> Dictionary:
 	return gs.level_state(level)
 
@@ -681,6 +699,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 		group_mult = 2.0 if int(def.get("groupSize", 2)) == 3 else 1.5
 	var xp := int(round(int(def.get("xpReward", 0)) * group_mult))
 	var gold := int(round(int(def.get("goldReward", 0)) * group_mult))
+	_note_summary(def, xp, gold)
 	_split_xp(st, xp)
 	_record_bestiary(def)
 	gs.stats["monstersKilled"] += 1
@@ -706,6 +725,8 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 						gs.stats["itemsFound"] += 1
 						gs.add_log("🎁 %s laisse tomber %s !" % [_mname(def), it.name])
 						events.append({"type": "loot", "name": str(it.name)})
+						if not summary.is_empty():
+							summary.loot.append(str(it.name))
 					else:
 						gs.add_log("🎁 %s laissait tomber %s, mais la besace est pleine ! Le butin est perdu." % [_mname(def), it.name])
 	# endurance récupérée après la victoire (difficulté « normal »)

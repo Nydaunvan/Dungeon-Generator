@@ -6,6 +6,7 @@ extends Node
 signal changed
 signal popup(text: String, color: Color)
 signal game_over
+signal combat_won(summary: Dictionary)
 
 const MONSTER_DELAY := 0.85
 
@@ -208,6 +209,8 @@ func _drain() -> void:
 				popup.emit(str(e.text), e.color)
 			"monster_died":
 				view.entities.remove_monster(str(e.id))
+				if not in_combat() and not combat.summary.is_empty():
+					combat_won.emit(combat.take_summary())
 			"door_open":
 				combat.lstate().get_or_add("opened_doors", {})[str(e.id)] = true
 				view.open_door(str(e.id))

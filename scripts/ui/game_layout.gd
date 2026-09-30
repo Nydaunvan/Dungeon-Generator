@@ -258,6 +258,14 @@ func _build_parts() -> void:
 	panel_bag.body.add_child(bag)
 	panel_log = OrnatePanel.new("Grimoire des événements")
 	panel_log.name = "Journal"
+	if panel_log.header_row != null:
+		var lb := Button.new()
+		lb.text = "📜"
+		lb.flat = true
+		lb.focus_mode = Control.FOCUS_NONE
+		lb.tooltip_text = "Historique complet du journal"
+		lb.pressed.connect(func(): menu_pressed.emit("Journal"))
+		panel_log.header_row.add_child(lb)
 	log_panel = LogPanel.new()
 	log_panel.setup(gs)
 	panel_log.body.add_child(log_panel)

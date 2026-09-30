@@ -65,6 +65,7 @@ func on_step() -> void:
 			"trap": _prompt_trap(it)
 			"fountain": _prompt_fountain(it)
 			"switch": _trigger_switch(it)
+			"decor": _activate_decor(it)
 			_:
 				if PICKUP_TYPES.has(str(it.get("type", ""))):
 					_pickup(it)
@@ -211,6 +212,40 @@ func stairs_open(st: Dictionary) -> bool:
 	unlocked[str(st.id)] = true
 	bag_changed.emit()
 	return true
+
+# ------------------------------------------------------------------ décor
+
+## Décor à effet (statue, brasero…) : marcher dessus donne un statut au groupe, une fois par visite.
+func _activate_decor(it: Dictionary) -> void:
+	var st := gs.item_state(_lid(), str(it.id))
+	if st.get("taken", false):
+		return
+	st["taken"] = true
+	var def: Dictionary = {}
+	for d in Data.constants.get("DECOR_LIBRARY", []):
+		if str(d.get("id", "")) == str(it.get("decorTypeId", "")):
+			def = d
+	var sdef := Statuses.def(str(def.get("status", "")))
+	if not def.is_empty() and not sdef.is_empty():
+		var dur := int(def.get("duration", 8))
+		var power := int(def.get("power", 4))
+		for c in gs.alive_party():
+			var list: Array = c.get("statusEffects", [])
+			var found := false
+			for e in list:
+				if str(e.type) == str(def.status):
+					e["remaining"] = maxi(int(e.remaining), dur)
+					e["power"] = power
+					found = true
+			if not found:
+				list.append({"type": def.status, "remaining": dur, "power": power, "casterId": ""})
+			c["statusEffects"] = list
+			Characters.recompute(c, gs.cfg)
+		Sound.sfx("pickup")
+		_log("%s %s — %s %s %s !" % [it.get("icon", "") if not str(it.get("icon", "")).begins_with("@icon:") else "", it.get("name", ""), def.get("flavor", ""), sdef.get("icon", ""), sdef.get("label", "")])
+		ctrl.changed.emit()
+	else:
+		_log("%s — %s" % [it.get("name", ""), def.get("flavor", "")])
 
 # ------------------------------------------------------------------ levier
 
