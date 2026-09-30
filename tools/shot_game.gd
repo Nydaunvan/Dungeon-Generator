@@ -114,6 +114,12 @@ func _init() -> void:
 					await create_timer(1.3).timeout
 				else:
 					await create_timer(3.6).timeout
+			"modal":
+				main._leave_game()
+				await create_timer(1.2).timeout
+			"flee":
+				main._on_command("flee")
+				await create_timer(1.2).timeout
 			"dock":
 				main.dock.open_for(str(main.gs.party[0].id))
 				await create_timer(1.0).timeout

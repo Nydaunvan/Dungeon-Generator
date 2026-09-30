@@ -41,6 +41,7 @@ func _init(title: String = "", modal: bool = false) -> void:
 		title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if modal else TextServer.AUTOWRAP_OFF
 		title_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
 		title_label.add_theme_constant_override("outline_size", 2)
+		title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		header_row.add_child(title_label)
 		var sep := ColorRect.new()
 		sep.color = Color("070504")
