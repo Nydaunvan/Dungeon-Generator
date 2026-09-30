@@ -71,6 +71,31 @@ func _init() -> void:
 							print("trap kind ", it.get("trapKind"))
 							break
 				await create_timer(1.0).timeout
+			"stairs":
+				main.wand.paused_if = func(): return true
+				var done2 := false
+				for dk in main.grid.doors.keys():
+					main.grid.opened[str(main.grid.doors[dk].get("id", ""))] = true
+				print("STAIRS ", main.grid.stairs.keys())
+				for sp in main.grid.stairs.keys():
+					if done2:
+						break
+					for d in 4:
+						var v2: Vector2i = DungeonGrid.DIRS[d]
+						var from2: Vector2i = sp - v2
+						if main.grid.is_walkable(from2.x, from2.y):
+							main.rig.place(main.grid, from2.x, from2.y, d)
+							done2 = true
+							print("PLACED ", from2, " dir ", d)
+							break
+				await create_timer(1.0).timeout
+			"lockdoor":
+				main.wand.paused_if = func(): return true
+				main.rig.place(main.grid, 9, 7, 1)
+				await create_timer(0.8).timeout
+			"dooropen":
+				main.inter.open_door("doorA")
+				await create_timer(0.35).timeout
 			"trapui":
 				for it in main.level.items:
 					if str(it.get("type", "")) == "trap":

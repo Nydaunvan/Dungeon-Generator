@@ -161,6 +161,27 @@ static func _add_door(view: LevelView, edge: Vector3, rot: float, theme: String,
 		if not view.doors.has(id):
 			view.doors[id] = []
 		view.doors[id].append(leaf)
+		if bool(door_def.get("locked", true)) and not view.locks.has(id):
+			view.locks[id] = _lock_sprite(view, edge + Vector3(0, CELL * 0.55, 0) + _inward(rot) * CELL * 0.04)
+
+## Vecteur unitaire vers l'intérieur de la case pour un plan de rotation `rot` (inverse de _rot).
+static func _inward(rot: float) -> Vector3:
+	return Vector3(sin(rot), 0.0, cos(rot))
+
+## Cadenas doré (sprite face caméra, 0,55 u de large) posé devant une porte verrouillée.
+static func _lock_sprite(view: LevelView, pos: Vector3) -> Sprite3D:
+	var sp := Sprite3D.new()
+	sp.texture = load("res://assets/ui/lock_icon.png")
+	sp.pixel_size = 0.55 / 512.0 * 1.0
+	sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sp.shaded = false
+	sp.double_sided = true
+	sp.alpha_cut = SpriteBase3D.ALPHA_CUT_DISABLED
+	sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sp.render_priority = 2
+	sp.position = pos
+	view.add_child(sp)
+	return sp
 
 ## Arche d'escalier : cadre de bronze par-dessus le mur + deux torches de part et d'autre.
 static func _add_arch(view: LevelView, torches: TorchLayer, edge: Vector3, d: Vector2i, rot: float,
@@ -180,6 +201,29 @@ static func _add_arch(view: LevelView, torches: TorchLayer, edge: Vector3, d: Ve
 	arch.position = edge + Vector3(-d.x * 0.01, CELL * 0.5, -d.y * 0.01)   # juste devant le mur
 	arch.rotation.y = rot
 	view.add_child(arch)
+	# grille de fer si l'arche est verrouillée (même vantail que les portes, légèrement en retrait devant l'arche)
+	if bool(_stair_def.get("locked", false)):
+		var gate := MeshInstance3D.new()
+		var gq := QuadMesh.new()
+		gq.size = Vector2(CELL, CELL)
+		gate.mesh = gq
+		var gm := StandardMaterial3D.new()
+		gm.albedo_texture = ProceduralTextures.door(theme)
+		gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		gm.alpha_scissor_threshold = 0.5
+		gm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		gm.roughness = 1.0
+		gm.metallic_specular = 0.0
+		gm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+		gate.material_override = gm
+		gate.position = edge + Vector3(0, CELL * 0.5, 0) + _inward(rot) * CELL * 0.08
+		gate.rotation.y = rot
+		view.add_child(gate)
+		var sid := str(_stair_def.get("id", ""))
+		if sid != "":
+			if not view.doors.has(sid):
+				view.doors[sid] = []
+			view.doors[sid].append(gate)
 	# torches : même distance de l'arche des deux côtés, la paire décalée légèrement à gauche
 	var tang := Vector3(0.0 if d.x != 0 else 1.0, 0.0, 0.0 if d.y != 0 else 1.0)
 	var offset := 0.43

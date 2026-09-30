@@ -75,6 +75,12 @@ static func door(theme: String) -> Texture2D:
 static func arch() -> Texture2D:
 	if _cache.has("arch"):
 		return _cache["arch"]
+	# Dessin exact du cadre de l'original (mêmes traits/dégradé/plaques rivetées que l'arche de l'accueil), rendu à 1024².
+	var tex: Texture2D = load("res://assets/ui/arch_frame.png")
+	_cache["arch"] = tex
+	return tex
+
+static func arch_procedural_legacy() -> Texture2D:
 	var W := 512
 	var H := 512
 	var m_x := W * 0.1172

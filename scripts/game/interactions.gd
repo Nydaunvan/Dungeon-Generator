@@ -211,6 +211,7 @@ func stairs_open(st: Dictionary) -> bool:
 	gs.inventory.remove_at(k)
 	unlocked[str(st.id)] = true
 	bag_changed.emit()
+	open_door(str(st.id))     # la grille de l'arche remonte
 	return true
 
 # ------------------------------------------------------------------ décor
