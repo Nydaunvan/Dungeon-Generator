@@ -1,7 +1,7 @@
 extends Node3D
 ## Scène principale : couloir 3D, équipe, combat au tour par tour.
-## Clavier (touches physiques, libellés AZERTY) :
-##   ↑/Z avancer · ↓/S reculer · Q/D pas de côté · ←/A et →/E tourner
+## Clavier :
+##   ↑/Z/W avancer · ↓/S reculer · ←/Q/A et →/D tourner (touches logiques : AZERTY et QWERTY sans réglage)
 ##   X ou Espace : attaquer (ou interagir s'il n'y a rien à frapper) · F/Entrée : interagir · C : fuir
 
 var level_index: int = 0
@@ -39,7 +39,6 @@ func _ready() -> void:
 	for c in gs.party:
 		print("%s -> PV %d, ATK %d-%d, vitesse %d" % [c.name, c.maxHp, c.atkMin, c.atkMax, c.effSpeed])
 
-	_setup_input()
 	_setup_environment()
 	rig = PlayerRig.new()
 	rig.blocked.connect(_on_blocked)
@@ -235,7 +234,11 @@ func _toggle_map() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		match event.physical_keycode:
+		var lk: Key = event.keycode if event.keycode != KEY_NONE else event.physical_keycode
+		var dk: Key = event.physical_keycode
+		if dk >= KEY_1 and dk <= KEY_7:
+			lk = dk
+		match lk:
 			KEY_M:
 				_toggle_map()
 				get_viewport().set_input_as_handled()
@@ -251,7 +254,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
 				if get_tree().get_nodes_in_group("modal").is_empty() and ctrl.in_combat():
-					var slot: int = event.physical_keycode - KEY_1
+					var slot: int = int(lk) - int(KEY_1)
 					if slot == 0:
 						ctrl.attack()
 					else:
@@ -263,10 +266,21 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 	if not get_tree().get_nodes_in_group("modal").is_empty():
 		return
-	for action in ["forward", "back", "left", "right", "turn_left", "turn_right", "attack", "interact", "flee"]:
-		if event.is_action_pressed(action):
-			_on_command(action)
-			return
+	if event is InputEventKey and event.pressed:
+		# Touches « logiques » (celles qui s'impriment sur la touche) : Z/Q/S/D sur AZERTY, W/A/S/D sur QWERTY, sans réglage.
+		var k: Key = event.keycode if event.keycode != KEY_NONE else event.physical_keycode
+		var cmd := ""
+		match k:
+			KEY_UP, KEY_Z, KEY_W: cmd = "forward"
+			KEY_DOWN, KEY_S: cmd = "back"
+			KEY_LEFT, KEY_Q, KEY_A: cmd = "turn_left"
+			KEY_RIGHT, KEY_D: cmd = "turn_right"
+			KEY_SPACE, KEY_X: cmd = "attack"
+			KEY_F, KEY_ENTER, KEY_KP_ENTER: cmd = "interact"
+			KEY_C: cmd = "flee"
+		if cmd != "" and (not event.echo or cmd in ["forward", "back", "turn_left", "turn_right"]):
+			_on_command(cmd)
+			get_viewport().set_input_as_handled()
 
 func _on_command(cmd: String) -> void:
 	if gs.game_over:
