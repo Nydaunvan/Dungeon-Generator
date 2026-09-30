@@ -82,7 +82,58 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	view.stage = stage
 	if outdoor:
 		Outdoor.decorate(view, level)
+	else:
+		_add_columns(view, grid, theme.get("wall"))
 	return view
+
+## Colonnes aux angles : là où deux murs se rejoignent, et aux deux extrémités d'un mur isolé (port de buildDecor).
+static func _add_columns(view: LevelView, grid: DungeonGrid, wall_mat: Material) -> void:
+	var dirs := {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S": Vector2i(0, 1), "O": Vector2i(-1, 0)}
+	var opposite := {"N": "S", "S": "N", "E": "O", "O": "E"}
+	var perp := {"N": ["E", "O"], "S": ["E", "O"], "E": ["N", "S"], "O": ["N", "S"]}
+	var placed := {}
+	var root := Node3D.new()
+	root.name = "Columns"
+	view.add_child(root)
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.32
+	mesh.bottom_radius = 0.32
+	mesh.height = CELL
+	mesh.radial_segments = 10
+	mesh.rings = 1
+	mesh.material = wall_mat
+	var place := func(wx: float, wz: float):
+		var key := "%.2f,%.2f" % [wx, wz]
+		if placed.has(key):
+			return
+		placed[key] = true
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.position = Vector3(wx, CELL * 0.5, wz)
+		root.add_child(mi)
+	for y in grid.height:
+		for x in grid.width:
+			if grid.cell(x, y) == "#":
+				continue
+			var walls: Array = []
+			for n in ["N", "E", "S", "O"]:
+				var d: Vector2i = dirs[n]
+				var nx := x + d.x
+				var ny := y + d.y
+				var solid := nx < 0 or ny < 0 or nx >= grid.width or ny >= grid.height or grid.cell(nx, ny) == "#"
+				if solid:
+					walls.append(n)
+			var cx := x * CELL
+			var cz := y * CELL
+			if walls.size() == 2 and opposite[walls[0]] != walls[1]:
+				var d1: Vector2i = dirs[walls[0]]
+				var d2: Vector2i = dirs[walls[1]]
+				place.call(cx + (d1.x + d2.x) * CELL * 0.5, cz + (d1.y + d2.y) * CELL * 0.5)
+			elif walls.size() == 1:
+				var d0: Vector2i = dirs[walls[0]]
+				for pn in perp[walls[0]]:
+					var p: Vector2i = dirs[pn]
+					place.call(cx + (d0.x + p.x) * CELL * 0.5, cz + (d0.y + p.y) * CELL * 0.5)
 
 ## Rotation Y d'un plan qui regarde vers l'intérieur de la case (même valeur que `rot` du JS).
 static func _rot(d: Vector2i) -> float:
