@@ -16,12 +16,20 @@ static var _face_mats: Array = []
 var _dice: Array = []   # {pivot, cube, rest: Vector3, x: float, busy: bool, anim: Dictionary}
 var _time := 0.0
 var _vp: SubViewport
+var _pic: TextureRect
+const PAD := 1.8
 
 func _fit_vp() -> void:
 	if _vp == null or size.x < 1.0:
 		return
-	var w := clampi(int(size.x * UiMetrics.s * 2.0), 296, 1776)
+	var w := clampi(int(size.x * UiMetrics.s * 2.0 * PAD), 296, 2400)
 	_vp.size = Vector2i(w, int(round(w * 184.0 / 296.0)))
+	if _pic != null:
+		var m := size * (PAD - 1.0) * 0.5     # la vue déborde de la zone nominale : les dés peuvent sauter sans être coupés
+		_pic.offset_left = -m.x
+		_pic.offset_right = m.x
+		_pic.offset_top = -m.y
+		_pic.offset_bottom = m.y
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -41,9 +49,10 @@ func _ready() -> void:
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pic)
+	_pic = pic
 	resized.connect(_fit_vp)
 	var cam := Camera3D.new()
-	cam.fov = 11.96
+	cam.fov = rad_to_deg(2.0 * atan(tan(deg_to_rad(11.96) * 0.5) * PAD))
 	cam.position = Vector3(0, 0, 220.0 / 24.0)
 	vp.add_child(cam)
 	var rests := [Vector3(0, 90, 0), Vector3(90, 180, 0)]

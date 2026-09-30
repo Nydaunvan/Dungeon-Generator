@@ -236,7 +236,7 @@ func _make_seal() -> Control:
 		t.add_theme_font_size_override("font_size", fs)
 		t.add_theme_constant_override("line_spacing", int(round(1.25 * fs - UiTheme.font(UiTheme.F_DISPLAY_BOLD).get_height(fs))))
 		s.add_theme_font_size_override("font_size", int(round(13.0 * f)))
-		var dw := 74.0 * f * 1.18
+		var dw := 74.0 * f * 1.0
 		dice.size = Vector2(dw, dw * 46.0 / 74.0)
 		dice.position = Vector2((root.size.x - dw) * 0.5, root.size.y * (94.0 / 280.0) - dice.size.y * 0.5))
 	root.mouse_entered.connect(func():

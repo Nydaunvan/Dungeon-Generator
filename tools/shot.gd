@@ -11,6 +11,10 @@ func _init() -> void:
 	var packed: PackedScene = load(str(args.get("scene", "res://scenes/home.tscn")))
 	root.add_child(packed.instantiate())
 	await create_timer(float(args.get("wait", "1.5"))).timeout
+	if args.has("roll"):
+		for d in root.find_children("dice", "", true, false):
+			d.roll()
+		await create_timer(float(args.get("roll"))).timeout
 	await process_frame
 	var img := root.get_texture().get_image()
 	img.save_png(str(args.get("out", "/tmp/shot.png")))
