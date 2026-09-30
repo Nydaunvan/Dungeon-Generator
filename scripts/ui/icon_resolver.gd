@@ -32,6 +32,8 @@ static func texture(icon: String) -> Texture2D:
 		tex = _cell(ITEM_SHEET, int(id.substr(4)), 8, 128)
 	elif ResourceLoader.exists("res://assets/icons/%s.webp" % id):
 		tex = load("res://assets/icons/%s.webp" % id)
+	elif ResourceLoader.exists("res://assets/icons/%s.png" % id):
+		tex = load("res://assets/icons/%s.png" % id)
 	_cache[icon] = tex
 	return tex
 

@@ -44,7 +44,7 @@ static func _image_ids() -> Array:
 	var d := DirAccess.open("res://assets/icons")
 	if d != null:
 		for f in d.get_files():
-			if f.ends_with(".webp") or f.ends_with(".webp.import"):
+			if f.ends_with(".webp") or f.ends_with(".webp.import") or f.ends_with(".png") or f.ends_with(".png.import"):
 				var id := f.get_basename().get_basename() if f.ends_with(".import") else f.get_basename()
 				if not seen.has(id):
 					seen[id] = true

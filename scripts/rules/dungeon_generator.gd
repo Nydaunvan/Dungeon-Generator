@@ -634,7 +634,7 @@ func _try_locking_door(grid: Array, dist: Array, rooms: Array, candidates: Array
 		attempt += 1
 		var room: Dictionary = tries.pop_at(randi_range(0, tries.size() - 1))
 		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var n := Vector2i(room.x, room.y) + d
+			var n: Vector2i = Vector2i(int(room.x), int(room.y)) + d
 			if n.y < 0 or n.y >= grid.size() or n.x < 0 or n.x >= grid[0].size():
 				continue
 			if grid[n.y][n.x] != "#" and dist[n.y][n.x] == room.d - 1:

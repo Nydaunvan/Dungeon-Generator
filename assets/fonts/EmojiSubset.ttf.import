@@ -2,12 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-path="res://.godot/imported/EmojiSubset.ttf-emoji.fontdata"
+uid="uid://dxd1nxtpfipcs"
+path="res://.godot/imported/EmojiSubset.ttf-12406f33f7dedc0d6cd7b2cc76d62a0e.fontdata"
 
 [deps]
 
 source_file="res://assets/fonts/EmojiSubset.ttf"
-dest_files=["res://.godot/imported/EmojiSubset.ttf-emoji.fontdata"]
+dest_files=["res://.godot/imported/EmojiSubset.ttf-12406f33f7dedc0d6cd7b2cc76d62a0e.fontdata"]
 
 [params]
 
@@ -27,6 +28,7 @@ keep_rounding_remainders=true
 oversampling=0.0
 Fallbacks=null
 fallbacks=[]
+Compress=null
 compress=true
 preload=[]
 language_support={}
