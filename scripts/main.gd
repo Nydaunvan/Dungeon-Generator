@@ -13,6 +13,7 @@ var ctrl: CombatController
 var env: Environment
 var layout: GameLayout
 var inter: Interactions
+var wand: Wanderers
 var dock: EquipDock
 var _we: WorldEnvironment
 var message_label: Label
@@ -70,6 +71,11 @@ func _ready() -> void:
 	inter = Interactions.new()
 	add_child(inter)
 	inter.setup(gs, ctrl, rig, layout, _modal_layer)
+	wand = Wanderers.new()
+	add_child(wand)
+	wand.setup(gs, ctrl, rig)
+	wand.paused_if = func(): return not get_tree().get_nodes_in_group("modal").is_empty() or dock.visible
+	inter.wand = wand
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
 	layout.item_pressed.connect(_on_bag_item)
@@ -93,6 +99,7 @@ func load_level(index: int) -> void:
 	rig.place(grid, int(level.get("startX", 1)), int(level.get("startY", 1)), int(level.get("startDir", 0)))
 	ctrl.bind_level(level, grid, level_node)
 	inter.bind_level(level, grid, level_node)
+	wand.bind_level(level, grid, level_node)
 	for id in ls.get("opened_doors", {}):
 		level_node.open_door(str(id), true)
 	for it in level.get("items", []):
@@ -100,6 +107,11 @@ func load_level(index: int) -> void:
 			level_node.entities.remove_item(str(it.id))
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig)
+	layout.minimap.merchant_cell = func():
+		var mm := wand.merchant()
+		return Vector2i(int(mm.x), int(mm.y)) if (not mm.is_empty() and mm.discovered) else Vector2i(-1, -1)
+	if not wand.merchant_moved.is_connected(layout.minimap.queue_redraw):
+		wand.merchant_moved.connect(layout.minimap.queue_redraw)
 	show_message(str(level.name))
 
 func _setup_environment() -> void:

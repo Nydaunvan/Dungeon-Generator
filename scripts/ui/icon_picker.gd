@@ -16,6 +16,26 @@ static func apply(btn: Button, icon: String, size: float = 40.0) -> void:
 	btn.add_theme_font_size_override("font_size", int(size * 0.62))
 	btn.add_theme_constant_override("icon_max_width", int(size))
 
+## Petit contrôle d'affichage d'une icône (image ou emoji), non cliquable.
+static func icon_control(icon: String, size: float = 36.0) -> Control:
+	var tex: Texture2D = IconResolver.texture(icon) if icon.begins_with("@icon:") else null
+	if tex != null:
+		var t := TextureRect.new()
+		t.texture = tex
+		t.custom_minimum_size = Vector2(size, size)
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return t
+	var l := Label.new()
+	l.text = icon
+	l.custom_minimum_size = Vector2(size, size)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", int(size * 0.7))
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
 ## Bouton-icône qui ouvre le sélecteur ; `target[key]` reçoit le choix, `changed` est ensuite appelé.
 static func button(host: Node, target: Dictionary, key: String, changed: Callable = Callable(), size: float = 40.0) -> Button:
 	var b := Button.new()

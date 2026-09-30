@@ -6,6 +6,7 @@ var grid: DungeonGrid
 var rig: PlayerRig
 var seen: Dictionary = {}   # niveau -> { Vector2i: true }
 var _level_id: String = ""
+var merchant_cell: Callable = Callable()   # () -> Vector2i, (-1, -1) tant que le marchand n'est pas découvert
 
 func bind(g: DungeonGrid, r: PlayerRig) -> void:
 	grid = g
@@ -73,3 +74,9 @@ func _draw() -> void:
 	var side := Vector2(-f.y, f.x)
 	var r := cs * 0.45
 	draw_colored_polygon(PackedVector2Array([pc + f * r, pc - f * r * 0.7 + side * r * 0.7, pc - f * r * 0.7 - side * r * 0.7]), UiTheme.GOLD)
+	if merchant_cell.is_valid():
+		var mc: Vector2i = merchant_cell.call()
+		if mc.x >= 0:
+			var mp := origin + (Vector2(mc.x - lo.x, mc.y - lo.y) + Vector2(0.5, 0.5)) * cs
+			draw_circle(mp, cs * 0.42, Color("8a4fc8"))
+			draw_arc(mp, cs * 0.42, 0, TAU, 16, UiTheme.GOLD, 1.2)

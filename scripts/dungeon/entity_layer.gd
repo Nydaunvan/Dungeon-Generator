@@ -25,6 +25,7 @@ static var _mats: Dictionary = {}
 
 var monsters: Dictionary = {}   # Vector2i -> Array[{node, def}]
 var items: Dictionary = {}      # Vector2i -> Array[{node, def}]
+var merchant_node: MeshInstance3D = null
 
 func populate(level: Dictionary) -> void:
 	for m in level.get("monsters", []):
@@ -50,6 +51,40 @@ func populate(level: Dictionary) -> void:
 		add_child(n)
 		if type != "decor":
 			_register(items, p, n, it)
+
+## Marchand itinérant (sprite unique, déplaçable).
+func add_merchant(x: int, y: int) -> void:
+	if merchant_node != null:
+		merchant_node.queue_free()
+	var n := _make_sprite("@icon:merchant", false, false)
+	if n == null:
+		return
+	_place_on_floor(n, Vector2i(x, y), "@icon:merchant")
+	add_child(n)
+	merchant_node = n
+
+func move_merchant(x: int, y: int) -> void:
+	if merchant_node != null:
+		_slide(merchant_node, Vector2i(x, y))
+
+## Déplace le sprite d'un monstre vers la case (x, y) avec un court glissement.
+func move_monster(id: String, x: int, y: int) -> void:
+	for p in monsters.keys():
+		var list: Array = monsters[p]
+		for i in list.size():
+			if str(list[i].def.id) == id:
+				var e: Dictionary = list[i]
+				list.remove_at(i)
+				var np := Vector2i(x, y)
+				if not monsters.has(np):
+					monsters[np] = []
+				monsters[np].append(e)
+				_slide(e.node, np)
+				return
+
+func _slide(n: Node3D, p: Vector2i) -> void:
+	var target := Vector3(p.x * LevelBuilder.CELL, n.position.y, p.y * LevelBuilder.CELL)
+	create_tween().tween_property(n, "position", target, 0.4).set_trans(Tween.TRANS_SINE)
 
 func _register(dict: Dictionary, p: Vector2i, node: Node3D, def: Dictionary) -> void:
 	if not dict.has(p):
@@ -150,6 +185,8 @@ func _material_for(icon: String, is_boss: bool, is_item: bool) -> StandardMateri
 	var remake: Dictionary = consts.get("REMAKE_MAP", {})
 	var legacy: Dictionary = consts.get("ITEM_SPRITE_LEGACY", {})
 	var single := "res://assets/icons/%s.webp" % id
+	if not ResourceLoader.exists(single):
+		single = "res://assets/icons/%s.png" % id
 	if NEW_MONSTER_IDS.has(id):
 		mat = _sheet_material(MONSTER_SHEET, NEW_MONSTER_IDS.find(id), MONSTER_COLS, 1)
 	elif remake.has(id) and not is_boss:

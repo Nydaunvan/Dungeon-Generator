@@ -14,6 +14,7 @@ var host: Node               # couche qui reçoit les fenêtres modales
 var level: Dictionary = {}
 var grid: DungeonGrid
 var view: LevelView
+var wand: Wanderers          # marchand itinérant (état et déplacements)
 
 const TRAP_DEFAULTS := {"base": 15, "rogueBonus": 12, "assassinBonus": 6, "dexBonus": 0.5, "dexCap": 10, "min": 10, "max": 95,
 	"critExtraDmg": 50, "dmgPctMin": 15, "dmgPctMax": 30}
@@ -50,6 +51,10 @@ func on_step() -> void:
 	if int(gs.stats.moves) % interval == 0:
 		for c in gs.alive_party():
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(sta.get("moveGain", 0)))
+	var mm: Dictionary = wand.merchant() if wand != null else {}
+	if not mm.is_empty() and int(mm.x) == rig.gx and int(mm.y) == rig.gy:
+		_meet_merchant(mm)
+		return
 	for it in level.get("items", []):
 		if int(it.x) != rig.gx or int(it.y) != rig.gy:
 			continue
@@ -64,6 +69,31 @@ func on_step() -> void:
 				if PICKUP_TYPES.has(str(it.get("type", ""))):
 					_pickup(it)
 		return
+
+# ------------------------------------------------------------------ marchand itinérant
+
+func _meet_merchant(mm: Dictionary) -> void:
+	mm["discovered"] = true
+	if wand != null:
+		wand.merchant_moved.emit()
+	_log("🧙 Un marchand itinérant croise la route du groupe.")
+	var m := Modal.open(host, "Marchand itinérant", 400)
+	m.add_text("Un marchand itinérant vous interpelle : « Équipement, potions, parchemins… tout se négocie. »")
+	m.set_buttons([
+		{"text": "Voir son étal", "cb": func():
+			m.close()
+			open_merchant(mm)},
+		{"text": "Continuer", "cb": func(): m.close()},
+	])
+
+func open_merchant(mm: Dictionary) -> void:
+	if mm.get("offers") == null:
+		var run := maxi(0, (gs.cfg.get("levels", []) as Array).find(level))
+		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), run)
+	var on_change := func():
+		bag_changed.emit()
+		ctrl.changed.emit()
+	ShopModal.open(host, gs, mm.offers, false, on_change)
 
 func _pickup(it: Dictionary) -> void:
 	var inst := Inventory.make_instance(it)
