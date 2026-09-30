@@ -23,9 +23,17 @@ const F_TITLE_BOLD := "res://assets/fonts/Cinzel-Bold.ttf"
 static var _fonts: Dictionary = {}
 static var _circle: ShaderMaterial = null
 
+const F_EMOJI := "res://assets/fonts/EmojiSubset.ttf"
+
+## Charge une police et lui ajoute la police d'emojis en secours (icônes des sorts, statuts, etc.).
 static func font(path: String) -> Font:
 	if not _fonts.has(path):
-		_fonts[path] = load(path) if ResourceLoader.exists(path) else null
+		var f = load(path) if ResourceLoader.exists(path) else null
+		if f is FontFile and path != F_EMOJI and ResourceLoader.exists(F_EMOJI):
+			var em = load(F_EMOJI)
+			if em is Font:
+				f.fallbacks = [em]
+		_fonts[path] = f
 	return _fonts[path]
 
 static func box(bg: Color, border: Color = BRONZE, border_w: int = 3, radius: int = 6) -> StyleBoxFlat:
