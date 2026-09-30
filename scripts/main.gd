@@ -47,6 +47,7 @@ func _ready() -> void:
 	ctrl.popup.connect(_show_popup)
 	ctrl.game_over.connect(_on_game_over)
 	ctrl.combat_won.connect(_show_combat_summary)
+	ctrl.fx.connect(_on_fx)
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
@@ -422,6 +423,22 @@ static func _strip_tags(s: String) -> String:
 	var re := RegEx.new()
 	re.compile("<[^>]+>|\\[/?[a-z_]+[^\\]]*\\]")
 	return re.sub(s, "", true)
+
+func _on_fx(type: String) -> void:
+	layout.fx_layer.play(type)
+	if type == "hit" or type == "trap":
+		_shake()
+
+## Secousse de la caméra (impact subi).
+func _shake() -> void:
+	var cam := rig.camera
+	var tw := create_tween()
+	for i in 6:
+		var amp := 0.06 * (1.0 - i / 6.0)
+		tw.tween_property(cam, "h_offset", randf_range(-amp, amp), 0.05)
+		tw.parallel().tween_property(cam, "v_offset", randf_range(-amp, amp), 0.05)
+	tw.tween_property(cam, "h_offset", 0.0, 0.05)
+	tw.parallel().tween_property(cam, "v_offset", 0.0, 0.05)
 
 ## Bilan affiché à la fin d'un combat gagné.
 func _show_combat_summary(s: Dictionary) -> void:

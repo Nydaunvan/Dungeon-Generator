@@ -7,6 +7,7 @@ signal changed
 signal popup(text: String, color: Color)
 signal game_over
 signal combat_won(summary: Dictionary)
+signal fx(type: String)
 
 const MONSTER_DELAY := 0.85
 
@@ -207,6 +208,8 @@ func _drain() -> void:
 		match str(e.type):
 			"popup":
 				popup.emit(str(e.text), e.color)
+			"fx":
+				fx.emit(str(e.fx))
 			"monster_died":
 				view.entities.remove_monster(str(e.id))
 				if not in_combat() and not combat.summary.is_empty():

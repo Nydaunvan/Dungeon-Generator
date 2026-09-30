@@ -240,6 +240,7 @@ func player_attack(attacker: Dictionary) -> bool:
 	var wpn_v = (attacker.get("equipment", {}) as Dictionary).get("weapon")
 	var wtype := str(wpn_v.get("weaponType", "sword")) if wpn_v is Dictionary else "fist"
 	gs.bump(attacker.id, "actions")
+	events.append({"type": "fx", "fx": "unarmed" if wtype == "fist" else wtype})
 	Sound.sfx("swing", wtype)
 	Sound.sfx_later(0.09, "hit")
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
@@ -330,6 +331,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	gs.bump(caster.id, "actions")
 	gs.bump(caster.id, "spellsCast")
 	gs.stats["spellsCast"] = int(gs.stats.get("spellsCast", 0)) + 1
+	events.append({"type": "fx", "fx": "spell" + str(spell.get("style", "arcane"))})
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:
@@ -583,6 +585,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	gs.last_attacker_id = str(victim.id)
 	gs.add_log("%s attaque et blesse %s (%d dégâts)%s." % [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""], true)
 	Sound.sfx("monster_attack")
+	events.append({"type": "fx", "fx": "hit"})
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
@@ -608,6 +611,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.add_log("%s utilise %s %s sur %s (%d dégâts)%s." % [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""], true)
 	Sound.sfx("monster_attack")
+	events.append({"type": "fx", "fx": "hit"})
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")

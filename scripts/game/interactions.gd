@@ -254,6 +254,7 @@ func _trigger_switch(it: Dictionary) -> void:
 	if st.get("triggered", false):
 		return
 	st["triggered"] = true
+	ctrl.fx.emit("switch")
 	_log("🔧 %s actionné !" % it.get("name", "Levier"))
 	var did := str(it.get("switchOpensDoorId", ""))
 	if did != "":
@@ -294,6 +295,7 @@ func _use_fountain(it: Dictionary) -> void:
 		c["hp"] = c.maxHp
 		c["stamina"] = c.get("maxStamina", 100)
 	Sound.sfx("fountain")
+	ctrl.fx.emit("fountain")
 	_log("⛲ %s redonne toutes ses forces au groupe ! PV et endurance entièrement restaurés." % it.get("name", "La fontaine"))
 	if not revived.is_empty():
 		_log("✝️ %s %s ramené(s) à la vie par la fontaine !" % [", ".join(revived), "est" if revived.size() == 1 else "sont"])
@@ -384,6 +386,7 @@ func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
 	var hit: Dictionary = pre if not pre.is_empty() else _pick_victim(it, mult)
 	var victim: Dictionary = hit.victim
 	victim["hp"] = maxi(0, int(victim.hp) - int(hit.dmg))
+	ctrl.fx.emit("trap")
 	gs.stats["trapsTriggered"] = int(gs.stats.get("trapsTriggered", 0)) + 1
 	gs.bump(victim.id, "damageTaken", int(hit.dmg))
 	if int(victim.hp) <= 0:

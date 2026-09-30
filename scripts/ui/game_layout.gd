@@ -34,6 +34,7 @@ var btn_interact: Button
 var btn_flee: Button
 var initiative: InitiativeBar
 var banner: CombatBanner
+var fx_layer: FxLayer
 var strip: PanelContainer
 var spell_bar: SpellBar
 var rail: ColorRect
@@ -177,6 +178,9 @@ func _build_parts() -> void:
 	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	banner.pressed.connect(func(d, s): monster_pressed.emit(d, s))
 	stage.add_child(banner)
+
+	fx_layer = FxLayer.new()
+	stage.add_child(fx_layer)
 
 	popup_layer = Control.new()
 	popup_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
