@@ -349,6 +349,9 @@ func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
 	var victim: Dictionary = hit.victim
 	victim["hp"] = maxi(0, int(victim.hp) - int(hit.dmg))
 	gs.stats["trapsTriggered"] = int(gs.stats.get("trapsTriggered", 0)) + 1
+	gs.bump(victim.id, "damageTaken", int(hit.dmg))
+	if int(victim.hp) <= 0:
+		gs.bump(victim.id, "knockdowns")
 	_log("⚠️ Piège déclenché : %s ! %s subit %d dégâts." % [it.get("name", ""), victim.name, int(hit.dmg)], true)
 	ctrl.popup.emit("-%d" % int(hit.dmg), Color("ff6a6a"))
 	if int(victim.hp) <= 0:

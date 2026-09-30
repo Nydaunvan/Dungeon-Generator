@@ -221,6 +221,7 @@ func player_attack(attacker: Dictionary) -> bool:
 	var dmg := randi_range(int(attacker.atkMin), int(attacker.atkMax)) + Statuses.flat_damage_bonus(attacker)
 	var wpn_v = (attacker.get("equipment", {}) as Dictionary).get("weapon")
 	var wtype := str(wpn_v.get("weaponType", "sword")) if wpn_v is Dictionary else "fist"
+	gs.bump(attacker.id, "actions")
 	Sound.sfx("swing", wtype)
 	Sound.sfx_later(0.09, "hit")
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
@@ -308,6 +309,9 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		var cds: Dictionary = caster.get("spellCooldowns", {})
 		cds[spell_id] = Time.get_ticks_msec() + int(float(spell.get("cooldownSec", 6)) * 1000.0)
 		caster["spellCooldowns"] = cds
+	gs.bump(caster.id, "actions")
+	gs.bump(caster.id, "spellsCast")
+	gs.stats["spellsCast"] = int(gs.stats.get("spellsCast", 0)) + 1
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:
@@ -400,6 +404,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 func _credit_heal(caster: Dictionary, healed: int) -> void:
 	if healed <= 0:
 		return
+	gs.bump(caster.id, "healingDone", healed)
 	var eng := engaged()
 	var mid := str(lstate().get("last_engaged_id", ""))
 	if not eng.is_empty():
@@ -439,6 +444,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	for h in holders:
 		h["hp"] = float(h.hp) - dmg
 		_add_contrib(st, str(attacker.id), dmg)
+		gs.bump(attacker.id, "damageDealt", dmg)
 	lstate()["last_engaged_id"] = str(target.id)
 	if bool(target.get("isBoss", false)) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
 			and st.hp > 0 and st.hp <= st.maxHp * (int(target.enrageThreshold) / 100.0):
@@ -463,6 +469,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	for h in holders:
 		if float(h.hp) <= 0.0:
 			h["alive"] = false
+			gs.bump(attacker.id, "kills")
 	var all_dead := true
 	if is_group:
 		for mem in st.members:
@@ -558,6 +565,9 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	gs.last_attacker_id = str(victim.id)
 	gs.add_log("%s attaque et blesse %s (%d dégâts)%s." % [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""], true)
 	Sound.sfx("monster_attack")
+	gs.bump(victim.id, "damageTaken", dmg)
+	if int(victim.hp) <= 0:
+		gs.bump(victim.id, "knockdowns")
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) <= 0:
@@ -580,6 +590,9 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.add_log("%s utilise %s %s sur %s (%d dégâts)%s." % [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""], true)
 	Sound.sfx("monster_attack")
+	gs.bump(victim.id, "damageTaken", dmg)
+	if int(victim.hp) <= 0:
+		gs.bump(victim.id, "knockdowns")
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) > 0:
@@ -669,6 +682,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 	var xp := int(round(int(def.get("xpReward", 0)) * group_mult))
 	var gold := int(round(int(def.get("goldReward", 0)) * group_mult))
 	_split_xp(st, xp)
+	_record_bestiary(def)
 	gs.stats["monstersKilled"] += 1
 	if def.get("isBoss", false):
 		gs.stats["bossesKilled"] += 1
@@ -704,6 +718,21 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + gain)
 	events.append({"type": "monster_died", "id": str(def.id)})
 	gauges.clear()
+
+func _record_bestiary(def: Dictionary) -> void:
+	var d := Stats.monster_derived(def)
+	var key := str(def.get("name", "?"))
+	var e: Dictionary = gs.bestiary.get(key, {"killCount": 0})
+	e.merge({"name": key, "icon": def.get("icon", ""), "isBoss": bool(def.get("isBoss", false)),
+		"force": int(def.get("force", 8)), "dex": int(def.get("dex", 8)), "con": int(def.get("con", 8)),
+		"maxHp": d.maxHp, "atkMin": d.atkMin, "atkMax": d.atkMax,
+		"resistPhys": int(def.get("resistPhys", 0)), "resistMagic": int(def.get("resistMagic", 0)),
+		"xpReward": int(def.get("xpReward", 0)), "goldReward": int(def.get("goldReward", 0)),
+		"attackSpeed": float(def.get("attackSpeed", 2.0)), "patrolRadius": int(def.get("patrolRadius", 0)),
+		"abilitySpellId": str(def.get("abilitySpellId", "")), "abilityChance": int(def.get("abilityChance", 0)),
+		"enrageThreshold": int(def.get("enrageThreshold", 0))}, true)
+	e["killCount"] = int(e.killCount) + 1
+	gs.bestiary[key] = e
 
 func _split_xp(st: Dictionary, total: int) -> void:
 	var entries: Array = []

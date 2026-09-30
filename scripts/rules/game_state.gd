@@ -12,6 +12,7 @@ var active_char_id: String = ""
 var last_attacker_id: String = ""
 var level_states: Dictionary = {}
 var stats: Dictionary = {"monstersKilled": 0, "bossesKilled": 0, "goldEarnedTotal": 0, "xpEarnedTotal": 0, "itemsFound": 0}
+var bestiary: Dictionary = {}
 var log_lines: Array[String] = []
 var game_over: bool = false
 var won: bool = false
@@ -27,7 +28,15 @@ var in_village: bool = false
 var village_prev: Dictionary = {}   # donjon quitté pour le village : {levels, level_index, x, y, dir}
 
 const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
-	"log_lines", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_mods_chosen", "in_village", "village_prev"]
+	"bestiary", "log_lines", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_mods_chosen", "in_village", "village_prev"]
+
+## Compteur par personnage pour l'écran de statistiques (actions, dégâts, soins…).
+func bump(char_id, field: String, amount = 1) -> void:
+	if str(char_id) == "":
+		return
+	var per: Dictionary = stats.get_or_add("perChar", {})
+	var c: Dictionary = per.get_or_add(str(char_id), {"actions": 0, "damageDealt": 0, "damageTaken": 0, "healingDone": 0, "kills": 0, "knockdowns": 0, "spellsCast": 0})
+	c[field] = int(c.get(field, 0)) + int(amount)
 
 func to_save() -> Dictionary:
 	var d := {}

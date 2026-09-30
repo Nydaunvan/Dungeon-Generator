@@ -101,7 +101,7 @@ static func parse_import(text: String) -> Dictionary:
 static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 	var out := {"level_index": int(js.get("levelIndex", 0)), "px": int(js.get("x", 1)), "py": int(js.get("y", 1)), "pdir": int(js.get("dir", 0)),
 		"party": js.get("party", []), "gold": int(js.get("gold", 0)), "inventory": js.get("inventory", []),
-		"active_char_id": str(js.get("activeCharId", "")), "last_attacker_id": "", "stats": js.get("stats", {}),
+		"active_char_id": str(js.get("activeCharId", "")), "last_attacker_id": "", "stats": js.get("stats", {}), "bestiary": js.get("bestiary", {}),
 		"game_over": bool(js.get("gameOver", false)), "won": bool(js.get("won", false)), "log_lines": js.get("log", [])}
 	for c in out.party:
 		if not c.has("statusEffects"):

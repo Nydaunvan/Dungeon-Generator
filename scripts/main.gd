@@ -293,6 +293,7 @@ func _use_stairs(p: Vector2i) -> void:
 			show_message("Niveau introuvable : %s" % action.get("targetId"))
 		"victory":
 			gs.won = true
+			gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
 			_show_victory()
 		"villageExit":
 			Dialogs.confirm(_modals(), "🏘️ Sortie du village", "Voulez-vous rester au village, ou repartir affronter un donjon plus puissant ?",
@@ -341,6 +342,7 @@ func _on_menu(name: String) -> void:
 				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
+		"Stats": StatsModal.open(_modals(), gs)
 		"Admin":
 			Data.resume_game = snapshot()
 			Sound.stop_ambient()
