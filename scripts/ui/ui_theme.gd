@@ -134,6 +134,9 @@ static func build() -> Theme:
 	th.set_color("font_color", "CheckBox", PARCH)
 	th.set_color("font_hover_color", "CheckBox", GOLD)
 	th.set_color("font_pressed_color", "CheckBox", PARCH)
+	for nm in ["checked", "unchecked", "checked_disabled", "unchecked_disabled"]:
+		th.set_icon(nm, "CheckBox", _check_icon(nm.begins_with("checked"), nm.ends_with("disabled")))
+	th.set_constant("h_separation", "CheckBox", 8)
 	th.set_stylebox("panel", "PanelContainer", tbox("frame_panel", [12, 12, 12, 12], [14, 12, 14, 12]))
 	th.set_stylebox("panel", "TabContainer", StyleBoxEmpty.new())
 	th.set_stylebox("tab_selected", "TabContainer", tbox("btn_h", [10, 10, 10, 10], [12, 5, 12, 5]))
@@ -145,6 +148,24 @@ static func build() -> Theme:
 	th.set_color("font_unselected_color", "TabContainer", DIM)
 	th.set_color("font_hovered_color", "TabContainer", GOLD)
 	return th
+
+## Case à cocher dessinée : carré sombre à liseré bronze, coche dorée.
+static func _check_icon(on: bool, disabled: bool) -> Texture2D:
+	var n := 20
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var edge := BRONZE_LIGHT if not disabled else BRONZE_DARK
+	for y in n:
+		for x in n:
+			var border := x < 2 or y < 2 or x >= n - 2 or y >= n - 2
+			img.set_pixel(x, y, edge if border else Color("0d0906"))
+	if on:
+		var mark := GOLD if not disabled else DIM
+		var pts := [Vector2i(5, 10), Vector2i(6, 11), Vector2i(7, 12), Vector2i(8, 13), Vector2i(9, 12), Vector2i(10, 11), Vector2i(11, 10), Vector2i(12, 9), Vector2i(13, 8), Vector2i(14, 7)]
+		for p in pts:
+			for dx in 2:
+				for dy in 2:
+					img.set_pixel(p.x + dx, p.y + dy - 1, mark)
+	return ImageTexture.create_from_image(img)
 
 ## Bouton rond façon « rivet » (attaque, sorts).
 static func round_button_style(ring: Color, fill: Color) -> StyleBoxFlat:

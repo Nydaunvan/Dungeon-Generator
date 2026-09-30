@@ -3,6 +3,7 @@ extends RefCounted
 ## Onglet « Objets de base » : bibliothèque d'objets (potions, armes, armures, bijoux, clés, parchemins, pièges).
 
 const TYPES := [["potion", "Potion"], ["weapon", "Arme"], ["armor", "Armure"], ["jewelry", "Bijou"], ["key", "Clé"], ["scroll", "Parchemin"], ["trap", "Piège"]]
+const LEVEL_TYPES := [["potion", "Potion"], ["weapon", "Arme"], ["armor", "Armure"], ["jewelry", "Bijou"], ["key", "Clé"], ["scroll", "Parchemin"], ["trap", "Piège"], ["switch", "Interrupteur"], ["fountain", "Fontaine"]]
 const PERKS := [["lifesteal", "Vol de vie"], ["crit", "Critique"], ["thorns", "Renvoi"]]
 const STAT_FIELDS := ["bonusAtkMin", "bonusAtkMax", "bonusHp", "bonusSpellDmg", "heal", "trapDmgMin", "trapDmgMax", "bonusForce", "bonusDex", "bonusCon", "bonusInt", "bonusSpeed"]
 
@@ -56,7 +57,7 @@ static func _num(parent: Control, label: String, it: Dictionary, key: String, hi
 	return s
 
 ## Champs propres au type de l'objet (partagés avec l'éditeur de niveaux).
-static func fields(parent: Control, it: Dictionary, admin: Node) -> void:
+static func fields(parent: Control, it: Dictionary, admin: Node, lvl: Dictionary = {}) -> void:
 	var f := AdminUtil.flow(parent)
 	match str(it.get("type", "potion")):
 		"potion":
@@ -102,7 +103,33 @@ static func fields(parent: Control, it: Dictionary, admin: Node) -> void:
 			cb.toggled.connect(func(on: bool): it["permanent"] = on)
 			f.add_child(cb)
 		"key":
-			f.add_child(AdminUtil.label("Se lie à une porte une fois placée dans un niveau.", 13, UiTheme.DIM))
+			if lvl.is_empty():
+				f.add_child(AdminUtil.label("Se lie à une porte une fois placée dans un niveau.", 13, UiTheme.DIM))
+			else:
+				var on_door := func(v): it["opensDoorId"] = v
+				AdminUtil.chip(f, "Ouvre", AdminUtil.dropdown(door_options(lvl), it.get("opensDoorId", ""), on_door, 200.0))
+		"switch":
+			var on_d := func(v): it["switchOpensDoorId"] = v
+			AdminUtil.chip(f, "Ouvre la porte", AdminUtil.dropdown(door_options(lvl), it.get("switchOpensDoorId", ""), on_d, 190.0))
+			var mons: Array = [["", "— aucun —"]]
+			for m in lvl.get("monsters", []):
+				mons.append([m.id, str(m.get("name", "?"))])
+			var on_m := func(v): it["switchRevealMonsterId"] = v
+			AdminUtil.chip(f, "Révèle le monstre", AdminUtil.dropdown(mons, it.get("switchRevealMonsterId", ""), on_m, 200.0))
+			var its: Array = [["", "— aucun —"]]
+			for o in lvl.get("items", []):
+				if o.id != it.id and str(o.get("type", "")) != "decor":
+					its.append([o.id, str(o.get("name", "?"))])
+			var on_i := func(v): it["switchRevealItemId"] = v
+			AdminUtil.chip(f, "Révèle l'objet", AdminUtil.dropdown(its, it.get("switchRevealItemId", ""), on_i, 200.0))
+			var msg := LineEdit.new()
+			msg.placeholder_text = "Message affiché"
+			msg.text = str(it.get("message", ""))
+			msg.custom_minimum_size = Vector2(260, 0)
+			msg.text_changed.connect(func(t: String): it["message"] = t)
+			AdminUtil.chip(f, "Message", msg)
+		"fountain":
+			f.add_child(AdminUtil.label("Restaure PV et endurance du groupe. Délai réglable dans « Général ».", 13, UiTheme.DIM))
 		"scroll":
 			var so: Array = []
 			for s in Data.config.get("spells", []):
@@ -116,6 +143,12 @@ static func fields(parent: Control, it: Dictionary, admin: Node) -> void:
 			for c in AdminUtil.classes_allowing(str(it.get("spellId", ""))):
 				names.append(c.name)
 			Form.hint(parent, "Classes compatibles : " + (", ".join(names) if not names.is_empty() else "aucune"))
+
+static func door_options(lvl: Dictionary) -> Array:
+	var out: Array = [["", "— aucune —"]]
+	for d in lvl.get("doors", []):
+		out.append([d.id, "Porte (%d,%d)" % [int(d.x), int(d.y)]])
+	return out
 
 static func _boosts(parent: Control, it: Dictionary) -> void:
 	var f := AdminUtil.flow(parent)
