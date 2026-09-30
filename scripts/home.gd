@@ -37,8 +37,8 @@ func _on_action(name: String) -> void:
 		"saves": SlotsModal.open(_modal_layer, Callable(), Data.launch_save)
 		"load-code": _load_code()
 		"import-json": _import_json()
-		"tutorial": _soon("Tutoriel")
-		"changelog": _soon("Journal des versions")
+		"tutorial": DocModal.tutorial(_modal_layer)
+		"changelog": DocModal.changelog(_modal_layer)
 
 func _soon(what: String) -> void:
 	Dialogs.notice(_modal_layer, what, "Cette partie est en cours de portage vers Godot.")

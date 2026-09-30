@@ -21,19 +21,7 @@ static func confirm(host: Node, title: String, text: String, on_yes: Callable, y
 	return m
 
 static func guide(host: Node) -> Modal:
-	var m := Modal.open(host, "Guide", 520.0)
-	var lines := [
-		["Déplacement", "↑ / Z avancer · ↓ / S reculer · Q / D pas de côté · ← / A et → / E tourner (ou les boutons à l'écran)."],
-		["Combat", "Les personnages agissent quand leur jauge est pleine. X ou Espace : attaquer. Les sorts se lancent depuis la barre ronde ; les sorts alliés demandent de cliquer sur la carte d'un allié. C : fuir."],
-		["Interaction", "F ou Entrée : ouvrir une porte, utiliser un escalier. Marcher sur un objet le ramasse ; les pièges, fontaines et leviers se déclenchent en marchant dessus."],
-		["Équipement", "Cliquer sur la carte d'un personnage (hors combat) ouvre son volet d'équipement ; cliquer un objet de la besace l'affiche pour l'équiper. Clic droit sur une carte : fiche du personnage."],
-		["Statuts", "Poison, brûlure, gel, étourdissement… s'affichent sur le portrait avec les tours restants. Les étourdis ou gelés perdent leur tour."],
-	]
-	for l in lines:
-		m.add_text(str(l[0]), UiTheme.GOLD, 16)
-		m.add_text(str(l[1]), UiTheme.PARCH, 14)
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
-	return m
+	return DocModal.guide(host)
 
 static func _stats_lines(m: Modal, gs: GameState) -> void:
 	var st := gs.stats
