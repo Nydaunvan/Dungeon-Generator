@@ -42,13 +42,15 @@ static func _stats_lines(m: Modal, gs: GameState) -> void:
 	for c in gs.party:
 		m.add_text("%s — niveau %d%s" % [c.name, int(c.level), "  (tombé)" if int(c.hp) <= 0 else ""], UiTheme.PARCH, 14)
 
-static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable()) -> Modal:
+static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable(), on_village: Callable = Callable()) -> Modal:
 	var m := Modal.open(host, "Victoire !", 480.0)
 	m.add_text("Le groupe émerge de %s, triomphant." % str(gs.cfg.get("title", "")), UiTheme.PARCH, 16, true)
 	_stats_lines(m, gs)
 	var btns: Array = []
+	if on_village.is_valid():
+		btns.append({"text": "🏘️ Aller au village", "cb": _then(m, on_village)})
 	if on_next.is_valid():
-		btns.append({"text": "Donjon plus difficile", "cb": _then(m, on_next)})
+		btns.append({"text": "⚔️ Donjon plus difficile", "cb": _then(m, on_next)})
 	btns.append({"text": "Repartir de zéro", "cb": _then(m, on_restart)})
 	btns.append({"text": "Accueil", "cb": _then(m, on_home)})
 	m.set_buttons(btns)

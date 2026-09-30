@@ -16,8 +16,10 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	torches.name = "Torches"
 	view.add_child(torches)
 
-	var parts := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new()}
-	var counts := {"wall": 0, "floor": 0, "ceil": 0}
+	var outdoor := bool(level.get("outdoor", false))
+	var path_cells: Array = level.get("pathCells", [])
+	var parts := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new()}
+	var counts := {"wall": 0, "floor": 0, "ceil": 0, "path": 0}
 	for k in parts:
 		parts[k].begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -28,10 +30,15 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 			if ch == "#" or ch == "S":
 				continue
 			var c := Vector3(x * CELL, 0.0, y * CELL)
-			_quad(parts["floor"], c, Vector3(0, 0, -1), Vector3.UP, half)
-			_quad(parts["ceil"], c + Vector3(0, CELL, 0), Vector3(0, 0, 1), Vector3.DOWN, half)
-			counts["floor"] += 1
-			counts["ceil"] += 1
+			if outdoor and path_cells.has("%d,%d" % [x, y]):
+				_quad(parts["path"], c, Vector3(0, 0, -1), Vector3.UP, half)
+				counts["path"] += 1
+			else:
+				_quad(parts["floor"], c, Vector3(0, 0, -1), Vector3.UP, half)
+				counts["floor"] += 1
+			if not outdoor:
+				_quad(parts["ceil"], c + Vector3(0, CELL, 0), Vector3(0, 0, 1), Vector3.DOWN, half)
+				counts["ceil"] += 1
 			for d in DungeonGrid.DIRS:
 				var n := grid.cell(x + d.x, y + d.y)
 				var edge := c + Vector3(d.x * half, 0.0, d.y * half)   # milieu de l'arête au sol
@@ -39,7 +46,7 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 				if n == "#":
 					_quad(parts["wall"], edge + Vector3(0, half, 0), Vector3.UP, Vector3(-d.x, 0, -d.y), half)
 					counts["wall"] += 1
-					if (x + y) % 2 == 0:   # ~1 pan de mur sur 2 porte une torche
+					if not outdoor and (x + y) % 2 == 0:   # ~1 pan de mur sur 2 porte une torche
 						torches.add_torch(c + Vector3(d.x * CELL * 0.49, CELL * 0.62, d.y * CELL * 0.49), rot, theme_name)
 				elif n == "S":
 					_quad(parts["wall"], edge + Vector3(0, half, 0), Vector3.UP, Vector3(-d.x, 0, -d.y), half)
@@ -49,11 +56,16 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 					_add_door(view, edge, rot, theme_name, grid.door_at(x + d.x, y + d.y))
 
 	var mesh := ArrayMesh.new()
-	for k in ["wall", "floor", "ceil"]:
+	for k in ["wall", "floor", "ceil", "path"]:
 		if counts[k] == 0:
 			continue
 		parts[k].commit(mesh)
-		mesh.surface_set_material(mesh.get_surface_count() - 1, theme[k])
+		var mat: Material = theme.get(k)
+		if outdoor and k == "floor":
+			mat = Outdoor.grass()
+		elif k == "path":
+			mat = Outdoor.path()
+		mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
 	var mi := MeshInstance3D.new()
 	mi.name = "LevelMesh"
 	mi.mesh = mesh
@@ -63,6 +75,8 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	view.add_child(ents)
 	ents.populate(level)
 	view.entities = ents
+	if outdoor:
+		Outdoor.decorate(view, level)
 	return view
 
 ## Rotation Y d'un plan qui regarde vers l'intérieur de la case (même valeur que `rot` du JS).

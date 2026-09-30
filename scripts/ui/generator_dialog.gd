@@ -54,6 +54,10 @@ static func open(host: Node, on_launch: Callable) -> void:
 	m.set_buttons([{"text": "Générer et jouer", "cb": go}, {"text": "Annuler", "cb": func(): m.close()}])
 
 static func _pick_modifiers(host: Node, params: Dictionary, on_launch: Callable) -> void:
+	pick_modifiers(host, func(mods: Array): _generate(host, params, mods, on_launch))
+
+## Choix de 0 à 2 modificateurs d'expédition ; `on_chosen(mods)` reçoit les ids.
+static func pick_modifiers(host: Node, on_chosen: Callable) -> void:
 	var m := Modal.open(host, "Modificateurs d'expédition", 500.0)
 	m.add_text("Facultatif : jusqu'à 2 modificateurs cumulables, chacun un vrai compromis pour varier l'expérience. Le choix reste actif pour toute cette expédition.", UiTheme.DIM, 14, true)
 	var chosen: Array = []
@@ -83,7 +87,7 @@ static func _pick_modifiers(host: Node, params: Dictionary, on_launch: Callable)
 		m.content.add_child(b)
 	var launch := func(mods: Array):
 		m.close()
-		_generate(host, params, mods, on_launch)
+		on_chosen.call(mods)
 	m.set_buttons([
 		{"text": "Valider", "cb": func(): launch.call(chosen.duplicate())},
 		{"text": "Aucun modificateur", "cb": func(): launch.call([])},

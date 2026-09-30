@@ -42,7 +42,7 @@ func bind_level(lvl: Dictionary, g: DungeonGrid, v: LevelView) -> void:
 		if not ls.has("merchant"):
 			ls["merchant"] = {"x": int(tm.x), "y": int(tm.y), "discovered": false, "offers": null}
 		var m: Dictionary = ls.merchant
-		v.entities.add_merchant(int(m.x), int(m.y))
+		v.entities.add_merchant(int(m.x), int(m.y), bool(lvl.get("outdoor", false)))
 
 func merchant() -> Dictionary:
 	if level.is_empty() or not (level.get("travelingMerchant") is Dictionary):

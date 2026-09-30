@@ -21,9 +21,14 @@ var px: int = 0
 var py: int = 0
 var pdir: int = 0
 var seen: Dictionary = {}   # id de niveau -> [[x, y], …]
+var choice_queue: Array = []        # talents et évolutions en attente : {kind, char_id, level}
+var run_number: int = 1
+var run_mods_chosen: bool = false
+var in_village: bool = false
+var village_prev: Dictionary = {}   # donjon quitté pour le village : {levels, level_index, x, y, dir}
 
 const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
-	"log_lines", "game_over", "won", "level_index", "px", "py", "pdir", "seen"]
+	"log_lines", "game_over", "won", "level_index", "px", "py", "pdir", "seen", "choice_queue", "run_number", "run_mods_chosen", "in_village", "village_prev"]
 
 func to_save() -> Dictionary:
 	var d := {}

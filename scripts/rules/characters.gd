@@ -81,19 +81,20 @@ static func equipped_bonus(c: Dictionary) -> Dictionary:
 
 static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	var eq := equipped_bonus(c)
-	var f := int(c.get("force", 10)) + int(eq["bonusForce"])
-	var d := int(c.get("dex", 10)) + int(eq["bonusDex"])
-	var co := int(c.get("con", 10)) + int(eq["bonusCon"])
-	var i := int(c.get("int", 10)) + int(eq["bonusInt"])
+	var tal := Talents.bonus(c, cfg)
+	var f := int(c.get("force", 10)) + int(eq["bonusForce"]) + int(tal.bonusForce)
+	var d := int(c.get("dex", 10)) + int(eq["bonusDex"]) + int(tal.bonusDex)
+	var co := int(c.get("con", 10)) + int(eq["bonusCon"]) + int(tal.bonusCon)
+	var i := int(c.get("int", 10)) + int(eq["bonusInt"]) + int(tal.bonusInt)
 	var b := Stats.char_base({"force": f, "dex": d, "con": co, "level": c.get("level", 1)})
 	var run := DungeonGenerator.combine_mods(cfg.get("runModifierIds", []))
 	var hp_mult: float = float(run.hpMult) * (2.0 if c.get("hpDoubleStart", false) else 1.0)   # mode Hardcore : PV doublés
-	c["maxHp"] = maxi(1, int(round((b.maxHp + eq["bonusHp"]) * hp_mult)))
+	c["maxHp"] = maxi(1, int(round((b.maxHp + eq["bonusHp"] + tal.bonusHp) * hp_mult)))
 	c["baseAtkMin"] = b.baseAtkMin
 	c["baseAtkMax"] = b.baseAtkMax
-	c["atkMin"] = int(b.baseAtkMin) + int(eq["bonusAtkMin"])
-	c["atkMax"] = int(b.baseAtkMax) + int(eq["bonusAtkMax"])
-	c["bonusSpellDmg"] = eq["bonusSpellDmg"]
+	c["atkMin"] = int(b.baseAtkMin) + int(eq["bonusAtkMin"]) + int(tal.bonusAtkMin)
+	c["atkMax"] = int(b.baseAtkMax) + int(eq["bonusAtkMax"]) + int(tal.bonusAtkMax)
+	c["bonusSpellDmg"] = int(eq["bonusSpellDmg"]) + int(tal.bonusSpellDmg)
 	c["effForce"] = f
 	c["effDex"] = d
 	c["effCon"] = co
@@ -103,11 +104,11 @@ static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	c["effSpeed"] = maxi(1, base_speed + int(eq["bonusSpeed"]) + Statuses.speed_bonus(c))
 	if not c.has("baseMaxStamina"):
 		c["baseMaxStamina"] = int(c.get("maxStamina", 100))
-	c["maxStamina"] = maxi(10, int(round(float(c["baseMaxStamina"]) * float(run.staminaMult))))
-	c["talentCritChance"] = 0
-	c["talentLifestealPct"] = 0
-	c["resistPhys"] = 0
-	c["resistMagic"] = 0
+	c["maxStamina"] = maxi(10, int(round((float(c["baseMaxStamina"]) + float(tal.bonusStamina)) * float(run.staminaMult))))
+	c["talentCritChance"] = int(tal.critChance)
+	c["talentLifestealPct"] = int(tal.lifestealPct)
+	c["resistPhys"] = int(tal.resistPhys)
+	c["resistMagic"] = int(tal.resistMagic)
 	if int(c.get("hp", 0)) > c["maxHp"]:
 		c["hp"] = c["maxHp"]
 	if int(c.get("stamina", 0)) > c["maxStamina"]:
@@ -138,6 +139,7 @@ static func award_xp(gs: GameState, c: Dictionary, amount: int) -> void:
 		c["xpToNext"] = int(round(int(c.xpToNext) * 1.6))
 		gs.add_log("🎉 %s monte au niveau %d !" % [c.name, c.level])
 		learn_spells(gs, c)
+		Talents.check_unlock(gs, c)
 	if int(c.level) >= MAX_LEVEL:
 		c["xp"] = 0
 

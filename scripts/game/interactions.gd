@@ -70,6 +70,58 @@ func on_step() -> void:
 					_pickup(it)
 		return
 
+# ------------------------------------------------------------------ village
+
+## Case bloquée par le décor du village (arbre ou PNJ) : on ne peut pas y entrer, on lui parle.
+func blocks_cell(x: int, y: int) -> bool:
+	if not bool(level.get("outdoor", false)):
+		return false
+	return (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]) or npc_at(x, y) != ""
+
+func npc_at(x: int, y: int) -> String:
+	if not bool(level.get("outdoor", false)):
+		return ""
+	var mm: Dictionary = wand.merchant() if wand != null else {}
+	if not mm.is_empty() and int(mm.x) == x and int(mm.y) == y:
+		return "merchant"
+	var bs = level.get("blacksmith")
+	if bs is Dictionary and int(bs.x) == x and int(bs.y) == y:
+		return "blacksmith"
+	var tm = level.get("talentMaster")
+	if tm is Dictionary and int(tm.x) == x and int(tm.y) == y:
+		return "talent"
+	return ""
+
+## Le groupe se heurte à un arbre ou à un PNJ du village. Renvoie true si quelque chose a réagi.
+func bump_village(x: int, y: int) -> bool:
+	if not bool(level.get("outdoor", false)):
+		return false
+	var on_change := func():
+		bag_changed.emit()
+		ctrl.changed.emit()
+	if (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]):
+		_log("Un arbre bloque le passage.")
+		message.emit("Un arbre bloque le passage")
+		return true
+	match npc_at(x, y):
+		"merchant":
+			var mm: Dictionary = wand.merchant()
+			mm["discovered"] = true
+			_log("🧙 Le marchand vous accueille et vous montre son étal.")
+			if mm.get("offers") == null:
+				mm["offers"] = Shop.village_offers(gs.cfg, gs.run_number)
+			ShopModal.open(host, gs, mm.offers, true, on_change)
+			return true
+		"blacksmith":
+			_log("🔨 Le forgeron vous accueille dans son atelier.")
+			ForgeModal.open(host, gs, on_change)
+			return true
+		"talent":
+			_log("📖 Le maître des talents vous invite à reconsidérer votre voie.")
+			TalentModals.master(host, gs, on_change)
+			return true
+	return false
+
 # ------------------------------------------------------------------ marchand itinérant
 
 func _meet_merchant(mm: Dictionary) -> void:

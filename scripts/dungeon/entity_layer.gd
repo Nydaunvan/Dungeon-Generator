@@ -28,6 +28,11 @@ var items: Dictionary = {}      # Vector2i -> Array[{node, def}]
 var merchant_node: MeshInstance3D = null
 
 func populate(level: Dictionary) -> void:
+	if bool(level.get("outdoor", false)):
+		if level.get("blacksmith") is Dictionary:
+			add_npc("@icon:blacksmith", int(level.blacksmith.x), int(level.blacksmith.y))
+		if level.get("talentMaster") is Dictionary:
+			add_npc("@icon:talentmaster", int(level.talentMaster.x), int(level.talentMaster.y))
 	for m in level.get("monsters", []):
 		var n := _make_sprite(str(m.get("icon", "")), bool(m.get("isBoss", false)), false)
 		if n == null:
@@ -52,11 +57,19 @@ func populate(level: Dictionary) -> void:
 		if type != "decor":
 			_register(items, p, n, it)
 
-## Marchand itinérant (sprite unique, déplaçable).
-func add_merchant(x: int, y: int) -> void:
+## PNJ fixe (forgeron, maître des talents) : grand sprite posé au sol.
+func add_npc(icon: String, x: int, y: int) -> void:
+	var n := _make_sprite(icon, true, false)
+	if n == null:
+		return
+	_place_on_floor(n, Vector2i(x, y), icon)
+	add_child(n)
+
+## Marchand itinérant (sprite unique, déplaçable). `big` : grand format des PNJ du village.
+func add_merchant(x: int, y: int, big: bool = false) -> void:
 	if merchant_node != null:
 		merchant_node.queue_free()
-	var n := _make_sprite("@icon:merchant", false, false)
+	var n := _make_sprite("@icon:merchant", big, false)
 	if n == null:
 		return
 	_place_on_floor(n, Vector2i(x, y), "@icon:merchant")

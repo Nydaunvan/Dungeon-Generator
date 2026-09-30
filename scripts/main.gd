@@ -39,7 +39,7 @@ func _ready() -> void:
 	rig = PlayerRig.new()
 	rig.blocked.connect(_on_blocked)
 	rig.moved.connect(_on_moved)
-	rig.extra_block = func(x, y): return ctrl != null and not ctrl.monster_at(x, y).is_empty()
+	rig.extra_block = func(x, y): return (ctrl != null and not ctrl.monster_at(x, y).is_empty()) or (inter != null and inter.blocks_cell(x, y))
 
 	ctrl = CombatController.new()
 	add_child(ctrl)
@@ -90,6 +90,7 @@ func _ready() -> void:
 	_popup_layer = layout.popup_layer
 	message_label = layout.message_label
 
+	ctrl.changed.connect(_check_choices)
 	layout.minimap.import_seen(gs.seen)
 	load_level(level_index, resume)
 	if resume:
@@ -117,6 +118,7 @@ func load_level(index: int, at_saved: bool = false) -> void:
 	for it in level.get("items", []):
 		if gs.item_state(str(level.id), str(it.id)).get("taken", false):
 			level_node.entities.remove_item(str(it.id))
+	_apply_outdoor(bool(level.get("outdoor", false)))
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig)
 	layout.minimap.merchant_cell = func():
@@ -125,6 +127,15 @@ func load_level(index: int, at_saved: bool = false) -> void:
 	if not wand.merchant_moved.is_connected(layout.minimap.queue_redraw):
 		wand.merchant_moved.connect(layout.minimap.queue_redraw)
 	show_message(str(level.name))
+
+## Ciel, brouillard clair et pas de torche dans le village ; ténèbres dans les donjons.
+func _apply_outdoor(outdoor: bool) -> void:
+	env.background_color = Outdoor.SKY if outdoor else Color("030201")
+	env.fog_light_color = Outdoor.SKY if outdoor else Color("030201")
+	env.fog_density = 0.012 if outdoor else 0.035
+	env.ambient_light_color = Color("d8e4f0") if outdoor else Color("40342a")
+	env.ambient_light_energy = 1.5 if outdoor else 1.1
+	rig.torch.visible = not outdoor
 
 func _setup_environment() -> void:
 	env = Environment.new()
@@ -248,6 +259,8 @@ func _on_blocked(x: int, y: int) -> void:
 	if not mon.is_empty():
 		ctrl.refresh()   # engage le combat
 		return
+	if inter.bump_village(x, y):
+		return
 	match grid.cell(x, y):
 		"D": inter.try_door(x, y)
 		"S": _use_stairs(Vector2i(x, y))
@@ -270,6 +283,16 @@ func _use_stairs(p: Vector2i) -> void:
 		"victory":
 			gs.won = true
 			_show_victory()
+		"villageExit":
+			Dialogs.confirm(_modals(), "🏘️ Sortie du village", "Voulez-vous rester au village, ou repartir affronter un donjon plus puissant ?",
+				_continue_next, "⚔️ Aller vers un donjon plus puissant", "Rester au village")
+		"villageReturn":
+			if gs.village_prev.is_empty():
+				gs.add_log("🚪 Il n'y a nulle part où revenir pour l'instant.")
+				show_message("Nulle part où revenir")
+			else:
+				Dialogs.confirm(_modals(), "⬅️ Retour au donjon", "Voulez-vous revenir au donjon que vous veniez de quitter ?",
+					_return_to_dungeon, "⬅️ Revenir au donjon précédent", "Rester au village")
 		_:
 			show_message("Escalier")
 
@@ -306,7 +329,50 @@ func _on_game_over() -> void:
 func _show_victory() -> void:
 	show_message("Victoire !", 3.0)
 	await get_tree().create_timer(0.8).timeout
-	Dialogs.victory(_modals(), gs, _restart, Data.go_home)
+	var maxed := gs.party.all(func(c): return int(c.level) >= Characters.MAX_LEVEL)
+	var random_run := Data.play_origin == "random" and not maxed
+	Dialogs.victory(_modals(), gs, _restart, Data.go_home,
+		_continue_next if random_run else Callable(), _enter_village if random_run else Callable())
+
+# ------------------------------------------------------------------ village et expéditions successives
+
+func _enter_village() -> void:
+	if not gs.in_village:
+		gs.village_prev = {"levels": gs.cfg.levels, "level_index": level_index, "x": rig.gx, "y": rig.gy, "dir": rig.dir}
+	gs.cfg["levels"] = [Village.build_level()]
+	gs.in_village = true
+	gs.won = false
+	gs.game_over = false
+	load_level(0)
+
+func _return_to_dungeon() -> void:
+	if gs.village_prev.is_empty():
+		return
+	var prev: Dictionary = gs.village_prev
+	gs.cfg["levels"] = prev.levels
+	gs.px = int(prev.x)
+	gs.py = int(prev.y)
+	gs.pdir = int(prev.dir)
+	gs.in_village = false
+	gs.village_prev = {}
+	load_level(int(prev.level_index), true)
+
+func _continue_next() -> void:
+	var go := func(mods: Array):
+		Village.next_dungeon(gs, mods)
+		load_level(0)
+	if gs.run_mods_chosen:
+		go.call((gs.cfg.get("runModifierIds", []) as Array).duplicate())
+	else:
+		GeneratorDialog.pick_modifiers(_modals(), go)
+
+## Présente les talents et évolutions en attente dès que le groupe n'est plus en combat.
+func _check_choices() -> void:
+	if gs.choice_queue.is_empty() or ctrl.in_combat() or gs.game_over:
+		return
+	TalentModals.process_queue.call_deferred(_modals(), gs, func():
+		ctrl.changed.emit()
+		layout.bag.refresh())
 
 func show_message(text: String, seconds: float = 1.8) -> void:
 	message_label.text = text
