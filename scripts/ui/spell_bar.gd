@@ -52,13 +52,21 @@ func _show_tip(i: int) -> void:
 	var sid := str(_ids[i])
 	SpellTip.show_for(_slots[i], ctrl.combat.spell_def(sid), ceili(ctrl.combat.cooldown_left(c, sid)))
 
+var _last_w := -1.0
+
+## Cotes de l'original : disques de clamp(30px, 9cqw, 46px), répartis en « space-between » sur toute la largeur.
 func _apply_size() -> void:
-	var s := clampf(size.y * 0.92, 30.0, 70.0)
+	var w := roundf(size.x)
+	if w == _last_w or w <= 0.0:
+		return
+	_last_w = w
+	var s := UiMetrics.css(clampf(0.09 * w * UiMetrics.s, 30.0, 46.0))
 	slot_size = s
-	add_theme_constant_override("separation", int(maxf(6.0, (size.x - s * float(SLOTS + 1)) / float(SLOTS))))   # space-between
+	add_theme_constant_override("separation", int(maxf(2.0, floorf((w - s * float(SLOTS + 1)) / float(SLOTS)))))
 	_attack.custom_minimum_size = Vector2(s, s)
 	for b in _slots:
 		b.custom_minimum_size = Vector2(s, s)
+	custom_minimum_size = Vector2(0, s)
 
 func _process(_d: float) -> void:
 	if ctrl != null and ctrl.combat != null:

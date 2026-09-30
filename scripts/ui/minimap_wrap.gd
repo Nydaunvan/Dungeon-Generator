@@ -28,6 +28,8 @@ func _process(_d: float) -> void:
 	if minimap == null:
 		return
 	var avail := get_parent_area_size().x if get_parent() != null else 0.0
-	var w := minf(UiMetrics.css(170.0), maxf(40.0, avail))
+	var hr := get_viewport().get_visible_rect().size.y * UiMetrics.s
+	var maxw := 170.0 if hr > 820.0 else (105.0 if hr > 650.0 else 80.0)   # @media (max-height:820px / 650px)
+	var w := minf(UiMetrics.css(maxw), maxf(40.0, avail))
 	var inner := w - _pad * 2.0
 	custom_minimum_size = Vector2(w, inner / minimap.view_aspect() + _pad * 2.0)

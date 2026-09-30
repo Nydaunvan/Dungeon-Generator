@@ -49,6 +49,7 @@ var panel_log: OrnatePanel
 var panel_menu: OrnatePanel
 
 var _root: Control
+var _scroll: ScrollContainer
 var _portrait: bool = false
 var _built_mode: int = -1
 var _title: Label
@@ -602,7 +603,16 @@ func _rebuild() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", int(UiMetrics.css(10.0)))
 	_root = v
-	add_child(v)
+	if _scroll == null:
+		# si l'écran est trop bas pour tout afficher (comme la page de l'original), l'interface défile verticalement
+		_scroll = ScrollContainer.new()
+		_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		add_child(_scroll)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(v)
 	v.add_child(header)
 	if _portrait:
 		frame.size_flags_stretch_ratio = 3.0
@@ -669,7 +679,6 @@ func _size_widgets() -> void:
 	add_theme_constant_override("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
 	hud.custom_minimum_size = Vector2(0, hh if not _portrait else clampf(h * 0.2, 110.0, 220.0))
-	strip.custom_minimum_size = Vector2(0, clampf(h * 0.07, 36.0, 64.0))
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
 	header.custom_minimum_size = Vector2(0, UiMetrics.css(92.0 if not _portrait else 60.0))
 	_title.add_theme_font_size_override("font_size", int(UiMetrics.css(28.8 if not _portrait else 18.0)))
