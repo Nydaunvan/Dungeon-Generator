@@ -41,6 +41,12 @@ func _init() -> void:
 					main.gs.inventory.append({"type": "potion", "name": "Élixir", "icon": "@icon:spr_13", "staminaRestore": 40})
 				main.ctrl.refresh()
 				await create_timer(2.5).timeout
+			"fx":
+				for sid in ["spell_fire1", "spell_arc1", "spell_holy1"]:
+					main._on_fx3d(sid)
+					await create_timer(0.42).timeout
+					root.get_texture().get_image().save_png(out + "_fx_" + sid + ".png")
+					await create_timer(0.8).timeout
 			"dock":
 				main.dock.open_for(str(main.gs.party[0].id))
 				await create_timer(1.0).timeout

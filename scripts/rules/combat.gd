@@ -332,6 +332,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	gs.bump(caster.id, "spellsCast")
 	gs.stats["spellsCast"] = int(gs.stats.get("spellsCast", 0)) + 1
 	events.append({"type": "fx", "fx": "spell" + str(spell.get("style", "arcane"))})
+	events.append({"type": "fx3d", "spell": spell_id})
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:

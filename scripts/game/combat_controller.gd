@@ -8,6 +8,7 @@ signal popup(text: String, color: Color)
 signal game_over
 signal combat_won(summary: Dictionary)
 signal fx(type: String)
+signal fx3d(spell_id: String)
 
 const MONSTER_DELAY := 0.85
 
@@ -210,6 +211,8 @@ func _drain() -> void:
 				popup.emit(str(e.text), e.color)
 			"fx":
 				fx.emit(str(e.fx))
+			"fx3d":
+				fx3d.emit(str(e.spell))
 			"monster_died":
 				view.entities.remove_monster(str(e.id))
 				if not in_combat() and not combat.summary.is_empty():

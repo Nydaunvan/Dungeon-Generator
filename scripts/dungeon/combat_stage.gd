@@ -196,3 +196,16 @@ func pick(pos: Vector2) -> int:
 				best_d = d
 				best = int(e.idx)
 	return best
+
+## Point visé par les sorts : le combattant ciblé (ou le premier visible). {"pos": Vector3, "h": float} ou {} sans cible.
+func target_point() -> Dictionary:
+	var best: Dictionary = {}
+	for k in _nodes:
+		var e: Dictionary = _nodes[k]
+		if not e.node.visible:
+			continue
+		if e.halo != null and e.halo.visible:
+			return {"pos": e.node.global_position, "h": float(e.h)}
+		if best.is_empty():
+			best = {"pos": e.node.global_position, "h": float(e.h)}
+	return best

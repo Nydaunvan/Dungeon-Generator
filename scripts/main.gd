@@ -49,6 +49,7 @@ func _ready() -> void:
 	ctrl.game_over.connect(_on_game_over)
 	ctrl.combat_won.connect(_show_combat_summary)
 	ctrl.fx.connect(_on_fx)
+	ctrl.fx3d.connect(_on_fx3d)
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
@@ -464,6 +465,14 @@ func _on_fx(type: String) -> void:
 	layout.fx_layer.play(type)
 	if type == "hit" or type == "trap":
 		_shake()
+
+func _on_fx3d(spell_id: String) -> void:
+	var tgt: Dictionary = layout_stage_target()
+	SpellFx3D.cast(layout.world, rig.camera, spell_id, tgt)
+
+func layout_stage_target() -> Dictionary:
+	var st: CombatStage = level_node.stage if level_node != null else null
+	return st.target_point() if st != null and st.active else {}
 
 ## Secousse de la caméra (impact subi).
 func _shake() -> void:
