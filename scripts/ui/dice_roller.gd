@@ -1,5 +1,5 @@
 class_name DiceRoller
-extends SubViewportContainer
+extends Control
 ## Deux dés 3D qui roulent au survol du sceau « Donjon aléatoire » (portage de l'animation du HTML).
 
 const FACES := {   # position des points (grille 3×3) par face
@@ -15,16 +15,33 @@ static var _face_mats: Array = []
 
 var _dice: Array = []   # {pivot, cube, rest: Vector3, x: float, busy: bool, anim: Dictionary}
 var _time := 0.0
+var _vp: SubViewport
+
+func _fit_vp() -> void:
+	if _vp == null or size.x < 1.0:
+		return
+	var w := clampi(int(size.x * UiMetrics.s * 2.0), 296, 1776)
+	_vp.size = Vector2i(w, int(round(w * 184.0 / 296.0)))
 
 func _ready() -> void:
-	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	var vp := SubViewport.new()
-	vp.size = Vector2i(296, 184)
+	vp.size = Vector2i(888, 552)      # 3× la zone d'origine 296×184 ; recalé sur la taille réelle à l'écran
 	vp.transparent_bg = true
 	vp.own_world_3d = true
+	vp.msaa_3d = Viewport.MSAA_4X
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
+	_vp = vp
+	var pic := TextureRect.new()
+	pic.texture = vp.get_texture()
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pic)
+	resized.connect(_fit_vp)
 	var cam := Camera3D.new()
 	cam.fov = 11.96
 	cam.position = Vector3(0, 0, 220.0 / 24.0)
@@ -48,6 +65,9 @@ func _build_cube(cube: Node3D) -> void:
 		for v in range(1, 7):
 			var m := StandardMaterial3D.new()
 			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			m.alpha_scissor_threshold = 0.5
+			m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 			m.albedo_texture = _face_texture(v)
 			_face_mats.append(m)
 	# (valeur, normale, rotation du quad) : 1 devant, 6 derrière, 3 droite, 4 gauche, 2 dessus, 5 dessous
@@ -65,22 +85,38 @@ func _build_cube(cube: Node3D) -> void:
 		cube.add_child(q)
 
 static func _face_texture(v: int) -> ImageTexture:
-	var n := 64
+	# 256×256 : coins arrondis (rayon 4/24), liseré #b9976a, dégradé radial, points anti-crénelés
+	var n := 256
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var rad := n * 4.0 / 24.0
+	var border := n / 24.0
 	for y in n:
 		for x in n:
-			var d := Vector2(x, y).distance_to(Vector2(n * 0.35, n * 0.30)) / (n * 0.9)
-			var base := Color("f7e8cb").lerp(Color("cdb082"), clampf(d, 0.0, 1.0))
-			var edge := mini(mini(x, y), mini(n - 1 - x, n - 1 - y))
-			if edge < 2:
-				base = Color("b9976a")
+			var px := Vector2(x + 0.5, y + 0.5)
+			# distance signée à un rectangle arrondi
+			var q := (px - Vector2(n, n) * 0.5).abs() - Vector2(n, n) * 0.5 + Vector2(rad, rad)
+			var sd := Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - rad
+			var a := clampf(0.5 - sd, 0.0, 1.0)
+			if a <= 0.0:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			var d := px.distance_to(Vector2(n * 0.35, n * 0.30)) / (n * 0.955)
+			var base := Color("f7e8cb").lerp(Color("e6cfa4"), clampf(d / 0.7, 0.0, 1.0)) if d < 0.7 \
+				else Color("e6cfa4").lerp(Color("cdb082"), clampf((d - 0.7) / 0.3, 0.0, 1.0))
+			var edge := clampf(0.5 + (border + sd), 0.0, 1.0)   # 1 = intérieur, 0 = liseré
+			base = Color("b9976a").lerp(base, edge)
+			base.a = a
 			img.set_pixel(x, y, base)
 	for cell in FACES[v]:
-		var c := Vector2((cell % 3) * 0.5 + 0.0, floorf(cell / 3.0) * 0.5) * (n - 26) + Vector2(13, 13)
-		for y in range(int(c.y) - 4, int(c.y) + 5):
-			for x in range(int(c.x) - 4, int(c.x) + 5):
-				if Vector2(x, y).distance_to(c) <= 4.2:
-					img.set_pixel(x, y, Color("5e1710"))
+		var c := Vector2(0.5 + ((cell % 3) - 1) * 0.1944, 0.5 + (floorf(cell / 3.0) - 1.0) * 0.1944) * n
+		var r := n * 2.0 / 24.0
+		for y in range(int(c.y - r - 2), int(c.y + r + 3)):
+			for x in range(int(c.x - r - 2), int(c.x + r + 3)):
+				var dd := Vector2(x + 0.5, y + 0.5).distance_to(c)
+				var cov := clampf(r - dd + 0.5, 0.0, 1.0)
+				if cov > 0.0:
+					var o := img.get_pixel(x, y)
+					img.set_pixel(x, y, o.lerp(Color("5e1710"), cov))
 	img.generate_mipmaps()
 	return ImageTexture.create_from_image(img)
 

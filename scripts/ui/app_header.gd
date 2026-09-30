@@ -12,10 +12,12 @@ var btn_home: Button
 var hang: HangChain
 var _lang: MenuButton
 var _home_mode: bool = false
+var _frame: FrameBox
 
 func _init() -> void:
 	clip_contents = false
-	add_theme_stylebox_override("panel", FrameBox.new(18.0, Vector4(58, 0, 8, 0)))
+	_frame = FrameBox.new(18.0, Vector4(58, 0, 8, 0))
+	add_theme_stylebox_override("panel", _frame)
 	var hrow := HBoxContainer.new()
 	hrow.add_theme_constant_override("separation", 10)
 	add_child(hrow)
@@ -75,7 +77,13 @@ func set_home_mode(on: bool) -> void:
 
 func rescale() -> void:
 	custom_minimum_size.y = UiMetrics.css(92.0 if not UiMetrics.portrait else 60.0)
-	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(28.8 if not UiMetrics.portrait else 18.0)))
+	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(28.8 if not UiMetrics.portrait else 15.0)))
+	_frame.pad_css = Vector4(58 if not UiMetrics.portrait else 34, 0, 8, 0)
+	_frame.rescale()
+	if nav_row != null:
+		for b in nav_row.get_children():
+			if b is BaseButton or b is MenuButton:
+				_style(b, (b as Button).text if b is Button else (b as MenuButton).text)
 
 func _process(_d: float) -> void:
 	btn_admin.visible = Data.admin_unlocked or Data.play_origin == "custom"
@@ -89,7 +97,7 @@ func _style(b: Button, text: String) -> void:
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82)))
+	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82 if not UiMetrics.portrait else 0.66)))
 	b.add_theme_color_override("font_color", Color("dccbaa"))
 	b.add_theme_color_override("font_hover_color", Color("ffd98a"))
 	b.add_theme_color_override("font_pressed_color", Color("ffd98a"))
@@ -99,8 +107,8 @@ func _style(b: Button, text: String) -> void:
 		g.bg_color = Color("3a2e21") if st == "hover" else (Color("43352a") if st == "disabled" else Color("2a2119"))
 		g.border_color = Color("070504")
 		g.border_width_left = maxi(1, roundi(UiMetrics.css(2.0)))
-		g.content_margin_left = UiMetrics.css(14.0)
-		g.content_margin_right = UiMetrics.css(14.0)
+		g.content_margin_left = UiMetrics.css(14.0 if not UiMetrics.portrait else 7.0)
+		g.content_margin_right = UiMetrics.css(14.0 if not UiMetrics.portrait else 7.0)
 		g.content_margin_top = UiMetrics.css(7.0)
 		g.content_margin_bottom = UiMetrics.css(7.0)
 		b.add_theme_stylebox_override(st, g)

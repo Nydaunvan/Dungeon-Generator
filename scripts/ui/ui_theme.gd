@@ -19,6 +19,8 @@ const F_BODY_BOLD := "res://assets/fonts/Spectral-SemiBold.ttf"
 const F_BODY_ITALIC := "res://assets/fonts/Spectral-Italic.ttf"
 const F_TITLE := "res://assets/fonts/Cinzel-SemiBold.ttf"
 const F_TITLE_BOLD := "res://assets/fonts/Cinzel-Bold.ttf"
+const F_DISPLAY := "res://assets/fonts/CormorantGaramond-SemiBold.ttf"        # titres de l'accueil (Cormorant Garamond 600)
+const F_DISPLAY_BOLD := "res://assets/fonts/CormorantGaramond-Bold.ttf"
 
 static var _fonts: Dictionary = {}
 static var _circle: ShaderMaterial = null

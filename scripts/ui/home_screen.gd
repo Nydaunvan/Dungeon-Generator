@@ -18,6 +18,8 @@ var _scroll: ScrollContainer
 var _column: VBoxContainer
 var _scene_bg: TextureRect
 var _glow: TextureRect
+var _chains: Array = []       # {node, delay}  (chaînes suspendues au-dessus de l'arche, oscillation de ±1,2° sur 5 s)
+var _time := 0.0
 var _embers: Embers
 var _title_box: Control
 var _tagline: Label
@@ -77,7 +79,18 @@ func _build() -> void:
 	_scene_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_scene_bg.stretch_mode = TextureRect.STRETCH_SCALE
 	_scene_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scene_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_stage.add_child(_scene_bg)
+	# chaînes animées (à gauche : avec le crâne ; à droite : avec le crochet, décalée de 1,2 s)
+	for spec in [["chain_left.png", 0.0, Vector2(452, 0), Vector2(40, 228)], ["chain_right.png", 1.2, Vector2(948, 0), Vector2(40, 281)]]:
+		var ch := TextureRect.new()
+		ch.texture = _tex(spec[0])
+		ch.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ch.stretch_mode = TextureRect.STRETCH_SCALE
+		ch.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_stage.add_child(ch)
+		_chains.append({"node": ch, "delay": spec[1], "pos": spec[2], "size": spec[3]})
 
 	# lueur vacillante de la torche
 	var grad := Gradient.new()
@@ -116,9 +129,9 @@ func _build() -> void:
 	# titre à lettrine
 	_title_box = Control.new()
 	_title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var cap := _label("É", 108, Color("f1dfb8"), UiTheme.F_TITLE_BOLD)
+	var cap := _label("É", 108, Color("f1dfb8"), UiTheme.F_DISPLAY_BOLD)
 	cap.name = "cap"
-	var rest := _label("diteur de Donjon", 40, Color("f1dfb8"), UiTheme.F_TITLE_BOLD)
+	var rest := _label("diteur de Donjon", 40, Color("f1dfb8"), UiTheme.F_DISPLAY)
 	rest.name = "rest"
 	for l in [cap, rest]:
 		l.add_theme_color_override("font_shadow_color", Color(1.0, 0.7, 0.35, 0.35))
@@ -184,26 +197,28 @@ func _make_seal() -> Control:
 	root.focus_mode = Control.FOCUS_NONE
 	var pic := TextureRect.new()
 	pic.texture = _tex("seal.png")
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_SCALE
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(pic)
-	var t := _label("Donjon\naléatoire", 20, Color("f2ddc4"), UiTheme.F_BODY_BOLD)
-	t.add_theme_constant_override("line_spacing", -6)
+	var t := _label("Donjon\naléatoire", 24, Color("f2ddc4"), UiTheme.F_DISPLAY_BOLD)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	t.anchor_left = 0.08
 	t.anchor_right = 0.92
-	t.anchor_top = 0.46
-	t.anchor_bottom = 0.66
+	t.anchor_top = 127.0 / 280.0
+	t.anchor_bottom = 187.0 / 280.0
 	root.add_child(t)
-	var s := _label("jamais deux fois pareil", 11, Color("e0c2ab"), UiTheme.F_BODY_BOLD)
+	var s := _label("jamais deux fois pareil", 13, Color("e6d6b2"), UiTheme.F_DISPLAY)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	s.anchor_left = 0.08
 	s.anchor_right = 0.92
-	s.anchor_top = 0.665
-	s.anchor_bottom = 0.74
+	s.anchor_top = 191.0 / 280.0
+	s.anchor_bottom = 209.0 / 280.0
+	s.add_theme_color_override("font_shadow_color", Color(0.1, 0.03, 0.02, 0.9))
+	s.add_theme_constant_override("shadow_offset_y", 1)
 	root.add_child(s)
 	var dice := DiceRoller.new()
 	dice.name = "dice"
@@ -213,11 +228,17 @@ func _make_seal() -> Control:
 	root.resized.connect(func():
 		root.pivot_offset = root.size * 0.5
 		var f := root.size.x / 280.0
-		t.add_theme_font_size_override("font_size", int(round(20.0 * f)))
-		s.add_theme_font_size_override("font_size", int(round(11.0 * f)))
+		pic.offset_left = -16.0 * f
+		pic.offset_top = -12.0 * f
+		pic.offset_right = 16.0 * f
+		pic.offset_bottom = 32.0 * f
+		var fs := int(round(24.0 * f))
+		t.add_theme_font_size_override("font_size", fs)
+		t.add_theme_constant_override("line_spacing", int(round(1.25 * fs - UiTheme.font(UiTheme.F_DISPLAY_BOLD).get_height(fs))))
+		s.add_theme_font_size_override("font_size", int(round(13.0 * f)))
 		var dw := 74.0 * f * 1.18
 		dice.size = Vector2(dw, dw * 46.0 / 74.0)
-		dice.position = Vector2((root.size.x - dw) * 0.5, root.size.y * 0.36 - dice.size.y * 0.5))
+		dice.position = Vector2((root.size.x - dw) * 0.5, root.size.y * (94.0 / 280.0) - dice.size.y * 0.5))
 	root.mouse_entered.connect(func():
 		dice.roll()
 		create_tween().tween_property(root, "scale", Vector2(1.03, 1.03), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
@@ -248,6 +269,7 @@ func _make_banner(tex_name: String, title: String, sub: String, act: String, bas
 	root.add_child(vis)
 	var pic := TextureRect.new()
 	pic.texture = _tex(tex_name)
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_SCALE
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -262,7 +284,7 @@ func _make_banner(tex_name: String, title: String, sub: String, act: String, bas
 	box.anchor_top = 0.0
 	box.anchor_bottom = 1.0
 	vis.add_child(box)
-	var tl := _label(title, 19, Color("f1dfb8"), UiTheme.F_BODY_BOLD)
+	var tl := _label(title, 19, Color("f1dfb8"), UiTheme.F_DISPLAY)
 	tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var sl := _label(sub, 12, Color("c2ab7e"), UiTheme.F_BODY)
 	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -270,6 +292,10 @@ func _make_banner(tex_name: String, title: String, sub: String, act: String, bas
 	box.add_child(sl)
 	root.resized.connect(func():
 		var f := root.size.x / 300.0
+		pic.offset_left = -12.0 * f
+		pic.offset_top = -8.0 * f
+		pic.offset_right = 12.0 * f
+		pic.offset_bottom = 8.0 * f
 		tl.add_theme_font_size_override("font_size", int(round(19.0 * f)))
 		sl.add_theme_font_size_override("font_size", int(round(12.0 * f))))
 	root.mouse_entered.connect(func():
@@ -297,21 +323,22 @@ func _move(n: Control, parent: Node) -> void:
 
 ## Lettrine « É » + « diteur de Donjon » alignés sur la même ligne de base. Renvoie la taille du bloc.
 func _place_title(cap_size: int, rest_size: int, width: float, centered: bool) -> Vector2:
-	var font := UiTheme.font(UiTheme.F_TITLE_BOLD)
+	var font := UiTheme.font(UiTheme.F_DISPLAY_BOLD)
+	var font_r := UiTheme.font(UiTheme.F_DISPLAY)
 	var cap: Label = _title_box.get_node("cap")
 	var rest: Label = _title_box.get_node("rest")
 	cap.add_theme_font_size_override("font_size", cap_size)
 	rest.add_theme_font_size_override("font_size", rest_size)
 	var cap_w := font.get_string_size("É", HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size).x
-	var rest_w := font.get_string_size("diteur de Donjon", HORIZONTAL_ALIGNMENT_LEFT, -1, rest_size).x
+	var rest_w := font_r.get_string_size("diteur de Donjon", HORIZONTAL_ALIGNMENT_LEFT, -1, rest_size).x + 16.0 * 0.01 * rest_size
 	var gap := 4.0
 	var x0 := maxf(0.0, (width - (cap_w + gap + rest_w)) * 0.5) if centered else 0.0
 	var asc_c := font.get_ascent(cap_size)
-	var asc_r := font.get_ascent(rest_size)
+	var asc_r := font_r.get_ascent(rest_size)
 	cap.position = Vector2(x0, 0)
 	cap.size = Vector2(cap_w + 2, font.get_height(cap_size))
 	rest.position = Vector2(x0 + cap_w + gap, asc_c - asc_r)
-	rest.size = Vector2(rest_w + 2, font.get_height(rest_size))
+	rest.size = Vector2(rest_w + 2, font_r.get_height(rest_size))
 	return Vector2(x0 + cap_w + gap + rest_w, asc_c + font.get_descent(cap_size))
 
 func _layout() -> void:
@@ -326,7 +353,7 @@ func _layout() -> void:
 	_header.position = Vector2(mx, UiMetrics.css(12.0))
 	_header.custom_minimum_size = Vector2(w - mx * 2.0, hh)
 	_header.size = Vector2(w - mx * 2.0, hh)
-	hh += UiMetrics.css(12.0)
+	hh = maxf(hh, _header.get_combined_minimum_size().y) + UiMetrics.css(12.0)
 	var area := Rect2(0, hh, w, h - hh)
 	var stacked := w < 900.0 or area.size.y < 560.0 or h > w
 	if stacked != _stacked or _seal.get_parent() == null:
@@ -338,6 +365,12 @@ func _layout() -> void:
 		_layout_stacked(area)
 	else:
 		_layout_stage(area)
+
+func _process(delta: float) -> void:
+	_time += delta
+	for c in _chains:
+		var t := maxf(0.0, _time - float(c.delay))
+		(c.node as Control).rotation = deg_to_rad(-1.2 * cos(t * TAU / 5.0))
 
 func _reparent_all() -> void:
 	var host: Node = _column if _stacked else _stage
@@ -359,6 +392,11 @@ func _layout_stage(area: Rect2) -> void:
 	var off := origin - area.position
 	_scene_bg.position = off
 	_scene_bg.size = sz
+	for c in _chains:
+		var cn: TextureRect = c.node
+		cn.position = off + (c.pos as Vector2) * k
+		cn.size = (c.size as Vector2) * k
+		cn.pivot_offset = Vector2(cn.size.x * 0.5, 0.0)
 	_embers.position = off
 	_embers.size = sz
 	_embers.k = k

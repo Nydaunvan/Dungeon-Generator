@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dgnfrig0o5ox6"
-path="res://.godot/imported/home_bg.png-1939f0e57f7774bb421234a25df79cbf.ctex"
+uid="uid://dkxa5ut70knyn"
+path="res://.godot/imported/chain_left.png-9cce94cc6c82707ae2c5f7223f46a58d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/home/home_bg.png"
-dest_files=["res://.godot/imported/home_bg.png-1939f0e57f7774bb421234a25df79cbf.ctex"]
+source_file="res://assets/home/chain_left.png"
+dest_files=["res://.godot/imported/chain_left.png-9cce94cc6c82707ae2c5f7223f46a58d.ctex"]
 
 [params]
 
