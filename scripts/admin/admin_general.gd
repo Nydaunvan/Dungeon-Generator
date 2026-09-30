@@ -11,7 +11,6 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	Form.buttons(b, [["Enregistrer le titre", save]])
 
 	b = Form.panel(host, "Sécurité")
-	Form.text(b, "Mot de passe admin", cfg, "adminPassword", Callable(), 200.0)
 	Form.hint(b, "Protection basique côté appareil : évite les accès accidentels, ce n'est pas une sécurité de production.")
 	Form.buttons(b, [["Enregistrer le mot de passe", save], ["Se déconnecter", admin.logout]])
 

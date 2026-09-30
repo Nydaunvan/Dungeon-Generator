@@ -87,7 +87,9 @@ func _build_gate() -> void:
 	_gate.add_child(p)
 	_pw_input = LineEdit.new()
 	_pw_input.secret = true
-	_pw_input.placeholder_text = "Mot de passe"
+	var _cf := ConfigFile.new()
+	var _exists := _cf.load(PW_FILE) == OK and _cf.has_section_key("admin", "hash")
+	_pw_input.placeholder_text = "Mot de passe" if _exists else "Créez votre mot de passe admin"
 	_pw_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pw_input.text_submitted.connect(func(_t): _try_login())
 	p.body.add_child(_pw_input)
@@ -100,9 +102,29 @@ func _build_gate() -> void:
 		gate_btns.insert(1, ["Retour au jeu", Data.resume_from_admin])
 	Form.buttons(p.body, gate_btns)
 
+const PW_FILE := "user://admin_pw.cfg"
+
+static func _hash(pw: String, salt: String) -> String:
+	return (salt + pw).sha256_text()
+
+## Le mot de passe est créé au premier accès, haché et gardé localement (jamais dans le dépôt ni la config).
 func _try_login() -> void:
-	var pw := str(Data.config.get("adminPassword", "admin"))
-	if _pw_input.text == pw:
+	var cf := ConfigFile.new()
+	var has := cf.load(PW_FILE) == OK and cf.has_section_key("admin", "hash")
+	if not has:
+		if _pw_input.text.length() < 4:
+			_pw_error.text = "Choisissez un mot de passe d'au moins 4 caractères."
+			return
+		var salt := str(randi()) + str(Time.get_ticks_usec())
+		cf.set_value("admin", "salt", salt)
+		cf.set_value("admin", "hash", _hash(_pw_input.text, salt))
+		cf.save(PW_FILE)
+		_pw_input.text = ""
+		_pw_error.text = ""
+		Data.admin_unlocked = true
+		_show_state()
+		return
+	if _hash(_pw_input.text, str(cf.get_value("admin", "salt", ""))) == str(cf.get_value("admin", "hash", "")):
 		Data.admin_unlocked = true
 		_pw_input.text = ""
 		_pw_error.text = ""
