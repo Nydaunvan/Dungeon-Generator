@@ -53,6 +53,7 @@ func active() -> Dictionary:
 func launch(cfg: Dictionary, origin: String) -> void:
 	if origin != "custom":
 		admin_unlocked = false
+	resume_game = {}
 	play_config = cfg.duplicate(true)
 	play_origin = origin
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
@@ -139,10 +140,20 @@ func create_own_dungeon() -> void:
 	admin_banner = true
 	get_tree().change_scene_to_file("res://scenes/admin.tscn")
 
+## Partie en cours mise de côté pendant qu'on ouvre l'administration depuis le jeu.
+var resume_game: Dictionary = {}
+
+func resume_from_admin() -> void:
+	var g := resume_game
+	resume_game = {}
+	if not g.is_empty():
+		launch_save(g)
+
 func open_admin() -> void:
 	admin_banner = false
 	get_tree().change_scene_to_file("res://scenes/admin.tscn")
 
 func go_home() -> void:
+	resume_game = {}
 	Sound.stop_ambient()
 	get_tree().change_scene_to_file("res://scenes/home.tscn")

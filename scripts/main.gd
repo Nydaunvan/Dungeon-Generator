@@ -286,7 +286,9 @@ func _use_stairs(p: Vector2i) -> void:
 			var levels: Array = gs.cfg.levels
 			for i in levels.size():
 				if levels[i].id == action.get("targetId"):
+					_transition_regen(levels[i])
 					load_level(i)
+					_prompt_save_on_level(levels[i])
 					return
 			show_message("Niveau introuvable : %s" % action.get("targetId"))
 		"victory":
@@ -305,6 +307,33 @@ func _use_stairs(p: Vector2i) -> void:
 		_:
 			show_message("Escalier")
 
+## Premier passage dans un niveau : le groupe reprend son souffle (PV et endurance en pourcentage du maximum).
+func _transition_regen(target: Dictionary) -> void:
+	var tls := gs.level_state(target)
+	if tls.get("transitionRegenDone", false):
+		return
+	tls["transitionRegenDone"] = true
+	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
+	var hp_pct := int(sta.get("levelTransitionHpPct", 0))
+	var st_pct := int(sta.get("levelTransitionStaPct", 0))
+	if hp_pct <= 0 and st_pct <= 0:
+		return
+	for c in gs.alive_party():
+		if hp_pct > 0:
+			c["hp"] = mini(int(c.maxHp), int(c.hp) + int(round(int(c.maxHp) * hp_pct / 100.0)))
+		if st_pct > 0:
+			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(round(int(c.get("maxStamina", 100)) * st_pct / 100.0)))
+	gs.add_log("💤 Le groupe reprend son souffle en chemin : un peu de PV et d'endurance récupérés.")
+
+## Première arrivée dans un niveau : proposition de sauvegarde.
+func _prompt_save_on_level(target: Dictionary) -> void:
+	var tls := gs.level_state(target)
+	if tls.get("stairsPromptShown", false):
+		return
+	tls["stairsPromptShown"] = true
+	Dialogs.confirm(_modals(), "🚪 Nouveau niveau du donjon", "C'est le bon moment pour sauvegarder votre progression.",
+		func(): SlotsModal.open(_modals(), snapshot, Data.launch_save), "💾 Sauvegarder maintenant", "Continuer sans sauvegarder")
+
 func _on_menu(name: String) -> void:
 	match name:
 		"Accueil":
@@ -312,6 +341,10 @@ func _on_menu(name: String) -> void:
 				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
+		"Admin":
+			Data.resume_game = snapshot()
+			Sound.stop_ambient()
+			Data.open_admin()
 		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save)
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message("« %s » : à venir" % name)

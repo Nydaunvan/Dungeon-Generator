@@ -95,7 +95,10 @@ func _build_gate() -> void:
 	_pw_error.add_theme_color_override("font_color", Color("e06a5a"))
 	_pw_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	p.body.add_child(_pw_error)
-	Form.buttons(p.body, [["Se connecter", _try_login], ["Retour à l'accueil", Data.go_home]])
+	var gate_btns := [["Se connecter", _try_login], ["Retour à l'accueil", Data.go_home]]
+	if not Data.resume_game.is_empty():
+		gate_btns.insert(1, ["Retour au jeu", Data.resume_from_admin])
+	Form.buttons(p.body, gate_btns)
 
 func _try_login() -> void:
 	var pw := str(Data.config.get("adminPassword", "admin"))
@@ -124,7 +127,12 @@ func _build_main() -> void:
 	_main.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_main.add_theme_constant_override("separation", 8)
 	_body.add_child(_main)
-	if Data.admin_banner:
+	if not Data.resume_game.is_empty():
+		var rb := OrnatePanel.new()
+		_main.add_child(rb)
+		Form.hint(rb.body, "Une partie est en cours. Vos modifications s'appliqueront à la prochaine partie ; la reprise garde le donjon tel qu'il était.")
+		Form.buttons(rb.body, [["Reprendre là où vous étiez", Data.resume_from_admin], ["Jouer ce donjon (nouvelle partie)", _play_current]])
+	elif Data.admin_banner:
 		var ban := OrnatePanel.new()
 		_main.add_child(ban)
 		Form.hint(ban.body, "Vous configurez votre propre donjon. Lancez-le dès que vous êtes prêt, ou modifiez librement les onglets ci-dessous avant de jouer.")
