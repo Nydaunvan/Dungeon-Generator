@@ -51,6 +51,13 @@ var _root: Control
 var _portrait: bool = false
 var _built_mode: int = -1
 var _title: Label
+var _comp: Control
+var _plaque_lvl: Control
+var _vignette: TextureRect
+var _timer_track: ColorRect
+var _timer_fill: ColorRect
+var _was_combat: bool = false
+var _flash: ColorRect
 
 func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void:
 	clip_contents = true
@@ -131,6 +138,7 @@ func _build_parts() -> void:
 	lp.position = Vector2(8, 8)
 	level_label = lp.get_child(0) as Label
 	stage.add_child(lp)
+	_plaque_lvl = lp
 
 	# boussole (haut centre) : N E ☠ S O, la direction actuelle est en or
 	var comp := PanelContainer.new()
@@ -160,10 +168,52 @@ func _build_parts() -> void:
 		crow.add_child(lb)
 		compass_letters.append(lb)
 	stage.add_child(comp)
+	_comp = comp
 
 	# file d'initiative : chaîne sous la vue 3D (placée par _rebuild)
 	queue = QueueBar.new()
 	queue.setup(gs, ctrl)
+
+	# lueur rouge en bord de vue pendant le combat
+	var grad := Gradient.new()
+	grad.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+	grad.colors = PackedColorArray([Color(0.75, 0.05, 0.03, 0.0), Color(0.75, 0.05, 0.03, 0.0), Color(0.75, 0.05, 0.03, 0.42)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.0, 0.85)
+	gt.width = 256
+	gt.height = 256
+	_vignette = TextureRect.new()
+	_vignette.texture = gt
+	_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.visible = false
+	stage.add_child(_vignette)
+	_flash = ColorRect.new()
+	_flash.color = Color(0.9, 0.12, 0.08, 0.0)
+	_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(_flash)
+	# piste du chronomètre de tour (bas de la vue)
+	_timer_track = ColorRect.new()
+	_timer_track.color = Color(0, 0, 0, 0.55)
+	_timer_track.anchor_top = 1.0
+	_timer_track.anchor_bottom = 1.0
+	_timer_track.anchor_right = 1.0
+	_timer_track.offset_top = -7
+	_timer_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_timer_track.visible = false
+	_timer_fill = ColorRect.new()
+	_timer_fill.color = Color("e8b45c")
+	_timer_fill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_timer_fill.anchor_right = 1.0
+	_timer_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_timer_track.add_child(_timer_fill)
+	stage.add_child(_timer_track)
 
 	banner = CombatBanner.new()
 	banner.setup(ctrl)
@@ -210,6 +260,8 @@ func _build_parts() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.modulate = Color(1, 1, 1, 0.9)
 		act_box.add_child(b)
+	btn_flee.text = "🏃 FUITE"
+	_style_flee()
 	btn_interact.pressed.connect(func(): command.emit("interact"))
 	btn_flee.pressed.connect(func(): command.emit("flee"))
 	stage.add_child(act_box)
@@ -380,9 +432,9 @@ func _size_overlays() -> void:
 	var side := clampf(minf(fs.x, fs.y) * 0.11, 38.0, 60.0)
 	pad.set_side(side)
 	btn_interact.custom_minimum_size = Vector2(side, side)
-	btn_flee.custom_minimum_size = Vector2(side, side)
-	for b in [btn_interact, btn_flee]:
-		b.add_theme_font_size_override("font_size", int(side * 0.5))
+	btn_interact.add_theme_font_size_override("font_size", int(side * 0.5))
+	btn_flee.custom_minimum_size = Vector2(side * 2.6, side * 0.8)
+	btn_flee.add_theme_font_size_override("font_size", int(side * 0.3))
 	pad.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 10)
 	act_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 10)
 
@@ -391,7 +443,39 @@ func _size_overlays() -> void:
 func set_level_name(text: String) -> void:
 	level_label.text = text.to_upper()
 
+func _style_flee() -> void:
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color("5a1712") if st != "hover" else Color("7a2018")
+		sb.border_color = Color("c9a25c")
+		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(6)
+		sb.shadow_color = Color(0, 0, 0, 0.8)
+		sb.shadow_size = 3
+		sb.set_content_margin_all(6)
+		btn_flee.add_theme_stylebox_override(st, sb)
+	btn_flee.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	btn_flee.add_theme_color_override("font_color", Color("f3dcae"))
+
 func _process(_d: float) -> void:
+	var on := ctrl != null and ctrl.in_combat()
+	if on != _was_combat:
+		_was_combat = on
+		if on:
+			_flash.color.a = 0.55
+			create_tween().tween_property(_flash, "color:a", 0.0, 0.5)
+	pad.visible = not on
+	_comp.visible = not on
+	_plaque_lvl.visible = not on
+	btn_interact.visible = not on
+	btn_flee.visible = on
+	_vignette.visible = on
+	var tf := ctrl.turn_timer_fraction() if on else -1.0
+	_timer_track.visible = tf >= 0.0
+	if on:
+		_timer_fill.anchor_right = clampf(tf, 0.0, 1.0)
+		_timer_fill.color = Color("e8b45c") if tf > 0.3 else Color("d8452e")
+		_vignette.modulate.a = 0.85 + 0.15 * sin(Time.get_ticks_msec() / 400.0)
 	if rig != null:
 		for i in compass_letters.size():
 			# ordre affiché : N E S O = directions 0 1 2 3
