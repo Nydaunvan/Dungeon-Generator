@@ -6,7 +6,7 @@ signal item_pressed(index: int)
 
 const CAPACITY := Inventory.MAX_PER_TAB
 const TAB_IDS := ["items", "potions", "keys"]
-const TAB_ICONS := ["@icon:sword_broad", "@icon:potion_heal", "@icon:misc_key"]
+const TAB_EMOJI := ["⚒️", "🧪", "🗝️"]
 const EMPTY := ["Aucun objet équipable.", "Aucune potion.", "Aucune clé ni parchemin."]
 var gs: GameState
 var _gold: Label
@@ -20,35 +20,51 @@ func setup(state: GameState) -> void:
 	gs = state
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation", 4)
-	var top := HBoxContainer.new()
-	add_child(top)
 	_gold = Label.new()
-	_gold.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_gold.add_theme_color_override("font_color", UiTheme.GOLD)
-	top.add_child(_gold)
+	_gold.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
+	_gold.add_theme_color_override("font_color", Color("ffd88a"))
+	_gold.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_gold.add_theme_constant_override("shadow_offset_y", 1)
+	add_child(_gold)
 	_count = Label.new()
-	_count.add_theme_font_size_override("font_size", 13)
+	_count.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	_count.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
 	_count.add_theme_color_override("font_color", UiTheme.DIM)
-	top.add_child(_count)
+	add_child(_count)
 	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 4)
+	tabs.add_theme_constant_override("separation", int(UiMetrics.css(4.0)))
 	add_child(tabs)
 	for i in TAB_IDS.size():
 		var b := Button.new()
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.icon = IconResolver.texture(TAB_ICONS[i])
-		b.expand_icon = true
-		b.custom_minimum_size = Vector2(0, 26)
+		b.text = TAB_EMOJI[i]
+		b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+		b.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.0)))
+		b.add_theme_color_override("font_color", Color("e2d2b0"))
+		b.add_theme_color_override("font_pressed_color", Color("ffd88a"))
+		b.add_theme_color_override("font_hover_color", Color("ffd88a"))
+		b.add_theme_color_override("font_hover_pressed_color", Color("ffd88a"))
+		for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+			b.add_theme_stylebox_override(st, TrapBox.new(st in ["pressed", "hover_pressed"], st.begins_with("hover")))
 		b.tooltip_text = Inventory.TAB_LABELS[TAB_IDS[i]]
 		var idx := i
 		b.pressed.connect(func(): _select(idx))
 		tabs.add_child(b)
 		_tab_buttons.append(b)
+	var tsep := ColorRect.new()
+	tsep.color = Color("070504")
+	tsep.custom_minimum_size = Vector2(0, maxf(1.0, UiMetrics.css(2.0)))
+	add_child(tsep)
+	move_child(tsep, tabs.get_index() + 1)
 	var inset := PanelContainer.new()
 	inset.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	inset.add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [6, 6, 6, 6]))
+	var isb := StyleBoxFlat.new()
+	isb.bg_color = Color("080604")
+	isb.set_content_margin_all(UiMetrics.css(6.0))
+	isb.shadow_color = Color(0, 0, 0, 0.6)
+	inset.add_theme_stylebox_override("panel", isb)
 	add_child(inset)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -78,8 +94,8 @@ func select_tab_of(it: Dictionary) -> void:
 	refresh()
 
 func refresh() -> void:
-	_gold.text = "%d pièces d'or" % gs.gold
-	_count.text = "%d/%d" % [Inventory.tab_count(gs, TAB_IDS[_tab]), CAPACITY]
+	_gold.text = "💰 %d pièces d'or" % gs.gold
+	_count.text = "🎒 %d/%d" % [Inventory.tab_count(gs, TAB_IDS[_tab]), CAPACITY]
 	for i in _tab_buttons.size():
 		_tab_buttons[i].set_pressed_no_signal(i == _tab)
 	for ch in _grid.get_children():
@@ -122,3 +138,29 @@ func refresh() -> void:
 			stacks[k] = {"n": 1, "badge": badge}
 		shown += 1
 	_empty.text = "" if shown > 0 else str(EMPTY[_tab])
+
+
+## Onglet trapèze de la besace (clip-path polygon(10% 0, 90% 0, 100% 100%, 0 100%)) : dégradé, reflet, filet or si actif.
+class TrapBox extends StyleBox:
+	var on: bool
+	var hot: bool
+	func _init(is_on: bool = false, is_hot: bool = false) -> void:
+		on = is_on
+		hot = is_hot
+		content_margin_top = UiMetrics.css(7.0)
+		content_margin_bottom = UiMetrics.css(6.0)
+		content_margin_left = 0.0
+		content_margin_right = 0.0
+	func _draw(ci: RID, rect: Rect2) -> void:
+		var p := PackedVector2Array([rect.position + Vector2(rect.size.x * 0.1, 0), rect.position + Vector2(rect.size.x * 0.9, 0), rect.end, rect.position + Vector2(0, rect.size.y)])
+		var top := Color("5a4631") if on else Color("3a2e21")
+		var bot := Color("2a2018") if on else Color("1a140e")
+		var a := 1.0 if (on or hot) else 0.75
+		var cols := PackedColorArray()
+		for v in p:
+			cols.append((top if v.y <= rect.position.y + 0.5 else bot) * Color(1, 1, 1, a))
+		RenderingServer.canvas_item_add_polygon(ci, p, cols)
+		RenderingServer.canvas_item_add_line(ci, p[0] + Vector2(1, 0.5), p[1] - Vector2(1, -0.5), Color(1, 0.86, 0.67, 0.22 if on else 0.12), maxf(1.0, UiMetrics.css(1.0)))
+		if on:
+			var h := maxf(1.0, UiMetrics.css(2.0))
+			RenderingServer.canvas_item_add_rect(ci, Rect2(rect.position.x, rect.end.y - h, rect.size.x, h), Color("a9793a"))

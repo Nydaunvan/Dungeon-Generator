@@ -16,8 +16,25 @@ var original_config: Dictionary = {}
 var admin_unlocked: bool = false
 
 const USER_CONFIG := "user://config.json"
+const USER_PREFS := "user://prefs.cfg"
+
+## Langue de l'interface (« fr » / « en »), mémorisée sur l'appareil.
+var lang: String = "fr"
+
+func set_lang(l: String) -> void:
+	lang = l
+	var cf := ConfigFile.new()
+	cf.load(USER_PREFS)
+	cf.set_value("ui", "lang", l)
+	cf.save(USER_PREFS)
+	lang_changed.emit(l)
+
+signal lang_changed(l: String)
 
 func _ready() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(USER_PREFS) == OK:
+		lang = str(cf.get_value("ui", "lang", "fr"))
 	get_window().size_changed.connect(_update_scale)
 	_update_scale()
 	original_config = _load_json("res://data/default_config.json")

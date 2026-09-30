@@ -1,172 +1,104 @@
 class_name PartyHud
-extends HBoxContainer
+extends Control
 ## Cartes de l'équipe en arche : ruban de classe, portrait rond, nom, classe, niveau, PV / endurance / XP,
 ## jauge de tour en combat. Cliquer une carte = choisir le personnage / la cible d'un sort.
 
 signal card_pressed(char_id: String)
 signal card_opened(char_id: String)
+signal chest_pressed(char_id: String)
 
 var gs: GameState
 var ctrl: CombatController
 var _cards: Dictionary = {}
-var _st_normal: StyleBox
-var _st_active: StyleBox
-var _st_target: StyleBox
 
 func setup(state: GameState, controller: CombatController) -> void:
 	gs = state
 	ctrl = controller
-	clip_contents = true
-	add_theme_constant_override("separation", 10)
+	clip_contents = false
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_st_normal = UiTheme.tbox("card_arch", [62, 62, 62, 14], [12, 8, 12, 10])
-	_st_active = UiTheme.tbox("card_arch_active", [62, 62, 62, 14], [12, 8, 12, 10])
-	_st_target = UiTheme.tbox("card_arch_target", [62, 62, 62, 14], [12, 8, 12, 10])
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	UiMetrics.register(self)
 	for c in gs.party:
 		_add_card(c)
 	ctrl.changed.connect(refresh)
-	resized.connect(_resize)
-	_resize()
+	resized.connect(_layout)
+	_layout()
 	refresh()
+
+func rescale() -> void:
+	_layout()
+	queue_redraw()
 
 func _add_card(c: Dictionary) -> void:
 	var cls := Characters.class_def(gs.cfg, str(c.get("classId", "")))
 	var cls_name := str(cls.get("name", ""))
 	var base := str(cls.get("evolvesFrom", cls_name))
 	var accent := UiTheme.class_color(base)
-	var panel := PanelContainer.new()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.gui_input.connect(_on_card_input.bind(str(c.id)))
-	panel.add_theme_stylebox_override("panel", _st_normal)
-	add_child(panel)
-	var v := VBoxContainer.new()
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_theme_constant_override("separation", 1)
-	panel.add_child(v)
-	var ribbon := TextureRect.new()
-	ribbon.texture = UiTheme.tex("ribbon")
-	ribbon.modulate = accent
-	ribbon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	ribbon.stretch_mode = TextureRect.STRETCH_SCALE
-	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(ribbon)
+	var id := str(c.id)
+	var card := PartyCard.new()
+	card.char_id = id
+	card.accent = accent
+	card.pressed.connect(func(): card_pressed.emit(id))
+	card.chest_pressed.connect(func(): chest_pressed.emit(id))
+	card.context.connect(func(): card_opened.emit(id))
+	add_child(card)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
-	var tex: Texture2D = load(pp) if pp != "" else IconResolver.texture(str(c.get("icon", "")))
-	var pic := UiTheme.portrait(tex, UiTheme.BRONZE_LIGHT.lerp(accent, 0.5), 64)
-	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	v.add_child(pic)
-	var badge := Label.new()
-	badge.visible = false
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-	badge.add_theme_font_size_override("font_size", 10)
-	badge.add_theme_stylebox_override("normal", UiTheme.box(Color(0.05, 0.03, 0.02, 0.85), Color("6b4a24"), 1, 6))
-	badge.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	badge.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	pic.add_child(badge)
-	var name_lbl := Label.new()
-	name_lbl.text = str(c.name).to_upper()
-	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.clip_text = true
-	name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	name_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	v.add_child(name_lbl)
-	var cls_lbl := Label.new()
-	cls_lbl.text = cls_name
-	cls_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cls_lbl.clip_text = true
-	cls_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cls_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
-	cls_lbl.add_theme_color_override("font_color", Color("b8843e"))
-	v.add_child(cls_lbl)
-	var lvl_row := HBoxContainer.new()
-	lvl_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	lvl_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lvl_lbl := Label.new()
-	lvl_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lvl_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-	var chest := TextureRect.new()
-	chest.texture = UiTheme.tex("chest")
-	chest.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	chest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	chest.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var cls_ico := TextureRect.new()
-	cls_ico.texture = IconResolver.texture(str(c.get("icon", "")))
-	cls_ico.visible = cls_ico.texture != null
-	cls_ico.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	cls_ico.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	cls_ico.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lvl_row.add_child(cls_ico)
-	lvl_row.add_child(lvl_lbl)
-	lvl_row.add_child(chest)
-	var dead_lbl := Label.new()
-	dead_lbl.text = "MORT"
-	dead_lbl.visible = false
-	dead_lbl.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	dead_lbl.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	dead_lbl.grow_vertical = Control.GROW_DIRECTION_BOTH
-	dead_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dead_lbl.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	dead_lbl.add_theme_font_size_override("font_size", 26)
-	dead_lbl.add_theme_color_override("font_color", Color("ffffff"))
-	dead_lbl.add_theme_color_override("font_outline_color", Color(0.4, 0.05, 0.05))
-	dead_lbl.add_theme_constant_override("outline_size", 8)
-	panel.add_child(dead_lbl)
-	v.add_child(lvl_row)
-	var hp := TextBar.new(UiTheme.HP_GREEN, 16, 11)
-	var sta := TextBar.new(UiTheme.STA_CYAN, 14, 10)
-	var xp := TextBar.new(Color("2b2114"), 14, 10)
-	var gauge := TextBar.new(UiTheme.GOLD, 5, 1)
-	for b in [hp, sta, xp, gauge]:
-		v.add_child(b)
-	_cards[str(c.id)] = {"panel": panel, "name": name_lbl, "cls": cls_lbl, "lvl": lvl_lbl, "chest": chest, "cls_ico": cls_ico, "dead": dead_lbl,
-		"ribbon": ribbon, "badge": badge, "ring": UiTheme.BRONZE_LIGHT.lerp(accent, 0.5), "hp": hp, "sta": sta, "xp": xp, "gauge": gauge, "pic": pic, "state": "normal"}
+	card.pic.texture = load(pp) if pp != "" else IconResolver.texture(str(c.get("icon", "")))
+	card.name_lbl.text = str(c.name)
+	card.cls_lbl.text = cls_name
+	card.cls_ico.texture = IconResolver.texture(str(c.get("icon", "")))
+	card.cls_ico.visible = card.cls_ico.texture != null
+	_cards[id] = {"card": card, "panel": card, "lvl": card.lvl_lbl, "hp": card.hp, "sta": card.sta, "xp": card.xp, "gauge": card.gauge,
+		"badge": card.badge, "dead": card.dead_lbl, "state": "normal"}
 
-func _on_card_input(ev: InputEvent, char_id: String) -> void:
-	if ev is InputEventMouseButton:
-		var mb := ev as InputEventMouseButton
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			card_pressed.emit(char_id)
-		elif mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
-			card_opened.emit(char_id)
+func _on_card_input(_ev: InputEvent, _char_id: String) -> void:
+	pass
 
-func _resize() -> void:
-	# tout est dimensionné à partir de la hauteur réellement disponible : les cartes ne peuvent pas déborder
-	var inner := maxf(80.0, size.y - 24.0)
-	var w := maxf(80.0, size.x / maxf(1.0, float(_cards.size())) - 10.0)
-	var pic_size := clampf(minf(inner * 0.25, w * 0.42), 28.0, 96.0)
-	var line := func(frac: float) -> float: return maxf(9.0, inner * frac)
-	var name_h: float = line.call(0.11)
-	var small_h: float = line.call(0.085)
-	var bar_h: float = inner * 0.10
-	for id in _cards:
-		var cd: Dictionary = _cards[id]
-		cd.pic.custom_minimum_size = Vector2(pic_size, pic_size)
-		cd.ribbon.custom_minimum_size = Vector2(clampf(w * 0.55, 60.0, 130.0), clampf(inner * 0.06, 8.0, 18.0))
-		cd.name.custom_minimum_size = Vector2(0, name_h)
-		cd.name.add_theme_font_size_override("font_size", int(clampf(name_h / 1.5, 8.0, 22.0)))
-		cd.cls.custom_minimum_size = Vector2(0, small_h)
-		cd.cls.add_theme_font_size_override("font_size", int(clampf(small_h / 1.5, 8.0, 17.0)))
-		cd.lvl.custom_minimum_size = Vector2(0, small_h)
-		cd.lvl.add_theme_font_size_override("font_size", int(clampf(small_h / 1.5, 8.0, 17.0)))
-		cd.chest.custom_minimum_size = Vector2(small_h * 0.8, small_h * 0.8)
-		cd.cls_ico.custom_minimum_size = Vector2(small_h * 1.1, small_h * 1.1)
-		cd.dead.add_theme_font_size_override("font_size", int(clampf(w * 0.12, 14.0, 30.0)))
-		cd.hp.set_height(bar_h * 1.05)
-		cd.sta.set_height(bar_h * 0.95)
-		cd.xp.set_height(bar_h * 0.95)
-		cd.gauge.set_height(maxf(4.0, inner * 0.03))
-		cd.gauge.set_font_size(1)
+## Place les cartes en grille régulière (écart 8 px CSS) sous le rail ; le rail est dessiné ici.
+func _layout() -> void:
+	var n := _cards.size()
+	if n == 0:
+		return
+	var top := UiMetrics.css(26.0)
+	var gap := UiMetrics.css(8.0)
+	var pad := UiMetrics.css(6.0)
+	var w := (size.x - pad * 2.0 - gap * (n - 1)) / float(n)
+	var h := maxf(40.0, size.y - top)
+	var i := 0
+	for c in gs.party:
+		var card: PartyCard = _cards[str(c.id)].card
+		card.position = Vector2(pad + i * (w + gap), top)
+		card.size = Vector2(w, h)
+		i += 1
+	queue_redraw()
+
+func _draw() -> void:
+	# rail : barre bronze (gauche 2 px, droite 2 px, à -21 px du haut des cartes)
+	var top := UiMetrics.css(26.0)
+	var y := top - UiMetrics.css(21.0)
+	var h := UiMetrics.css(9.0)
+	var r := Rect2(UiMetrics.css(2.0), y, size.x - UiMetrics.css(4.0), h)
+	draw_rect(Rect2(r.position - Vector2(1, 1) * UiMetrics.css(1.0), r.size + Vector2(2, 2) * UiMetrics.css(1.0)), Color("070504"))
+	var steps := 8
+	for i in steps:
+		var t := float(i) / float(steps - 1)
+		var col := Color("5a4630").lerp(Color("2a2016"), minf(t * 2.0, 1.0)) if t < 0.5 else Color("2a2016").lerp(Color("0d0a07"), (t - 0.5) * 2.0)
+		draw_rect(Rect2(r.position.x, r.position.y + r.size.y * i / steps, r.size.x, r.size.y / steps + 0.5), col)
+	draw_rect(Rect2(r.position.x, r.position.y, r.size.x, maxf(1.0, UiMetrics.css(1.0))), Color(1, 0.86, 0.67, 0.2))
+	# rivet aux deux bouts
+	var rv := UiMetrics.css(2.6)
+	for x in [r.position.x + UiMetrics.css(4.0), r.end.x - UiMetrics.css(4.0)]:
+		draw_circle(Vector2(x, y + h * 0.5), rv, Color("b09068"))
+		draw_circle(Vector2(x, y + h * 0.5), rv * 0.55, Color("4a3826"))
 
 func refresh() -> void:
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
-		cd.lvl.text = "Nv.%d" % int(c.level)
+		var lv := "Nv.%d" % int(c.level)
+		if cd.lvl.text != lv:
+			cd.lvl.text = lv
+			(cd.card as PartyCard)._layout()
+		cd.lvl.text = lv
 		cd.hp.set_values(int(c.hp), int(c.maxHp), "%d/%d PV" % [int(c.hp), int(c.maxHp)])
 		cd.sta.set_values(int(c.stamina), int(c.maxStamina), "%d/%d End." % [int(c.stamina), int(c.maxStamina)])
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), "%d/%d XP" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))])
@@ -179,10 +111,11 @@ func refresh() -> void:
 				and float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0)) >= 100.0
 		var selected: bool = not ctrl.in_combat() and gs.active_char_id == str(c.id)
 		var targeting: bool = ctrl.pending_spell != "" and not dead
-		var want := "active" if (my_turn or selected) else ("target" if targeting else "normal")
-		if want != cd.state:
-			cd.state = want
-			cd.panel.add_theme_stylebox_override("panel", _st_active if want == "active" else (_st_target if want == "target" else _st_normal))
+		var card: PartyCard = cd.card
+		card.active = my_turn or selected
+		card.targetable = targeting
+		card.dead = dead
+		card.queue_redraw()
 
 func _process(_delta: float) -> void:
 	if ctrl.combat == null:
@@ -205,10 +138,12 @@ const STATUS_COLORS := {"freeze": "7fd0ff", "stun": "e6d36b", "burn": "ff8a3d", 
 ## Pastille de statut sur le portrait (statut prioritaire + tours restants) et anneau teinté.
 func _refresh_status(c: Dictionary, cd: Dictionary, dead: bool) -> void:
 	var effs: Array = [] if dead else Statuses.active(c)
-	var ring: StyleBoxFlat = cd.pic.get_meta("ring_style")
+	var card: PartyCard = cd.card
 	if effs.is_empty():
 		cd.badge.visible = false
-		ring.border_color = cd.ring
+		if card.ring_override.a > 0.0:
+			card.ring_override = Color(0, 0, 0, 0)
+			card.queue_redraw()
 		return
 	var e: Dictionary = effs[0]
 	var sdef := Statuses.def(str(e.type))
@@ -216,4 +151,6 @@ func _refresh_status(c: Dictionary, cd: Dictionary, dead: bool) -> void:
 	cd.badge.text = "%s %d" % [str(sdef.label), int(e.remaining)] + (" +%d" % (effs.size() - 1) if effs.size() > 1 else "")
 	cd.badge.add_theme_color_override("font_color", col)
 	cd.badge.visible = true
-	ring.border_color = col
+	if card.ring_override != col:
+		card.ring_override = col
+		card.queue_redraw()

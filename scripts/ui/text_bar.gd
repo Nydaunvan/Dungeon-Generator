@@ -9,11 +9,13 @@ func _init(fill: Color = Color.WHITE, height: int = 18, font_size: int = 12) -> 
 	custom_minimum_size = Vector2(0, height)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color("0a0705")
-	bg.border_color = Color("2a2016")
+	bg.bg_color = Color("1a1108")
+	bg.border_color = Color("3a2c18")
 	bg.set_border_width_all(1)
+	bg.set_corner_radius_all(4)
 	var fg := StyleBoxFlat.new()
 	fg.bg_color = fill
+	fg.set_corner_radius_all(4)
 	add_theme_stylebox_override("background", bg)
 	add_theme_stylebox_override("fill", fg)
 	_label = Label.new()

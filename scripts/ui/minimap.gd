@@ -105,7 +105,7 @@ func _draw() -> void:
 			elif ch == "S":
 				col = Color("8a5f16") if vis else Color("5a4212")
 			var pos := origin + Vector2(x - ox, y - oy) * cs
-			draw_rect(Rect2(pos, Vector2(cs, cs)).grow(-0.5), col)
+			draw_rect(Rect2(pos, Vector2(cs, cs) * (1.0 - 1.0 / float(cpx))), col)
 			if ch == "S" and cs >= 5.0:
 				var c := pos + Vector2(cs, cs) * 0.5
 				var r := cs * 0.32
@@ -148,3 +148,18 @@ func _draw() -> void:
 	var side := Vector2(-f.y, f.x)
 	var r2 := cs * 0.45
 	draw_colored_polygon(PackedVector2Array([pc + f * r2, pc - f * r2 * 0.7 + side * r2 * 0.7, pc - f * r2 * 0.7 - side * r2 * 0.7]), UiTheme.GOLD)
+
+## Proportions du canevas de l'original (cases visibles en largeur / hauteur) : le cadre s'y adapte.
+func view_aspect() -> float:
+	if grid == null:
+		return 1.11
+	var z := clampi(zoom, 1, _max_zoom())
+	var base_px := clampi(int(floor(320.0 / maxi(grid.width, grid.height))), 3, 16)
+	var cpx := mini(28, base_px * z)
+	var fog := gs != null and (gs.cfg.get("runModifierIds", []) as Array).has("mod_fog")
+	var budget := 130 if fog else 300
+	var vw := maxi(4, mini(grid.width, int(floor(budget / float(cpx)))))
+	var vh := maxi(4, mini(grid.height, int(floor(budget / float(cpx)))))
+	if full:
+		return float(grid.width) / float(grid.height)
+	return float(vw) / float(vh)

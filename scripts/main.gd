@@ -93,6 +93,7 @@ func _ready() -> void:
 	layout.potion_quick.connect(func(i): inter.use_potion_at(gs.active_char_id, i))
 	layout.scrolls_quick.connect(func(): inter.open_scroll_picker(gs.active_char_id))
 	layout.card_pressed.connect(_on_card_pressed)
+	layout.chest_pressed.connect(_on_chest_pressed)
 	layout.card_opened.connect(inter.open_sheet)
 	_popup_layer = layout.popup_layer
 	message_label = layout.message_label
@@ -312,6 +313,10 @@ func _interact() -> void:
 
 ## Clic sur une carte : cible d'un sort, fiche (en combat) ou volet d'équipement (hors combat).
 func _on_card_pressed(id: String) -> void:
+	ctrl.card_pressed(id)   # choisit le héros actif (ou la cible d'un sort) ; l'inventaire ne s'ouvre que par le coffre
+
+## Icône coffre d'un portrait : inventaire du héros (hors combat) ; en combat, sa fiche de groupe.
+func _on_chest_pressed(id: String) -> void:
 	if ctrl.pending_spell != "":
 		ctrl.card_pressed(id)
 	elif ctrl.in_combat():
@@ -426,6 +431,7 @@ func _on_menu(name: String) -> void:
 				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
+		"Lang": pass   # la préférence est enregistrée ; les textes suivent la langue choisie
 		"Carte": _toggle_map()
 		"Journal":
 			var lm := Modal.open(_modals(), "📜 Historique du journal", 640.0)

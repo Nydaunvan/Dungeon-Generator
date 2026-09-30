@@ -55,7 +55,7 @@ func _show_tip(i: int) -> void:
 func _apply_size() -> void:
 	var s := clampf(size.y * 0.92, 30.0, 70.0)
 	slot_size = s
-	add_theme_constant_override("separation", int(clampf(size.x * 0.04, 8.0, 70.0)))
+	add_theme_constant_override("separation", int(maxf(6.0, (size.x - s * float(SLOTS + 1)) / float(SLOTS))))   # space-between
 	_attack.custom_minimum_size = Vector2(s, s)
 	for b in _slots:
 		b.custom_minimum_size = Vector2(s, s)
