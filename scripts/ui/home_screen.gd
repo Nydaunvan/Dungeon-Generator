@@ -11,7 +11,7 @@ const SH := 800.0
 const HOME := "res://assets/home/"
 
 var _wall: TextureRect
-var _header: PanelContainer
+var _header: AppHeader
 var _title_label: Label
 var _stage: Control
 var _scroll: ScrollContainer
@@ -107,25 +107,10 @@ func _build() -> void:
 	_stage.add_child(_embers)
 
 	# en-tête
-	_header = PanelContainer.new()
-	_header.add_theme_stylebox_override("panel", UiTheme.tbox("frame_header", [12, 12, 12, 12], [16, 5, 12, 5]))
-	var hrow := HBoxContainer.new()
-	hrow.add_theme_constant_override("separation", 8)
-	_header.add_child(hrow)
-	_title_label = _label(str(Data.config.get("title", "Éditeur de Donjon")), 26, Color("e0b070"), UiTheme.F_TITLE_BOLD)
-	_title_label.text = "Éditeur de Donjon"
-	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_title_label.clip_text = true
-	hrow.add_child(_title_label)
-	for n in ["Accueil", "Admin", "Guide"]:
-		var b := Button.new()
-		b.text = n.to_upper()
-		b.focus_mode = Control.FOCUS_NONE
-		b.disabled = n == "Accueil"
-		var nn: String = n
-		b.pressed.connect(func(): nav.emit(nn))
-		hrow.add_child(b)
+	_header = AppHeader.new()
+	_header.set_home_mode(true)
+	_header.nav.connect(func(n: String): nav.emit(n))
+	_title_label = _header.title_label
 	add_child(_header)
 
 	# titre à lettrine
@@ -334,12 +319,14 @@ func _layout() -> void:
 		return
 	var w := size.x
 	var h := size.y
-	_header.position = Vector2.ZERO
-	_header.size = Vector2(w, 0)
-	var hh := maxf(44.0, clampf(h * 0.075, 44.0, 66.0))
-	_header.custom_minimum_size = Vector2(w, hh)
-	_header.size = Vector2(w, hh)
-	_title_label.add_theme_font_size_override("font_size", int(clampf(hh * 0.45, 15.0, 28.0)))
+	UiMetrics.update(self)
+	var mx := UiMetrics.css(30.0 if not UiMetrics.portrait else 6.0)
+	var hh := UiMetrics.css(92.0 if not UiMetrics.portrait else 60.0)
+	_header.rescale()
+	_header.position = Vector2(mx, UiMetrics.css(12.0))
+	_header.custom_minimum_size = Vector2(w - mx * 2.0, hh)
+	_header.size = Vector2(w - mx * 2.0, hh)
+	hh += UiMetrics.css(12.0)
 	var area := Rect2(0, hh, w, h - hh)
 	var stacked := w < 900.0 or area.size.y < 560.0 or h > w
 	if stacked != _stacked or _seal.get_parent() == null:

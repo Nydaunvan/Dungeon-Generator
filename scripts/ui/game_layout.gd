@@ -24,7 +24,7 @@ var world: Node3D
 var sub_viewport: SubViewport
 var sub_container: SubViewportContainer
 # éléments partagés
-var header: PanelContainer
+var header: AppHeader
 var frame: PanelContainer
 var stage: Control
 var popup_layer: Control
@@ -53,13 +53,10 @@ var _scroll: ScrollContainer
 var _portrait: bool = false
 var _built_mode: int = -1
 var _title: Label
-var btn_admin: Button
 var type_badge: Label
 var view_controls: HBoxContainer
 var keys_panel: PanelContainer
 var sound_panel: PanelContainer
-var _nav_row: HBoxContainer
-var _hang: HangChain
 var _comp: Control
 var _plaque_lvl: Control
 var _vignette: TextureRect
@@ -237,86 +234,11 @@ func _small_iron(b: Button) -> void:
 	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
-func _nav_button(text: String) -> Button:
-	var b := Button.new()
-	_style_nav(b, text)
-	return b
-
-func _style_nav(b: Button, text: String) -> void:
-	b.text = text
-	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82)))
-	b.add_theme_color_override("font_color", Color("dccbaa"))
-	b.add_theme_color_override("font_hover_color", Color("ffd98a"))
-	b.add_theme_color_override("font_pressed_color", Color("ffd98a"))
-	for st in ["normal", "hover", "pressed", "focus"]:
-		var g := StyleBoxFlat.new()
-		g.bg_color = Color("2a2119") if st != "hover" else Color("3a2e21")
-		g.border_color = Color("070504")
-		g.border_width_left = maxi(1, roundi(UiMetrics.css(2.0)))
-		g.content_margin_left = UiMetrics.css(14.0)
-		g.content_margin_right = UiMetrics.css(14.0)
-		g.content_margin_top = UiMetrics.css(7.0)
-		g.content_margin_bottom = UiMetrics.css(7.0)
-		b.add_theme_stylebox_override(st, g)
-
 func _build_parts() -> void:
-	# en-tête : cadre riveté, titre, groupe de navigation (Accueil / Guide / langue), chaîne au crâne suspendue
-	header = PanelContainer.new()
-	header.clip_contents = false
-	var hbox := FrameBox.new(18.0, Vector4(58, 0, 8, 0))
-	header.add_theme_stylebox_override("panel", hbox)
-	var hrow := HBoxContainer.new()
-	hrow.add_theme_constant_override("separation", 10)
-	header.add_child(hrow)
-	_title = Label.new()
-	_title.text = "Éditeur de Donjon"
-	_title.clip_text = true
-	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_title.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	_title.add_theme_color_override("font_color", Color("ffd98a"))
-	_title.add_theme_color_override("font_shadow_color", Color.BLACK)
-	_title.add_theme_constant_override("shadow_offset_y", 2)
-	hrow.add_child(_title)
-	var nav := PanelContainer.new()
-	nav.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var nbox := FrameBox.new(10.0, Vector4(2, 2, 2, 2), Color("0e0b08"))
-	nbox.use_grime = false
-	nbox.inner_shadow = 0.0
-	nav.add_theme_stylebox_override("panel", nbox)
-	var nrow := HBoxContainer.new()
-	nrow.add_theme_constant_override("separation", 0)
-	nav.add_child(nrow)
-	hrow.add_child(nav)
-	_nav_row = nrow
-	for n in ["Accueil", "Guide"]:
-		var b := _nav_button(("🏠 " if n == "Accueil" else "📖 ") + n)
-		var nn: String = n
-		b.pressed.connect(func(): menu_pressed.emit(nn))
-		nrow.add_child(b)
-	# 🛠 Admin : n'apparaît que pour un donjon personnel / une session d'administration ouverte
-	btn_admin = _nav_button("🛠 Admin")
-	btn_admin.pressed.connect(func(): menu_pressed.emit("Admin"))
-	btn_admin.visible = false
-	nrow.add_child(btn_admin)
-	# sélecteur de langue (🇫🇷 FR / 🇬🇧 EN)
-	var lang := MenuButton.new()
-	_style_nav(lang, "%s ▾" % ("🇬🇧 EN" if Data.lang == "en" else "🇫🇷 FR"))
-	lang.flat = false
-	var pm := lang.get_popup()
-	pm.add_item("🇫🇷 FR", 0)
-	pm.add_item("🇬🇧 EN", 1)
-	pm.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82)))
-	pm.id_pressed.connect(func(i: int):
-		Data.set_lang("en" if i == 1 else "fr")
-		lang.text = "%s ▾" % ("🇬🇧 EN" if i == 1 else "🇫🇷 FR")
-		menu_pressed.emit("Lang"))
-	nrow.add_child(lang)
-	var hang := HangChain.new()
-	header.add_child(hang)
-	_hang = hang
+	# en-tête (partagé avec l'accueil)
+	header = AppHeader.new()
+	header.nav.connect(func(n: String): menu_pressed.emit(n))
+	_title = header.title_label
 
 	# cadre de la vue 3D
 	frame = PanelContainer.new()
@@ -680,8 +602,7 @@ func _size_widgets() -> void:
 	var hh := clampf(h * 0.225, 120.0, 330.0)
 	hud.custom_minimum_size = Vector2(0, hh if not _portrait else clampf(h * 0.2, 110.0, 220.0))
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
-	header.custom_minimum_size = Vector2(0, UiMetrics.css(92.0 if not _portrait else 60.0))
-	_title.add_theme_font_size_override("font_size", int(UiMetrics.css(28.8 if not _portrait else 18.0)))
+	header.rescale()
 	var right: Node = _root.get_node_or_null("Main/Right")
 	if right:
 		var wreal := w * UiMetrics.s
@@ -778,7 +699,6 @@ func _style_flee() -> void:
 	btn_flee.custom_minimum_size = Vector2(UiMetrics.css(130.0), UiMetrics.css(40.0))
 
 func _process(_d: float) -> void:
-	btn_admin.visible = Data.admin_unlocked or Data.play_origin == "custom"
 	var on := ctrl != null and ctrl.in_combat()
 	if on != _was_combat:
 		_was_combat = on
