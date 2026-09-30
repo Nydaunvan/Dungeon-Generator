@@ -18,6 +18,7 @@ var _scroll: ScrollContainer
 var _column: VBoxContainer
 var _scene_bg: TextureRect
 var _glow: TextureRect
+var _embers: Embers
 var _title_box: Control
 var _tagline: Label
 var _seal: Control
@@ -101,6 +102,9 @@ func _build() -> void:
 	tw.tween_property(_glow, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_glow, "modulate:a", 0.55, 0.9).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_glow, "modulate:a", 0.85, 0.5).set_trans(Tween.TRANS_SINE)
+
+	_embers = Embers.new()
+	_stage.add_child(_embers)
 
 	# en-tête
 	_header = PanelContainer.new()
@@ -216,12 +220,21 @@ func _make_seal() -> Control:
 	s.anchor_top = 0.665
 	s.anchor_bottom = 0.74
 	root.add_child(s)
+	var dice := DiceRoller.new()
+	dice.name = "dice"
+	dice.anchor_left = 0.5
+	dice.anchor_right = 0.5
+	root.add_child(dice)
 	root.resized.connect(func():
 		root.pivot_offset = root.size * 0.5
 		var f := root.size.x / 280.0
 		t.add_theme_font_size_override("font_size", int(round(20.0 * f)))
-		s.add_theme_font_size_override("font_size", int(round(11.0 * f))))
+		s.add_theme_font_size_override("font_size", int(round(11.0 * f)))
+		var dw := 74.0 * f * 1.18
+		dice.size = Vector2(dw, dw * 46.0 / 74.0)
+		dice.position = Vector2((root.size.x - dw) * 0.5, root.size.y * 0.36 - dice.size.y * 0.5))
 	root.mouse_entered.connect(func():
+		dice.roll()
 		create_tween().tween_property(root, "scale", Vector2(1.03, 1.03), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
 	root.mouse_exited.connect(func():
 		create_tween().tween_property(root, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
@@ -229,6 +242,7 @@ func _make_seal() -> Control:
 		var mb := ev as InputEventMouseButton
 		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 			_seal_roll(root)
+			root.get_node("dice").roll()
 			action.emit("random"))
 	return root
 
@@ -358,6 +372,9 @@ func _layout_stage(area: Rect2) -> void:
 	var off := origin - area.position
 	_scene_bg.position = off
 	_scene_bg.size = sz
+	_embers.position = off
+	_embers.size = sz
+	_embers.k = k
 	_glow.position = off + Vector2(-110, 260) * k
 	_glow.size = Vector2(420, 420) * k
 	for n in [_seal, _banners[0].root, _banners[1].root, _banners[2].root, _links, _foot, _title_box, _tuto]:
