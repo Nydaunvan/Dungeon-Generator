@@ -364,6 +364,7 @@ func _roll_trap(m: Modal, it: Dictionary, chance: int) -> void:
 		m.close()
 		if outcome == "perfect" or outcome == "success":
 			gs.item_state(_lid(), str(it.id))["disarmed"] = true
+			view.entities.remove_item(str(it.id))
 			_log("🔓 %s désamorcé par le groupe." % it.get("name", "Le piège"))
 			ctrl.changed.emit()
 		else:

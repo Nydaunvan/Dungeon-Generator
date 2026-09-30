@@ -44,7 +44,12 @@ func populate(level: Dictionary) -> void:
 	for it in level.get("items", []):
 		var type := str(it.get("type", ""))
 		if type == "trap":
-			continue   # pièges invisibles pour l'instant
+			var dec := TrapDecals.make_mesh(str(it.get("trapKind", "spikes")))
+			dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.015, int(it.y) * LevelBuilder.CELL)
+			dec.name = "Trap_" + str(it.id)
+			add_child(dec)
+			_register(items, Vector2i(int(it.x), int(it.y)), dec, it)
+			continue
 		var n := _make_sprite(str(it.get("icon", "")), false, true)
 		if n == null:
 			continue

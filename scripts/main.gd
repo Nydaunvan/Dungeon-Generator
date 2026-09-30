@@ -125,7 +125,8 @@ func load_level(index: int, at_saved: bool = false) -> void:
 	for id in ls.get("opened_doors", {}):
 		level_node.open_door(str(id), true)
 	for it in level.get("items", []):
-		if gs.item_state(str(level.id), str(it.id)).get("taken", false):
+		var ist := gs.item_state(str(level.id), str(it.id))
+		if ist.get("taken", false) or ist.get("disarmed", false):
 			level_node.entities.remove_item(str(it.id))
 	_apply_outdoor(bool(level.get("outdoor", false)))
 	if not bool(level.get("outdoor", false)):

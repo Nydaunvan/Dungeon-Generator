@@ -56,6 +56,21 @@ func _init() -> void:
 							(b as Button).pressed.emit()
 							break
 					await create_timer(0.4).timeout
+			"trap":
+				main.wand.paused_if = func(): return true
+				var done := false
+				for it in main.level.items:
+					if str(it.get("type", "")) != "trap" or done:
+						continue
+					for d in 4:
+						var v: Vector2i = DungeonGrid.DIRS[d]
+						var from := Vector2i(int(it.x), int(it.y)) - v
+						if main.grid.is_walkable(from.x, from.y) and main.grid.is_walkable(from.x, from.y):
+							main.rig.place(main.grid, from.x, from.y, d)
+							done = true
+							print("trap kind ", it.get("trapKind"))
+							break
+				await create_timer(1.0).timeout
 			"dock":
 				main.dock.open_for(str(main.gs.party[0].id))
 				await create_timer(1.0).timeout
