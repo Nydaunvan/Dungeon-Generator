@@ -224,6 +224,8 @@ func _timer_seconds() -> float:
 func _process(delta: float) -> void:
 	if combat == null or _busy or gs.game_over or not _timer_enabled() or not in_combat():
 		return
+	if not get_tree().get_nodes_in_group("modal").is_empty():
+		return   # fenêtre ouverte : le chronomètre de tour est en pause
 	var c := gs.char_by_id(gs.active_char_id)
 	if c.is_empty() or float(combat.gauges.get("char_" + str(c.id), 0.0)) < 100.0:
 		return

@@ -5,6 +5,7 @@ extends MarginContainer
 
 signal command(cmd: String)
 signal menu_pressed(name: String)
+signal monster_pressed(def: Dictionary, st: Dictionary)
 signal item_pressed(index: int)
 signal card_opened(char_id: String)
 signal card_pressed(char_id: String)
@@ -32,6 +33,7 @@ var act_box: VBoxContainer
 var btn_interact: Button
 var btn_flee: Button
 var initiative: InitiativeBar
+var banner: CombatBanner
 var strip: PanelContainer
 var spell_bar: SpellBar
 var rail: ColorRect
@@ -166,6 +168,15 @@ func _build_parts() -> void:
 	initiative.offset_top = 46
 	initiative.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	stage.add_child(initiative)
+
+	banner = CombatBanner.new()
+	banner.setup(ctrl)
+	banner.anchor_left = 0.5
+	banner.anchor_right = 0.5
+	banner.offset_top = 104
+	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	banner.pressed.connect(func(d, s): monster_pressed.emit(d, s))
+	stage.add_child(banner)
 
 	popup_layer = Control.new()
 	popup_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

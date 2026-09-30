@@ -59,6 +59,7 @@ func _ready() -> void:
 	ui.add_child(layout)
 	layout.setup(gs, ctrl, rig)
 	layout.command.connect(_on_command)
+	layout.monster_pressed.connect(func(d, s): MonsterInfoModal.open(_modals(), d, s))
 	layout.menu_pressed.connect(_on_menu)
 	# le monde 3D vit dans la vue encadrée
 	layout.world.add_child(rig)
