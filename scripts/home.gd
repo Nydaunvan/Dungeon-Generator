@@ -18,16 +18,22 @@ func _ready() -> void:
 func _on_nav(name: String) -> void:
 	match name:
 		"Guide": Dialogs.guide(_modal_layer)
-		"Admin": _soon("Administration")
+		"Admin": Data.open_admin()
+
+func _launch_original() -> void:
+	Data.launch_original()
+
+func _launch_generated(cfg: Dictionary) -> void:
+	Data.launch(cfg, "random")
 
 func _on_action(name: String) -> void:
 	match name:
 		"origin":
 			Dialogs.confirm(_modal_layer, "Le Donjon d'Origine",
 				"Ce donjon sert de démonstration : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, portes verrouillées, fontaine, objets, montée de niveau…).\n\nPour explorer tout ce que le jeu propose, lancez plutôt un donjon aléatoire depuis l'accueil.\n\nCommencer cette démonstration ?",
-				func(): Data.launch_original(), "Commencer")
-		"random": GeneratorDialog.open(_modal_layer, func(cfg): Data.launch(cfg, "random"))
-		"create": _soon("Création de donjon")
+				_launch_original, "Commencer")
+		"random": GeneratorDialog.open(_modal_layer, _launch_generated)
+		"create": Dialogs.confirm(_modal_layer, "Créer votre propre donjon", "Un nouveau donjon de départ va être généré et remplacera la configuration actuelle de l'administration. Continuer ?", Data.create_own_dungeon, "Créer")
 		"saves": _soon("Sauvegardes")
 		"load-code": _soon("Chargement par code")
 		"import-json": _soon("Import JSON")

@@ -10,8 +10,18 @@ var play_config: Dictionary = {}
 ## Provenance de la partie : "original", "random", "custom".
 var play_origin: String = "original"
 
+## Configuration d'origine (jamais modifiée) : sert au Donjon d'Origine et à la réinitialisation.
+var original_config: Dictionary = {}
+## Une session d'administration est déverrouillée (mot de passe saisi).
+var admin_unlocked: bool = false
+
+const USER_CONFIG := "user://config.json"
+
 func _ready() -> void:
-	config = _load_json("res://data/default_config.json")
+	original_config = _load_json("res://data/default_config.json")
+	config = _load_user_config()
+	if config.is_empty():
+		config = original_config.duplicate(true)
 	class_talents = _load_json("res://data/class_talents.json")
 	constants = _load_json("res://data/game_constants.json")
 
@@ -41,12 +51,86 @@ func active() -> Dictionary:
 
 ## Lance une partie avec la configuration donnée (copie profonde) puis ouvre la scène de jeu.
 func launch(cfg: Dictionary, origin: String) -> void:
+	if origin != "custom":
+		admin_unlocked = false
 	play_config = cfg.duplicate(true)
 	play_origin = origin
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func launch_original() -> void:
-	launch(config, "original")
+	launch(original_config, "original")
+
+# ------------------------------------------------------------------ configuration modifiable (administration)
+
+func _load_user_config() -> Dictionary:
+	if not FileAccess.file_exists(USER_CONFIG):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(USER_CONFIG))
+	if parsed is Dictionary and (parsed as Dictionary).has("levels") and (parsed as Dictionary).has("classes"):
+		return parsed
+	return {}
+
+## Enregistre la configuration courante comme configuration par défaut de l'appareil.
+func save_config() -> bool:
+	var f := FileAccess.open(USER_CONFIG, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify(config))
+	return true
+
+func reset_config() -> void:
+	config = original_config.duplicate(true)
+	if FileAccess.file_exists(USER_CONFIG):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(USER_CONFIG))
+
+func export_json() -> String:
+	return JSON.stringify(config, "\t")
+
+## Remplace la configuration par le JSON donné. Renvoie "" si tout va bien, sinon le message d'erreur.
+func import_json(text: String) -> String:
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return "Le contenu n'est pas un fichier de configuration valide."
+	var d: Dictionary = parsed
+	if not d.has("levels") or not d.has("classes") or not d.has("party"):
+		return "Configuration incomplète (niveaux, classes ou groupe manquant)."
+	config = d
+	return ""
+
+## Code de partage : « DGZ1 » + base64 du JSON compressé en gzip (même format que la version HTML).
+func encode_code(cfg: Dictionary) -> String:
+	var raw := JSON.stringify(cfg).to_utf8_buffer()
+	return "DGZ1" + Marshalls.raw_to_base64(raw.compress(FileAccess.COMPRESSION_GZIP))
+
+## Décode un code de partage. Renvoie {} si le code est invalide.
+func decode_code(code: String) -> Dictionary:
+	code = code.strip_edges().replace("\n", "").replace(" ", "")
+	var json := ""
+	if code.begins_with("DGZ1"):
+		var packed := Marshalls.base64_to_raw(code.substr(4))
+		var raw := packed.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
+		json = raw.get_string_from_utf8()
+	elif code.begins_with("DRAW1"):
+		json = Marshalls.base64_to_raw(code.substr(5)).get_string_from_utf8()
+	else:
+		return {}
+	var parsed = JSON.parse_string(json)
+	return parsed if parsed is Dictionary else {}
+
+## Bandeau « Jouer ce donjon » de l'administration (création d'un donjon personnel).
+var admin_banner: bool = false
+
+## « Créer votre propre donjon » : part d'un donjon aléatoire modifiable dans l'administration.
+func create_own_dungeon() -> void:
+	config = DungeonGenerator.build_config(original_config, 3, 13, 11, "normal", [])
+	save_config()
+	admin_unlocked = true
+	admin_banner = true
+	get_tree().change_scene_to_file("res://scenes/admin.tscn")
+
+func open_admin() -> void:
+	admin_banner = false
+	get_tree().change_scene_to_file("res://scenes/admin.tscn")
 
 func go_home() -> void:
 	get_tree().change_scene_to_file("res://scenes/home.tscn")

@@ -253,7 +253,7 @@ func _on_menu(name: String) -> void:
 	match name:
 		"Accueil":
 			Dialogs.confirm(_modals(), "Retour à l'accueil", "Quitter la partie en cours ? La progression non sauvegardée sera perdue.",
-				func(): Data.go_home(), "Quitter")
+				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
 		_: show_message("« %s » : à venir" % name)
 
