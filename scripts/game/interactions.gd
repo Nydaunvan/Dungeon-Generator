@@ -405,6 +405,46 @@ func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
 
 # ------------------------------------------------------------------ menu d'un objet de la besace
 
+## Barre rapide de combat : le personnage actif boit la potion.
+func use_potion_at(char_id: String, idx: int) -> void:
+	if idx < 0 or idx >= gs.inventory.size():
+		return
+	var healed := Inventory.use_potion(gs, gs.char_by_id(char_id), idx)
+	if healed >= 0:
+		ctrl.potion_drunk(char_id, healed)
+		bag_changed.emit()
+
+## Barre rapide de combat : choix d'un parchemin à lire par le personnage actif.
+func open_scroll_picker(char_id: String) -> void:
+	var groups: Array = []
+	for i in gs.inventory.size():
+		var it: Dictionary = gs.inventory[i]
+		if str(it.get("type", "")) != "scroll":
+			continue
+		var found := false
+		for g in groups:
+			if str(g.it.get("spellId", "")) == str(it.get("spellId", "")):
+				g.count += 1
+				found = true
+				break
+		if not found:
+			groups.append({"it": it, "idx": i, "count": 1})
+	if groups.is_empty():
+		return
+	var m := Modal.open(host, "📜 Choisir un parchemin", 420)
+	for g in groups:
+		var it2: Dictionary = g.it
+		var idx2: int = g.idx
+		var sp := ctrl.combat.spell_def(str(it2.get("spellId", "")))
+		var label := str(sp.get("name", it2.get("name", "Parchemin")))
+		if int(g.count) > 1:
+			label += "  ×%d" % int(g.count)
+		m.add_row(IconResolver.texture(str(it2.get("icon", ""))), "\n".join(SpellTip.lines(sp)) if not sp.is_empty() else "Parchemin illisible")
+		m.add_button(label, func():
+			m.close()
+			ctrl.read_scroll(char_id, idx2)
+			bag_changed.emit())
+
 func open_item_menu(idx: int) -> void:
 	if idx < 0 or idx >= gs.inventory.size():
 		return

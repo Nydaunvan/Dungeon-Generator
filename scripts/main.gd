@@ -89,6 +89,8 @@ func _ready() -> void:
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
 	layout.item_pressed.connect(_on_bag_item)
+	layout.potion_quick.connect(func(i): inter.use_potion_at(gs.active_char_id, i))
+	layout.scrolls_quick.connect(func(): inter.open_scroll_picker(gs.active_char_id))
 	layout.card_pressed.connect(_on_card_pressed)
 	layout.card_opened.connect(inter.open_sheet)
 	_popup_layer = layout.popup_layer

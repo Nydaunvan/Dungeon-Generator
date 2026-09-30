@@ -35,6 +35,10 @@ func _init() -> void:
 							break
 					if found:
 						break
+				if args.has("potions"):
+					for i in 3:
+						main.gs.inventory.append({"type": "potion", "name": "Potion de soin", "icon": "@icon:spr_12", "heal": 30})
+					main.gs.inventory.append({"type": "potion", "name": "Élixir", "icon": "@icon:spr_13", "staminaRestore": 40})
 				main.ctrl.refresh()
 				await create_timer(2.5).timeout
 			"dock":

@@ -9,6 +9,8 @@ signal monster_pressed(def: Dictionary, st: Dictionary)
 signal item_pressed(index: int)
 signal card_opened(char_id: String)
 signal card_pressed(char_id: String)
+signal potion_quick(idx: int)
+signal scrolls_quick
 
 const PORTRAIT_RATIO := 1.05   # largeur / hauteur en dessous : mode portrait
 
@@ -58,6 +60,8 @@ var _timer_track: ColorRect
 var _timer_fill: ColorRect
 var _was_combat: bool = false
 var _flash: ColorRect
+var pouch: HBoxContainer
+var _pouch_sig: String = ""
 
 func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void:
 	clip_contents = true
@@ -214,6 +218,19 @@ func _build_parts() -> void:
 	_timer_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_timer_track.add_child(_timer_fill)
 	stage.add_child(_timer_track)
+
+	# barre rapide potions / parchemins (combat)
+	pouch = HBoxContainer.new()
+	pouch.add_theme_constant_override("separation", 8)
+	pouch.anchor_left = 0.5
+	pouch.anchor_right = 0.5
+	pouch.anchor_top = 1.0
+	pouch.anchor_bottom = 1.0
+	pouch.offset_top = -62
+	pouch.offset_bottom = -12
+	pouch.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	pouch.visible = false
+	stage.add_child(pouch)
 
 	banner = CombatBanner.new()
 	banner.setup(ctrl)
@@ -443,6 +460,73 @@ func _size_overlays() -> void:
 func set_level_name(text: String) -> void:
 	level_label.text = text.to_upper()
 
+func _refresh_pouch(on: bool) -> void:
+	var potions: Array = []
+	var scrolls := 0
+	if on:
+		for i in gs.inventory.size():
+			var it: Dictionary = gs.inventory[i]
+			var t := str(it.get("type", ""))
+			if t == "potion":
+				var key := "%s|%d|%d" % [it.get("name", ""), int(it.get("heal", 0)), int(it.get("staminaRestore", 0))]
+				var hit := false
+				for g in potions:
+					if g.key == key:
+						g.count += 1
+						hit = true
+						break
+				if not hit:
+					potions.append({"key": key, "it": it, "idx": i, "count": 1})
+			elif t == "scroll":
+				scrolls += 1
+	var sig := str(on) + "|" + str(potions.map(func(g): return "%s%d" % [g.key, g.count])) + "|" + str(scrolls)
+	if sig == _pouch_sig:
+		return
+	_pouch_sig = sig
+	for c in pouch.get_children():
+		c.queue_free()
+	pouch.visible = on and (not potions.is_empty() or scrolls > 0)
+	for g in potions:
+		var it2: Dictionary = g.it
+		var detail := "+%d PV" % int(it2.heal) if int(it2.get("heal", 0)) > 0 else ("+%d End." % int(it2.get("staminaRestore", 0)) if int(it2.get("staminaRestore", 0)) > 0 else "")
+		var idx: int = g.idx
+		pouch.add_child(_pouch_button(IconResolver.texture(str(it2.get("icon", ""))), "🧪", detail, int(g.count), str(it2.get("name", "")), func(): potion_quick.emit(idx)))
+	if scrolls > 0:
+		pouch.add_child(_pouch_button(null, "📜", "Parchemins", scrolls, "Parchemins", func(): scrolls_quick.emit()))
+
+func _pouch_button(tex: Texture2D, glyph: String, detail: String, count: int, tip: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = tip
+	b.custom_minimum_size = Vector2(64, 46)
+	b.add_theme_font_size_override("font_size", 11)
+	b.text = "" if tex != null else glyph
+	b.icon = tex
+	b.expand_icon = true
+	b.add_theme_constant_override("icon_max_width", 26)
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.text = detail if tex != null else glyph + "\n" + detail
+	b.pressed.connect(cb)
+	if count > 1:
+		var l := Label.new()
+		l.text = "×%d" % count
+		l.add_theme_font_size_override("font_size", 11)
+		l.add_theme_color_override("font_color", Color("1a1108"))
+		var bs := UiTheme.box(UiTheme.GOLD, UiTheme.GOLD, 0, 9)
+		bs.content_margin_left = 5
+		bs.content_margin_right = 5
+		bs.content_margin_top = 0
+		bs.content_margin_bottom = 0
+		l.add_theme_stylebox_override("normal", bs)
+		l.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		l.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		l.offset_right = 6
+		l.offset_top = -7
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(l)
+	return b
+
 func _style_flee() -> void:
 	for st in ["normal", "hover", "pressed", "focus"]:
 		var sb := StyleBoxFlat.new()
@@ -464,6 +548,7 @@ func _process(_d: float) -> void:
 		if on:
 			_flash.color.a = 0.55
 			create_tween().tween_property(_flash, "color:a", 0.0, 0.5)
+	_refresh_pouch(on)
 	pad.visible = not on
 	_comp.visible = not on
 	_plaque_lvl.visible = not on
