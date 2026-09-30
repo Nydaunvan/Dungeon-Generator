@@ -6,7 +6,7 @@ var text: RichTextLabel
 
 func setup(gs: GameState) -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	custom_minimum_size = Vector2(0, 80)
+	custom_minimum_size = Vector2(0, 30)
 	add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [10, 8, 10, 8]))
 	text = RichTextLabel.new()
 	text.bbcode_enabled = true

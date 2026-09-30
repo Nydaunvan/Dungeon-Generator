@@ -7,6 +7,7 @@ signal command(cmd: String)
 signal menu_pressed(name: String)
 signal item_pressed(index: int)
 signal card_opened(char_id: String)
+signal card_pressed(char_id: String)
 
 const PORTRAIT_RATIO := 1.05   # largeur / hauteur en dessous : mode portrait
 
@@ -49,6 +50,7 @@ var _built_mode: int = -1
 var _title: Label
 
 func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void:
+	clip_contents = true
 	gs = state
 	ctrl = controller
 	rig = r
@@ -216,7 +218,7 @@ func _build_parts() -> void:
 	rail.custom_minimum_size = Vector2(0, 4)
 	hud = PartyHud.new()
 	hud.setup(gs, ctrl)
-	hud.card_pressed.connect(ctrl.card_pressed)
+	hud.card_pressed.connect(func(id): card_pressed.emit(id))
 	hud.card_opened.connect(func(id): card_opened.emit(id))
 
 	# panneaux latéraux
@@ -226,7 +228,7 @@ func _build_parts() -> void:
 	map_inset.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	map_inset.add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [6, 6, 6, 6]))
 	minimap = Minimap.new()
-	minimap.custom_minimum_size = Vector2(120, 110)
+	minimap.custom_minimum_size = Vector2(60, 50)
 	map_inset.add_child(minimap)
 	panel_map.body.add_child(map_inset)
 	panel_bag = OrnatePanel.new("Besace commune du groupe")
@@ -315,6 +317,8 @@ func _rebuild() -> void:
 			right.add_child(p)
 		panel_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		panel_map.size_flags_stretch_ratio = 1.0
+		for p in [panel_map, panel_bag, panel_log]:
+			p.custom_minimum_size = Vector2(0, 0)
 		panel_bag.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		panel_bag.size_flags_stretch_ratio = 1.15
 		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -327,11 +331,11 @@ func _size_widgets() -> void:
 	var h := size.y
 	if _root == null:
 		return
-	var hh := clampf(h * 0.235, 130.0, 300.0)
-	hud.custom_minimum_size = Vector2(0, hh if not _portrait else clampf(h * 0.2, 120.0, 220.0))
-	strip.custom_minimum_size = Vector2(0, clampf(h * 0.075, 40.0, 68.0))
-	header.custom_minimum_size = Vector2(0, clampf(h * 0.075, 42.0, 64.0))
-	_title.add_theme_font_size_override("font_size", int(clampf(h * 0.036, 16.0, 30.0)))
+	var hh := clampf(h * 0.225, 120.0, 300.0)
+	hud.custom_minimum_size = Vector2(0, hh if not _portrait else clampf(h * 0.2, 110.0, 220.0))
+	strip.custom_minimum_size = Vector2(0, clampf(h * 0.07, 36.0, 64.0))
+	header.custom_minimum_size = Vector2(0, clampf(h * 0.07, 38.0, 60.0))
+	_title.add_theme_font_size_override("font_size", int(clampf(h * 0.034, 15.0, 28.0)))
 	var right: Node = _root.get_node_or_null("Main/Right")
 	if right:
 		(right as Control).custom_minimum_size = Vector2(clampf(w * 0.235, 230.0, 380.0), 0)

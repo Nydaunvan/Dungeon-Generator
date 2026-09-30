@@ -48,6 +48,10 @@ func _build(title: String) -> void:
 	_buttons_row.add_theme_constant_override("separation", 8)
 	panel.body.add_child(_buttons_row)
 	call_deferred("_fit")
+	call_deferred("_animate_in")
+
+func _animate_in() -> void:
+	UiFx.pop_in(panel, 0.18)
 
 func _fit() -> void:
 	var vp := get_viewport_rect().size

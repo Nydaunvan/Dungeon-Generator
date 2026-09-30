@@ -34,6 +34,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 		var idx := i
 		b.pressed.connect(func(): _slot_pressed(idx))
 		add_child(b)
+		UiFx.hover_pop(b, 1.08)
 		_slots.append(b)
 	resized.connect(_apply_size)
 	ctrl.changed.connect(_refresh)

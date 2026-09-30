@@ -16,6 +16,7 @@ var _st_target: StyleBox
 func setup(state: GameState, controller: CombatController) -> void:
 	gs = state
 	ctrl = controller
+	clip_contents = true
 	add_theme_constant_override("separation", 10)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_st_normal = UiTheme.tbox("card_arch", [62, 62, 62, 14], [12, 8, 12, 10])
@@ -99,31 +100,35 @@ func _on_card_input(ev: InputEvent, char_id: String) -> void:
 	if ev is InputEventMouseButton:
 		var mb := ev as InputEventMouseButton
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.double_click:
-				card_opened.emit(char_id)
-			else:
-				card_pressed.emit(char_id)
+			card_pressed.emit(char_id)
 		elif mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
 			card_opened.emit(char_id)
 
 func _resize() -> void:
-	var h := maxf(100.0, size.y)
+	# tout est dimensionné à partir de la hauteur réellement disponible : les cartes ne peuvent pas déborder
+	var inner := maxf(80.0, size.y - 24.0)
 	var w := maxf(80.0, size.x / maxf(1.0, float(_cards.size())) - 10.0)
-	var pic_size := clampf(minf(h * 0.30, w * 0.42), 32.0, 96.0)
-	var name_f := int(clampf(minf(h * 0.085, w * 0.11), 11.0, 22.0))
-	var small_f := int(clampf(name_f * 0.8, 9.0, 17.0))
-	var bar_h := clampf(h * 0.078, 12.0, 22.0)
+	var pic_size := clampf(minf(inner * 0.25, w * 0.42), 28.0, 96.0)
+	var line := func(frac: float) -> float: return maxf(9.0, inner * frac)
+	var name_h: float = line.call(0.11)
+	var small_h: float = line.call(0.085)
+	var bar_h: float = inner * 0.10
 	for id in _cards:
 		var cd: Dictionary = _cards[id]
 		cd.pic.custom_minimum_size = Vector2(pic_size, pic_size)
-		cd.ribbon.custom_minimum_size = Vector2(clampf(w * 0.55, 60.0, 130.0), clampf(h * 0.07, 9.0, 18.0))
-		cd.name.add_theme_font_size_override("font_size", name_f)
-		cd.cls.add_theme_font_size_override("font_size", small_f)
-		cd.lvl.add_theme_font_size_override("font_size", small_f)
-		cd.chest.custom_minimum_size = Vector2(small_f + 4, small_f + 4)
-		cd.hp.set_height(bar_h + 2)
-		cd.sta.set_height(bar_h)
-		cd.xp.set_height(bar_h)
+		cd.ribbon.custom_minimum_size = Vector2(clampf(w * 0.55, 60.0, 130.0), clampf(inner * 0.06, 8.0, 18.0))
+		cd.name.custom_minimum_size = Vector2(0, name_h)
+		cd.name.add_theme_font_size_override("font_size", int(clampf(name_h / 1.5, 8.0, 22.0)))
+		cd.cls.custom_minimum_size = Vector2(0, small_h)
+		cd.cls.add_theme_font_size_override("font_size", int(clampf(small_h / 1.5, 8.0, 17.0)))
+		cd.lvl.custom_minimum_size = Vector2(0, small_h)
+		cd.lvl.add_theme_font_size_override("font_size", int(clampf(small_h / 1.5, 8.0, 17.0)))
+		cd.chest.custom_minimum_size = Vector2(small_h * 0.8, small_h * 0.8)
+		cd.hp.set_height(bar_h * 1.05)
+		cd.sta.set_height(bar_h * 0.95)
+		cd.xp.set_height(bar_h * 0.95)
+		cd.gauge.set_height(maxf(4.0, inner * 0.03))
+		cd.gauge.set_font_size(1)
 
 func refresh() -> void:
 	for c in gs.party:

@@ -26,10 +26,19 @@ func _init(fill: Color = Color.WHITE, height: int = 18, font_size: int = 12) -> 
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_label)
 
+var _tween: Tween
+
+## Met à jour la barre ; la valeur glisse doucement vers la cible (comme la transition CSS du HTML).
 func set_values(v: float, max_v: float, text: String) -> void:
 	max_value = maxf(1.0, max_v)
-	value = v
 	_label.text = text
+	if not is_inside_tree() or absf(value - v) < 0.01:
+		value = v
+		return
+	if _tween:
+		_tween.kill()
+	_tween = create_tween()
+	_tween.tween_property(self, "value", v, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func set_height(px: float) -> void:
 	custom_minimum_size = Vector2(0, px)

@@ -378,10 +378,10 @@ func open_sheet(char_id: String) -> void:
 		for sp in gs.cfg.get("spells", []):
 			if sp.get("id") == sid:
 				var ic := str(sp.get("icon", ""))
-				m.add_text("%s %s — %s, endurance %d, recharge %d s" % [("" if ic.begins_with("@icon:") else ic), sp.name, _spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))], UiTheme.PARCH, 14)
+				m.add_text("%s %s — %s, endurance %d, recharge %d s" % [("" if ic.begins_with("@icon:") else ic), sp.name, spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))], UiTheme.PARCH, 14)
 	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
 
-func _spell_effect(sp: Dictionary) -> String:
+static func spell_effect(sp: Dictionary) -> String:
 	match str(sp.get("mode", "")):
 		"damage": return "dégâts %d–%d" % [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))]
 		"damageGroup": return "dégâts de groupe %d–%d" % [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))]

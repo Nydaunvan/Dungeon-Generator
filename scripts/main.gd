@@ -13,6 +13,7 @@ var ctrl: CombatController
 var env: Environment
 var layout: GameLayout
 var inter: Interactions
+var dock: EquipDock
 var _we: WorldEnvironment
 var message_label: Label
 var _message_tween: Tween
@@ -55,6 +56,13 @@ func _ready() -> void:
 	layout.world.add_child(rig)
 	rig.camera.current = true
 	layout.world.add_child(_we)
+	var dock_layer := CanvasLayer.new()
+	dock_layer.layer = 15
+	add_child(dock_layer)
+	dock = EquipDock.new()
+	dock_layer.add_child(dock)
+	dock.setup(gs, ctrl)
+	dock.bag_changed.connect(layout.bag.refresh)
 	var modal_layer := CanvasLayer.new()
 	modal_layer.layer = 20
 	add_child(modal_layer)
@@ -63,7 +71,8 @@ func _ready() -> void:
 	inter.setup(gs, ctrl, rig, layout, modal_layer)
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
-	layout.item_pressed.connect(inter.open_item_menu)
+	layout.item_pressed.connect(_on_bag_item)
+	layout.card_pressed.connect(_on_card_pressed)
 	layout.card_opened.connect(inter.open_sheet)
 	_popup_layer = layout.popup_layer
 	message_label = layout.message_label
@@ -177,6 +186,31 @@ func _interact() -> void:
 		_use_stairs(f)
 	else:
 		show_message("Rien à faire ici")
+
+## Clic sur une carte : cible d'un sort, fiche (en combat) ou volet d'équipement (hors combat).
+func _on_card_pressed(id: String) -> void:
+	if ctrl.pending_spell != "":
+		ctrl.card_pressed(id)
+	elif ctrl.in_combat():
+		inter.open_sheet(id)
+	else:
+		dock.toggle_for(id)
+
+## Clic sur un objet de la besace : le volet d'équipement l'affiche ; en combat, menu rapide.
+func _on_bag_item(idx: int) -> void:
+	if idx < 0 or idx >= gs.inventory.size():
+		return
+	if ctrl.in_combat():
+		inter.open_item_menu(idx)
+		return
+	var who := gs.active_char_id
+	var c := gs.char_by_id(who)
+	if c.is_empty() or int(c.hp) <= 0:
+		var alive := gs.alive_party()
+		if alive.is_empty():
+			return
+		who = str(alive[0].id)
+	dock.open_for(who, gs.inventory[idx])
 
 func _on_moved() -> void:
 	inter.on_step()
