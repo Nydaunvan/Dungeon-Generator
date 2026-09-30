@@ -17,6 +17,9 @@ func _init() -> void:
 	for step in str(args.get("steps", "play")).split(","):
 		match step:
 			"combat", "group":
+				for i in 3:
+					main.gs.inventory.append({"id": "pp%d" % i, "type": "potion", "name": "Potion de soin", "icon": "@icon:potion_heal", "heal": 25})
+				main.gs.inventory.append({"id": "sc1", "type": "scroll", "name": "Parchemin", "icon": "📜", "spellId": "fireball"})
 				# place le groupe devant un monstre (un groupe pour "group"), errants figés
 				main.wand.paused_if = func(): return true
 				var g: DungeonGrid = main.grid

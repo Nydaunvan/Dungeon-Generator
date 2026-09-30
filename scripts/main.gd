@@ -89,7 +89,7 @@ func _ready() -> void:
 	wand = Wanderers.new()
 	add_child(wand)
 	wand.setup(gs, ctrl, rig)
-	wand.paused_if = func(): return not get_tree().get_nodes_in_group("modal").is_empty() or dock.visible
+	wand.paused_if = is_game_paused
 	inter.wand = wand
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
@@ -283,8 +283,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_on_command(cmd)
 			get_viewport().set_input_as_handled()
 
+## Équivalent de isGamePaused() de l'original : volet d'inventaire déployé ou fenêtre bloquante ouverte
+## (piège, fontaine, marchand, sauvegarde, évolution, fiche…). Plus rien n'avance pendant ce temps.
+func is_game_paused() -> bool:
+	return (dock != null and dock.is_open) or not get_tree().get_nodes_in_group("modal").is_empty()
+
 func _on_command(cmd: String) -> void:
 	if gs.game_over:
+		return
+	if is_game_paused() and cmd in ["forward", "right", "back", "left", "turn_left", "turn_right"]:
 		return
 	match cmd:
 		"forward", "right", "back", "left", "turn_left", "turn_right":
@@ -370,6 +377,21 @@ func _on_moved() -> void:
 	layout.minimap.mark_visited()
 	layout.minimap.reveal()
 	ctrl.step_tick()
+	_refresh_when_free()
+
+var _waiting_refresh: bool = false
+
+## Un combat qui devait s'engager sur cette case attend la fin de la fenêtre ouverte (piège, fontaine, marchand…).
+func _refresh_when_free() -> void:
+	if get_tree().get_nodes_in_group("modal").is_empty():
+		ctrl.refresh()
+		return
+	if _waiting_refresh:
+		return
+	_waiting_refresh = true
+	while not get_tree().get_nodes_in_group("modal").is_empty():
+		await get_tree().process_frame
+	_waiting_refresh = false
 	ctrl.refresh()
 
 func _on_blocked(x: int, y: int) -> void:

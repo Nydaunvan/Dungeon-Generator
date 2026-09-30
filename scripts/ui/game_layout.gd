@@ -66,7 +66,7 @@ var _timer_track: ColorRect
 var _timer_fill: ColorRect
 var _was_combat: bool = false
 var _flash: ColorRect
-var pouch: HBoxContainer
+var pouch: VBoxContainer
 var _pouch_sig: String = ""
 
 func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void:
@@ -378,15 +378,18 @@ func _build_parts() -> void:
 	stage.add_child(_timer_track)
 
 	# barre rapide potions / parchemins (combat)
-	pouch = HBoxContainer.new()
+	pouch = VBoxContainer.new()
 	pouch.add_theme_constant_override("separation", 8)
-	pouch.anchor_left = 0.5
-	pouch.anchor_right = 0.5
-	pouch.anchor_top = 1.0
-	pouch.anchor_bottom = 1.0
-	pouch.offset_top = -62
-	pouch.offset_bottom = -12
-	pouch.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	pouch.anchor_left = 0.0
+	pouch.anchor_right = 0.0
+	pouch.anchor_top = 0.5
+	pouch.anchor_bottom = 0.5
+	pouch.offset_left = 12
+	pouch.offset_right = 62
+	pouch.offset_top = 0
+	pouch.offset_bottom = 0
+	pouch.grow_horizontal = Control.GROW_DIRECTION_END
+	pouch.grow_vertical = Control.GROW_DIRECTION_BOTH
 	pouch.visible = false
 	stage.add_child(pouch)
 
