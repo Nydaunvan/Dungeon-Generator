@@ -351,8 +351,8 @@ func _on_command(cmd: String) -> void:
 		"flee":
 			if ctrl.in_combat():
 				if get_tree().get_nodes_in_group("modal").is_empty():
-					Dialogs.confirm(_modals(), "🏃 Fuir le combat ?", "Le groupe s'enfuit vers un endroit proche, hors de vue du monstre. Chacun perd la moitié de son endurance actuelle.",
-						ctrl.do_flee, "Fuir", "Rester")
+					Dialogs.confirm(_modals(), "🏃 Fuir le combat", "Fuir permet d'échapper immédiatement à ce combat, mais tout le groupe perdra 50% de son endurance actuelle. Voulez-vous vraiment fuir ?",
+							ctrl.do_flee, "🏃 Fuir (perdre 50% d'endurance)", "Annuler")
 			else:
 				show_message("Personne ne vous menace")
 
