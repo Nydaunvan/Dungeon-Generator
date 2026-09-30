@@ -28,6 +28,22 @@ func monster_def(id: String) -> Dictionary:
 			return m
 	return {}
 
+## Bonus spéciaux des objets légendaires équipés : [{perk, value, item}].
+static func perks(c: Dictionary) -> Array:
+	var out: Array = []
+	var eq: Dictionary = c.get("equipment", {})
+	for slot in Characters.SLOTS:
+		var it = eq.get(slot)
+		if it != null and it.get("legendary", false) and it.has("legendaryPerk"):
+			out.append({"perk": str(it.legendaryPerk), "value": int(it.get("legendaryValue", 0)), "item": it})
+	return out
+
+static func _perk_value(c: Dictionary, perk: String) -> int:
+	for p in perks(c):
+		if p.perk == perk:
+			return int(p.value)
+	return 0
+
 func _live(m: Dictionary) -> bool:
 	var st: Dictionary = lstate().monsters.get(str(m.id), {})
 	return not st.is_empty() and st.alive and not st.hidden
@@ -396,7 +412,8 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	if resist > 0:
 		dmg = 0 if resist >= 100 else maxi(1, int(round(raw_dmg * (1.0 - resist / 100.0))))
 	var crit := false
-	var crit_chance := int(attacker.get("talentCritChance", 0))
+	var crit_chance := int(attacker.get("talentCritChance", 0)) + _perk_value(attacker, "crit") \
+		+ int(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).critChanceBonus)
 	if crit_chance > 0 and randf() < crit_chance / 100.0:
 		dmg *= 2
 		crit = true
@@ -427,7 +444,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		gs.add_log("%s %s %s pour %d dégâts%s%s." % [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
 
-	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0))
+	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
 	if lifesteal > 0 and dmg > 0:
 		var heal := maxi(1, int(round(dmg * lifesteal / 100.0)))
 		var before := int(attacker.hp)
@@ -502,6 +519,11 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	var pool := alive.filter(func(c): return str(c.id) != gs.last_attacker_id)
 	if pool.is_empty():
 		pool = alive
+	if str(def.get("abilitySpellId", "")) != "" and randf() * 100.0 < float(def.get("abilityChance", 0)):
+		var ab := spell_def(str(def.abilitySpellId))
+		if not ab.is_empty():
+			_monster_use_ability(def, st, ab, pool)
+			return
 	var victim: Dictionary = pool[randi() % pool.size()]
 	var dmg := randi_range(int(st.atkMin), int(st.atkMax))
 	if st.enraged:
@@ -515,6 +537,14 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 		dmg -= absorbed
 		gs.add_log("🛡️ Le bouclier de %s absorbe %d dégâts%s." % [victim.name, absorbed, " (épuisé)" if int(victim.shieldAmount) <= 0 else ""], true)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	var thorns := _perk_value(victim, "thorns")
+	if thorns > 0 and dmg > 0:
+		var reflect := maxi(1, int(round(dmg * thorns / 100.0)))
+		st["hp"] = float(st.hp) - reflect
+		gs.add_log("🌵 L'équipement de %s renvoie %d dégâts à %s." % [victim.name, reflect, _mname(def)])
+		if float(st.hp) <= 0.0 and st.alive:
+			st["alive"] = false
+			_handle_death(def, st)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.last_attacker_id = str(victim.id)
@@ -522,6 +552,27 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) <= 0:
+		gs.add_log("💀 %s tombe au combat." % victim.name)
+		if gs.alive_party().is_empty():
+			gs.game_over = true
+			gs.add_log("☠️ Toute l'équipe a péri…")
+			events.append({"type": "game_over"})
+
+## Capacité spéciale d'un monstre (sort de dégâts) lancée à la place de son attaque.
+func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, pool: Array) -> void:
+	var victim: Dictionary = pool[randi() % pool.size()]
+	var dmg := randi_range(int(spell.get("dmgMin", 3)), int(spell.get("dmgMax", 6)))
+	if st.enraged:
+		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
+	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
+	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
+	gs.add_log("%s utilise %s %s sur %s (%d dégâts)%s." % [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""], true)
+	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
+	events.append({"type": "hit", "char": victim.id})
+	if int(victim.hp) > 0:
+		Statuses.apply_from_spell(gs, spell, victim, str(victim.name), "", true)
+	else:
 		gs.add_log("💀 %s tombe au combat." % victim.name)
 		if gs.alive_party().is_empty():
 			gs.game_over = true
@@ -623,13 +674,17 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 		if randi_range(1, 100) <= int(def.get(k[1], 100)):
 			for it in level.get("items", []):
 				if str(it.id) == item_id:
-					gs.inventory.append(it.duplicate(true))
-					gs.stats["itemsFound"] += 1
-					gs.add_log("🎁 %s laisse tomber %s !" % [_mname(def), it.name])
-					events.append({"type": "loot", "name": str(it.name)})
+					var inst := Inventory.make_instance(it)
+					if Inventory.add(gs, inst):
+						gs.stats["itemsFound"] += 1
+						gs.add_log("🎁 %s laisse tomber %s !" % [_mname(def), it.name])
+						events.append({"type": "loot", "name": str(it.name)})
+					else:
+						gs.add_log("🎁 %s laissait tomber %s, mais la besace est pleine ! Le butin est perdu." % [_mname(def), it.name])
 	# endurance récupérée après la victoire (difficulté « normal »)
 	var pct_map: Dictionary = (gs.cfg.get("staminaSettings", {}) as Dictionary).get("victoryGainPct", {"normal": 6})
-	var pct := int(pct_map.get("normal", 6))
+	var diff := str(gs.cfg.get("genDifficulty", "normal")) if Data.play_origin == "random" else "normal"
+	var pct := int(pct_map.get(diff, pct_map.get("normal", 6)))
 	if pct > 0:
 		for c in gs.alive_party():
 			var gain := int(round(int(c.get("maxStamina", 100)) * pct / 100.0))

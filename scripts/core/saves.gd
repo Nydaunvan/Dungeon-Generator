@@ -102,7 +102,7 @@ static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 	var out := {"level_index": int(js.get("levelIndex", 0)), "px": int(js.get("x", 1)), "py": int(js.get("y", 1)), "pdir": int(js.get("dir", 0)),
 		"party": js.get("party", []), "gold": int(js.get("gold", 0)), "inventory": js.get("inventory", []),
 		"active_char_id": str(js.get("activeCharId", "")), "last_attacker_id": "", "stats": js.get("stats", {}),
-		"game_over": bool(js.get("gameOver", false)), "won": bool(js.get("won", false)), "log_lines": js.get("log", []), "seen": {}}
+		"game_over": bool(js.get("gameOver", false)), "won": bool(js.get("won", false)), "log_lines": js.get("log", [])}
 	for c in out.party:
 		if not c.has("statusEffects"):
 			c["statusEffects"] = []
@@ -124,16 +124,11 @@ static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 		if jls.get("merchant") is Dictionary:
 			var m: Dictionary = jls.merchant
 			ls["merchant"] = {"x": int(m.get("x", 0)), "y": int(m.get("y", 0)), "discovered": bool(m.get("discovered", false)), "offers": null}
-		var arr: Array = []
-		for c in jls.get("seen", []):
-			if c is Array and c.size() >= 2:
-				arr.append([int(c[0]), int(c[1])])
-			elif c is Dictionary:
-				arr.append([int(c.get("x", 0)), int(c.get("y", 0))])
-			elif c is String and (c as String).contains(","):
-				var p := (c as String).split(",")
-				arr.append([int(p[0]), int(p[1])])
-		out.seen[lid] = arr
+		for kind in ["seen", "visited"]:
+			var d := {}
+			for c in jls.get(kind, []):
+				d[str(c)] = true
+			ls[kind] = d
 		states[lid] = ls
 	out["level_states"] = states
 	return out

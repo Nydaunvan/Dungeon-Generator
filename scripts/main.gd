@@ -91,7 +91,6 @@ func _ready() -> void:
 	message_label = layout.message_label
 
 	ctrl.changed.connect(_check_choices)
-	layout.minimap.import_seen(gs.seen)
 	load_level(level_index, resume)
 	if resume:
 		gs.add_log("📂 Partie chargée.")
@@ -120,12 +119,14 @@ func load_level(index: int, at_saved: bool = false) -> void:
 			level_node.entities.remove_item(str(it.id))
 	_apply_outdoor(bool(level.get("outdoor", false)))
 	layout.set_level_name(str(level.name))
-	layout.minimap.bind(grid, rig)
+	layout.minimap.bind(grid, rig, gs)
 	layout.minimap.merchant_cell = func():
 		var mm := wand.merchant()
 		return Vector2i(int(mm.x), int(mm.y)) if (not mm.is_empty() and mm.discovered) else Vector2i(-1, -1)
 	if not wand.merchant_moved.is_connected(layout.minimap.queue_redraw):
 		wand.merchant_moved.connect(layout.minimap.queue_redraw)
+		wand.monsters_moved.connect(layout.minimap.queue_redraw)
+		ctrl.changed.connect(layout.minimap.queue_redraw)
 	show_message(str(level.name))
 
 ## Ciel, brouillard clair et pas de torche dans le village ; ténèbres dans les donjons.
@@ -250,6 +251,7 @@ func _on_bag_item(idx: int) -> void:
 
 func _on_moved() -> void:
 	inter.on_step()
+	layout.minimap.mark_visited()
 	layout.minimap.reveal()
 	ctrl.step_tick()
 	ctrl.refresh()
@@ -312,7 +314,6 @@ func snapshot() -> Dictionary:
 	gs.px = rig.gx
 	gs.py = rig.gy
 	gs.pdir = rig.dir
-	gs.seen = layout.minimap.export_seen()
 	return {"config": gs.cfg, "save": gs.to_save(), "origin": Data.play_origin}
 
 func _modals() -> Node:

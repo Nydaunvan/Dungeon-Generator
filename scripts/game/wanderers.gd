@@ -3,6 +3,7 @@ extends Node
 ## Errance des monstres (patrouille, poursuite en ligne droite) et du marchand itinérant. Portage du ticker JS (500 ms).
 
 signal merchant_moved
+signal monsters_moved
 
 const TICK := 0.5
 const CHASE_CHANCE := 0.25
@@ -167,6 +168,8 @@ func _tick() -> void:
 		if absi(target.x - player.x) + absi(target.y - player.y) <= 1:
 			engaged = true
 	_tick_merchant()
+	if engaged or movers.any(func(e): return int(e.st.x) != int(e.pos.x) or int(e.st.y) != int(e.pos.y)):
+		monsters_moved.emit()
 	if engaged:
 		# le monstre arrive au contact : on attend la fin du glissement avant d'engager le combat
 		get_tree().create_timer(0.45).timeout.connect(func():
