@@ -36,7 +36,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	_panel = PanelContainer.new()
-	_panel.add_theme_stylebox_override("panel", UiTheme.tbox("frame_panel", [12, 12, 12, 12], [16, 14, 16, 14]))
+	_panel.add_theme_stylebox_override("panel", FrameBox.new(18.0, Vector4(8, 6, 8, 8)))
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_panel)
 	_scroll = ScrollContainer.new()
@@ -68,11 +68,17 @@ func _on_state_changed() -> void:
 
 func _target_rect() -> Rect2:
 	var vp := get_viewport_rect().size
-	var w := minf(700.0, vp.x - 16.0)
-	var top := clampf(vp.y * 0.09, 40.0, 80.0)
-	return Rect2(vp.x - w - 8.0, top, w, vp.y - top - 8.0)
+	var w := minf(680.0, vp.x - 20.0)
+	var top := UiMetrics.css(96.0)
+	var avail := vp.y - top - 10.0
+	var sbx := _panel.get_theme_stylebox("panel")
+	var want := _body.get_combined_minimum_size().y + (sbx.get_minimum_size().y if sbx != null else 0.0)
+	var h := clampf(want, 120.0, avail)
+	return Rect2(vp.x - w - 10.0, top, w, h)
 
 func _place() -> void:
+	if not is_inside_tree() or _panel == null:
+		return
 	var r := _target_rect()
 	_panel.size = r.size
 	_panel.position = r.position if is_open else Vector2(get_viewport_rect().size.x + 30.0, r.position.y)
@@ -226,7 +232,18 @@ func _render() -> void:
 	cols.add_child(_build_right(c, resolved))
 	_body.add_child(_build_drawer(c))
 	await get_tree().process_frame
+	_refit()
+	await get_tree().process_frame
+	_refit()
 	_scroll.scroll_vertical = keep
+
+## Hauteur = contenu (plafonnée à l'écran), comme le max-height du CSS d'origine.
+func _refit() -> void:
+	if not is_open:
+		return
+	var r := _target_rect()
+	_panel.size = Vector2(r.size.x, r.size.y)
+	_panel.position.y = r.position.y
 
 func _label(text: String, size: int = 14, color: Color = UiTheme.PARCH, font_path: String = "") -> Label:
 	var l := Label.new()
@@ -237,11 +254,77 @@ func _label(text: String, size: int = 14, color: Color = UiTheme.PARCH, font_pat
 		l.add_theme_font_override("font", UiTheme.font(font_path))
 	return l
 
+## Icône centrée dans son parent (texture ou emoji), sans jamais déborder.
+func _icon_node(icon: String, inset: float, font_px: int = 30) -> Control:
+	var t := IconResolver.texture(icon)
+	if t != null:
+		var tr := TextureRect.new()
+		tr.texture = t
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tr.offset_left = inset
+		tr.offset_top = inset
+		tr.offset_right = -inset
+		tr.offset_bottom = -inset
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return tr
+	var l := Label.new()
+	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	l.text = icon
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", font_px)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
+## Médaillon rond (anneau + contenu découpé en disque). `content` = texture de portrait ou emblème (icône / emoji).
+func _round_medal(size: float, ring: Color, ring_w: int, portrait: Texture2D, emblem: String, glow: bool = false) -> Control:
+	var root := Control.new()
+	root.custom_minimum_size = Vector2(size, size)
+	root.size = Vector2(size, size)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg := Panel.new()
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("150f08")
+	sb.border_color = ring
+	sb.set_border_width_all(ring_w)
+	sb.set_corner_radius_all(int(size))
+	if glow:
+		sb.shadow_color = Color(0.91, 0.7, 0.36, 0.35)
+		sb.shadow_size = 8
+	bg.add_theme_stylebox_override("panel", sb)
+	root.add_child(bg)
+	var clip := Control.new()
+	clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	clip.offset_left = ring_w
+	clip.offset_top = ring_w
+	clip.offset_right = -ring_w
+	clip.offset_bottom = -ring_w
+	clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(clip)
+	if portrait != null:
+		var pic := TextureRect.new()
+		pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pic.texture = portrait
+		pic.material = UiTheme.circle_material()
+		clip.add_child(pic)
+	else:
+		# emblème : icône (cellule d'atlas → pas de masque par shader) inscrite dans le disque, ou emoji
+		clip.add_child(_icon_node(emblem, size * 0.1, int(size * 0.5)))
+	return root
+
 func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
-	var ico := UiTheme.portrait(IconResolver.texture(str(cls.get("icon", ""))), UiTheme.BRONZE_LIGHT, 48)
-	row.add_child(ico)
+	row.add_child(_round_medal(58.0, Color("8a6a36"), 3, null, str(cls.get("icon", "")), true))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 0)
@@ -251,26 +334,25 @@ func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 	v.add_child(_label("%s — Nv.%d" % [cls.get("name", ""), int(c.level)], 13, UiTheme.DIM))
 	row.add_child(v)
 	for m in gs.party:
-		var b := Button.new()
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(38, 38)
-		var pp := IconResolver.portrait_path(m, gs.cfg)
-		if pp != "":
-			b.icon = load(pp)
-		b.expand_icon = true
-		b.disabled = int(m.hp) <= 0
-		b.tooltip_text = str(m.name)
 		var on: bool = str(m.id) == char_id
-		b.modulate = Color(1, 1, 1, 1.0 if on else 0.6)
-		if on:
-			b.add_theme_stylebox_override("normal", UiTheme.round_button_style(UiTheme.GOLD, Color("150f08")))
+		var dead: bool = int(m.hp) <= 0
+		var pp := IconResolver.portrait_path(m, gs.cfg)
+		var b := Control.new()
+		b.custom_minimum_size = Vector2(38, 38)
+		b.tooltip_text = str(m.name)
+		b.mouse_default_cursor_shape = Control.CURSOR_ARROW if dead else Control.CURSOR_POINTING_HAND
+		b.add_child(_round_medal(38.0, UiTheme.GOLD if on else Color("3b2d18"), 2, load(pp) if pp != "" else null, "?", on))
+		b.pivot_offset = Vector2(19, 19)
+		b.modulate = Color(1, 1, 1, 1.0 if on else (0.35 if dead else 0.65))
 		var mid: String = str(m.id)
-		b.pressed.connect(func():
-			gs.active_char_id = mid
-			char_id = mid
-			sel = {}
-			ctrl.changed.emit())
-		UiFx.hover_pop(b, 1.1)
+		b.gui_input.connect(func(ev: InputEvent):
+			if not dead and ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+				gs.active_char_id = mid
+				char_id = mid
+				sel = {}
+				ctrl.changed.emit())
+		b.mouse_entered.connect(func(): if not dead: create_tween().tween_property(b, "scale", Vector2(1.1, 1.1), 0.12))
+		b.mouse_exited.connect(func(): create_tween().tween_property(b, "scale", Vector2.ONE, 0.12))
 		row.add_child(b)
 	var x := Button.new()
 	x.text = "✕"
@@ -304,10 +386,7 @@ func _slot_button(c: Dictionary, def: Dictionary, resolved: Dictionary) -> Contr
 		b.add_theme_stylebox_override(st, sb)
 	b.add_theme_stylebox_override("hover", UiTheme.box(fill, UiTheme.BRONZE_LIGHT if not (is_sel or target) else UiTheme.GOLD, 2, 8))
 	if item != null:
-		b.icon = IconResolver.texture(str(item.get("icon", "")))
-		b.expand_icon = true
-		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.add_child(_icon_node(str(item.get("icon", "")), 6.0, 30))
 	var lbl := _label(str(def.label).to_upper(), 8, UiTheme.DIM, UiTheme.F_TITLE)
 	lbl.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	lbl.offset_top = -14
@@ -350,7 +429,7 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 			stage.draw_circle(stage.size * 0.5, 130.0 * (1.0 - k), Color(0.91, 0.7, 0.36, 0.028)))
 	col.add_child(stage)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
-	var port := UiTheme.portrait(load(pp) if pp != "" else null, UiTheme.BRONZE_LIGHT, 124)
+	var port := _round_medal(124.0, UiTheme.BRONZE_LIGHT, 3, load(pp) if pp != "" else null, "?")
 	port.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	port.offset_left = -62
 	port.offset_right = 62
