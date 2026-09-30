@@ -18,6 +18,8 @@ var admin_unlocked: bool = false
 const USER_CONFIG := "user://config.json"
 
 func _ready() -> void:
+	get_window().size_changed.connect(_update_scale)
+	_update_scale()
 	original_config = _load_json("res://data/default_config.json")
 	config = _load_user_config()
 	if config.is_empty():
@@ -128,6 +130,18 @@ func decode_code(code: String) -> Dictionary:
 		return {}
 	var parsed = JSON.parse_string(json)
 	return parsed if parsed is Dictionary else {}
+
+## Portrait (téléphone) : la base 1280×720 rendrait l'interface minuscule ; on agrandit pour viser ~540 unités de large.
+func _update_scale() -> void:
+	var win := get_window()
+	var sz := Vector2(win.size)
+	if sz.x <= 0.0 or sz.y <= 0.0:
+		return
+	var factor := 1.0
+	if sz.x < sz.y * 1.05:
+		var base := minf(sz.x / 1280.0, sz.y / 720.0)
+		factor = clampf((sz.x / 540.0) / base, 1.0, 8.0)
+	win.content_scale_factor = factor
 
 ## Bandeau « Jouer ce donjon » de l'administration (création d'un donjon personnel).
 var admin_banner: bool = false

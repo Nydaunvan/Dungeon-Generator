@@ -18,7 +18,7 @@ var _scroll: ScrollContainer
 var _column: VBoxContainer
 var _scene_bg: TextureRect
 var _glow: TextureRect
-var _title_box: HBoxContainer
+var _title_box: Control
 var _tagline: Label
 var _seal: Control
 var _banners: Array = []      # {root, height}
@@ -125,22 +125,18 @@ func _build() -> void:
 	add_child(_header)
 
 	# titre à lettrine
-	_title_box = HBoxContainer.new()
-	_title_box.add_theme_constant_override("separation", 4)
+	_title_box = Control.new()
 	_title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_title_box.alignment = BoxContainer.ALIGNMENT_BEGIN
 	var cap := _label("É", 108, Color("f1dfb8"), UiTheme.F_TITLE_BOLD)
 	cap.name = "cap"
 	var rest := _label("diteur de Donjon", 40, Color("f1dfb8"), UiTheme.F_TITLE_BOLD)
 	rest.name = "rest"
-	rest.size_flags_vertical = Control.SIZE_SHRINK_END
 	for l in [cap, rest]:
 		l.add_theme_color_override("font_shadow_color", Color(1.0, 0.7, 0.35, 0.35))
 		l.add_theme_constant_override("shadow_offset_x", 0)
 		l.add_theme_constant_override("shadow_offset_y", 0)
 		l.add_theme_constant_override("shadow_outline_size", 10)
-	_title_box.add_child(cap)
-	_title_box.add_child(rest)
+		_title_box.add_child(l)
 	_tagline = _label("Créez, Explorez, Survivez", 17, Color("cbb083"), UiTheme.F_BODY_ITALIC)
 
 	_seal = _make_seal()
@@ -204,26 +200,27 @@ func _make_seal() -> Control:
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(pic)
-	var t := _label("Donjon\naléatoire", 24, Color("f2ddc4"), UiTheme.F_BODY_BOLD)
+	var t := _label("Donjon\naléatoire", 20, Color("f2ddc4"), UiTheme.F_BODY_BOLD)
+	t.add_theme_constant_override("line_spacing", -6)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	t.anchor_left = 0.08
 	t.anchor_right = 0.92
-	t.anchor_top = 0.47
-	t.anchor_bottom = 0.68
+	t.anchor_top = 0.46
+	t.anchor_bottom = 0.66
 	root.add_child(t)
-	var s := _label("jamais deux fois pareil", 12, Color("e0c2ab"), UiTheme.F_BODY_BOLD)
+	var s := _label("jamais deux fois pareil", 11, Color("e0c2ab"), UiTheme.F_BODY_BOLD)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	s.anchor_left = 0.08
 	s.anchor_right = 0.92
-	s.anchor_top = 0.68
-	s.anchor_bottom = 0.75
+	s.anchor_top = 0.665
+	s.anchor_bottom = 0.74
 	root.add_child(s)
 	root.resized.connect(func():
 		root.pivot_offset = root.size * 0.5
 		var f := root.size.x / 280.0
-		t.add_theme_font_size_override("font_size", int(round(24.0 * f)))
-		s.add_theme_font_size_override("font_size", int(round(12.0 * f))))
+		t.add_theme_font_size_override("font_size", int(round(20.0 * f)))
+		s.add_theme_font_size_override("font_size", int(round(11.0 * f))))
 	root.mouse_entered.connect(func():
 		create_tween().tween_property(root, "scale", Vector2(1.03, 1.03), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
 	root.mouse_exited.connect(func():
@@ -299,6 +296,25 @@ func _move(n: Control, parent: Node) -> void:
 		n.get_parent().remove_child(n)
 	parent.add_child(n)
 
+## Lettrine « É » + « diteur de Donjon » alignés sur la même ligne de base. Renvoie la taille du bloc.
+func _place_title(cap_size: int, rest_size: int, width: float, centered: bool) -> Vector2:
+	var font := UiTheme.font(UiTheme.F_TITLE_BOLD)
+	var cap: Label = _title_box.get_node("cap")
+	var rest: Label = _title_box.get_node("rest")
+	cap.add_theme_font_size_override("font_size", cap_size)
+	rest.add_theme_font_size_override("font_size", rest_size)
+	var cap_w := font.get_string_size("É", HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size).x
+	var rest_w := font.get_string_size("diteur de Donjon", HORIZONTAL_ALIGNMENT_LEFT, -1, rest_size).x
+	var gap := 4.0
+	var x0 := maxf(0.0, (width - (cap_w + gap + rest_w)) * 0.5) if centered else 0.0
+	var asc_c := font.get_ascent(cap_size)
+	var asc_r := font.get_ascent(rest_size)
+	cap.position = Vector2(x0, 0)
+	cap.size = Vector2(cap_w + 2, font.get_height(cap_size))
+	rest.position = Vector2(x0 + cap_w + gap, asc_c - asc_r)
+	rest.size = Vector2(rest_w + 2, font.get_height(rest_size))
+	return Vector2(x0 + cap_w + gap + rest_w, asc_c + font.get_descent(cap_size))
+
 func _layout() -> void:
 	if not _built:
 		return
@@ -346,18 +362,17 @@ func _layout_stage(area: Rect2) -> void:
 	_glow.size = Vector2(420, 420) * k
 	for n in [_seal, _banners[0].root, _banners[1].root, _banners[2].root, _links, _foot, _title_box, _tuto]:
 		n.custom_minimum_size = Vector2.ZERO
-	_title_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+		n.size_flags_horizontal = Control.SIZE_FILL
 	_tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	for b in _links.get_children():
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var at := func(n: Control, x: float, y: float, ww: float, hh: float) -> void:
 		n.position = off + Vector2(x, y) * k
 		n.size = Vector2(ww, hh) * k
-	_title_box.position = off + Vector2(88, 64) * k
-	_title_box.size = Vector2(500, 120) * k
-	_title_box.get_node("cap").add_theme_font_size_override("font_size", int(108.0 * k))
-	_title_box.get_node("rest").add_theme_font_size_override("font_size", int(40.0 * k))
-	_tagline.position = off + Vector2(92, 178) * k
+	_title_box.position = off + Vector2(88, 58) * k
+	var tsz := _place_title(int(108.0 * k), int(40.0 * k), 0.0, false)
+	_title_box.size = tsz
+	_tagline.position = off + Vector2(92, 58) * k + Vector2(0, tsz.y - 26.0 * k)
 	_tagline.add_theme_font_size_override("font_size", int(17.0 * k))
 	at.call(_seal, 190, 230, 280, 280)
 	at.call(_banners[0].root, 580, 300, 300, 89)
@@ -376,10 +391,9 @@ func _layout_stacked(area: Rect2) -> void:
 	_scroll.size = area.size
 	var cw := minf(area.size.x - 32.0, 420.0)
 	_column.custom_minimum_size = Vector2(area.size.x, 0)
-	_title_box.custom_minimum_size = Vector2(cw, 0)
-	_title_box.get_node("cap").add_theme_font_size_override("font_size", 76)
-	_title_box.get_node("rest").add_theme_font_size_override("font_size", 30)
-	_title_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	var tsz := _place_title(76, 30, cw, true)
+	_title_box.custom_minimum_size = Vector2(cw, tsz.y)
+	_title_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_tagline.add_theme_font_size_override("font_size", 16)
 	_tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var sd := minf(area.size.x * 0.64, 300.0)
