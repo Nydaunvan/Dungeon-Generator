@@ -49,6 +49,7 @@ var panel_log: OrnatePanel
 var panel_menu: OrnatePanel
 
 var _root: Control
+var footer: Label
 var _scroll: ScrollContainer
 var _portrait: bool = false
 var _built_mode: int = -1
@@ -487,19 +488,37 @@ func _build_parts() -> void:
 	log_panel = LogPanel.new()
 	log_panel.setup(gs)
 	panel_log.body.add_child(log_panel)
-	panel_menu = OrnatePanel.new("Sauvegarde")
+	panel_menu = OrnatePanel.new("")
 	panel_menu.name = "Menu"
-	var srow := HBoxContainer.new()
-	srow.add_theme_constant_override("separation", 6)
-	panel_menu.body.add_child(srow)
-	for n in ["Sauvegarder", "Charger"]:
-		var b := Button.new()
-		b.text = n.to_upper()
-		b.focus_mode = Control.FOCUS_NONE
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var nn: String = n
-		b.pressed.connect(func(): menu_pressed.emit(nn))
-		srow.add_child(b)
+	var sm := MenuButton.new()
+	sm.text = "💾 Sauvegarde"
+	sm.focus_mode = Control.FOCUS_NONE
+	sm.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sm.custom_minimum_size = Vector2(0, UiMetrics.css(44.0))
+	sm.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	sm.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
+	sm.add_theme_color_override("font_color", Color("e2d2b0"))
+	sm.add_theme_color_override("font_hover_color", Color("ffd88a"))
+	var sst := IronBox.button_styles()
+	for k in sst:
+		var ib: IronBox = sst[k]
+		ib.rivets = false
+		ib.radius_css = 3.0
+		sm.add_theme_stylebox_override(k, ib)
+	sm.get_popup().add_item("💾 Sauvegarder", 0)
+	sm.get_popup().add_item("📂 Charger", 1)
+	sm.get_popup().add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
+	sm.get_popup().id_pressed.connect(func(i: int): menu_pressed.emit("Sauvegarder" if i == 0 else "Charger"))
+	panel_menu.body.add_child(sm)
+	var arrow := Label.new()
+	arrow.text = "▼"
+	arrow.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
+	arrow.add_theme_color_override("font_color", Color("b9a880"))
+	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arrow.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	arrow.offset_right = -UiMetrics.css(14.0)
+	arrow.offset_left = -UiMetrics.css(30.0)
+	sm.add_child(arrow)
 
 # ------------------------------------------------------------------ dispositions
 
@@ -514,11 +533,11 @@ func _update_mode() -> void:
 	_size_widgets()
 
 func _detach(n: Node) -> void:
-	if n.get_parent() != null:
+	if n != null and n.get_parent() != null:
 		n.get_parent().remove_child(n)
 
 func _rebuild() -> void:
-	for n in [header, frame, queue, strip, hud, panel_map, panel_bag, panel_log, panel_menu]:
+	for n in [header, frame, queue, strip, hud, footer, panel_map, panel_bag, panel_log, panel_menu]:
 		_detach(n)
 	if _root != null:
 		_root.queue_free()
@@ -535,6 +554,14 @@ func _rebuild() -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(v)
+	if footer == null:
+		footer = Label.new()
+		footer.text = "Éditeur de Donjon v1.29 · portage Godot\nMade by Claude & Nydaunvan"
+		footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+		footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
+		footer.add_theme_color_override("font_color", Color("6f5e44"))
+		footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(header)
 	if _portrait:
 		frame.size_flags_stretch_ratio = 3.0
@@ -578,15 +605,15 @@ func _rebuild() -> void:
 		h.add_child(right)
 		for p in [panel_map, panel_bag, panel_log, panel_menu]:
 			right.add_child(p)
-		panel_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		panel_map.size_flags_stretch_ratio = 1.0
+		panel_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		for p in [panel_map, panel_bag, panel_log]:
 			p.custom_minimum_size = Vector2(0, 0)
 		panel_bag.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		panel_bag.size_flags_stretch_ratio = 1.15
+		panel_bag.size_flags_stretch_ratio = 1.0
 		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		panel_log.size_flags_stretch_ratio = 1.15
+		panel_log.size_flags_stretch_ratio = 1.0
 		panel_menu.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	v.add_child(footer)
 	call_deferred("_size_widgets")
 
 func _size_widgets() -> void:

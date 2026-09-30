@@ -137,7 +137,8 @@ func _layout() -> void:
 	var ico := u(28.0)
 	var ch := u(27.0)
 	lvl_lbl.add_theme_font_size_override("font_size", maxi(7, int(u(18.0))))
-	var lw := lvl_lbl.get_minimum_size().x
+	var lfont := lvl_lbl.get_theme_font("font")
+	var lw := lfont.get_string_size(lvl_lbl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(7, int(u(18.0)))).x + 2.0
 	var gap := u(8.0)
 	var total := ico + gap + lw + gap * 0.5 + ch
 	var x0 := cx - total * 0.5
