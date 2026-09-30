@@ -18,9 +18,10 @@ var _we: WorldEnvironment
 var message_label: Label
 var _message_tween: Tween
 var _popup_layer: Control
+var _modal_layer: CanvasLayer
 
 func _ready() -> void:
-	var cfg: Dictionary = Data.config
+	var cfg: Dictionary = Data.active()
 	print("Donjon : ", cfg.get("title", "?"))
 	gs = GameState.create(cfg)
 	for c in gs.party:
@@ -37,7 +38,7 @@ func _ready() -> void:
 	add_child(ctrl)
 	ctrl.setup(gs, rig)
 	ctrl.popup.connect(_show_popup)
-	ctrl.game_over.connect(func(): show_message("☠️ Toute l'équipe a péri…", 6.0))
+	ctrl.game_over.connect(_on_game_over)
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
@@ -51,7 +52,7 @@ func _ready() -> void:
 	ui.add_child(layout)
 	layout.setup(gs, ctrl, rig)
 	layout.command.connect(_on_command)
-	layout.menu_pressed.connect(func(n): show_message("« %s » : à venir" % n))
+	layout.menu_pressed.connect(_on_menu)
 	# le monde 3D vit dans la vue encadrée
 	layout.world.add_child(rig)
 	rig.camera.current = true
@@ -63,12 +64,12 @@ func _ready() -> void:
 	dock_layer.add_child(dock)
 	dock.setup(gs, ctrl)
 	dock.bag_changed.connect(layout.bag.refresh)
-	var modal_layer := CanvasLayer.new()
-	modal_layer.layer = 20
-	add_child(modal_layer)
+	_modal_layer = CanvasLayer.new()
+	_modal_layer.layer = 20
+	add_child(_modal_layer)
 	inter = Interactions.new()
 	add_child(inter)
-	inter.setup(gs, ctrl, rig, layout, modal_layer)
+	inter.setup(gs, ctrl, rig, layout, _modal_layer)
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
 	layout.item_pressed.connect(_on_bag_item)
@@ -80,7 +81,7 @@ func _ready() -> void:
 	load_level(level_index)
 
 func load_level(index: int) -> void:
-	var level: Dictionary = Data.config.levels[index]
+	var level: Dictionary = gs.cfg.levels[index]
 	if level_node:
 		level_node.queue_free()
 	level_index = index
@@ -236,7 +237,7 @@ func _use_stairs(p: Vector2i) -> void:
 	var action: Dictionary = st.get("action", {})
 	match str(action.get("type", "")):
 		"level":
-			var levels: Array = Data.config.levels
+			var levels: Array = gs.cfg.levels
 			for i in levels.size():
 				if levels[i].id == action.get("targetId"):
 					load_level(i)
@@ -244,9 +245,33 @@ func _use_stairs(p: Vector2i) -> void:
 			show_message("Niveau introuvable : %s" % action.get("targetId"))
 		"victory":
 			gs.won = true
-			show_message("Victoire ! Vous avez terminé le donjon.", 8.0)
+			_show_victory()
 		_:
 			show_message("Escalier")
+
+func _on_menu(name: String) -> void:
+	match name:
+		"Accueil":
+			Dialogs.confirm(_modals(), "Retour à l'accueil", "Quitter la partie en cours ? La progression non sauvegardée sera perdue.",
+				func(): Data.go_home(), "Quitter")
+		"Guide": Dialogs.guide(_modals())
+		_: show_message("« %s » : à venir" % name)
+
+func _modals() -> Node:
+	return _modal_layer
+
+func _restart() -> void:
+	Data.launch(Data.active(), Data.play_origin)
+
+func _on_game_over() -> void:
+	show_message("☠️ Toute l'équipe a péri…", 4.0)
+	await get_tree().create_timer(1.6).timeout
+	Dialogs.defeat(_modals(), gs, _restart, Data.go_home)
+
+func _show_victory() -> void:
+	show_message("Victoire !", 3.0)
+	await get_tree().create_timer(0.8).timeout
+	Dialogs.victory(_modals(), gs, _restart, Data.go_home)
 
 func show_message(text: String, seconds: float = 1.8) -> void:
 	message_label.text = text

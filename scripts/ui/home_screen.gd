@@ -1,0 +1,398 @@
+class_name HomeScreen
+extends Control
+## Page d'accueil : mur de pierre, arche, sceau « Donjon aléatoire », bannières de quête.
+## Paysage : scène fixe 1280×800 mise à l'échelle. Portrait / petit écran : colonne défilante (comme le HTML).
+
+signal action(name: String)
+signal nav(name: String)
+
+const SW := 1280.0
+const SH := 800.0
+const HOME := "res://assets/home/"
+
+var _wall: TextureRect
+var _header: PanelContainer
+var _title_label: Label
+var _stage: Control
+var _scroll: ScrollContainer
+var _column: VBoxContainer
+var _scene_bg: TextureRect
+var _glow: TextureRect
+var _title_box: HBoxContainer
+var _tagline: Label
+var _seal: Control
+var _banners: Array = []      # {root, height}
+var _tuto: Button
+var _links: VBoxContainer
+var _foot: PanelContainer
+var _stacked := false
+var _built := false
+
+func _ready() -> void:
+	theme = UiTheme.shared()
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_build()
+	resized.connect(_layout)
+	_layout()
+
+# ------------------------------------------------------------------ construction
+
+func _tex(name: String) -> Texture2D:
+	return load(HOME + name) as Texture2D
+
+func _label(text: String, size: int, color: Color, font_path: String = UiTheme.F_BODY) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_override("font", UiTheme.font(font_path))
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	return l
+
+func _build() -> void:
+	_wall = TextureRect.new()
+	_wall.texture = UiTheme.tex("bg_tile")
+	_wall.stretch_mode = TextureRect.STRETCH_TILE
+	_wall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_wall)
+
+	_stage = Control.new()
+	_stage.clip_contents = true
+	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_stage)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(_scroll)
+	_column = VBoxContainer.new()
+	_column.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_column.add_theme_constant_override("separation", 14)
+	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_column)
+
+	_scene_bg = TextureRect.new()
+	_scene_bg.texture = _tex("home_bg.png")
+	_scene_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_scene_bg.stretch_mode = TextureRect.STRETCH_SCALE
+	_scene_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage.add_child(_scene_bg)
+
+	# lueur vacillante de la torche
+	var grad := Gradient.new()
+	grad.colors = PackedColorArray([Color(1.0, 0.62, 0.25, 0.55), Color(1.0, 0.45, 0.1, 0.0)])
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.0, 0.5)
+	gt.width = 256
+	gt.height = 256
+	_glow = TextureRect.new()
+	_glow.texture = gt
+	_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_glow.stretch_mode = TextureRect.STRETCH_SCALE
+	_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_glow.material = mat
+	_stage.add_child(_glow)
+	var tw := create_tween().set_loops()
+	tw.tween_property(_glow, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_glow, "modulate:a", 0.55, 0.9).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_glow, "modulate:a", 0.85, 0.5).set_trans(Tween.TRANS_SINE)
+
+	# en-tête
+	_header = PanelContainer.new()
+	_header.add_theme_stylebox_override("panel", UiTheme.tbox("frame_header", [12, 12, 12, 12], [16, 5, 12, 5]))
+	var hrow := HBoxContainer.new()
+	hrow.add_theme_constant_override("separation", 8)
+	_header.add_child(hrow)
+	_title_label = _label(str(Data.config.get("title", "Éditeur de Donjon")), 26, Color("e0b070"), UiTheme.F_TITLE_BOLD)
+	_title_label.text = "Éditeur de Donjon"
+	_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_title_label.clip_text = true
+	hrow.add_child(_title_label)
+	for n in ["Accueil", "Admin", "Guide"]:
+		var b := Button.new()
+		b.text = n.to_upper()
+		b.focus_mode = Control.FOCUS_NONE
+		b.disabled = n == "Accueil"
+		var nn: String = n
+		b.pressed.connect(func(): nav.emit(nn))
+		hrow.add_child(b)
+	add_child(_header)
+
+	# titre à lettrine
+	_title_box = HBoxContainer.new()
+	_title_box.add_theme_constant_override("separation", 4)
+	_title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_title_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	var cap := _label("É", 108, Color("f1dfb8"), UiTheme.F_TITLE_BOLD)
+	cap.name = "cap"
+	var rest := _label("diteur de Donjon", 40, Color("f1dfb8"), UiTheme.F_TITLE_BOLD)
+	rest.name = "rest"
+	rest.size_flags_vertical = Control.SIZE_SHRINK_END
+	for l in [cap, rest]:
+		l.add_theme_color_override("font_shadow_color", Color(1.0, 0.7, 0.35, 0.35))
+		l.add_theme_constant_override("shadow_offset_x", 0)
+		l.add_theme_constant_override("shadow_offset_y", 0)
+		l.add_theme_constant_override("shadow_outline_size", 10)
+	_title_box.add_child(cap)
+	_title_box.add_child(rest)
+	_tagline = _label("Créez, Explorez, Survivez", 17, Color("cbb083"), UiTheme.F_BODY_ITALIC)
+
+	_seal = _make_seal()
+	_banners = [
+		_make_banner("banner_create.png", "Créer votre propre donjon", "Concevoir votre expédition de A à Z", "create", 89.0),
+		_make_banner("banner_origin.png", "Le Donjon d'Origine", "La démonstration officielle", "origin", 67.0),
+		_make_banner("banner_saves.png", "Sauvegardes", "Reprendre vos 10 parties", "saves", 67.0),
+	]
+	_tuto = _link("Nouveau ici ? Suivre le tutoriel de création", "tutorial", 13)
+	_links = VBoxContainer.new()
+	_links.add_theme_constant_override("separation", 5)
+	_links.add_child(_link("Charger un donjon depuis un code", "load-code", 13))
+	_links.add_child(_link("Importer un fichier JSON", "import-json", 13))
+
+	_foot = PanelContainer.new()
+	var fs := StyleBoxFlat.new()
+	fs.bg_color = Color(20 / 255.0, 14 / 255.0, 7 / 255.0, 0.72)
+	fs.border_color = Color(200 / 255.0, 166 / 255.0, 110 / 255.0, 0.35)
+	fs.border_width_top = 1
+	fs.set_content_margin_all(8)
+	_foot.add_theme_stylebox_override("panel", fs)
+	var fv := VBoxContainer.new()
+	fv.alignment = BoxContainer.ALIGNMENT_CENTER
+	fv.add_theme_constant_override("separation", 6)
+	_foot.add_child(fv)
+	var ver := _link("Éditeur de Donjon v1.29 · portage Godot", "changelog", 14)
+	ver.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fv.add_child(ver)
+	var made := _label("Made by Claude & Nydaunvan", 13, Color("9c8659"), UiTheme.F_BODY_ITALIC)
+	made.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fv.add_child(made)
+	_built = true
+
+## Lien texte discret (survol : lueur dorée).
+func _link(text: String, act: String, size: int) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	b.add_theme_font_size_override("font_size", size)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(st, StyleBoxEmpty.new())
+	b.add_theme_color_override("font_color", Color("cbb083"))
+	b.add_theme_color_override("font_hover_color", Color("f6e4bd"))
+	b.add_theme_color_override("font_pressed_color", Color("f6e4bd"))
+	b.pressed.connect(func(): action.emit(act))
+	return b
+
+func _make_seal() -> Control:
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	root.focus_mode = Control.FOCUS_NONE
+	var pic := TextureRect.new()
+	pic.texture = _tex("seal.png")
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(pic)
+	var t := _label("Donjon\naléatoire", 24, Color("f2ddc4"), UiTheme.F_BODY_BOLD)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	t.anchor_left = 0.08
+	t.anchor_right = 0.92
+	t.anchor_top = 0.47
+	t.anchor_bottom = 0.68
+	root.add_child(t)
+	var s := _label("jamais deux fois pareil", 12, Color("e0c2ab"), UiTheme.F_BODY_BOLD)
+	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	s.anchor_left = 0.08
+	s.anchor_right = 0.92
+	s.anchor_top = 0.68
+	s.anchor_bottom = 0.75
+	root.add_child(s)
+	root.resized.connect(func():
+		root.pivot_offset = root.size * 0.5
+		var f := root.size.x / 280.0
+		t.add_theme_font_size_override("font_size", int(round(24.0 * f)))
+		s.add_theme_font_size_override("font_size", int(round(12.0 * f))))
+	root.mouse_entered.connect(func():
+		create_tween().tween_property(root, "scale", Vector2(1.03, 1.03), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
+	root.mouse_exited.connect(func():
+		create_tween().tween_property(root, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
+	root.gui_input.connect(func(ev: InputEvent):
+		var mb := ev as InputEventMouseButton
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_seal_roll(root)
+			action.emit("random"))
+	return root
+
+## Petit « lancer » du sceau au clic (les dés du HTML roulent au survol).
+func _seal_roll(root: Control) -> void:
+	var tw := create_tween()
+	tw.tween_property(root, "rotation", deg_to_rad(4.0), 0.07)
+	tw.tween_property(root, "rotation", deg_to_rad(-3.0), 0.09)
+	tw.tween_property(root, "rotation", 0.0, 0.08)
+
+func _make_banner(tex_name: String, title: String, sub: String, act: String, base_h: float) -> Dictionary:
+	var root := Control.new()
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var vis := Control.new()
+	vis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vis.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(vis)
+	var pic := TextureRect.new()
+	pic.texture = _tex(tex_name)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vis.add_child(pic)
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 2)
+	box.anchor_left = 60.0 / 300.0
+	box.anchor_right = 262.0 / 300.0
+	box.anchor_top = 0.0
+	box.anchor_bottom = 1.0
+	vis.add_child(box)
+	var tl := _label(title, 19, Color("f1dfb8"), UiTheme.F_BODY_BOLD)
+	tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var sl := _label(sub, 12, Color("c2ab7e"), UiTheme.F_BODY)
+	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(tl)
+	box.add_child(sl)
+	root.resized.connect(func():
+		var f := root.size.x / 300.0
+		tl.add_theme_font_size_override("font_size", int(round(19.0 * f)))
+		sl.add_theme_font_size_override("font_size", int(round(12.0 * f))))
+	root.mouse_entered.connect(func():
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(vis, "position:x", -6.0 * root.size.x / 300.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(vis, "modulate", Color(1.12, 1.1, 1.08), 0.15))
+	root.mouse_exited.connect(func():
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(vis, "position:x", 0.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(vis, "modulate", Color.WHITE, 0.15))
+	root.gui_input.connect(func(ev: InputEvent):
+		var mb := ev as InputEventMouseButton
+		if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			action.emit(act))
+	return {"root": root, "height": base_h}
+
+# ------------------------------------------------------------------ mise en page
+
+func _move(n: Control, parent: Node) -> void:
+	if n.get_parent() == parent:
+		return
+	if n.get_parent() != null:
+		n.get_parent().remove_child(n)
+	parent.add_child(n)
+
+func _layout() -> void:
+	if not _built:
+		return
+	var w := size.x
+	var h := size.y
+	_header.position = Vector2.ZERO
+	_header.size = Vector2(w, 0)
+	var hh := maxf(44.0, clampf(h * 0.075, 44.0, 66.0))
+	_header.custom_minimum_size = Vector2(w, hh)
+	_header.size = Vector2(w, hh)
+	_title_label.add_theme_font_size_override("font_size", int(clampf(hh * 0.45, 15.0, 28.0)))
+	var area := Rect2(0, hh, w, h - hh)
+	var stacked := w < 900.0 or area.size.y < 560.0 or h > w
+	if stacked != _stacked or _seal.get_parent() == null:
+		_stacked = stacked
+		_reparent_all()
+	_stage.visible = not stacked
+	_scroll.visible = stacked
+	if stacked:
+		_layout_stacked(area)
+	else:
+		_layout_stage(area)
+
+func _reparent_all() -> void:
+	var host: Node = _column if _stacked else _stage
+	for n in [_title_box, _tagline, _seal, _banners[0].root, _tuto, _banners[1].root, _banners[2].root, _links, _foot]:
+		_move(n, host)
+	if _stacked:
+		# ordre du HTML empilé : titre, sceau, bannières, liens, pied de page
+		var order := [_title_box, _tagline, _seal, _banners[0].root, _tuto, _banners[1].root, _banners[2].root, _links, _foot]
+		for i in order.size():
+			_column.move_child(order[i], i)
+
+func _layout_stage(area: Rect2) -> void:
+	var k := minf(area.size.x / SW, area.size.y / SH)
+	var sz := Vector2(SW, SH) * k
+	var origin := area.position + (area.size - sz) * 0.5
+	# la scène occupe tout l'espace sous l'en-tête ; le mur de fond déborde autour de la scène
+	_stage.position = area.position
+	_stage.size = area.size
+	var off := origin - area.position
+	_scene_bg.position = off
+	_scene_bg.size = sz
+	_glow.position = off + Vector2(-110, 260) * k
+	_glow.size = Vector2(420, 420) * k
+	for n in [_seal, _banners[0].root, _banners[1].root, _banners[2].root, _links, _foot, _title_box, _tuto]:
+		n.custom_minimum_size = Vector2.ZERO
+	_title_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	for b in _links.get_children():
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var at := func(n: Control, x: float, y: float, ww: float, hh: float) -> void:
+		n.position = off + Vector2(x, y) * k
+		n.size = Vector2(ww, hh) * k
+	_title_box.position = off + Vector2(88, 64) * k
+	_title_box.size = Vector2(500, 120) * k
+	_title_box.get_node("cap").add_theme_font_size_override("font_size", int(108.0 * k))
+	_title_box.get_node("rest").add_theme_font_size_override("font_size", int(40.0 * k))
+	_tagline.position = off + Vector2(92, 178) * k
+	_tagline.add_theme_font_size_override("font_size", int(17.0 * k))
+	at.call(_seal, 190, 230, 280, 280)
+	at.call(_banners[0].root, 580, 300, 300, 89)
+	at.call(_tuto, 606, 396, 300, 18)
+	_tuto.add_theme_font_size_override("font_size", int(13.0 * k))
+	at.call(_banners[1].root, 580, 440, 300, 67)
+	at.call(_banners[2].root, 580, 580, 300, 67)
+	at.call(_links, 596, 662, 260, 40)
+	for b in _links.get_children():
+		b.add_theme_font_size_override("font_size", int(13.0 * k))
+	at.call(_foot, 0, 704, 1280, 96)
+	_scroll.position = Vector2.ZERO
+
+func _layout_stacked(area: Rect2) -> void:
+	_scroll.position = area.position
+	_scroll.size = area.size
+	var cw := minf(area.size.x - 32.0, 420.0)
+	_column.custom_minimum_size = Vector2(area.size.x, 0)
+	_title_box.custom_minimum_size = Vector2(cw, 0)
+	_title_box.get_node("cap").add_theme_font_size_override("font_size", 76)
+	_title_box.get_node("rest").add_theme_font_size_override("font_size", 30)
+	_title_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_tagline.add_theme_font_size_override("font_size", 16)
+	_tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var sd := minf(area.size.x * 0.64, 300.0)
+	_seal.custom_minimum_size = Vector2(sd, sd)
+	_seal.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	for b in _banners:
+		b.root.custom_minimum_size = Vector2(cw, cw * b.height / 300.0)
+		b.root.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_tuto.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_tuto.add_theme_font_size_override("font_size", 14)
+	_links.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	for b in _links.get_children():
+		b.add_theme_font_size_override("font_size", 14)
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_foot.custom_minimum_size = Vector2(area.size.x, 90)
+	_foot.size_flags_horizontal = Control.SIZE_EXPAND_FILL

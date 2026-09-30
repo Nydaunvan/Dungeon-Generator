@@ -1,0 +1,62 @@
+class_name Dialogs
+extends RefCounted
+## Fenêtres usuelles : confirmation, avis, guide, victoire, défaite.
+
+static func notice(host: Node, title: String, text: String) -> Modal:
+	var m := Modal.open(host, title, 420.0)
+	m.add_text(text, UiTheme.PARCH, 15)
+	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	return m
+
+static func _then(m: Modal, cb: Callable) -> Callable:
+	return func():
+		m.close()
+		if cb.is_valid():
+			cb.call()
+
+static func confirm(host: Node, title: String, text: String, on_yes: Callable, yes_text: String = "Confirmer", no_text: String = "Annuler") -> Modal:
+	var m := Modal.open(host, title, 460.0)
+	m.add_text(text, UiTheme.PARCH, 15)
+	m.set_buttons([{"text": yes_text, "cb": _then(m, on_yes)}, {"text": no_text, "cb": _then(m, Callable())}])
+	return m
+
+static func guide(host: Node) -> Modal:
+	var m := Modal.open(host, "Guide", 520.0)
+	var lines := [
+		["Déplacement", "↑ / Z avancer · ↓ / S reculer · Q / D pas de côté · ← / A et → / E tourner (ou les boutons à l'écran)."],
+		["Combat", "Les personnages agissent quand leur jauge est pleine. X ou Espace : attaquer. Les sorts se lancent depuis la barre ronde ; les sorts alliés demandent de cliquer sur la carte d'un allié. C : fuir."],
+		["Interaction", "F ou Entrée : ouvrir une porte, utiliser un escalier. Marcher sur un objet le ramasse ; les pièges, fontaines et leviers se déclenchent en marchant dessus."],
+		["Équipement", "Cliquer sur la carte d'un personnage (hors combat) ouvre son volet d'équipement ; cliquer un objet de la besace l'affiche pour l'équiper. Clic droit sur une carte : fiche du personnage."],
+		["Statuts", "Poison, brûlure, gel, étourdissement… s'affichent sur le portrait avec les tours restants. Les étourdis ou gelés perdent leur tour."],
+	]
+	for l in lines:
+		m.add_text(str(l[0]), UiTheme.GOLD, 16)
+		m.add_text(str(l[1]), UiTheme.PARCH, 14)
+	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	return m
+
+static func _stats_lines(m: Modal, gs: GameState) -> void:
+	var st := gs.stats
+	m.add_text("Monstres vaincus : %d   ·   Boss : %d" % [int(st.get("monstersKilled", 0)), int(st.get("bossesKilled", 0))], UiTheme.DIM, 14)
+	m.add_text("Or gagné : %d   ·   XP gagnée : %d   ·   Objets trouvés : %d" % [int(st.get("goldEarnedTotal", 0)), int(st.get("xpEarnedTotal", 0)), int(st.get("itemsFound", 0))], UiTheme.DIM, 14)
+	for c in gs.party:
+		m.add_text("%s — niveau %d%s" % [c.name, int(c.level), "  (tombé)" if int(c.hp) <= 0 else ""], UiTheme.PARCH, 14)
+
+static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable()) -> Modal:
+	var m := Modal.open(host, "Victoire !", 480.0)
+	m.add_text("Le groupe émerge de %s, triomphant." % str(gs.cfg.get("title", "")), UiTheme.PARCH, 16, true)
+	_stats_lines(m, gs)
+	var btns: Array = []
+	if on_next.is_valid():
+		btns.append({"text": "Donjon plus difficile", "cb": _then(m, on_next)})
+	btns.append({"text": "Repartir de zéro", "cb": _then(m, on_restart)})
+	btns.append({"text": "Accueil", "cb": _then(m, on_home)})
+	m.set_buttons(btns)
+	return m
+
+static func defeat(host: Node, gs: GameState, on_restart: Callable, on_home: Callable) -> Modal:
+	var m := Modal.open(host, "Le groupe est tombé...", 480.0)
+	m.add_text("Les ténèbres ont eu raison de vos héros. Une nouvelle troupe devra tenter sa chance.", UiTheme.PARCH, 16, true)
+	_stats_lines(m, gs)
+	m.set_buttons([{"text": "Nouvelle partie", "cb": _then(m, on_restart)}, {"text": "Accueil", "cb": _then(m, on_home)}])
+	return m

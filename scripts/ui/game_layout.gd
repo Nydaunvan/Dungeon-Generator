@@ -84,7 +84,7 @@ func _build_parts() -> void:
 	hrow.add_theme_constant_override("separation", 8)
 	header.add_child(hrow)
 	_title = Label.new()
-	_title.text = str(Data.config.get("title", "Donjon")).to_upper()
+	_title.text = str(Data.active().get("title", "Donjon")).to_upper()
 	_title.clip_text = true
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

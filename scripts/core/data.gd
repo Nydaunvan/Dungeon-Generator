@@ -5,6 +5,10 @@ extends Node
 var config: Dictionary = {}
 var class_talents: Dictionary = {}
 var constants: Dictionary = {}
+## Configuration de la partie en cours (donjon d'origine, aléatoire, personnalisé…). Vide = donjon d'origine.
+var play_config: Dictionary = {}
+## Provenance de la partie : "original", "random", "custom".
+var play_origin: String = "original"
 
 func _ready() -> void:
 	config = _load_json("res://data/default_config.json")
@@ -30,3 +34,19 @@ func spell_by_id(id: String) -> Dictionary:
 		if s.get("id") == id:
 			return s
 	return {}
+
+## Configuration utilisée par le jeu.
+func active() -> Dictionary:
+	return play_config if not play_config.is_empty() else config
+
+## Lance une partie avec la configuration donnée (copie profonde) puis ouvre la scène de jeu.
+func launch(cfg: Dictionary, origin: String) -> void:
+	play_config = cfg.duplicate(true)
+	play_origin = origin
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+func launch_original() -> void:
+	launch(config, "original")
+
+func go_home() -> void:
+	get_tree().change_scene_to_file("res://scenes/home.tscn")
