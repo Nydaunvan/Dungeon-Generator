@@ -15,6 +15,34 @@ var stats: Dictionary = {"monstersKilled": 0, "bossesKilled": 0, "goldEarnedTota
 var log_lines: Array[String] = []
 var game_over: bool = false
 var won: bool = false
+# position du groupe (renseignée au moment d'une sauvegarde) et cases découvertes de la mini-carte
+var level_index: int = 0
+var px: int = 0
+var py: int = 0
+var pdir: int = 0
+var seen: Dictionary = {}   # id de niveau -> [[x, y], …]
+
+const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
+	"log_lines", "game_over", "won", "level_index", "px", "py", "pdir", "seen"]
+
+func to_save() -> Dictionary:
+	var d := {}
+	for f in SAVE_FIELDS:
+		d[f] = get(f)
+	return d.duplicate(true)
+
+static func from_save(config: Dictionary, d: Dictionary) -> GameState:
+	var s := GameState.new()
+	s.cfg = config
+	for f in SAVE_FIELDS:
+		if not d.has(f):
+			continue
+		if f == "log_lines":
+			for l in d[f]:
+				s.log_lines.append(str(l))
+		else:
+			s.set(f, d[f])
+	return s
 
 static func create(config: Dictionary) -> GameState:
 	var s := GameState.new()

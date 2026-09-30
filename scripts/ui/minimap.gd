@@ -16,6 +16,24 @@ func bind(g: DungeonGrid, r: PlayerRig) -> void:
 		seen[_level_id] = {}
 	reveal()
 
+func export_seen() -> Dictionary:
+	var out := {}
+	for lid in seen:
+		var arr: Array = []
+		for k in seen[lid]:
+			var c: Vector2i = k
+			arr.append([c.x, c.y])
+		out[lid] = arr
+	return out
+
+func import_seen(d: Dictionary) -> void:
+	seen.clear()
+	for lid in d:
+		var s := {}
+		for a in d[lid]:
+			s[Vector2i(int(a[0]), int(a[1]))] = true
+		seen[str(lid)] = s
+
 ## Découvre les cases visibles : voisinage immédiat + les 4 directions jusqu'au premier mur.
 func reveal() -> void:
 	if grid == null:

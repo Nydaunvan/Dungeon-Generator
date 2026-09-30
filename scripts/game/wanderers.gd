@@ -30,6 +30,12 @@ func bind_level(lvl: Dictionary, g: DungeonGrid, v: LevelView) -> void:
 	view = v
 	_zones.clear()
 	_acc = 0.0
+	# monstres qui ont changé de place lors d'un passage précédent ou avant une sauvegarde
+	var st_all: Dictionary = gs.level_state(lvl).monsters
+	for m in lvl.get("monsters", []):
+		var st: Dictionary = st_all.get(str(m.id), {})
+		if not st.is_empty() and st.alive and (int(st.x) != int(m.x) or int(st.y) != int(m.y)):
+			v.entities.move_monster(str(m.id), int(st.x), int(st.y), true)
 	var tm = lvl.get("travelingMerchant")
 	if tm is Dictionary:
 		var ls := gs.level_state(lvl)

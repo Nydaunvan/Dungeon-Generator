@@ -57,6 +57,17 @@ func launch(cfg: Dictionary, origin: String) -> void:
 	play_origin = origin
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
+## Partie à restaurer au prochain lancement de la scène de jeu (vide = nouvelle partie).
+var pending_save: Dictionary = {}
+
+## Reprend une sauvegarde : {"config", "save", "origin"}. Sans configuration, garde celle de l'administration.
+func launch_save(data: Dictionary) -> void:
+	var cfg: Dictionary = data.get("config", {})
+	if cfg.is_empty() or not cfg.has("levels"):
+		cfg = active().duplicate(true)
+	launch(cfg, str(data.get("origin", "custom")))
+	pending_save = (data.save as Dictionary).duplicate(true)
+
 func launch_original() -> void:
 	launch(original_config, "original")
 

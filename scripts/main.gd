@@ -24,7 +24,13 @@ var _modal_layer: CanvasLayer
 func _ready() -> void:
 	var cfg: Dictionary = Data.active()
 	print("Donjon : ", cfg.get("title", "?"))
-	gs = GameState.create(cfg)
+	var resume := not Data.pending_save.is_empty()
+	if resume:
+		gs = GameState.from_save(cfg, Saves.normalize(Data.pending_save))
+		level_index = clampi(gs.level_index, 0, (cfg.levels as Array).size() - 1)
+		Data.pending_save = {}
+	else:
+		gs = GameState.create(cfg)
 	for c in gs.party:
 		print("%s -> PV %d, ATK %d-%d, vitesse %d" % [c.name, c.maxHp, c.atkMin, c.atkMax, c.effSpeed])
 
@@ -84,9 +90,12 @@ func _ready() -> void:
 	_popup_layer = layout.popup_layer
 	message_label = layout.message_label
 
-	load_level(level_index)
+	layout.minimap.import_seen(gs.seen)
+	load_level(level_index, resume)
+	if resume:
+		gs.add_log("📂 Partie chargée.")
 
-func load_level(index: int) -> void:
+func load_level(index: int, at_saved: bool = false) -> void:
 	var level: Dictionary = gs.cfg.levels[index]
 	if level_node:
 		level_node.queue_free()
@@ -96,7 +105,10 @@ func load_level(index: int) -> void:
 	var ls := gs.level_state(level)
 	level_node = LevelBuilder.build(level, grid)
 	layout.world.add_child(level_node)
-	rig.place(grid, int(level.get("startX", 1)), int(level.get("startY", 1)), int(level.get("startDir", 0)))
+	if at_saved:
+		rig.place(grid, gs.px, gs.py, gs.pdir)
+	else:
+		rig.place(grid, int(level.get("startX", 1)), int(level.get("startY", 1)), int(level.get("startDir", 0)))
 	ctrl.bind_level(level, grid, level_node)
 	inter.bind_level(level, grid, level_node)
 	wand.bind_level(level, grid, level_node)
@@ -267,7 +279,18 @@ func _on_menu(name: String) -> void:
 			Dialogs.confirm(_modals(), "Retour à l'accueil", "Quitter la partie en cours ? La progression non sauvegardée sera perdue.",
 				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
+		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save)
+		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message("« %s » : à venir" % name)
+
+## Instantané de la partie pour une sauvegarde.
+func snapshot() -> Dictionary:
+	gs.level_index = level_index
+	gs.px = rig.gx
+	gs.py = rig.gy
+	gs.pdir = rig.dir
+	gs.seen = layout.minimap.export_seen()
+	return {"config": gs.cfg, "save": gs.to_save(), "origin": Data.play_origin}
 
 func _modals() -> Node:
 	return _modal_layer

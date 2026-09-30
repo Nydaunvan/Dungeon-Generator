@@ -68,7 +68,7 @@ func move_merchant(x: int, y: int) -> void:
 		_slide(merchant_node, Vector2i(x, y))
 
 ## Déplace le sprite d'un monstre vers la case (x, y) avec un court glissement.
-func move_monster(id: String, x: int, y: int) -> void:
+func move_monster(id: String, x: int, y: int, instant: bool = false) -> void:
 	for p in monsters.keys():
 		var list: Array = monsters[p]
 		for i in list.size():
@@ -79,11 +79,14 @@ func move_monster(id: String, x: int, y: int) -> void:
 				if not monsters.has(np):
 					monsters[np] = []
 				monsters[np].append(e)
-				_slide(e.node, np)
+				_slide(e.node, np, instant)
 				return
 
-func _slide(n: Node3D, p: Vector2i) -> void:
+func _slide(n: Node3D, p: Vector2i, instant: bool = false) -> void:
 	var target := Vector3(p.x * LevelBuilder.CELL, n.position.y, p.y * LevelBuilder.CELL)
+	if instant:
+		n.position = target
+		return
 	create_tween().tween_property(n, "position", target, 0.4).set_trans(Tween.TRANS_SINE)
 
 func _register(dict: Dictionary, p: Vector2i, node: Node3D, def: Dictionary) -> void:
