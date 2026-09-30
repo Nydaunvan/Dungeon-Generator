@@ -7,6 +7,7 @@ var grid: DungeonGrid
 var rig: PlayerRig
 var gs: GameState
 var zoom: int = 1
+var full: bool = false   # carte plein écran : tout le niveau, sans zoom
 var merchant_cell: Callable = Callable()   # () -> Vector2i, (-1, -1) tant que le marchand n'est pas découvert
 
 func _ready() -> void:
@@ -49,7 +50,7 @@ func _max_zoom() -> int:
 	return maxi(1, int(floor(maxi(grid.width, grid.height) / 10.0)))
 
 func _gui_input(event: InputEvent) -> void:
-	if grid == null:
+	if grid == null or full:
 		return
 	var step := 0
 	if event is InputEventMouseButton and event.pressed:
@@ -83,6 +84,9 @@ func _draw() -> void:
 	var budget := 130 if fog else 300
 	var vw := maxi(4, mini(W, int(floor(budget / float(cpx)))))
 	var vh := maxi(4, mini(H, int(floor(budget / float(cpx)))))
+	if full:
+		vw = W
+		vh = H
 	var ox := clampi(rig.gx - vw / 2, 0, W - vw)
 	var oy := clampi(rig.gy - vh / 2, 0, H - vh)
 	var cs := minf(size.x / vw, size.y / vh)

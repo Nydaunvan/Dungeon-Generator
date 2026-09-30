@@ -32,6 +32,7 @@ static func _stats_lines(m: Modal, gs: GameState) -> void:
 
 static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable(), on_village: Callable = Callable()) -> Modal:
 	var m := Modal.open(host, "Victoire !", 480.0)
+	m.esc_closes = false
 	m.add_text("Le groupe émerge de %s, triomphant." % str(gs.cfg.get("title", "")), UiTheme.PARCH, 16, true)
 	_stats_lines(m, gs)
 	var btns: Array = []
@@ -46,6 +47,7 @@ static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Ca
 
 static func defeat(host: Node, gs: GameState, on_restart: Callable, on_home: Callable) -> Modal:
 	var m := Modal.open(host, "Le groupe est tombé...", 480.0)
+	m.esc_closes = false
 	m.add_text("Les ténèbres ont eu raison de vos héros. Une nouvelle troupe devra tenter sa chance.", UiTheme.PARCH, 16, true)
 	_stats_lines(m, gs)
 	m.set_buttons([{"text": "Nouvelle partie", "cb": _then(m, on_restart)}, {"text": "Accueil", "cb": _then(m, on_home)}])

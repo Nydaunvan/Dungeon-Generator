@@ -224,6 +224,14 @@ func _build_parts() -> void:
 	# panneaux latéraux
 	panel_map = OrnatePanel.new("Carte")
 	panel_map.name = "Carte"
+	if panel_map.header_row != null:
+		var fb := Button.new()
+		fb.text = "🗺️"
+		fb.flat = true
+		fb.focus_mode = Control.FOCUS_NONE
+		fb.tooltip_text = "Carte en plein écran (touche M)"
+		fb.pressed.connect(func(): menu_pressed.emit("Carte"))
+		panel_map.header_row.add_child(fb)
 	var map_inset := PanelContainer.new()
 	map_inset.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	map_inset.add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [6, 6, 6, 6]))

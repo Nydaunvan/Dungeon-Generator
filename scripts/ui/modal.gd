@@ -9,6 +9,8 @@ var content: VBoxContainer
 var _scroll: ScrollContainer
 var _buttons_row: HBoxContainer
 var _width: float = 380.0
+## Échap ferme la fenêtre (sauf choix obligatoire : talent, évolution, piège, victoire…).
+var esc_closes: bool = true
 
 static func open(host: Node, title: String, width: float = 380.0) -> Modal:
 	var m := Modal.new()
@@ -49,6 +51,17 @@ func _build(title: String) -> void:
 	panel.body.add_child(_buttons_row)
 	call_deferred("_fit")
 	call_deferred("_animate_in")
+
+func _input(event: InputEvent) -> void:
+	if not esc_closes or is_queued_for_deletion() or not event.is_action_pressed("ui_cancel"):
+		return
+	var top: Node = null
+	for n in get_tree().get_nodes_in_group("modal"):
+		if not n.is_queued_for_deletion():
+			top = n
+	if top == self:
+		get_viewport().set_input_as_handled()
+		close()
 
 func _animate_in() -> void:
 	UiFx.pop_in(panel, 0.18)

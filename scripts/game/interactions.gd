@@ -295,6 +295,7 @@ static func trap_threshold(chance: int) -> int:
 func _prompt_trap(it: Dictionary) -> void:
 	var chance := trap_chance()
 	var m := Modal.open(host, "⚠ Piège : " + str(it.get("name", "")), 400)
+	m.esc_closes = false
 	m.add_text("Le groupe a repéré un piège. Tenter de le désamorcer ?")
 	m.add_text("Chance de réussite : %d %%  (jet de d20 : %d ou plus)" % [chance, trap_threshold(chance)], UiTheme.GOLD)
 	m.add_text("Un 20 naturel est une réussite parfaite, un 1 un échec critique.", UiTheme.DIM, 14, true)

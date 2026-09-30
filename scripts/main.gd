@@ -173,7 +173,45 @@ func _setup_input() -> void:
 			ev.physical_keycode = k
 			InputMap.action_add_event(action, ev)
 
+## Carte plein écran (M) ; un second appui la referme.
+func _toggle_map() -> void:
+	for n in get_tree().get_nodes_in_group("modal"):
+		if not n.is_queued_for_deletion():
+			if n.has_meta("full_map"):
+				n.close()
+			return
+	var mc := layout.minimap.merchant_cell
+	var m := FullMapModal.open(_modals(), grid, rig, gs, mc)
+	m.set_meta("full_map", true)
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			KEY_M:
+				_toggle_map()
+				get_viewport().set_input_as_handled()
+				return
+			KEY_I:
+				if get_tree().get_nodes_in_group("modal").is_empty():
+					var who := gs.active_char_id
+					if ctrl.in_combat():
+						inter.open_sheet(who)
+					else:
+						dock.toggle_for(who)
+				get_viewport().set_input_as_handled()
+				return
+			KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
+				if get_tree().get_nodes_in_group("modal").is_empty() and ctrl.in_combat():
+					var slot: int = event.physical_keycode - KEY_1
+					if slot == 0:
+						ctrl.attack()
+					else:
+						var c := gs.char_by_id(gs.active_char_id)
+						var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
+						if slot - 1 < known.size():
+							ctrl.cast(str(known[slot - 1]))
+				get_viewport().set_input_as_handled()
+				return
 	if not get_tree().get_nodes_in_group("modal").is_empty():
 		return
 	for action in ["forward", "back", "left", "right", "turn_left", "turn_right", "attack", "interact", "flee"]:
@@ -342,6 +380,7 @@ func _on_menu(name: String) -> void:
 				Data.go_home, "Quitter")
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
+		"Carte": _toggle_map()
 		"Stats": StatsModal.open(_modals(), gs)
 		"Admin":
 			Data.resume_game = snapshot()

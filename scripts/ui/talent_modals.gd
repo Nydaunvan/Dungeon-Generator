@@ -28,6 +28,7 @@ static func process_queue(host: Node, gs: GameState, on_change: Callable) -> voi
 
 static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary, done: Callable) -> void:
 	var m := Modal.open(host, "🌟 Nouveau talent", 440.0)
+	m.esc_closes = false
 	m.add_text("%s atteint le niveau %d ! Choisissez un talent :" % [c.name, int(track.level)])
 	for o in track.options:
 		var oid := str(o.id)
@@ -44,6 +45,7 @@ static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary,
 static func _evolution(host: Node, gs: GameState, c: Dictionary, done: Callable) -> void:
 	var cls := Characters.class_def(gs.cfg, str(c.classId))
 	var m := Modal.open(host, "⭐ Évolution de classe", 440.0)
+	m.esc_closes = false
 	m.add_text("%s a atteint le niveau requis pour évoluer. Choisissez une voie :" % c.name)
 	for cid in cls.get("evolvesTo", []):
 		var oc := Characters.class_def(gs.cfg, str(cid))
