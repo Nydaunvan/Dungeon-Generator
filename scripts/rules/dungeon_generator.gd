@@ -570,7 +570,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var exit_stairs: Dictionary = stairs[0]
 	if exit_stairs.action.type == "level":
 		exit_stairs["locked"] = true
-		var key_item := {"id": "key_exit_%d" % i, "name": "Clé de l'arche", "icon": "@icon:misc_key", "type": "key", "opensDoorId": exit_stairs.id}
+		var key_item := {"id": "key_exit_%d" % i, "name": "Clé de l'arche", "icon": "@icon:misc_key", "x": sx, "y": sy, "type": "key", "opensDoorId": exit_stairs.id, "startHidden": true}
 		items.append(key_item)
 		boss["lootItemId2"] = key_item.id
 		boss["lootChance2"] = 100
