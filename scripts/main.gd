@@ -164,6 +164,12 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) ->
 		var ist := gs.item_state(str(level.id), str(it.id))
 		if ist.get("taken", false) or ist.get("disarmed", false):
 			level_node.entities.remove_item(str(it.id))
+		elif bool(it.get("startHidden", false)) and not ist.get("hidden", true):
+			level_node.entities.set_item_visible(str(it.id), true)
+	for m in level.get("monsters", []):
+		var mst: Dictionary = ls.monsters.get(str(m.id), {})
+		if bool(m.get("startHidden", false)) and not mst.is_empty() and not mst.get("hidden", true):
+			level_node.entities.set_monster_visible(str(m.id), true)
 	_apply_outdoor(bool(level.get("outdoor", false)))
 	if not bool(level.get("outdoor", false)):
 		env.ambient_light_energy = float(level.get("lightAmbient", 1.1))

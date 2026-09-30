@@ -263,6 +263,24 @@ func _trigger_switch(it: Dictionary) -> void:
 	if did != "":
 		_lstate().get_or_add("door_unlocked", {})[did] = true
 		_log("🔓 Une porte se déverrouille au loin...")
+	var mid := str(it.get("switchRevealMonsterId", ""))
+	if mid != "":
+		var mst: Dictionary = _lstate().monsters.get(mid, {})
+		if not mst.is_empty() and mst.get("hidden", false):
+			mst["hidden"] = false
+			view.entities.set_monster_visible(mid, true)
+			_log("👹 Une présence hostile se révèle non loin...")
+	var iid := str(it.get("switchRevealItemId", ""))
+	if iid != "":
+		var ist := gs.item_state(_lid(), iid)
+		var def_hidden := false
+		for d in level.get("items", []):
+			if str(d.id) == iid:
+				def_hidden = bool(d.get("startHidden", false))
+		if ist.get("hidden", def_hidden):
+			ist["hidden"] = false
+			view.entities.set_item_visible(iid, true)
+			_log("✨ Un objet apparaît, jusque-là invisible...")
 	if str(it.get("message", "")) != "":
 		_log(str(it.message))
 

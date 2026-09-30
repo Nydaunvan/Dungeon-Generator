@@ -39,6 +39,7 @@ func populate(level: Dictionary) -> void:
 			continue
 		var p := Vector2i(int(m.x), int(m.y))
 		_place_on_floor(n, p, str(m.get("icon", "")))
+		n.visible = not bool(m.get("startHidden", false))
 		add_child(n)
 		_register(monsters, p, n, m)
 	for it in level.get("items", []):
@@ -47,6 +48,7 @@ func populate(level: Dictionary) -> void:
 			var dec := TrapDecals.make_mesh(str(it.get("trapKind", "spikes")))
 			dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.015, int(it.y) * LevelBuilder.CELL)
 			dec.name = "Trap_" + str(it.id)
+			dec.visible = not bool(it.get("startHidden", false))
 			add_child(dec)
 			_register(items, Vector2i(int(it.x), int(it.y)), dec, it)
 			continue
@@ -58,6 +60,7 @@ func populate(level: Dictionary) -> void:
 			_place_on_wall(n, p, str(it.wall))
 		else:
 			_place_on_floor(n, p, str(it.get("icon", "")), true)
+		n.visible = not bool(it.get("startHidden", false))
 		add_child(n)
 		if type != "decor":
 			_register(items, p, n, it)
@@ -125,6 +128,19 @@ func take_items_at(x: int, y: int) -> Array:
 		out.append(e.def)
 	items.erase(p)
 	return out
+
+## Révèle (ou cache) un objet / un monstre « caché » (startHidden) : interrupteur, butin…
+func set_item_visible(id: String, on: bool) -> void:
+	for p in items.keys():
+		for e in items[p]:
+			if str(e.def.id) == id and is_instance_valid(e.node):
+				e.node.visible = on
+
+func set_monster_visible(id: String, on: bool) -> void:
+	for p in monsters.keys():
+		for e in monsters[p]:
+			if str(e.def.id) == id and is_instance_valid(e.node):
+				e.node.visible = on
 
 func remove_monster(id: String) -> void:
 	for p in monsters.keys():
