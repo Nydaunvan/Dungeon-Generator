@@ -110,7 +110,36 @@ func _ready() -> void:
 	if resume:
 		gs.add_log("📂 Partie chargée.")
 
-func load_level(index: int, at_saved: bool = false) -> void:
+## Case d'arrivée d'un escalier (resolveStairs de l'original) : coordonnées de l'action si elles existent, sinon départ du niveau ;
+## jamais dans un mur ni sur un escalier (on se décale sur une case voisine) et on ne regarde jamais un mur / un escalier.
+func _arrival(target: Dictionary, action: Dictionary) -> Dictionary:
+	var g := DungeonGrid.new(target)
+	var has := func(k: String) -> bool:
+		return action.has(k) and action[k] != null and str(action[k]) != ""
+	var x: int = int(action.targetX) if has.call("targetX") else int(target.get("startX", 1))
+	var y: int = int(action.targetY) if has.call("targetY") else int(target.get("startY", 1))
+	var d: int = int(action.targetDir) if has.call("targetDir") else int(target.get("startDir", 0))
+	var ch := func(cx: int, cy: int) -> String:
+		return g.cell(cx, cy) if (cx >= 0 and cy >= 0 and cx < g.width and cy < g.height) else "#"
+	if ch.call(x, y) == "S" or ch.call(x, y) == "#":
+		for o in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(1, 0), Vector2i(-1, 0)]:
+			var c: String = ch.call(x + o.x, y + o.y)
+			if c != "S" and c != "#":
+				x += o.x
+				y += o.y
+				break
+	var blocked := func(dd: int) -> bool:
+		var v: Vector2i = DungeonGrid.DIRS[dd]
+		var c: String = ch.call(x + v.x, y + v.y)
+		return c == "#" or c == "S"
+	if d < 0 or d > 3 or blocked.call(d):
+		for dd in 4:
+			if not blocked.call(dd):
+				d = dd
+				break
+	return {"x": x, "y": y, "dir": d}
+
+func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) -> void:
 	level = gs.cfg.levels[index]
 	if level_node:
 		level_node.queue_free()
@@ -122,6 +151,8 @@ func load_level(index: int, at_saved: bool = false) -> void:
 	layout.world.add_child(level_node)
 	if at_saved:
 		rig.place(grid, gs.px, gs.py, gs.pdir)
+	elif not arrival.is_empty():
+		rig.place(grid, int(arrival.x), int(arrival.y), int(arrival.dir))
 	else:
 		rig.place(grid, int(level.get("startX", 1)), int(level.get("startY", 1)), int(level.get("startDir", 0)))
 	ctrl.bind_level(level, grid, level_node)
@@ -422,11 +453,15 @@ func _use_stairs(p: Vector2i) -> void:
 			for i in levels.size():
 				if levels[i].id == action.get("targetId"):
 					_transition_regen(levels[i])
-					load_level(i)
+					load_level(i, false, _arrival(levels[i], action))
 					_prompt_save_on_level(levels[i])
 					return
 			show_message("Niveau introuvable : %s" % action.get("targetId"))
 		"victory":
+			var before := gs.inventory.size()
+			gs.inventory = gs.inventory.filter(func(it): return str(it.get("type", "")) != "key")
+			if gs.inventory.size() < before:
+				gs.add_log("🗝️ %d clé(s) devenue(s) inutile(s) ont été laissées derrière en quittant le donjon." % (before - gs.inventory.size()))
 			gs.won = true
 			gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
 			_show_victory()
