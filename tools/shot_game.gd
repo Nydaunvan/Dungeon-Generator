@@ -71,6 +71,21 @@ func _init() -> void:
 							print("trap kind ", it.get("trapKind"))
 							break
 				await create_timer(1.0).timeout
+			"trapui":
+				for it in main.level.items:
+					if str(it.get("type", "")) == "trap":
+						main.inter._prompt_trap(it)
+						break
+				await create_timer(0.8).timeout
+			"trapmid", "trapend":
+				if step == "trapmid":
+					for b in root.find_children("*", "Button", true, false):
+						if (b as Button).text.contains("Crocheter"):
+							(b as Button).pressed.emit()
+							break
+					await create_timer(1.3).timeout
+				else:
+					await create_timer(3.6).timeout
 			"dock":
 				main.dock.open_for(str(main.gs.party[0].id))
 				await create_timer(1.0).timeout

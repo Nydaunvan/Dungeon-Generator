@@ -312,56 +312,47 @@ func _trap_cfg() -> Dictionary:
 			o[k] = float(c[k])
 	return o
 
-## Chance de désamorçage (%) : base + bonus de classe + dextérité de l'équipe.
-func trap_chance() -> int:
+## Détail du calcul de chance : base + bonus de classe + dextérité de l'équipe (comme computeTrapBreakdown).
+func trap_breakdown() -> Dictionary:
 	var s := _trap_cfg()
+	var lines: Array = []
+	var dex_parts: Array = []
 	var raw: float = float(s.base)
+	var dex_total := 0.0
 	for c in gs.alive_party():
 		var cid := str(c.get("classId", ""))
+		var b := 0.0
 		if cid == "class_rogue" or cid == "class_thief":
-			raw += float(s.rogueBonus)
+			b = float(s.rogueBonus)
 		elif cid == "class_assassin":
-			raw += float(s.assassinBonus)
-		var above := maxf(0.0, float(c.get("effDex", c.get("dex", 10))) - 10.0)
-		raw += minf(float(s.dexCap), above) * float(s.dexBonus)
-	return int(round(clampf(raw, float(s.min), maxf(float(s.min), float(s.max)))))
+			b = float(s.assassinBonus)
+		if b != 0.0:
+			lines.append({"name": c.name, "cls": str(Characters.class_def(gs.cfg, cid).get("name", cid)), "val": b})
+			raw += b
+		var dx := float(c.get("effDex", c.get("dex", 10)))
+		var above := maxf(0.0, dx - 10.0)
+		var d := minf(float(s.dexCap), above) * float(s.dexBonus)
+		if d > 0.0:
+			dex_parts.append({"name": c.name, "dex": dx, "val": d, "capped": above > float(s.dexCap)})
+			dex_total += d
+	raw += dex_total
+	var chance := int(round(clampf(raw, float(s.min), maxf(float(s.min), float(s.max)))))
+	var down := 0
+	for c in gs.party:
+		if int(c.hp) <= 0:
+			down += 1
+	return {"s": s, "lines": lines, "dexParts": dex_parts, "dexTotal": dex_total, "raw": int(round(raw)), "chance": chance, "down": down}
+
+func trap_chance() -> int:
+	return int(trap_breakdown().chance)
 
 static func trap_threshold(chance: int) -> int:
 	return clampi(int(ceil(21.0 - chance / 5.0)), 2, 20)
 
 func _prompt_trap(it: Dictionary) -> void:
-	var chance := trap_chance()
-	var m := Modal.open(host, "⚠ Piège : " + str(it.get("name", "")), 400)
-	m.esc_closes = false
-	m.add_text("Le groupe a repéré un piège. Tenter de le désamorcer ?")
-	m.add_text("Chance de réussite : %d %%  (jet de d20 : %d ou plus)" % [chance, trap_threshold(chance)], UiTheme.GOLD)
-	m.add_text("Un 20 naturel est une réussite parfaite, un 1 un échec critique.", UiTheme.DIM, 14, true)
-	m.set_buttons([
-		{"text": "Crocheter", "cb": func(): _roll_trap(m, it, chance)},
-		{"text": "Passer", "cb": func():
-			m.close()
-			_apply_trap(it, 1.0, {})},
-	])
-
-func _roll_trap(m: Modal, it: Dictionary, chance: int) -> void:
-	var thr := trap_threshold(chance)
-	var roll := randi_range(1, 20)
-	var outcome := "crit" if roll == 1 else ("perfect" if roll == 20 else ("success" if roll >= thr else "fail"))
-	for ch in m.content.get_children():
-		ch.queue_free()
-	m.add_text("🎲 Jet : %d / 20  (il fallait %d ou plus)" % [roll, thr], UiTheme.GOLD, 20)
-	var hit := {}
-	match outcome:
-		"perfect": m.add_text("✨ Crochetage parfait !", Color("7fd17f"), 20)
-		"success": m.add_text("🔓 Piège désamorcé", Color("7fd17f"), 20)
-		"fail": m.add_text("❌ Le crochetage échoue", Color("ff8a6a"), 20)
-		_: m.add_text("💥 Échec critique !", Color("ff5a4a"), 20)
-	if outcome == "fail" or outcome == "crit":
-		var mult := 1.0 + float(_trap_cfg().critExtraDmg) / 100.0 if outcome == "crit" else 1.0
-		hit = _pick_victim(it, mult)
-		m.add_text("🎯 %s subira %d dégâts" % [hit.victim.name, int(hit.dmg)], Color("ff8a6a"))
-	m.set_buttons([{"text": "Continuer", "cb": func():
-		m.close()
+	var m := TrapModal.open(host, it, trap_breakdown(), func(mult: float): return _pick_victim(it, mult))
+	m.skipped.connect(func(): _apply_trap(it, 1.0, {}))
+	m.resolved.connect(func(outcome: String, hit: Dictionary):
 		if outcome == "perfect" or outcome == "success":
 			gs.item_state(_lid(), str(it.id))["disarmed"] = true
 			view.entities.remove_item(str(it.id))
@@ -370,7 +361,7 @@ func _roll_trap(m: Modal, it: Dictionary, chance: int) -> void:
 		else:
 			if outcome == "crit":
 				_log("💥 Échec critique ! Le piège frappe plus fort (+%d %%)." % int(_trap_cfg().critExtraDmg), true)
-			_apply_trap(it, 1.0, hit)}])
+			_apply_trap(it, 1.0, hit))
 
 func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
 	var alive := gs.alive_party()
