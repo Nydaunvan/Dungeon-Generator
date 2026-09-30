@@ -149,15 +149,26 @@ func decode_code(code: String) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 ## Portrait (téléphone) : la base 1280×720 rendrait l'interface minuscule ; on agrandit pour viser ~540 unités de large.
+## Dans la scène de jeu, l'interface est dessinée sur une zone de conception 1600 x 1000 (comme la page de l'original) puis
+## réduite/agrandie pour toujours tout afficher, sans ascenseur, quelle que soit la définition de l'écran.
+const GAME_DESIGN := Vector2(1600.0, 1000.0)
+var game_scale_mode: bool = false:
+	set(v):
+		game_scale_mode = v
+		_update_scale()
+
 func _update_scale() -> void:
 	var win := get_window()
 	var sz := Vector2(win.size)
 	if sz.x <= 0.0 or sz.y <= 0.0:
 		return
+	var base := minf(sz.x / 1280.0, sz.y / 720.0)
 	var factor := 1.0
 	if sz.x < sz.y * 1.05:
-		var base := minf(sz.x / 1280.0, sz.y / 720.0)
 		factor = clampf((sz.x / 540.0) / base, 1.0, 8.0)
+	elif game_scale_mode:
+		var real := minf(sz.x / GAME_DESIGN.x, sz.y / GAME_DESIGN.y)
+		factor = real / base
 	win.content_scale_factor = factor
 
 ## Bandeau « Jouer ce donjon » de l'administration (création d'un donjon personnel).

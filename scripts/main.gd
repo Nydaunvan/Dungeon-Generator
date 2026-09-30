@@ -22,7 +22,11 @@ var _message_tween: Tween
 var _popup_layer: Control
 var _modal_layer: CanvasLayer
 
+func _exit_tree() -> void:
+	Data.game_scale_mode = false
+
 func _ready() -> void:
+	Data.game_scale_mode = true
 	var cfg: Dictionary = Data.active()
 	print("Donjon : ", cfg.get("title", "?"))
 	var resume := not Data.pending_save.is_empty()

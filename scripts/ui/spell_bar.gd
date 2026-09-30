@@ -60,7 +60,7 @@ func _apply_size() -> void:
 	if w == _last_w or w <= 0.0:
 		return
 	_last_w = w
-	var s := UiMetrics.css(clampf(0.09 * w * UiMetrics.s, 30.0, 46.0))
+	var s := UiMetrics.css(clampf(0.09 * w, 30.0, 46.0))
 	slot_size = s
 	add_theme_constant_override("separation", int(maxf(2.0, floorf((w - s * float(SLOTS + 1)) / float(SLOTS)))))
 	_attack.custom_minimum_size = Vector2(s, s)

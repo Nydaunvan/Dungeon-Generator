@@ -25,7 +25,7 @@ static func update(node: Node) -> bool:
 
 ## px CSS de l'original -> px de conception. Sur mobile (portrait) l'original réduit déjà ses tailles : on garde ses valeurs mobiles.
 static func css(px: float) -> float:
-	return px / s if not portrait else px * 1.15
+	return px if not portrait else px * 1.15
 
 static func register(b) -> void:
 	_boxes.append(b)

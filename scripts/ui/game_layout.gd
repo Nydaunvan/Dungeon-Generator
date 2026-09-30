@@ -609,7 +609,7 @@ func _rebuild() -> void:
 		for p in [panel_map, panel_bag, panel_log]:
 			p.custom_minimum_size = Vector2(0, 0)
 		panel_bag.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		panel_bag.size_flags_stretch_ratio = 1.0
+		panel_bag.size_flags_stretch_ratio = 1.5
 		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		panel_log.size_flags_stretch_ratio = 1.0
 		panel_menu.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -627,13 +627,13 @@ func _size_widgets() -> void:
 	add_theme_constant_override("margin_top", int(UiMetrics.css(12.0 if not _portrait else 4.0)))
 	add_theme_constant_override("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
-	hud.custom_minimum_size = Vector2(0, hh if not _portrait else clampf(h * 0.2, 110.0, 220.0))
+	hud.custom_minimum_size = Vector2(0, UiMetrics.css(292.0) if not _portrait else clampf(h * 0.2, 110.0, 220.0))
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
 	header.rescale()
 	var right: Node = _root.get_node_or_null("Main/Right")
 	if right:
-		var wreal := w * UiMetrics.s
-		(right as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.175 * wreal + 56.0, 260.0, 420.0)), 0)
+		var wreal := w
+		(right as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.175 * wreal + 56.0, 260.0, 460.0)), 0)
 	_size_overlays()
 
 func _size_overlays() -> void:
