@@ -152,6 +152,11 @@ func _build_main() -> void:
 		b.pressed.connect(func(): _select_tab(id))
 		_tab_bar.add_child(b)
 		_tab_buttons[id] = b
+	var tut := Button.new()
+	tut.text = "🧭 Tutoriel"
+	tut.focus_mode = Control.FOCUS_NONE
+	tut.pressed.connect(func(): DocModal.tutorial(_modal_layer))
+	_tab_bar.add_child(tut)
 	_status = Label.new()
 	_status.add_theme_color_override("font_color", UiTheme.HP_GREEN)
 	_status.add_theme_font_size_override("font_size", 13)

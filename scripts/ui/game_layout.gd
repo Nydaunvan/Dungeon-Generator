@@ -312,6 +312,11 @@ func _rebuild() -> void:
 	_root = v
 	add_child(v)
 	v.add_child(header)
+	_title.add_theme_font_size_override("font_size", 15 if _portrait else 26)
+	for b in _title.get_parent().get_children():
+		if b is Button:
+			b.add_theme_font_size_override("font_size", 10 if _portrait else 16)
+			b.custom_minimum_size = Vector2(0, 0)
 	if _portrait:
 		frame.size_flags_stretch_ratio = 3.0
 		v.add_child(frame)
