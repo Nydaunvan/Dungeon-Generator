@@ -5,6 +5,7 @@ extends Node3D
 var grid: DungeonGrid
 var doors: Dictionary = {}   # id de porte -> Array[MeshInstance3D]
 var entities: EntityLayer
+var stage: CombatStage
 
 func open_door(id: String, instant: bool = false) -> void:
 	if grid.opened.has(id):

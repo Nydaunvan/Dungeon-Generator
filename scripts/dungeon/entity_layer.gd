@@ -164,11 +164,11 @@ func _entity_height(icon: String, is_boss: bool, is_item: bool) -> float:
 		return float(ov.get(id, 1.0))
 	return 2.2 if is_boss else 1.5
 
-func _make_sprite(icon: String, is_boss: bool, is_item: bool) -> MeshInstance3D:
+func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0) -> MeshInstance3D:
 	var mat := _material_for(icon, is_boss, is_item)
 	if mat == null:
 		return null
-	var h := _entity_height(icon, is_boss, is_item) * 1.3
+	var h := _entity_height(icon, is_boss, is_item) * 1.3 * mult
 	var mi := MeshInstance3D.new()
 	var q := QuadMesh.new()
 	q.size = Vector2(h, h)
@@ -176,6 +176,11 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool) -> MeshInstance3D:
 	mi.material_override = mat
 	mi.set_meta("h", h)
 	return mi
+
+## Décalage vertical d'ancrage (fraction de la hauteur) propre à certaines icônes.
+func anchor_offset(icon: String) -> float:
+	var anchors: Dictionary = Data.constants.get("ANCHOR_OFFSET", {})
+	return float(anchors.get(_icon_id(icon), 0.0))
 
 func _place_on_floor(n: MeshInstance3D, p: Vector2i, icon: String, is_item: bool = false) -> void:
 	var h: float = n.get_meta("h")

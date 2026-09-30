@@ -75,6 +75,11 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	view.add_child(ents)
 	ents.populate(level)
 	view.entities = ents
+	var stage := CombatStage.new()
+	stage.name = "CombatStage"
+	stage.view = view
+	view.add_child(stage)
+	view.stage = stage
 	if outdoor:
 		Outdoor.decorate(view, level)
 	return view

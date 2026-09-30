@@ -454,11 +454,14 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	var is_group: bool = bool(target.get("isGroup", false)) and st.has("members")
 	var holders: Array = []
 	if is_group:
-		for mem in st.members:
-			if mem.alive:
-				holders.append(mem)
-				if not all_members:
-					break
+		if all_members:
+			for mem in st.members:
+				if mem.alive:
+					holders.append(mem)
+		else:
+			var sel := gs.selected_member_idx(str(target.id), st)   # membre choisi par le joueur (clic sur le monstre)
+			if sel >= 0:
+				holders.append(st.members[sel])
 	else:
 		holders.append(st)
 	for h in holders:

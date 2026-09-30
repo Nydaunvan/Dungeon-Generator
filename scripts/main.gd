@@ -5,6 +5,7 @@ extends Node3D
 ##   X ou Espace : attaquer (ou interagir s'il n'y a rien à frapper) · F/Entrée : interagir · C : fuir
 
 var level_index: int = 0
+var level: Dictionary = {}
 var gs: GameState
 var grid: DungeonGrid
 var level_node: LevelView
@@ -95,12 +96,14 @@ func _ready() -> void:
 
 	ctrl.changed.connect(_check_choices)
 	ctrl.changed.connect(_update_music)
+	ctrl.changed.connect(_sync_stage)
+	layout.stage.gui_input.connect(_on_stage_input)
 	load_level(level_index, resume)
 	if resume:
 		gs.add_log("📂 Partie chargée.")
 
 func load_level(index: int, at_saved: bool = false) -> void:
-	var level: Dictionary = gs.cfg.levels[index]
+	level = gs.cfg.levels[index]
 	if level_node:
 		level_node.queue_free()
 	level_index = index
@@ -136,6 +139,37 @@ func load_level(index: int, at_saved: bool = false) -> void:
 		ctrl.changed.connect(layout.minimap.queue_redraw)
 	show_message(str(level.name))
 	_update_music()
+	_sync_stage()
+
+## Salle de combat scellée : active pendant un combat (monstre ou groupe entier visible), sinon le couloir normal.
+func _sync_stage() -> void:
+	if level_node == null or level_node.stage == null or ctrl == null or ctrl.combat == null:
+		return
+	var stage := level_node.stage
+	stage.camera = rig.camera
+	if not ctrl.in_combat():
+		stage.exit()
+		return
+	var eng := ctrl.combat.engaged()
+	var def: Dictionary = eng.monster
+	var mst: Dictionary = ctrl.combat.lstate().monsters[str(def.id)]
+	var sel := -1
+	if bool(def.get("isGroup", false)) and mst.has("members"):
+		sel = gs.selected_member_idx(str(def.id), mst)
+	stage.enter(str(level.get("theme", "stone")), Vector2i(rig.gx, rig.gy), int(eng.dir), def, mst, sel)
+
+## Clic sur un monstre du groupe pendant le combat : il devient la cible.
+func _on_stage_input(ev: InputEvent) -> void:
+	if not (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if level_node == null or level_node.stage == null or not level_node.stage.active:
+		return
+	var idx := level_node.stage.pick(ev.position)
+	if idx < 0:
+		return
+	var def: Dictionary = ctrl.combat.engaged().monster
+	gs.selected_member[str(def.id)] = idx
+	ctrl.changed.emit()
 
 ## Ciel, brouillard clair et pas de torche dans le village ; ténèbres dans les donjons.
 func _apply_outdoor(outdoor: bool) -> void:

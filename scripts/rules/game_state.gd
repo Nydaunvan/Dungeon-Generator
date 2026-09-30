@@ -26,6 +26,21 @@ var run_number: int = 1
 var run_mods_chosen: bool = false
 var in_village: bool = false
 var village_prev: Dictionary = {}   # donjon quitté pour le village : {levels, level_index, x, y, dir}
+var selected_member: Dictionary = {}   # id de groupe de monstres -> membre visé (pas sauvegardé, comme un simple état d'affichage)
+
+## Membre visé d'un groupe : celui choisi par le joueur s'il est vivant, sinon le premier vivant (-1 si tous morts).
+func selected_member_idx(id: String, st: Dictionary) -> int:
+	var members: Array = st.get("members", [])
+	var i := int(selected_member.get(id, 0))
+	if i >= 0 and i < members.size() and bool(members[i].alive):
+		return i
+	i = -1
+	for k in members.size():
+		if bool(members[k].alive):
+			i = k
+			break
+	selected_member[id] = i
+	return i
 
 const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
 	"bestiary", "log_lines", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_mods_chosen", "in_village", "village_prev"]
@@ -108,4 +123,5 @@ func _monster_state(m: Dictionary) -> Dictionary:
 		for i in size:
 			members.append({"hp": d.maxHp, "maxHp": d.maxHp, "alive": true})
 		st["members"] = members
+		st["mirrorSlot"] = randi() % size   # un membre du groupe est affiché en miroir pour varier l'aspect
 	return st
