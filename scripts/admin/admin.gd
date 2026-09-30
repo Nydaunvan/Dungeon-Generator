@@ -17,6 +17,7 @@ var _modal_layer: CanvasLayer
 var _pw_input: LineEdit
 var _pw_error: Label
 var _tab_buttons: Dictionary = {}
+var _scroll: ScrollContainer
 
 func _ready() -> void:
 	theme = UiTheme.shared()
@@ -148,6 +149,7 @@ func _build_main() -> void:
 	_status.add_theme_font_size_override("font_size", 13)
 	_main.add_child(_status)
 	var scroll := ScrollContainer.new()
+	_scroll = scroll
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_main.add_child(scroll)
@@ -186,7 +188,12 @@ func _select_tab(id: String) -> void:
 
 ## Recharge l'onglet courant (après une modification qui change sa structure).
 func refresh_tab() -> void:
+	var keep := _scroll.scroll_vertical if _scroll != null else 0
 	_select_tab(_tab)
+	if _scroll != null:
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_scroll.scroll_vertical = keep
 
 func modals() -> Node:
 	return _modal_layer
