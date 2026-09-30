@@ -361,7 +361,7 @@ func _on_bag_item(idx: int) -> void:
 
 func _on_turned() -> void:
 	# Un simple quart de tour ne déclenche ni objet, ni tour de jeu (comme l'original).
-	layout.minimap.queue_redraw()
+	layout.minimap.reveal()
 	ctrl.refresh()
 
 func _on_moved() -> void:

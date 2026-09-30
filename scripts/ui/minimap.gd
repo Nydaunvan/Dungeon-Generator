@@ -36,14 +36,22 @@ func mark_visited() -> void:
 	ls.get_or_add("visited", {})[_k(rig.gx, rig.gy)] = true
 	ls.get_or_add("seen", {})[_k(rig.gx, rig.gy)] = true
 
-## Découvre les 4 cases devant le groupe (et la suivante, même si c'est un mur).
+## Comme l'original : on découvre, devant le groupe, les cases jusqu'à 4 pas de profondeur (et la suivante),
+## mais la vue s'arrête au premier obstacle (mur, porte fermée, arche).
 func reveal() -> void:
 	if grid == null:
 		return
 	var seen: Dictionary = _ls().get_or_add("seen", {})
 	var v: Vector2i = DungeonGrid.DIRS[rig.dir]
-	for d in 5:
-		seen[_k(rig.gx + v.x * d, rig.gy + v.y * d)] = true
+	for d in 4:
+		var px := rig.gx + v.x * d
+		var py := rig.gy + v.y * d
+		var nx := px + v.x
+		var ny := py + v.y
+		seen[_k(px, py)] = true
+		seen[_k(nx, ny)] = true
+		if not grid.is_walkable(nx, ny):
+			break
 	queue_redraw()
 
 func _max_zoom() -> int:
@@ -146,8 +154,24 @@ func _draw() -> void:
 	var v: Vector2i = DungeonGrid.DIRS[rig.dir]
 	var f := Vector2(v.x, v.y)
 	var side := Vector2(-f.y, f.x)
-	var r2 := cs * 0.45
-	draw_colored_polygon(PackedVector2Array([pc + f * r2, pc - f * r2 * 0.7 + side * r2 * 0.7, pc - f * r2 * 0.7 - side * r2 * 0.7]), UiTheme.GOLD)
+	if full:
+		# carte plein écran : flèche blanche cernée de noir (comme le canvas d'origine)
+		var pts := PackedVector2Array([pc + f * cs * 0.5, pc - f * cs * 0.35 + side * cs * 0.32, pc - f * cs * 0.35 - side * cs * 0.32])
+		draw_colored_polygon(pts, Color.WHITE)
+		pts.append(pts[0])
+		draw_polyline(pts, Color.BLACK, 1.0, true)
+	else:
+		# mini-carte : « ▲ » #ffd88a de 17 px, double contour noir et halo doré (text-shadow de l'original)
+		var r2 := maxf(cs * 0.5, UiMetrics.css(9.0))
+		var tip := pc + f * r2
+		var bl := pc - f * r2 * 0.75 + side * r2 * 0.8
+		var br := pc - f * r2 * 0.75 - side * r2 * 0.8
+		for i in 4:
+			draw_circle(pc, r2 * (1.7 - i * 0.22), Color(1.0, 0.85, 0.54, 0.09))
+		var tri := PackedVector2Array([tip, bl, br])
+		var ol := PackedVector2Array([tip, bl, br, tip])
+		draw_polyline(ol, Color(0, 0, 0, 0.95), maxf(3.5, r2 * 0.45), true)
+		draw_colored_polygon(tri, Color("ffd88a"))
 
 ## Proportions du canevas de l'original (cases visibles en largeur / hauteur) : le cadre s'y adapte.
 func view_aspect() -> float:

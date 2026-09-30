@@ -117,6 +117,7 @@ func refresh() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.icon = IconResolver.texture(str(it.get("icon", "")))
 		b.expand_icon = true
+		bare_tile(b)
 		b.tooltip_text = str(it.get("name", ""))
 		var i2 := idx
 		b.pressed.connect(func(): item_pressed.emit(i2))
@@ -139,6 +140,27 @@ func refresh() -> void:
 		shown += 1
 	_empty.text = "" if shown > 0 else str(EMPTY[_tab])
 
+
+## Case d'objet de la besace : fond plat, aucun cadre, liseré ni halo autour de l'objet.
+static func bare_tile(b: Button, selected: bool = false) -> void:
+	var mk := func(c: Color) -> StyleBoxFlat:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = c
+		sb.set_corner_radius_all(int(UiMetrics.css(5.0)))
+		sb.set_content_margin_all(UiMetrics.css(3.0))
+		sb.set_border_width_all(0)
+		sb.shadow_size = 0
+		return sb
+	var base: Color = Color("2a1f12") if selected else Color("120c07")
+	var hot: Color = Color("33261a") if selected else Color("1c140c")
+	b.add_theme_stylebox_override("normal", mk.call(base))
+	b.add_theme_stylebox_override("pressed", mk.call(base))
+	b.add_theme_stylebox_override("hover", mk.call(hot))
+	b.add_theme_stylebox_override("hover_pressed", mk.call(hot))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 ## Onglet trapèze de la besace (clip-path polygon(10% 0, 90% 0, 100% 100%, 0 100%)) : dégradé, reflet, filet or si actif.
 class TrapBox extends StyleBox:

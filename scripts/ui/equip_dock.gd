@@ -357,7 +357,20 @@ func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 	var x := Button.new()
 	x.text = "✕"
 	x.focus_mode = Control.FOCUS_NONE
-	x.custom_minimum_size = Vector2(32, 32)
+	x.custom_minimum_size = Vector2(30, 30)
+	x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	x.add_theme_font_size_override("font_size", 15)
+	x.add_theme_color_override("font_color", Color("e2d2b0"))
+	x.add_theme_color_override("font_hover_color", Color("ffd88a"))
+	for st in ["normal", "hover", "pressed", "hover_pressed"]:
+		var xs := StyleBoxFlat.new()    # carré net, sans halo
+		xs.bg_color = Color("3a2c1a") if st == "normal" else Color("56401f")
+		xs.border_color = Color("8a6a36")
+		xs.set_border_width_all(1)
+		xs.set_corner_radius_all(2)
+		xs.set_content_margin_all(2)
+		x.add_theme_stylebox_override(st, xs)
+	x.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	x.pressed.connect(close)
 	row.add_child(x)
 	return row
@@ -504,9 +517,10 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 		var b := Button.new()
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(48, 30)
-		b.icon = IconResolver.texture(tdef[1])
-		b.expand_icon = true
+		b.custom_minimum_size = Vector2(56, 34)
+		for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+			b.add_theme_stylebox_override(st, BagPanel.TrapBox.new(st in ["pressed", "hover_pressed"], st.begins_with("hover")))
+		b.add_child(_icon_node(tdef[1], 5.0, 18))
 		b.button_pressed = tab == tdef[0]
 		b.tooltip_text = Inventory.TAB_LABELS[tdef[0]]
 		var tid: String = tdef[0]
@@ -534,15 +548,7 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 			tile.expand_icon = true
 			tile.tooltip_text = str(it.get("name", ""))
 			var is_sel: bool = not resolved.is_empty() and resolved.src == "bag" and sel.get("key") == e.key
-			var border := Color("3b2d18")
-			if bool(it.get("legendary", false)):
-				border = Color("ffb84d")
-			if is_sel:
-				border = UiTheme.GOLD
-			var st := UiTheme.box(Color("120c07"), border, 2, 8)
-			tile.add_theme_stylebox_override("normal", st)
-			tile.add_theme_stylebox_override("pressed", st)
-			tile.add_theme_stylebox_override("hover", UiTheme.box(Color("120c07"), UiTheme.GOLD if is_sel else UiTheme.BRONZE_LIGHT, 2, 8))
+			BagPanel.bare_tile(tile, is_sel)
 			if e.count > 1:
 				var cnt := _label(str(e.count), 12, UiTheme.GOLD, UiTheme.F_BODY_BOLD)
 				cnt.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -560,8 +566,10 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 			cell = tile
 		else:
 			var empty := Panel.new()
-			empty.add_theme_stylebox_override("panel", UiTheme.box(Color("120c07"), Color("3b2d18"), 2, 8))
-			empty.modulate = Color(1, 1, 1, 0.3)
+			var esb := StyleBoxFlat.new()
+			esb.bg_color = Color("0e0906")
+			esb.set_corner_radius_all(5)
+			empty.add_theme_stylebox_override("panel", esb)
 			cell = empty
 		cell.custom_minimum_size = Vector2(56, 56)
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -735,9 +743,13 @@ func _grow_drawer(animate: bool) -> void:
 	var target := _drawer_inner.get_combined_minimum_size().y + 4.0
 	if animate:
 		var t := create_tween()
-		t.tween_property(_drawer_clip, "custom_minimum_size:y", target, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_method(func(h: float):
+			if is_instance_valid(_drawer_clip):
+				_drawer_clip.custom_minimum_size.y = h
+				_refit(), 0.0, target, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	else:
 		_drawer_clip.custom_minimum_size.y = target
+		_refit()
 
 func _toggle_details() -> void:
 	details_open = not details_open

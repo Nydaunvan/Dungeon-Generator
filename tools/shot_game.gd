@@ -114,6 +114,11 @@ func _init() -> void:
 			"dock":
 				main.dock.open_for(str(main.gs.party[0].id))
 				await create_timer(1.0).timeout
+			"dockdetails":
+				main.dock.open_for(str(main.gs.party[0].id))
+				await create_timer(0.6).timeout
+				main.dock._toggle_details()
+				await create_timer(1.0).timeout
 			"closedock":
 				main.dock.close()
 				await create_timer(0.5).timeout

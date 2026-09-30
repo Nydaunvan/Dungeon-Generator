@@ -24,8 +24,11 @@ func _init(fill: Color = Color.WHITE, height: int = 18, font_size: int = 12) -> 
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_label.add_theme_font_size_override("font_size", font_size)
 	_label.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-	_label.add_theme_constant_override("outline_size", 3)
-	_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_label.add_theme_color_override("font_color", Color("fffaf0"))
+	_label.add_theme_color_override("font_outline_color", Color(0.04, 0.02, 0.01, 0.96))
+	_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	_label.add_theme_constant_override("shadow_offset_y", 1)
+	_label.add_theme_constant_override("outline_size", 4)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_label)
 
@@ -49,3 +52,4 @@ func set_height(px: float) -> void:
 
 func set_font_size(px: int) -> void:
 	_label.add_theme_font_size_override("font_size", px)
+	_label.add_theme_constant_override("outline_size", maxi(3, int(round(px * 0.3))))
