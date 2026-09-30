@@ -213,10 +213,13 @@ func _material_for(icon: String, is_boss: bool, is_item: bool) -> StandardMateri
 	var single := "res://assets/icons/%s.webp" % id
 	if not ResourceLoader.exists(single):
 		single = "res://assets/icons/%s.png" % id
+	var hd := "res://assets/monsters/%s.webp" % id
 	if NEW_MONSTER_IDS.has(id):
-		mat = _sheet_material(MONSTER_SHEET, NEW_MONSTER_IDS.find(id), MONSTER_COLS, 1)
+		mat = _monster_cell(NEW_MONSTER_IDS.find(id))
 	elif remake.has(id) and not is_boss:
-		mat = _sheet_material(MONSTER_SHEET, int(remake[id]), MONSTER_COLS, 1)
+		mat = _monster_cell(int(remake[id]))
+	elif ResourceLoader.exists(hd):
+		mat = _base_material(load(hd))      # vignette individuelle agrandie ×2 (Lanczos + netteté)
 	elif legacy.has(id):
 		mat = _sheet_material(ITEM_SHEET, int(legacy[id]), ITEM_COLS, ITEM_ROWS)
 	elif id.begins_with("spr_") and id.substr(4).is_valid_int():
@@ -226,6 +229,13 @@ func _material_for(icon: String, is_boss: bool, is_item: bool) -> StandardMateri
 	_mats[key] = mat
 	return mat
 
+## Cellule de la planche des monstres, pré-découpée et agrandie ×2 (mipmaps propres à chaque sprite, sans bavure entre voisins).
+static func _monster_cell(index: int) -> StandardMaterial3D:
+	var path := "res://assets/monsters/m%02d.webp" % index
+	if ResourceLoader.exists(path):
+		return _base_material(load(path))
+	return _sheet_material(MONSTER_SHEET, index, MONSTER_COLS, 1)
+
 static func _base_material(tex: Texture2D) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -234,7 +244,7 @@ static func _base_material(tex: Texture2D) -> StandardMaterial3D:
 	m.billboard_keep_scale = true
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.albedo_texture = tex
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	return m
 
 static func _sheet_material(path: String, index: int, cols: int, rows: int) -> StandardMaterial3D:
