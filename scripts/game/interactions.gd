@@ -378,6 +378,7 @@ func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
 func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
 	if not bool(it.get("permanent", false)):
 		gs.item_state(_lid(), str(it.id))["taken"] = true
+		view.entities.remove_item(str(it.id))     # piège à usage unique : il disparaît une fois déclenché
 	var hit: Dictionary = pre if not pre.is_empty() else _pick_victim(it, mult)
 	var victim: Dictionary = hit.victim
 	victim["hp"] = maxi(0, int(victim.hp) - int(hit.dmg))
