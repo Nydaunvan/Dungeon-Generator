@@ -94,7 +94,8 @@ static func _card(host: VBoxContainer, admin: Node, idx: int) -> void:
 				ok = it.get("type") == "armor" and it.get("slot") == sid
 			if ok:
 				options.append([it.id, AdminUtil.item_label(it)])
-		AdminUtil.chip(eq, str(slot.label), AdminUtil.dropdown(options, se.get(sid, ""), func(v): se[sid] = v, 190.0))
+		var on_eq := func(v): se[sid] = v
+		AdminUtil.chip(eq, str(slot.label), AdminUtil.dropdown(options, se.get(sid, ""), on_eq, 190.0))
 
 	# sorts connus
 	body.add_child(AdminUtil.label("Sorts et compétences connus au départ", 14, UiTheme.GOLD))

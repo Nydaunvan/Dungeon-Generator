@@ -41,9 +41,10 @@ static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
 		var opts: Array = []
 		for n in AdminUtil.BASE_ARCHETYPES:
 			opts.append([n, n])
-		top.add_child(AdminUtil.dropdown(opts, cls.get("name", ""), func(v):
+		var on_name := func(v):
 			cls["name"] = v
-			admin.refresh_tab(), 200.0))
+			admin.refresh_tab()
+		top.add_child(AdminUtil.dropdown(opts, cls.get("name", ""), on_name, 200.0))
 	else:
 		var e := LineEdit.new()
 		e.text = str(cls.get("name", ""))
@@ -56,9 +57,10 @@ static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
 		var dep: Array = []
 		for n in AdminUtil.BASE_ARCHETYPES:
 			dep.append([n, n])
-		AdminUtil.chip(top, "Dépend de", AdminUtil.dropdown(dep, cls.get("evolvesFrom", "Guerrier"), func(v):
+		var on_dep := func(v):
 			cls["evolvesFrom"] = v
-			admin.refresh_tab(), 160.0))
+			admin.refresh_tab()
+		AdminUtil.chip(top, "Dépend de", AdminUtil.dropdown(dep, cls.get("evolvesFrom", "Guerrier"), on_dep, 160.0))
 	var rm := Button.new()
 	rm.text = "Supprimer"
 	rm.focus_mode = Control.FOCUS_NONE
@@ -132,9 +134,9 @@ static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
 		var chip := Button.new()
 		chip.focus_mode = Control.FOCUS_NONE
 		chip.text = "Niv. %d → %s ✕" % [int(p.level), AdminUtil.spell_label(s2) if not s2.is_empty() else "?"]
-		var pi := i
+		var pidx := i
 		chip.pressed.connect(func():
-			prog.remove_at(pi)
+			prog.remove_at(pidx)
 			admin.refresh_tab())
 		pf.add_child(chip)
 	var add_row := AdminUtil.flow(b)
@@ -145,7 +147,8 @@ static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
 	if not spell_opts.is_empty():
 		draft.spellId = spell_opts[0][0]
 	AdminUtil.chip(add_row, "Niveau", AdminUtil.mini_number(draft, "level", 1, 60, 3))
-	add_row.add_child(AdminUtil.dropdown(spell_opts, draft.spellId, func(v): draft.spellId = v, 240.0))
+	var on_spell := func(v): draft.spellId = v
+	add_row.add_child(AdminUtil.dropdown(spell_opts, draft.spellId, on_spell, 240.0))
 	var add := Button.new()
 	add.text = "+ Ajouter"
 	add.focus_mode = Control.FOCUS_NONE
@@ -183,7 +186,8 @@ static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
 				cand.append([c.id, "%s %s" % [c.get("icon", "") if AdminUtil.is_emoji_icon(str(c.get("icon", ""))) else "", c.name]])
 		for slot in 2:
 			var sl := slot
-			ev.add_child(AdminUtil.dropdown(cand, to[sl] if to[sl] != null else "", func(v): to[sl] = v if v != "" else null, 220.0))
+			var on_evo := func(v): to[sl] = v if v != "" else null
+			ev.add_child(AdminUtil.dropdown(cand, to[sl] if to[sl] != null else "", on_evo, 220.0))
 		Form.hint(b, "Voies d'évolution : classes évoluées dont la dépendance pointe vers cette classe de base.")
 
 	# talents
