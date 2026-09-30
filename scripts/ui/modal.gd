@@ -19,6 +19,17 @@ static func open(host: Node, title: String, width: float = 380.0) -> Modal:
 	host.add_child(m)
 	return m
 
+## Variante « .slots-box » : titre à gauche, croix carrée à droite, liste paddée.
+static func open_framed(host: Node, title: String, width: float = 560.0) -> Modal:
+	var m := Modal.new()
+	m._width = width
+	m._framed_title = title
+	m._build("")
+	host.add_child(m)
+	return m
+
+var _framed_title: String = ""
+
 func _build(title: String) -> void:
 	add_to_group("modal")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -34,6 +45,8 @@ func _build(title: String) -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	panel = OrnatePanel.new(title)
+	if _framed_title != "":
+		panel.use_framed_header(_framed_title, close)
 	var vp := get_viewport_rect().size if is_inside_tree() else Vector2(1280, 720)
 	panel.custom_minimum_size = Vector2(minf(_width, vp.x - 24.0), 0)
 	center.add_child(panel)

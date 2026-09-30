@@ -15,12 +15,14 @@ var hooks: bool = false:
 		hooks = v
 		queue_redraw()
 var _box: FrameBox
+var _v: VBoxContainer
 
 func _init(title: String = "") -> void:
 	_box = FrameBox.new(18.0, Vector4(12, 10, 12, 10))
 	add_theme_stylebox_override("panel", _box)
 	clip_contents = false
 	var v := VBoxContainer.new()
+	_v = v
 	v.add_theme_constant_override("separation", 4)
 	add_child(v)
 	if title != "":
@@ -68,3 +70,57 @@ func _draw() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		queue_redraw()
+
+## En-tête « .changelog-header » de l'original (fenêtres de sauvegarde, aide…) : titre doré à gauche, croix carrée rivetée
+## à droite, filet #5a4526 en dessous ; le corps est paddé de 16/20 px.
+func use_framed_header(title: String, on_close: Callable) -> void:
+	_box.pad_css = Vector4(0, 0, 0, 0)
+	_box.rescale()
+	_v.add_theme_constant_override("separation", 0)
+	var head := MarginContainer.new()
+	for side in ["left", "right"]:
+		head.add_theme_constant_override("margin_" + side, int(UiMetrics.css(20.0)))
+	for side in ["top", "bottom"]:
+		head.add_theme_constant_override("margin_" + side, int(UiMetrics.css(14.0)))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	head.add_child(row)
+	var t := Label.new()
+	t.text = title
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	t.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	t.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.12)))
+	t.add_theme_color_override("font_color", Color("ffd88a"))
+	t.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	t.add_theme_constant_override("outline_size", 2)
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(t)
+	var x := Button.new()
+	x.text = "✕"
+	x.focus_mode = Control.FOCUS_NONE
+	x.custom_minimum_size = Vector2(UiMetrics.css(32.0), UiMetrics.css(32.0))
+	x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	x.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.0)))
+	x.add_theme_color_override("font_color", Color("e2d2b0"))
+	x.add_theme_color_override("font_hover_color", Color("f5cccc"))
+	var st := IronBox.button_styles(Color("b03a3a"))
+	for k in st:
+		x.add_theme_stylebox_override(k, st[k])
+	x.pressed.connect(func(): on_close.call())
+	row.add_child(x)
+	_v.add_child(head)
+	_v.move_child(head, 0)
+	var line := ColorRect.new()
+	line.color = Color("5a4526")
+	line.custom_minimum_size = Vector2(0, maxf(1.0, UiMetrics.css(1.0)))
+	_v.add_child(line)
+	_v.move_child(line, 1)
+	var pad := MarginContainer.new()
+	pad.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for side in ["left", "right"]:
+		pad.add_theme_constant_override("margin_" + side, int(UiMetrics.css(20.0)))
+	for side in ["top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, int(UiMetrics.css(16.0)))
+	body.reparent(pad)
+	_v.add_child(pad)
