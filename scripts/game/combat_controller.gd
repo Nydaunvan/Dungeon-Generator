@@ -151,6 +151,11 @@ func card_pressed(char_id: String) -> void:
 func flee() -> void:
 	if not in_combat() or _busy:
 		return
+	do_flee()
+
+func do_flee() -> void:
+	if not in_combat() or _busy:
+		return
 	sync_position()
 	var dest := combat.flee()
 	if dest.x >= 0:

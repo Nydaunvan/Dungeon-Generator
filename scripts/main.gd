@@ -120,6 +120,9 @@ func load_level(index: int, at_saved: bool = false) -> void:
 		if gs.item_state(str(level.id), str(it.id)).get("taken", false):
 			level_node.entities.remove_item(str(it.id))
 	_apply_outdoor(bool(level.get("outdoor", false)))
+	if not bool(level.get("outdoor", false)):
+		env.ambient_light_energy = float(level.get("lightAmbient", 1.1))
+		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig, gs)
 	layout.minimap.merchant_cell = func():
@@ -243,7 +246,9 @@ func _on_command(cmd: String) -> void:
 		"interact": _interact()
 		"flee":
 			if ctrl.in_combat():
-				ctrl.flee()
+				if get_tree().get_nodes_in_group("modal").is_empty():
+					Dialogs.confirm(_modals(), "🏃 Fuir le combat ?", "Le groupe s'enfuit vers un endroit proche, hors de vue du monstre. Chacun perd la moitié de son endurance actuelle.",
+						ctrl.do_flee, "Fuir", "Rester")
 			else:
 				show_message("Personne ne vous menace")
 
