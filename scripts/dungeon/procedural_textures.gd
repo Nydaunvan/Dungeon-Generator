@@ -44,6 +44,30 @@ static func _hex(v: int) -> Color:
 	return Color.hex((v << 8) | 0xff)
 
 ## Grille de fer (porte) : barreaux verticaux + 3 traverses, fond transparent.
+## Matériau de grille de fer forgé (portes et arches verrouillées) : texture HD neutre teintée par le thème du niveau,
+## bord lissé (alpha-to-coverage) et léger reflet métallique.
+static func grille_material(theme: String) -> StandardMaterial3D:
+	var key := "grille_mat_" + theme
+	if _cache.has(key):
+		return _cache[key]
+	var tints: Dictionary = Data.constants.get("DOOR_TINTS", {})
+	var tint: Dictionary = tints.get(theme, tints.get("stone", {"metal": "#7a7a78"}))
+	var metal := Color(str(tint.get("metal", "#7a7a78")))
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load("res://assets/ui/door_grille.png")
+	var iron := Color(0.78, 0.8, 0.84).lerp(Color(clampf(metal.r * 1.4, 0.0, 1.0), clampf(metal.g * 1.4, 0.0, 1.0), clampf(metal.b * 1.4, 0.0, 1.0)), 0.4)   # fer forgé, à peine teinté par le thème
+	m.albedo_color = iron
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	m.alpha_scissor_threshold = 0.5
+	m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.roughness = 0.62
+	m.metallic = 0.25
+	m.metallic_specular = 0.5
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	_cache[key] = m
+	return m
+
 static func door(theme: String) -> Texture2D:
 	var key := "door_" + theme
 	if _cache.has(key):
