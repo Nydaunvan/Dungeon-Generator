@@ -62,7 +62,7 @@ func populate(level: Dictionary) -> void:
 			_place_on_floor(n, p, str(it.get("icon", "")), true)
 		n.visible = not bool(it.get("startHidden", false))
 		add_child(n)
-		if type != "decor":
+		if type != "decor" or str(it.get("wall", "")) == "":
 			_register(items, p, n, it)
 
 ## PNJ fixe (forgeron, maître des talents) : grand sprite posé au sol.

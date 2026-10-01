@@ -464,6 +464,7 @@ func _use_stairs(p: Vector2i) -> void:
 			if gs.cfg.levels[i].id == action.get("targetId"):
 				going_up = i <= gs.level_index
 	Sound.sfx("stairs", going_up)
+	StairsDust.pulse(layout.world, rig.camera, going_up)
 	match str(action.get("type", "victory")) if not action.is_empty() else "victory":
 		"level":
 			var levels: Array = gs.cfg.levels
@@ -710,8 +711,17 @@ func _update_music() -> void:
 		boss = bool(eng.monster.get("isBoss", false))
 	if combat and not _was_combat:
 		Sound.sfx("combat_start")
+		_pulse_combat_enter()
 	_was_combat = combat
 	Sound.ambient(theme, boss)
+
+## pulseCombatEnter de l'original : le champ de vision se resserre de 88° à 70° en 380 ms à l'entrée en combat.
+func _pulse_combat_enter() -> void:
+	if rig == null or rig.camera == null:
+		return
+	rig.camera.fov = 88.0
+	var tw := create_tween()
+	tw.tween_property(rig.camera, "fov", 70.0, 0.38).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func show_message(text: String, seconds: float = 1.8) -> void:
 	message_label.text = text
