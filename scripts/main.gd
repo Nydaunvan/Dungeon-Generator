@@ -36,6 +36,8 @@ func _ready() -> void:
 		Data.pending_save = {}
 	else:
 		gs = GameState.create(cfg)
+		if (cfg.levels as Array).size() > 0:
+			gs.level_state(cfg.levels[0])["stairsPromptShown"] = true
 	for c in gs.party:
 		print("%s -> PV %d, ATK %d-%d, vitesse %d" % [c.name, c.maxHp, c.atkMin, c.atkMax, c.effSpeed])
 
@@ -455,25 +457,27 @@ func _use_stairs(p: Vector2i) -> void:
 	if not inter.stairs_open(st):
 		return
 	var action: Dictionary = st.get("action", {})
-	Sound.sfx("stairs", str(action.get("type", "")) == "villageReturn")
-	match str(action.get("type", "")):
+	var going_up := true
+	if str(action.get("type", "")) == "level":
+		for i in (gs.cfg.levels as Array).size():
+			if gs.cfg.levels[i].id == action.get("targetId"):
+				going_up = i <= gs.level_index
+	Sound.sfx("stairs", going_up)
+	match str(action.get("type", "victory")) if not action.is_empty() else "victory":
 		"level":
 			var levels: Array = gs.cfg.levels
 			for i in levels.size():
 				if levels[i].id == action.get("targetId"):
 					_transition_regen(levels[i])
 					load_level(i, false, _arrival(levels[i], action))
+					gs.add_log("Le groupe se déplace vers : %s." % levels[i].get("name", ""))
 					_prompt_save_on_level(levels[i])
 					return
-			show_message("Niveau introuvable : %s" % action.get("targetId"))
+			gs.add_log("L'escalier semble mener nulle part... Victoire par défaut !")
+			_victory_by_stairs()
 		"victory":
-			var before := gs.inventory.size()
-			gs.inventory = gs.inventory.filter(func(it): return str(it.get("type", "")) != "key")
-			if gs.inventory.size() < before:
-				gs.add_log("🗝️ %d clé(s) devenue(s) inutile(s) ont été laissées derrière en quittant le donjon." % (before - gs.inventory.size()))
-			gs.won = true
-			gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
-			_show_victory()
+			gs.add_log("Le groupe découvre l'escalier de sortie... la lumière du jour ! Victoire !")
+			_victory_by_stairs()
 		"villageExit":
 			Dialogs.confirm(_modals(), "🏘️ Sortie du village", "Voulez-vous rester au village, ou repartir affronter un donjon plus puissant ?",
 				_continue_next, "⚔️ Aller vers un donjon plus puissant", "Rester au village")
@@ -487,6 +491,15 @@ func _use_stairs(p: Vector2i) -> void:
 		_:
 			show_message("Escalier")
 
+func _victory_by_stairs() -> void:
+	var before := gs.inventory.size()
+	gs.inventory = gs.inventory.filter(func(it): return str(it.get("type", "")) != "key")
+	if gs.inventory.size() < before:
+		gs.add_log("🗝️ %d clé(s) devenue(s) inutile(s) ont été laissées derrière en quittant le donjon." % (before - gs.inventory.size()))
+	gs.won = true
+	gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
+	_show_victory()
+
 ## Premier passage dans un niveau : le groupe reprend son souffle (PV et endurance en pourcentage du maximum).
 func _transition_regen(target: Dictionary) -> void:
 	var tls := gs.level_state(target)
@@ -494,8 +507,8 @@ func _transition_regen(target: Dictionary) -> void:
 		return
 	tls["transitionRegenDone"] = true
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
-	var hp_pct := int(sta.get("levelTransitionHpPct", 0))
-	var st_pct := int(sta.get("levelTransitionStaPct", 0))
+	var hp_pct := int(sta.get("levelTransitionHpPct", 25))
+	var st_pct := int(sta.get("levelTransitionStaPct", 35))
 	if hp_pct <= 0 and st_pct <= 0:
 		return
 	for c in gs.alive_party():

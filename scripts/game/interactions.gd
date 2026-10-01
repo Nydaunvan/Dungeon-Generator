@@ -60,7 +60,7 @@ func on_step() -> void:
 	var interval := maxi(1, int(sta.get("moveInterval", 1)))
 	if int(gs.stats.moves) % interval == 0:
 		for c in gs.alive_party():
-			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(sta.get("moveGain", 0)))
+			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(sta.get("moveGain", 2)))
 	# un seul objet par pas (le premier de la case), puis le marchand ambulant s'il est là (hors village)
 	for it in level.get("items", []):
 		if int(it.x) != rig.gx or int(it.y) != rig.gy:
@@ -141,20 +141,19 @@ func _meet_merchant(mm: Dictionary) -> void:
 	mm["discovered"] = true
 	if wand != null:
 		wand.merchant_moved.emit()
-	_log("🧙 Un marchand itinérant croise la route du groupe.")
-	var m := Modal.open(host, "Marchand itinérant", 400)
-	m.add_text("Un marchand itinérant vous interpelle : « Équipement, potions, parchemins… tout se négocie. »")
+	_log("🧙 Un marchand ambulant vous salue et déballe son étal.")
+	var m := Modal.open(host, "🧙 Marchand ambulant", 380)
+	m.add_text("Vous croisez le marchand ambulant. Souhaitez-vous consulter son étal ?", UiTheme.DIM, 15, true)
 	m.set_buttons([
-		{"text": "Voir son étal", "cb": func():
+		{"text": "🛒 Voir son étal", "primary": true, "cb": func():
 			m.close()
 			open_merchant(mm)},
-		{"text": "Continuer", "cb": func(): m.close()},
+		{"text": "Continuer sans s'arrêter", "cb": func(): m.close()},
 	])
 
 func open_merchant(mm: Dictionary) -> void:
 	if mm.get("offers") == null:
-		var run := maxi(0, (gs.cfg.get("levels", []) as Array).find(level))
-		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), run)
+		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), maxi(1, gs.run_number))
 	var on_change := func():
 		bag_changed.emit()
 		ctrl.changed.emit()
@@ -236,14 +235,15 @@ func _activate_decor(it: Dictionary) -> void:
 	if st.get("taken", false):
 		return
 	st["taken"] = true
+	view.entities.remove_item(str(it.id))
 	var def: Dictionary = {}
 	for d in Data.constants.get("DECOR_LIBRARY", []):
 		if str(d.get("id", "")) == str(it.get("decorTypeId", "")):
 			def = d
 	var sdef := Statuses.def(str(def.get("status", "")))
 	if not def.is_empty() and not sdef.is_empty():
-		var dur := int(def.get("duration", 8))
-		var power := int(def.get("power", 4))
+		var dur := int(def.get("duration", 0)) if int(def.get("duration", 0)) > 0 else 8
+		var power := int(def.get("power", 0)) if int(def.get("power", 0)) > 0 else 4
 		for c in gs.alive_party():
 			var list: Array = c.get("statusEffects", [])
 			var found := false

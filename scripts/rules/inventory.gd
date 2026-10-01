@@ -4,7 +4,7 @@ extends RefCounted
 
 const MAX_PER_TAB := 12
 const SLOT_LABELS := {"weapon": "Arme", "head": "Tête", "body": "Torse", "hands": "Mains", "feet": "Pieds", "accessory": "Bijou"}
-const TAB_LABELS := {"items": "Équipement", "potions": "Potions", "keys": "Clés et parchemins"}
+const TAB_LABELS := {"items": "🗡️ Objets", "potions": "🧪 Potions", "keys": "🗝️ Clés & parchemins"}
 
 static func tab_of(it: Dictionary) -> String:
 	var t := str(it.get("type", ""))
@@ -110,6 +110,9 @@ static func use_potion(gs: GameState, c: Dictionary, idx: int) -> int:
 		return -1
 	var it: Dictionary = gs.inventory[idx]
 	if str(it.get("type", "")) != "potion" or int(c.hp) <= 0:
+		return -1
+	if Statuses.has(c, "freeze"):
+		gs.add_log("❄️ %s est gelé — impossible de lui administrer quoi que ce soit tant que l'effet n'est pas passé." % c.name)
 		return -1
 	var healed := 0
 	var restored := 0

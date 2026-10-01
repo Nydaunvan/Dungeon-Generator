@@ -119,6 +119,10 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 	var c := gs.char_by_id(char_id)
 	if c.is_empty() or int(c.hp) <= 0 or str(it.get("type", "")) != "scroll":
 		return
+	if Statuses.has(c, "freeze"):
+		gs.add_log("❄️ %s est gelé — impossible de lui faire lire quoi que ce soit tant que l'effet n'est pas passé." % c.name)
+		changed.emit()
+		return
 	sync_position()
 	var spell := combat.spell_def(str(it.get("spellId", "")))
 	if spell.is_empty():
@@ -135,7 +139,6 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 
 ## Un potion a été bue : les soins comptent dans la contribution au combat.
 func potion_drunk(char_id: String, healed: int) -> void:
-	gs.stats["potionsUsed"] = int(gs.stats.get("potionsUsed", 0)) + 1
 	if combat != null and healed > 0:
 		Sound.sfx("heal")
 		var c := gs.char_by_id(char_id)

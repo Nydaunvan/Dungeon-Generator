@@ -95,6 +95,8 @@ static func apply_from_spell(gs: GameState, spell: Dictionary, holder: Dictionar
 		list.append({"type": type, "remaining": duration, "power": power, "casterId": caster_id})
 	holder["statusEffects"] = list
 	gs.add_log("%s %s est affecté par %s !" % [sdef.icon, display_name, sdef.label], is_party)
+	if is_party:
+		Characters.recompute(holder, gs.cfg)
 	return true
 
 ## Retire les statuts négatifs (dégâts sur la durée / incapacitants) — sort de dissipation.

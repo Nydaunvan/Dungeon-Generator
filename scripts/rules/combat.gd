@@ -244,7 +244,7 @@ func player_attack(attacker: Dictionary) -> bool:
 	Sound.sfx("swing", wtype)
 	Sound.sfx_later(0.09, "hit")
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
-	_mark_acted(attacker)
+	_mark_acted(attacker, false)
 	return true
 
 # ------------------------------------------------------------------ sorts
@@ -318,6 +318,9 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			return false
 		if int(ally.hp) <= 0:
 			gs.add_log("💀 %s est mort et ne peut pas être ciblé." % ally.name)
+			return false
+		if Statuses.has(ally, "freeze"):
+			gs.add_log("❄️ %s est gelé — impossible de lui lancer quoi que ce soit tant que l'effet n'est pas passé." % ally.name)
 			return false
 	var cost := 0 if free else int(spell.get("staminaCost", 15))
 	if int(caster.get("stamina", 0)) < cost:
@@ -418,7 +421,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				Characters.recompute(c, gs.cfg)
 			gs.add_log("%s lance %s %s sur tout le groupe, qui se sent revigoré !" % [caster.name, spell.get("icon", ""), spell.name], true)
 			events.append({"type": "popup", "text": "🎶 Vigueur", "color": Color("ffd88a")})
-	_mark_acted(caster)
+	_mark_acted(caster, mode != "damage")
 	return true
 
 ## Les soins comptent dans la contribution au combat (XP), pondérés par xpSettings.healRatio.
@@ -511,7 +514,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	if not all_dead and not spell.is_empty():
 		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
 
-func _mark_acted(c: Dictionary) -> void:
+func _mark_acted(c: Dictionary, turn_gain: bool = true) -> void:
 	tick_char(c)
 	if not in_combat():
 		return
@@ -520,7 +523,7 @@ func _mark_acted(c: Dictionary) -> void:
 	# gain d'endurance de fin de tour (staminaSettings.turnGain), tant qu'un combat se poursuit
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	var gain := int(sta.get("turnGain", 3))
-	if gain > 0 and in_combat():
+	if turn_gain and gain > 0 and in_combat():
 		for p in gs.alive_party():
 			p["stamina"] = mini(int(p.get("maxStamina", 100)), int(p.get("stamina", 0)) + gain)
 
@@ -586,7 +589,6 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 			_handle_death(def, st)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
-	gs.last_attacker_id = str(victim.id)
 	gs.add_log("%s attaque et blesse %s (%d dégâts)%s." % [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""], true)
 	Sound.sfx("monster_attack")
 	events.append({"type": "fx", "fx": "hit"})
@@ -709,7 +711,9 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 	var gold := int(round(int(def.get("goldReward", 0)) * group_mult))
 	_note_summary(def, xp, gold)
 	_split_xp(st, xp)
-	_record_bestiary(def)
+	var tally: int = st.members.size() if def.get("isGroup", false) and st.get("members") is Array else 1
+	for _i in tally:
+		_record_bestiary(def)
 	gs.stats["monstersKilled"] += 1
 	if def.get("isBoss", false):
 		gs.stats["bossesKilled"] += 1
@@ -738,7 +742,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 					else:
 						gs.add_log("🎁 %s laissait tomber %s, mais la besace est pleine ! Le butin est perdu." % [_mname(def), it.name])
 	# endurance récupérée après la victoire (difficulté « normal »)
-	var pct_map: Dictionary = (gs.cfg.get("staminaSettings", {}) as Dictionary).get("victoryGainPct", {"normal": 6})
+	var pct_map: Dictionary = (gs.cfg.get("staminaSettings", {}) as Dictionary).get("victoryGainPct", {"easy": 4, "normal": 6, "hard": 9, "hardcore": 13})
 	var diff := str(gs.cfg.get("genDifficulty", "normal")) if Data.play_origin == "random" else "normal"
 	var pct := int(pct_map.get(diff, pct_map.get("normal", 6)))
 	if pct > 0:
@@ -746,7 +750,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 			var gain := int(round(int(c.get("maxStamina", 100)) * pct / 100.0))
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + gain)
 	events.append({"type": "monster_died", "id": str(def.id)})
-	gauges.clear()
+	ensure_gauges()
 
 func _record_bestiary(def: Dictionary) -> void:
 	var d := Stats.monster_derived(def)
