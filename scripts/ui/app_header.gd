@@ -86,7 +86,7 @@ func rescale() -> void:
 				_style(b, (b as Button).text if b is Button else (b as MenuButton).text)
 
 func _process(_d: float) -> void:
-	btn_admin.visible = Data.admin_unlocked or Data.play_origin == "custom"
+	btn_admin.visible = (Data.admin_unlocked or Data.play_origin == "random") and not _home_mode
 
 func _button(text: String) -> Button:
 	var b := Button.new()

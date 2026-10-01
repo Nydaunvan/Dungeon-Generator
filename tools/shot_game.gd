@@ -10,6 +10,8 @@ func _init() -> void:
 	var sz := str(args.get("size", "1280x800")).split("x")
 	root.size = Vector2i(int(sz[0]), int(sz[1]))
 	await process_frame
+	if args.has("origin"):
+		root.get_node("Data").play_origin = str(args.origin)
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await create_timer(2.5).timeout
