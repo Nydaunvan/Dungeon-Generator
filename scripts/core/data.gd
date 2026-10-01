@@ -23,6 +23,7 @@ var lang: String = "fr"
 
 func set_lang(l: String) -> void:
 	lang = l
+	_apply_locale()
 	var cf := ConfigFile.new()
 	cf.load(USER_PREFS)
 	cf.set_value("ui", "lang", l)
@@ -31,11 +32,19 @@ func set_lang(l: String) -> void:
 
 signal lang_changed(l: String)
 
+func _apply_locale() -> void:
+	if TranslationServer.get_translation_object("en") == null or not (TranslationServer.get_translation_object("en") is EnTranslation):
+		var tr_en := EnTranslation.new()
+		tr_en.load_dictionary("res://data/i18n_en.json")
+		TranslationServer.add_translation(tr_en)
+	TranslationServer.set_locale("en" if lang == "en" else "fr")
+
 func _ready() -> void:
 	add_child(FloatingTip.new())
 	var cf := ConfigFile.new()
 	if cf.load(USER_PREFS) == OK:
 		lang = str(cf.get_value("ui", "lang", "fr"))
+	_apply_locale()
 	get_window().size_changed.connect(_update_scale)
 	_update_scale()
 	original_config = _load_json("res://data/default_config.json")

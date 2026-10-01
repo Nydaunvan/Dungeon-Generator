@@ -559,7 +559,7 @@ func _rebuild() -> void:
 	_scroll.add_child(v)
 	if footer == null:
 		footer = Label.new()
-		footer.text = "Éditeur de Donjon v1.29 · portage Godot\nMade by Claude & Nydaunvan"
+		footer.text = tr("Éditeur de Donjon") + " v1.29 · " + tr("portage Godot") + "\nMade by Claude & Nydaunvan"
 		footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
 		footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))

@@ -328,7 +328,7 @@ func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 0)
-	var title := _label("ÉQUIPEMENT — " + str(c.name).to_upper(), 17, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
+	var title := _label(tr("Équipement").to_upper() + " — " + str(c.name).to_upper(), 17, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	title.clip_text = true
 	v.add_child(title)
 	v.add_child(_label("%s — Nv.%d" % [cls.get("name", ""), int(c.level)], 13, UiTheme.DIM))
@@ -478,7 +478,7 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hh.add_child(sp)
 	var more := Button.new()
-	more.text = "Détails et sorts " + ("▴" if details_open else "▾")
+	more.text = tr("Détails et sorts") + " " + ("▴" if details_open else "▾")
 	more.focus_mode = Control.FOCUS_NONE
 	more.add_theme_font_size_override("font_size", 11)
 	more.pressed.connect(_toggle_details)

@@ -19,6 +19,7 @@ func _on_nav(name: String) -> void:
 	match name:
 		"Guide": Dialogs.guide(_modal_layer)
 		"Admin": Data.open_admin()
+		"Lang": get_tree().reload_current_scene()
 
 func _launch_original() -> void:
 	Data.launch_original()

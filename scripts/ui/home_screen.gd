@@ -129,9 +129,10 @@ func _build() -> void:
 	# titre à lettrine
 	_title_box = Control.new()
 	_title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var cap := _label("É", 108, Color("f1dfb8"), UiTheme.F_DISPLAY_BOLD)
+	var full_title := tr("Éditeur de Donjon")
+	var cap := _label(full_title.substr(0, 1), 108, Color("f1dfb8"), UiTheme.F_DISPLAY_BOLD)
 	cap.name = "cap"
-	var rest := _label("diteur de Donjon", 40, Color("f1dfb8"), UiTheme.F_DISPLAY)
+	var rest := _label(full_title.substr(1), 40, Color("f1dfb8"), UiTheme.F_DISPLAY)
 	rest.name = "rest"
 	for l in [cap, rest]:
 		l.add_theme_color_override("font_shadow_color", Color(1.0, 0.7, 0.35, 0.35))
@@ -164,7 +165,7 @@ func _build() -> void:
 	fv.alignment = BoxContainer.ALIGNMENT_CENTER
 	fv.add_theme_constant_override("separation", 6)
 	_foot.add_child(fv)
-	var ver := _link("Éditeur de Donjon v1.29 · portage Godot", "changelog", 14)
+	var ver := _link(tr("Éditeur de Donjon") + " v1.29 · " + tr("portage Godot"), "changelog", 14)
 	ver.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	fv.add_child(ver)
 	var made := _label("Made by Claude & Nydaunvan", 13, Color("9c8659"), UiTheme.F_BODY_ITALIC)
@@ -329,8 +330,8 @@ func _place_title(cap_size: int, rest_size: int, width: float, centered: bool) -
 	var rest: Label = _title_box.get_node("rest")
 	cap.add_theme_font_size_override("font_size", cap_size)
 	rest.add_theme_font_size_override("font_size", rest_size)
-	var cap_w := font.get_string_size("É", HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size).x
-	var rest_w := font_r.get_string_size("diteur de Donjon", HORIZONTAL_ALIGNMENT_LEFT, -1, rest_size).x + 16.0 * 0.01 * rest_size
+	var cap_w := font.get_string_size(cap.text, HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size).x
+	var rest_w := font_r.get_string_size(rest.text, HORIZONTAL_ALIGNMENT_LEFT, -1, rest_size).x + 16.0 * 0.01 * rest_size
 	var gap := 4.0
 	var x0 := maxf(0.0, (width - (cap_w + gap + rest_w)) * 0.5) if centered else 0.0
 	var asc_c := font.get_ascent(cap_size)

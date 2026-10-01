@@ -8,6 +8,8 @@ func _init() -> void:
 	var sz := str(args.get("size", "1280x720")).split("x")
 	root.size = Vector2i(int(sz[0]), int(sz[1]))
 	await process_frame
+	if args.has("lang"):
+		root.get_node("Data").set_lang(str(args.lang))
 	var packed: PackedScene = load(str(args.get("scene", "res://scenes/home.tscn")))
 	root.add_child(packed.instantiate())
 	await create_timer(float(args.get("wait", "1.5"))).timeout
