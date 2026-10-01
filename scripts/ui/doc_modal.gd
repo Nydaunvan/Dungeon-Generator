@@ -37,12 +37,13 @@ static func topics(host: Node, title: String, data_name: String, start_id: Strin
 	var doc := _rich("")
 	m.content.add_child(doc)
 	var group := ButtonGroup.new()
+	var en: bool = TranslationServer.get_locale().begins_with("en")
 	var show := func(i: int):
-		doc.text = str(items[i].text)
+		doc.text = str(items[i].get("textEn", items[i].text)) if en else str(items[i].text)
 		m.call_deferred("_fit")
 	for i in items.size():
 		var b := Button.new()
-		b.text = str(items[i].label)
+		b.text = str(items[i].get("labelEn", items[i].label)) if en else str(items[i].label)
 		b.toggle_mode = true
 		b.button_group = group
 		b.focus_mode = Control.FOCUS_NONE
