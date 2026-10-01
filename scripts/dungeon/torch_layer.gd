@@ -4,7 +4,7 @@ extends Node3D
 
 const SHEET := "res://assets/sheets/wall_torches.webp"
 const SHEET_COUNT := 5
-const THEME_MODEL := {"stone": 0, "dirt": 1, "damp": 2, "ruins": 3, "ice": 2, "lava": 0, "temple": 4}
+const THEME_MODEL := {"stone": 0, "dirt": 1, "damp": 2, "ruins": 3, "ice": 2, "lava": 0, "temple": 4, "village_forward": 4, "village_return": 2}
 const FLAME_ANCHOR := [Vector2(0.088, 0.273), Vector2(0.063, 0.273), Vector2(0.085, 0.273),
 	Vector2(0.092, 0.273), Vector2(0.088, 0.234)]
 

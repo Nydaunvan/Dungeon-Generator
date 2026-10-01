@@ -53,7 +53,7 @@ func bump_wall(x: int, y: int) -> void:
 	last_bump = k
 
 ## Après chaque pas : gain d'endurance puis objet éventuel sur la case.
-func on_step() -> void:
+func step_stamina() -> void:
 	last_bump = ""
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	gs.stats["moves"] = int(gs.stats.get("moves", 0)) + 1
@@ -61,6 +61,9 @@ func on_step() -> void:
 	if int(gs.stats.moves) % interval == 0:
 		for c in gs.alive_party():
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(sta.get("moveGain", 2)))
+
+## Ordre de l'original : déplacement, endurance, statuts (step_tick), puis objet de la case et marchand.
+func step_items() -> void:
 	# un seul objet par pas (le premier de la case), puis le marchand ambulant s'il est là (hors village)
 	for it in level.get("items", []):
 		if int(it.x) != rig.gx or int(it.y) != rig.gy:

@@ -215,8 +215,15 @@ static func _add_arch(view: LevelView, torches: TorchLayer, edge: Vector3, d: Ve
 	var offset := 0.43
 	var lateral := -0.05
 	var center := edge + Vector3(-d.x, 0, -d.y) * CELL * 0.01 + tang * CELL * lateral
+	var atype := str(_stair_def.get("action", {}).get("type", "")) if _stair_def.get("action") is Dictionary else ""
+	var torch_theme := "village_forward" if atype == "villageExit" else ("village_return" if atype == "villageReturn" else theme)
 	for side in [-1.0, 1.0]:
-		torches.add_torch(center + tang * CELL * side * offset + Vector3(0, CELL * 0.74, 0), rot, theme)
+		torches.add_torch(center + tang * CELL * side * offset + Vector3(0, CELL * 0.74, 0), rot, torch_theme)
+	if atype == "villageExit" or atype == "villageReturn":
+		var fwd := atype == "villageExit"
+		var label := ArchLabel.make("⚔ DONJON SUIVANT" if fwd else "⬅ DONJON PRÉCÉDENT", Color("ffa030") if fwd else Color("60c8ff"))
+		label.position = edge + Vector3(-d.x * CELL * 0.01, CELL * 1.12, -d.y * CELL * 0.01)
+		view.add_child(label)
 
 ## Ajoute un carré (2 triangles) centré en c, de demi-côté `half`,
 ## `up` = direction « haut » de la texture, `n` = normale (face visible).

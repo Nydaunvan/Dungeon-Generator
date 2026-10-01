@@ -31,7 +31,8 @@ static func start_weapon(t: Dictionary, cfg: Dictionary) -> Dictionary:
 	var types: Array = cls.get("allowedWeaponTypes", [])
 	if types.is_empty():
 		return {}
-	return {"id": "start_" + str(t.id), "name": "Arme de départ", "icon": "⚔️", "type": "weapon",
+	var icon: String = {"sword": "⚔️", "axe": "🪓", "dagger": "🗡️", "staff": "🔱", "bow": "🏹", "mace": "🔨"}.get(str(types[0]), "⚔️")
+	return {"id": "start_" + str(t.id), "name": "Arme de départ", "icon": icon, "type": "weapon",
 		"weaponType": types[0], "bonusAtkMin": 1, "bonusAtkMax": 2}
 
 static func create(t: Dictionary, cfg: Dictionary) -> Dictionary:

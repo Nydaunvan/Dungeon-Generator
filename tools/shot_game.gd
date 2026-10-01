@@ -116,6 +116,11 @@ func _init() -> void:
 					await create_timer(1.3).timeout
 				else:
 					await create_timer(3.6).timeout
+			"village":
+				main._enter_village()
+				await create_timer(1.5).timeout
+				main.rig.place(main.grid, 5, 3, 0)
+				await create_timer(1.0).timeout
 			"modal":
 				main._leave_game()
 				await create_timer(1.2).timeout

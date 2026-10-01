@@ -412,10 +412,11 @@ func _on_turned() -> void:
 
 func _on_moved() -> void:
 	Sound.sfx("footstep")
-	inter.on_step()
+	inter.step_stamina()
 	layout.minimap.mark_visited()
 	layout.minimap.reveal()
 	ctrl.step_tick()
+	inter.step_items()
 	_refresh_when_free()
 
 var _waiting_refresh: bool = false
