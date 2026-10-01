@@ -70,18 +70,30 @@ func _from_template(s: String) -> String:
 		if m == null:
 			continue
 		var out: String = t.en
-		var i := 1
-		var parts := out.split("%")
-		# remplace les %s / %d de l'anglais, dans l'ordre, par les groupes capturés
+		if out.contains("$"):
+			# modèle à ordre inversé (titres de donjon) : chaque morceau capturé doit être connu, sinon ce n'est pas ce modèle
+			var ok := true
+			for gi in range(1, m.get_group_count() + 1):
+				if _tr_part(m.get_string(gi)) == m.get_string(gi):
+					ok = false
+			if not ok:
+				continue
 		var res := ""
+		var seq := 1
+		var parts := out.split("%")
 		for j in parts.size():
 			var seg: String = parts[j]
 			if j == 0:
 				res += seg
 				continue
-			if seg.begins_with("s") or seg.begins_with("d"):
-				res += _tr_part(m.get_string(i) if i <= m.get_group_count() else "") + seg.substr(1)
-				i += 1
+			var pos_re := RegEx.create_from_string("^(\\d+)\\$[sd]")
+			var pm := pos_re.search(seg)
+			if pm != null:
+				var gi := int(pm.get_string(1))
+				res += _tr_part(m.get_string(gi) if gi <= m.get_group_count() else "") + seg.substr(pm.get_end())
+			elif seg.begins_with("s") or seg.begins_with("d"):
+				res += _tr_part(m.get_string(seq) if seq <= m.get_group_count() else "") + seg.substr(1)
+				seq += 1
 			else:
 				res += "%" + seg
 		return res.replace("\u0001", "%")
