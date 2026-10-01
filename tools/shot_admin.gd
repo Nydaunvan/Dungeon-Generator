@@ -15,8 +15,13 @@ func _init() -> void:
 	root.add_child(adm)
 	await create_timer(1.5).timeout
 	for tab in str(args.get("tabs", "general")).split(","):
+		if args.has("sub"):
+			(load("res://scripts/admin/admin_levels.gd") as GDScript).set("_tab", str(args.sub))
 		adm._select_tab(tab)
 		await create_timer(1.2).timeout
+		if args.has("scroll"):
+			adm._scroll.scroll_vertical = int(args.scroll)
+			await create_timer(0.4).timeout
 		root.get_texture().get_image().save_png("%s_%s.png" % [args.get("out", "/tmp/adm"), tab])
 	data.set_lang("fr")
 	quit()
