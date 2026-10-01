@@ -151,7 +151,7 @@ static func village_offers(cfg: Dictionary, run: int) -> Array:
 # ------------------------------------------------------------------ transactions
 
 ## Achète l'offre `idx` (au rang courant de `offers`). Renvoie "" si réussi, sinon le motif de l'échec.
-static func buy(gs: GameState, offers: Array, idx: int) -> String:
+static func buy(gs: GameState, offers: Array, idx: int, quiet: bool = false) -> String:
 	if idx < 0 or idx >= offers.size():
 		return "Offre introuvable."
 	var o: Dictionary = offers[idx]
@@ -164,11 +164,12 @@ static func buy(gs: GameState, offers: Array, idx: int) -> String:
 		return "L'onglet %s de la besace est plein." % str(Inventory.TAB_LABELS.get(Inventory.tab_of(inst), ""))
 	gs.gold -= int(o.price)
 	gs.stats["itemsBought"] = int(gs.stats.get("itemsBought", 0)) + 1
-	gs.add_log("🛒 Le groupe achète %s pour %d pièces d'or." % [o.name, int(o.price)])
+	if not quiet:
+		gs.add_log("🛒 Le groupe achète %s pour %d pièces d'or." % [o.name, int(o.price)])
 	offers.remove_at(idx)
 	return ""
 
-static func sell(gs: GameState, idx: int) -> String:
+static func sell(gs: GameState, idx: int, quiet: bool = false) -> String:
 	if idx < 0 or idx >= gs.inventory.size():
 		return "Objet introuvable."
 	var it: Dictionary = gs.inventory[idx]
@@ -178,7 +179,8 @@ static func sell(gs: GameState, idx: int) -> String:
 	gs.gold += p
 	gs.inventory.remove_at(idx)
 	gs.stats["itemsSold"] = int(gs.stats.get("itemsSold", 0)) + 1
-	gs.add_log("💰 Le groupe vend %s pour %d pièces d'or." % [it.name, p])
+	if not quiet:
+		gs.add_log("💰 Le groupe vend %s pour %d pièces d'or." % [it.name, p])
 	return ""
 
 ## Résumé court des bonus (« Atq +2-4, PV +3 »).

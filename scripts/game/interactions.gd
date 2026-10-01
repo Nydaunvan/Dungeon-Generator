@@ -479,9 +479,12 @@ func open_item_menu(idx: int) -> void:
 	m.add_row(IconResolver.texture(str(it.get("icon", ""))), "\n".join(Inventory.describe(it, gs.cfg)))
 	var type := str(it.get("type", ""))
 	var alive := gs.alive_party()
+	var fighting := ctrl.in_combat()
 	if type == "potion":
 		m.add_text("Faire boire à :", UiTheme.DIM, 14, true)
 		for c in alive:
+			if fighting and str(c.id) != gs.active_char_id:
+				continue
 			var cid: String = str(c.id)
 			m.add_button("%s  (%d/%d PV · %d/%d End.)" % [c.name, int(c.hp), int(c.maxHp), int(c.get("stamina", 0)), int(c.get("maxStamina", 100))],
 				func():
@@ -498,7 +501,7 @@ func open_item_menu(idx: int) -> void:
 				m.close()
 				ctrl.read_scroll(cid2, idx)
 				bag_changed.emit())
-	elif Inventory.can_equip(it):
+	elif Inventory.can_equip(it) and not fighting:
 		m.add_text("Équiper sur :", UiTheme.DIM, 14, true)
 		for c in gs.party:
 			var cid3: String = str(c.id)
@@ -512,7 +515,7 @@ func open_item_menu(idx: int) -> void:
 				ctrl.changed.emit()
 				bag_changed.emit())
 	var buttons: Array = []
-	if type != "key":
+	if type != "key" and not fighting:
 		buttons.append({"text": "Jeter", "cb": func():
 			m.close()
 			Inventory.discard(gs, idx)

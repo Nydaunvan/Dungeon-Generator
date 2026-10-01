@@ -181,11 +181,19 @@ static func _fill(list: VBoxContainer, gs: GameState, offers: Array, st: Diction
 				take.sort()
 				take.reverse()   # indices décroissants : les retraits ne décalent pas les suivants
 				var bought := 0
+				var paid := 0
+				var rep_name := str(gs.inventory[int(take[0])].get("name", "")) if not buy else str(offers[int(take[0])].get("name", ""))
 				for ix in take:
-					err = Shop.buy(gs, offers, int(ix)) if buy else Shop.sell(gs, int(ix))
+					var unit_p := int(offers[int(ix)].get("price", 0)) if buy else Shop.sell_price(gs.inventory[int(ix)])
+					err = Shop.buy(gs, offers, int(ix), true) if buy else Shop.sell(gs, int(ix), true)
 					if err != "":
+						if buy and err.contains("plein"):
+							gs.add_log(err.trim_suffix(".") + ", impossible d'acheter davantage de ce type d'objet.")
 						break
 					bought += 1
+					paid += unit_p
+				if bought > 0:
+					gs.add_log("%s %s%s pour %d pièces d'or." % ["🛒 Le groupe achète" if buy else "💰 Le groupe vend", "%d× " % bought if bought > 1 else "", rep_name, paid])
 				st.qty.erase(gkey)
 				done.call(err if bought == 0 else ""))
 			row.add_child(b)

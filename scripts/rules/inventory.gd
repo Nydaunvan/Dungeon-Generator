@@ -142,7 +142,7 @@ static func discard(gs: GameState, idx: int) -> bool:
 		gs.add_log("🔑 Une clé ne peut jamais être jetée — elle pourrait encore servir.")
 		return false
 	gs.inventory.remove_at(idx)
-	gs.add_log("Le groupe jette %s." % it.get("name", ""))
+	gs.add_log("🗑️ Le groupe se débarrasse définitivement de %s." % it.get("name", ""))
 	return true
 
 static func find_key(gs: GameState, door_id: String) -> int:

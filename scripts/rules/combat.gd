@@ -347,7 +347,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var int_bonus := int(floor(int(caster.get("effInt", 10)) / 5.0)) + bonus
 			var dmg := randi_range(int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
 			var magic: bool = str(spell.get("style", "")) != "physical"
-			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)), spell)
+			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)), spell, mode == "damageGroup")
 		"healSingle":
 			var amt := randi_range(int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
 			var before := int(ally.hp)
@@ -441,10 +441,10 @@ func _credit_heal(caster: Dictionary, healed: int) -> void:
 
 ## Applique une attaque (physique ou magique) au monstre visé. `all_members` : frappe tout un groupe.
 func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic: bool, verb: String,
-		all_members: bool, ignore_resist: bool, spell: Dictionary = {}) -> void:
+		all_members: bool, ignore_resist: bool, spell: Dictionary = {}, aoe: bool = false) -> void:
 	var st: Dictionary = lstate().monsters[str(target.id)]
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
-	var resist := 0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st))
+	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st)))
 	var dmg := raw_dmg
 	if resist > 0:
 		dmg = 0 if resist >= 100 else maxi(1, int(round(raw_dmg * (1.0 - resist / 100.0))))
@@ -473,7 +473,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		_add_contrib(st, str(attacker.id), dmg)
 		gs.bump(attacker.id, "damageDealt", dmg)
 	lstate()["last_engaged_id"] = str(target.id)
-	if bool(target.get("isBoss", false)) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
+	if not aoe and bool(target.get("isBoss", false)) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
 			and st.hp > 0 and st.hp <= st.maxHp * (int(target.enrageThreshold) / 100.0):
 		st["enraged"] = true
 		gs.add_log("😡 %s entre en rage, ses attaques deviennent bien plus violentes !" % _mname(target))
@@ -486,7 +486,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
-	if lifesteal > 0 and dmg > 0:
+	if lifesteal > 0 and dmg > 0 and not aoe:
 		var heal := maxi(1, int(round(dmg * lifesteal / 100.0)))
 		var before := int(attacker.hp)
 		attacker["hp"] = mini(int(attacker.maxHp), before + heal)
@@ -511,7 +511,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		for h in holders:
 			if not h.alive:
 				gs.add_log("💀 %s perd un membre du groupe !" % _mname(target))
-	if not all_dead and not spell.is_empty():
+	if (aoe or not all_dead) and not spell.is_empty():
 		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
 
 func _mark_acted(c: Dictionary, turn_gain: bool = true) -> void:

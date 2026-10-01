@@ -790,9 +790,18 @@ func _unequip(slot: String) -> void:
 		_after()
 
 func _discard(idx: int) -> void:
-	if Inventory.discard(gs, idx):
-		sel = {}
+	if idx < 0 or idx >= gs.inventory.size():
+		return
+	var it: Dictionary = gs.inventory[idx]
+	if str(it.get("type", "")) == "key":
+		Inventory.discard(gs, idx)
 		_after()
+		return
+	var scene := get_tree().current_scene
+	Dialogs.confirm(scene._modals() if scene.has_method("_modals") else scene, "Jeter", "Jeter définitivement %s ? Cette action est irréversible, l'objet sera perdu." % it.get("name", ""), func():
+		if Inventory.discard(gs, idx):
+			sel = {}
+			_after(), "Confirmer", "Annuler")
 
 func _use_potion(idx: int) -> void:
 	var healed := Inventory.use_potion(gs, gs.char_by_id(char_id), idx)

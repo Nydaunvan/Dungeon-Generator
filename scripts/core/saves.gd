@@ -103,6 +103,12 @@ static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 		"party": js.get("party", []), "gold": int(js.get("gold", 0)), "inventory": js.get("inventory", []),
 		"active_char_id": str(js.get("activeCharId", "")), "last_attacker_id": "", "stats": js.get("stats", {}), "bestiary": js.get("bestiary", {}),
 		"game_over": bool(js.get("gameOver", false)), "won": bool(js.get("won", false)), "log_lines": js.get("log", [])}
+	out["run_number"] = maxi(1, int(js.get("runNumber", 1)))
+	out["run_mods_chosen"] = js.get("runModifierIds") is Array
+	out["in_village"] = bool(js.get("inVillage", false))
+	if js.get("villagePrevLevels") is Array:
+		out["village_prev"] = {"levels": js.villagePrevLevels, "level_index": int(js.get("villagePrevLevelIndex", 0)), "x": int(js.get("villagePrevX", 1)),
+			"y": int(js.get("villagePrevY", 1)), "dir": int(js.get("villagePrevDir", 0))}
 	for c in out.party:
 		if not c.has("statusEffects"):
 			c["statusEffects"] = []
@@ -113,7 +119,8 @@ static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 	for lid in js_states:
 		var jls: Dictionary = js_states[lid]
 		var ls := {"monsters": jls.get("monsters", {}), "taken_items": {}, "last_engaged_id": str(jls.get("lastEngagedId", "") if jls.get("lastEngagedId") != null else ""),
-			"items_state": jls.get("items", {}), "opened_doors": {}, "door_unlocked": {}}
+			"items_state": jls.get("items", {}), "opened_doors": {}, "door_unlocked": {},
+			"transitionRegenDone": bool(jls.get("transitionRegenDone", false)), "stairsPromptShown": bool(js.get("stairsPromptShown", {}).get(lid, false)) if js.get("stairsPromptShown") is Dictionary else false}
 		for id in ls.items_state:
 			if ls.items_state[id].get("taken", false):
 				ls.taken_items[id] = true
@@ -123,7 +130,7 @@ static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 				ls.opened_doors[id] = true
 		if jls.get("merchant") is Dictionary:
 			var m: Dictionary = jls.merchant
-			ls["merchant"] = {"x": int(m.get("x", 0)), "y": int(m.get("y", 0)), "discovered": bool(m.get("discovered", false)), "offers": null}
+			ls["merchant"] = {"x": int(m.get("x", 0)), "y": int(m.get("y", 0)), "discovered": bool(m.get("discovered", false)), "offers": m.get("offers")}
 		for kind in ["seen", "visited"]:
 			var d := {}
 			for c in jls.get(kind, []):

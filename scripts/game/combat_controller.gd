@@ -129,6 +129,10 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 		gs.add_log("📜 %s est illisible, son contenu s'est effacé..." % it.get("name", "le parchemin"))
 		changed.emit()
 		return
+	if int(c.get("stamina", 0)) < int(spell.get("staminaCost", 15)):
+		gs.add_log("😮‍💨 %s n'a plus assez d'endurance pour lire ce parchemin." % c.name)
+		changed.emit()
+		return
 	gs.active_char_id = char_id
 	gs.add_log("📜 %s lit le parchemin et invoque %s %s !" % [c.name, spell.get("icon", ""), spell.name], true)
 	if combat.cast_spell(c, str(spell.id), char_id, true):
