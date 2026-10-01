@@ -74,6 +74,14 @@ func spell_by_id(id: String) -> Dictionary:
 			return s
 	return {}
 
+## Configuration éditée par l'administration. Comme le `CONFIG` unique de l'original : si une partie est suspendue
+## (admin ouvert depuis le jeu), c'est la configuration de CETTE partie (même Dictionary que `gs.cfg`), sinon la configuration
+## par défaut de l'appareil. Tous les onglets admin doivent passer par ici, jamais par `Data.config` directement.
+func admin_config() -> Dictionary:
+	if not resume_game.is_empty() and (resume_game.get("config") is Dictionary):
+		return resume_game.config
+	return config
+
 ## Configuration utilisée par le jeu.
 func active() -> Dictionary:
 	return play_config if not play_config.is_empty() else config
@@ -116,7 +124,7 @@ func save_config() -> bool:
 	var f := FileAccess.open(USER_CONFIG, FileAccess.WRITE)
 	if f == null:
 		return false
-	f.store_string(JSON.stringify(config))
+	f.store_string(JSON.stringify(admin_config()))
 	return true
 
 func reset_config() -> void:

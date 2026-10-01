@@ -45,14 +45,30 @@ static func classes_allowing(spell_id: String) -> Array:
 static func is_emoji_icon(icon: String) -> bool:
 	return icon != "" and not icon.begins_with("@icon:")
 
-## Libellé « 🔥 Boule de feu » (l'emoji seulement si l'icône en est un).
+## `iconTextFallback` de l'original : emoji déduit de l'identifiant d'une icône illustrée (« @icon:sword_short » → ⚔️).
+const _ICON_FALLBACKS := [
+	["shield", "🛡️"], ["bow", "🏹"], ["dagger", "🗡️"], ["crystalball", "🔮"], ["mace", "🔨"],
+	["axe", "🪓"], ["sword", "⚔️"], ["staff", "🔱"], ["helm", "⛑️"], ["banner", "🚩"],
+	["scroll", "📜"], ["key", "🗝️"], ["medallion|pendant", "📿"], ["coins", "🪙"], ["gem", "💎"], ["potion", "🧪"],
+	["ring|amulet", "💍"], ["boot", "👢"], ["armor|chest", "🧥"], ["fountain", "⛲"],
+	["boss_dragon", "🐉"], ["boss_lich", "💀"], ["boss_golem", "🗿"], ["boss_", "👑"]]
+
+static func icon_text_fallback(icon: String) -> String:
+	if not icon.begins_with("@icon:"):
+		return icon
+	var id := icon.substr(6)
+	for pair in _ICON_FALLBACKS:
+		for alt in str(pair[0]).split("|"):
+			if id.contains(alt):
+				return str(pair[1])
+	return "🖼️"
+
+## Libellé « 🔥 Boule de feu » (repli emoji pour les icônes illustrées, comme `iconTextFallback`).
 static func spell_label(s: Dictionary) -> String:
-	var ic := str(s.get("icon", ""))
-	return ("%s %s" % [ic, s.get("name", "?")]) if is_emoji_icon(ic) else str(s.get("name", "?"))
+	return "%s %s" % [icon_text_fallback(str(s.get("icon", ""))), s.get("name", "?")]
 
 static func item_label(it: Dictionary) -> String:
-	var ic := str(it.get("icon", ""))
-	return ("%s %s" % [ic, it.get("name", "?")]) if is_emoji_icon(ic) else str(it.get("name", "?"))
+	return "%s %s" % [icon_text_fallback(str(it.get("icon", ""))), it.get("name", "?")]
 
 static func weapon_types() -> Array:
 	return Data.constants.get("WEAPON_TYPES", [])

@@ -242,6 +242,18 @@ func save() -> void:
 	var t := Time.get_time_dict_from_system()
 	say(("Configuration enregistrée à %02d:%02d:%02d." % [t.hour, t.minute, t.second]) if Data.save_config() else "Échec de l'enregistrement.")
 
+## Bouton « 💾 Enregistrer la configuration par défaut » de l'original (`confirmSaveConfigDefault`) : confirmation puis
+## enregistrement ; le message va dans `status` (libellé sous le bouton) s'il est fourni.
+func confirm_save(status: Label = null) -> void:
+	var go := func():
+		var t := Time.get_time_dict_from_system()
+		var msg := ("Configuration enregistrée à %02d:%02d:%02d (stockage local de l'appareil)" % [t.hour, t.minute, t.second]) if Data.save_config() else "Échec de l'enregistrement."
+		if status != null and is_instance_valid(status):
+			status.text = msg
+		else:
+			say(msg)
+	Dialogs.confirm(_modal_layer, "", "⚠️ Ceci va enregistrer la configuration comme NOUVELLE CONFIGURATION PAR DÉFAUT : classes, sorts, objets, niveaux... Tout changement ici s'appliquera à TOUTES les futures parties, y compris le donjon aléatoire, qui pioche dans ce même catalogue de classes/sorts/objets — pas seulement à la partie en cours. Confirmer l'enregistrement ?", go)
+
 func logout() -> void:
 	_logout()
 
