@@ -333,7 +333,9 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		caster["spellCooldowns"] = cds
 	gs.bump(caster.id, "actions")
 	gs.bump(caster.id, "spellsCast")
-	gs.stats["spellsCast"] = int(gs.stats.get("spellsCast", 0)) + 1
+	# HTML : le compteur global n'est incrémenté que pour un sort de dégâts sur cible unique
+	if mode == "damage":
+		gs.stats["spellsCast"] = int(gs.stats.get("spellsCast", 0)) + 1
 	events.append({"type": "fx", "fx": "spell" + str(spell.get("style", "arcane"))})
 	events.append({"type": "fx3d", "spell": spell_id})
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
@@ -523,10 +525,17 @@ func _mark_acted(c: Dictionary, turn_gain: bool = true) -> void:
 		return
 	gauges["char_" + str(c.id)] = 0.0
 	turn_seq += 1
-	# gain d'endurance de fin de tour (staminaSettings.turnGain), tant qu'un combat se poursuit
+	if turn_gain:
+		end_turn_gain()
+
+## endPlayerTurn de l'original : gain d'endurance de fin de tour (staminaSettings.turnGain) tant qu'un combat est engagé.
+## Appelé aussi après un pas, une collision avec un monstre ou un escalier.
+func end_turn_gain() -> void:
+	if not in_combat():
+		return
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	var gain := int(sta.get("turnGain", 3))
-	if turn_gain and gain > 0 and in_combat():
+	if gain > 0:
 		for p in gs.alive_party():
 			p["stamina"] = mini(int(p.get("maxStamina", 100)), int(p.get("stamina", 0)) + gain)
 
@@ -666,10 +675,12 @@ func tick_char(c: Dictionary) -> void:
 			if int(c.hp) <= 0:
 				gs.bump(c.id, "knockdowns")
 				gs.add_log("%s s'effondre, à terre !" % c.name)
+				Sound.sfx("down")
 				_switch_active_if_down()
 				if gs.alive_party().is_empty() and not gs.game_over:
 					gs.game_over = true
 					gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
+					Sound.sfx("game_over")
 					events.append({"type": "game_over"})
 		eff["remaining"] = int(eff.remaining) - 1
 		if int(eff.remaining) > 0:

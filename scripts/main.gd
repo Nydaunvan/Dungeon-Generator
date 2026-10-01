@@ -418,6 +418,7 @@ func _on_moved() -> void:
 	ctrl.step_tick()
 	inter.step_items()
 	_refresh_when_free()
+	ctrl.combat.end_turn_gain()
 
 var _waiting_refresh: bool = false
 
@@ -440,6 +441,7 @@ func _on_blocked(x: int, y: int) -> void:
 		gs.add_log("%s vous barre la route !" % str(mon.get("name", "Un monstre")))
 		Sound.sfx("blocked")
 		ctrl.refresh()   # engage le combat
+		ctrl.combat.end_turn_gain()
 		return
 	if inter.bump_village(x, y):
 		Sound.sfx("blocked")
