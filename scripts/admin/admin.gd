@@ -210,7 +210,8 @@ func _fit_width() -> void:
 
 func _select_tab(id: String) -> void:
 	_tab = id
-	(_tab_buttons[id] as Button).set_pressed_no_signal(true)
+	for k in _tab_buttons:
+		(_tab_buttons[k] as Button).set_pressed_no_signal(k == id)
 	for ch in _content_host.get_children():
 		ch.queue_free()
 	match id:
