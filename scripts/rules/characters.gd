@@ -151,11 +151,16 @@ static func learn_spells(gs: GameState, c: Dictionary) -> void:
 	var cls := class_def(gs.cfg, str(c.get("classId", "")))
 	var known: Array = c.get("spellsKnown", [])
 	for step in cls.get("spellProgression", []):
-		if int(step.get("level", 99)) <= int(c.level) and not known.has(step.spellId) and known.size() < MAX_SPELLS:
-			known.append(step.spellId)
+		if int(step.get("level", 99)) == int(c.level) and not known.has(step.spellId):
 			var name := str(step.spellId)
+			var icon := ""
 			for sp in gs.cfg.get("spells", []):
 				if sp.get("id") == step.spellId:
 					name = str(sp.name)
-			gs.add_log("📖 %s apprend %s !" % [c.name, name])
+					icon = str(sp.get("icon", "")) if not str(sp.get("icon", "")).begins_with("@icon:") else ""
+			if known.size() >= MAX_SPELLS:
+				gs.add_log("❌ %s connaît déjà le maximum de compétences possible (%d), %s %s reste hors de portée." % [c.name, MAX_SPELLS, icon, name])
+				continue
+			known.append(step.spellId)
+			gs.add_log("🎓 %s apprend automatiquement %s %s (niveau %d) !" % [c.name, icon, name, int(c.level)])
 	c["spellsKnown"] = known

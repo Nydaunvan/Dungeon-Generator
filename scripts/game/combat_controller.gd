@@ -147,7 +147,7 @@ func potion_drunk(char_id: String, healed: int) -> void:
 		Sound.sfx("heal")
 		var c := gs.char_by_id(char_id)
 		if not c.is_empty():
-			combat._credit_heal(c, healed)
+			combat._credit_heal(c, healed, false)
 	changed.emit()
 
 ## Clic sur la carte d'un personnage : cible du sort en attente, sinon sélection du personnage actif (hors combat).

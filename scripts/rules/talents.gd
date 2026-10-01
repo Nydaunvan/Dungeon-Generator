@@ -83,7 +83,7 @@ static func choose(gs: GameState, c: Dictionary, level: int, talent_id: String) 
 	c.talents.append({"level": level, "id": talent_id})
 	Characters.recompute(c, gs.cfg)
 	var opt := find_option(gs.cfg, talent_id)
-	gs.add_log("🌟 %s choisit le talent %s %s !" % [c.name, opt.get("icon", ""), opt.get("labelFr", "")])
+	gs.add_log("📖 %s choisit le talent %s %s !" % [c.name, opt.get("icon", ""), opt.get("labelFr", "")])
 
 ## Change un talent déjà choisi contre de l'or. Renvoie "" si réussi, sinon le motif.
 static func respec(gs: GameState, c: Dictionary, level: int, new_id: String) -> String:
@@ -95,6 +95,7 @@ static func respec(gs: GameState, c: Dictionary, level: int, new_id: String) -> 
 		return "Aucun talent à changer."
 	var cost := respec_cost(gs.cfg, level)
 	if gs.gold < cost:
+		gs.add_log("💰 Pas assez d'or pour changer ce talent.")
 		return "Pas assez d'or pour changer ce talent."
 	gs.gold -= cost
 	gs.stats["goldSpentTotal"] = int(gs.stats.get("goldSpentTotal", 0)) + cost

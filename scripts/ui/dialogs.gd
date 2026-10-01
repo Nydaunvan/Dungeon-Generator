@@ -33,15 +33,19 @@ static func _stats_lines(m: Modal, gs: GameState) -> void:
 static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable(), on_village: Callable = Callable()) -> Modal:
 	var m := Modal.open(host, "Victoire !", 480.0)
 	m.esc_closes = false
-	m.add_text("Le groupe émerge de %s, triomphant." % str(gs.cfg.get("title", "")), UiTheme.PARCH, 16, true)
+	var maxed := true
+	for c in gs.party:
+		if int(c.level) < Characters.MAX_LEVEL:
+			maxed = false
+	m.add_text("Le groupe émerge de %s, triomphant.%s" % [str(gs.cfg.get("title", "")), (" Vos héros ont atteint le sommet de leur puissance (niveau %d)." % Characters.MAX_LEVEL) if maxed else ""], UiTheme.PARCH, 16, true)
 	_stats_lines(m, gs)
 	var btns: Array = []
 	if on_village.is_valid():
 		btns.append({"text": "🏘️ Aller au village", "cb": _then(m, on_village)})
 	if on_next.is_valid():
-		btns.append({"text": "⚔️ Donjon plus difficile", "cb": _then(m, on_next)})
-	btns.append({"text": "Repartir de zéro", "cb": _then(m, on_restart)})
-	btns.append({"text": "Accueil", "cb": _then(m, on_home)})
+		btns.append({"text": "⚔️ Continuer dans un donjon plus difficile", "primary": true, "cb": _then(m, on_next)})
+	btns.append({"text": "🔄 Repartir de zéro", "cb": _then(m, on_restart)})
+	btns.append({"text": "🏠 Retour à l'accueil", "cb": _then(m, on_home)})
 	m.set_buttons(btns)
 	return m
 
@@ -50,5 +54,10 @@ static func defeat(host: Node, gs: GameState, on_restart: Callable, on_home: Cal
 	m.esc_closes = false
 	m.add_text("Les ténèbres ont eu raison de vos héros. Une nouvelle troupe devra tenter sa chance.", UiTheme.PARCH, 16, true)
 	_stats_lines(m, gs)
-	m.set_buttons([{"text": "Nouvelle partie", "cb": _then(m, on_restart)}, {"text": "Accueil", "cb": _then(m, on_home)}])
+	var specs: Array = [{"text": "🔄 Nouvelle partie", "primary": true, "cb": _then(m, on_restart)}, {"text": "🏠 Retour à l'accueil", "cb": _then(m, on_home)}]
+	for i in Saves.SLOTS:
+		if not Saves.summary(i).is_empty():
+			specs.push_front({"text": "📂 Charger une sauvegarde", "primary": false, "cb": func(): SlotsModal.open(host, Callable(), Data.launch_save)})
+			break
+	m.set_buttons(specs)
 	return m

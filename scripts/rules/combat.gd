@@ -425,10 +425,11 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	return true
 
 ## Les soins comptent dans la contribution au combat (XP), pondérés par xpSettings.healRatio.
-func _credit_heal(caster: Dictionary, healed: int) -> void:
+func _credit_heal(caster: Dictionary, healed: int, stat: bool = true) -> void:
 	if healed <= 0:
 		return
-	gs.bump(caster.id, "healingDone", healed)
+	if stat:
+		gs.bump(caster.id, "healingDone", healed)
 	var eng := engaged()
 	var mid := str(lstate().get("last_engaged_id", ""))
 	if not eng.is_empty():
@@ -477,9 +478,11 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 			and st.hp > 0 and st.hp <= st.maxHp * (int(target.enrageThreshold) / 100.0):
 		st["enraged"] = true
 		gs.add_log("😡 %s entre en rage, ses attaques deviennent bien plus violentes !" % _mname(target))
-	var note := (" (%d%% de résistance : %d→%d)" % [resist, raw_dmg, dmg]) if resist > 0 else ""
+	var note := (" (%d%% de résistance %s : %d→%d)" % [resist, "magique" if magic else "physique", raw_dmg, dmg]) if resist > 0 else ""
 	var who := "tout le groupe" if (all_members and is_group) else _mname(target)
-	if verb == "frappe":
+	if aoe and is_group and all_members:
+		gs.add_log("%s %s et frappe tout le groupe : %d dégâts chacun (%d %s)%s%s." % [attacker.name, verb.trim_suffix(" sur"), dmg, holders.size(), "cibles" if holders.size() > 1 else "cible", note, " 💥 Coup critique !" if crit else ""], true)
+	elif verb == "frappe":
 		gs.add_log("%s frappe %s pour %d dégâts%s%s." % [attacker.name, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
 	else:
 		gs.add_log("%s %s %s pour %d dégâts%s%s." % [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
@@ -510,7 +513,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	elif is_group:
 		for h in holders:
 			if not h.alive:
-				gs.add_log("💀 %s perd un membre du groupe !" % _mname(target))
+				gs.add_log("💀 %s voit ses rangs décimés !" % _mname(target))
 	if (aoe or not all_dead) and not spell.is_empty():
 		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
 
@@ -599,10 +602,11 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) <= 0:
 		Sound.sfx_later(0.15, "down")
-		gs.add_log("💀 %s tombe au combat." % victim.name)
+		gs.add_log("%s s'effondre, à terre !" % victim.name)
+		_switch_active_if_down()
 		if gs.alive_party().is_empty():
 			gs.game_over = true
-			gs.add_log("☠️ Toute l'équipe a péri…")
+			gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
 			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
 
@@ -626,16 +630,25 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	if int(victim.hp) > 0:
 		Statuses.apply_from_spell(gs, spell, victim, str(victim.name), "", true)
 	else:
-		gs.add_log("💀 %s tombe au combat." % victim.name)
+		gs.bump(victim.id, "knockdowns")
+		gs.add_log("%s s'effondre, à terre !" % victim.name)
+		_switch_active_if_down()
 		if gs.alive_party().is_empty():
 			gs.game_over = true
-			gs.add_log("☠️ Toute l'équipe a péri…")
+			gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
 			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
 
 # ------------------------------------------------------------------ statuts (tick)
 
 ## Fait avancer les statuts d'un personnage d'un tour : dégâts sur la durée, durée restante, fin.
+func _switch_active_if_down() -> void:
+	var a := gs.char_by_id(gs.active_char_id)
+	if a.is_empty() or int(a.hp) <= 0:
+		var alive := gs.alive_party()
+		if not alive.is_empty():
+			gs.active_char_id = str(alive[0].id)
+
 func tick_char(c: Dictionary) -> void:
 	if int(c.hp) <= 0 or (c.get("statusEffects", []) as Array).is_empty():
 		return
@@ -651,10 +664,12 @@ func tick_char(c: Dictionary) -> void:
 			events.append({"type": "popup", "text": "%s -%d" % [c.name, dmg], "color": Color("c98bff")})
 			events.append({"type": "hit", "char": c.id})
 			if int(c.hp) <= 0:
-				gs.add_log("💀 %s succombe à %s." % [c.name, sdef.label])
+				gs.bump(c.id, "knockdowns")
+				gs.add_log("%s s'effondre, à terre !" % c.name)
+				_switch_active_if_down()
 				if gs.alive_party().is_empty() and not gs.game_over:
 					gs.game_over = true
-					gs.add_log("☠️ Toute l'équipe a péri…")
+					gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
 					events.append({"type": "game_over"})
 		eff["remaining"] = int(eff.remaining) - 1
 		if int(eff.remaining) > 0:
@@ -721,7 +736,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 	if gold > 0:
 		gs.gold += gold
 		gs.stats["goldEarnedTotal"] += gold
-		gs.add_log("💰 Le groupe récupère %d pièces d'or." % gold)
+		gs.add_log("💰 Le groupe récupère %d pièces d'or.%s" % [gold, " (butin de groupe)" if group_mult > 1.0 else ""])
 	if str(def.get("opensDoorId", "")) != "":
 		gs.add_log("La mort de %s déverrouille une porte au loin..." % _mname(def))
 		events.append({"type": "door_open", "id": str(def.opensDoorId)})
@@ -780,17 +795,23 @@ func _split_xp(st: Dictionary, total: int) -> void:
 			Characters.award_xp(gs, a, total)
 		return
 	var shares: Array[String] = []
+	var skipped: Array[String] = []
 	for cid in entries:
 		var c := gs.char_by_id(str(cid))
 		if c.is_empty():
 			continue
 		var share := int(round(total * float(st.contrib[cid]) / weight))
-		if share <= 0 or int(c.hp) <= 0:
+		if share <= 0:
+			continue
+		if int(c.hp) <= 0:
+			skipped.append(str(c.name))
 			continue
 		Characters.award_xp(gs, c, share)
 		shares.append("%s +%d" % [c.name, share])
 	if shares.size() > 1:
 		gs.add_log("✨ XP répartie selon la contribution au combat : %s." % ", ".join(shares))
+	if not skipped.is_empty():
+		gs.add_log("💀 %s %s tombé(s) au combat et n'a pas reçu d'XP." % [", ".join(skipped), "étaient" if skipped.size() > 1 else "était"])
 
 # ------------------------------------------------------------------ fuite
 

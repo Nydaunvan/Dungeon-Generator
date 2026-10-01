@@ -96,12 +96,11 @@ static func unequip(gs: GameState, c: Dictionary, slot: String) -> bool:
 	if it == null:
 		return false
 	if not has_space(gs, it):
-		gs.add_log("🎒 Impossible de déséquiper : l'onglet %s est plein (%d/%d)." % [TAB_LABELS[tab_of(it)], MAX_PER_TAB, MAX_PER_TAB])
+		gs.add_log("🎒 Impossible de déséquiper : l'onglet %s est plein (%d/%d). Jetez ou attribuez d'abord un objet." % [TAB_LABELS[tab_of(it)], MAX_PER_TAB, MAX_PER_TAB])
 		return false
 	eq[slot] = null
 	gs.inventory.append(it)
 	Characters.recompute(c, gs.cfg)
-	gs.add_log("%s retire %s." % [c.name, it.get("name", "")])
 	return true
 
 ## Boit une potion ; renvoie les PV rendus (-1 si impossible).

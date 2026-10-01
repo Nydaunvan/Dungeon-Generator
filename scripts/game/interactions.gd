@@ -343,6 +343,9 @@ func _trap_cfg() -> Dictionary:
 	for k in o.keys():
 		if c.has(k) and c[k] != null and str(c[k]) != "":
 			o[k] = float(c[k])
+	o["max"] = maxf(o.max, o.min)
+	o["dmgPctMax"] = maxf(o.dmgPctMax, o.dmgPctMin)
+	o["dexCap"] = maxf(o.dexCap, 0.0)
 	return o
 
 ## Détail du calcul de chance : base + bonus de classe + dextérité de l'équipe (comme computeTrapBreakdown).
@@ -402,7 +405,9 @@ func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
 	var s := _trap_cfg()
 	var pct := randi_range(int(round(float(s.dmgPctMin))), int(round(float(s.dmgPctMax))))
 	var pct_dmg := int(ceil(float(victim.get("maxHp", 1)) * pct / 100.0))
-	var flat := randi_range(int(it.get("trapDmgMin", 1)), maxi(int(it.get("trapDmgMin", 1)), int(it.get("trapDmgMax", 4))))
+	var dmin := int(it.get("trapDmgMin", 0)) if int(it.get("trapDmgMin", 0)) > 0 else 1
+	var dmax := int(it.get("trapDmgMax", 0)) if int(it.get("trapDmgMax", 0)) > 0 else 4
+	var flat := randi_range(dmin, maxi(dmin, dmax))
 	return {"victim": victim, "dmg": maxi(1, int(round(maxi(pct_dmg, flat) * mult)))}
 
 func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
