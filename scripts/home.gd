@@ -34,8 +34,8 @@ func _on_action(name: String) -> void:
 				"Ce donjon sert de démonstration : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, portes verrouillées, fontaine, objets, montée de niveau…).\n\nPour explorer tout ce que le jeu propose, lancez plutôt un donjon aléatoire depuis l'accueil.\n\nCommencer cette démonstration ?",
 				_launch_original, "Commencer")
 		"random": GeneratorDialog.open(_modal_layer, _launch_generated)
-		"create": Dialogs.confirm(_modal_layer, "Créer votre propre donjon", "Un nouveau donjon de départ va être généré et remplacera la configuration actuelle de l'administration. Continuer ?", Data.create_own_dungeon, "Créer")
-		"saves": SlotsModal.open(_modal_layer, Callable(), Data.launch_save)
+		"create": Data.create_own_dungeon()
+		"saves": SlotsModal.open(_modal_layer, Callable(), func(d): Data.launch_save(d))
 		"load-code": _load_code()
 		"import-json": _import_json()
 		"tutorial": DocModal.tutorial(_modal_layer)
@@ -48,22 +48,23 @@ func _load_code() -> void:
 	Files.paste_dialog(_modal_layer, "Charger un donjon depuis un code",
 		"Collez le code reçu : il contient tout le donjon (personnages, classes, sorts, niveaux, objets). Une nouvelle partie démarre avec ce donjon.",
 		func(text: String):
-			var cfg := Data.decode_code(text)
-			if cfg.is_empty() or not cfg.has("levels"):
-				Dialogs.notice(_modal_layer, "Code invalide", "Ce code est invalide ou illisible.")
+			if text.strip_edges() == "":
 				return
-			Data.config = cfg
-			Data.save_config()
-			Data.launch(cfg, "custom"))
+			Dialogs.confirm(_modal_layer, "", "Démarrer une nouvelle partie avec ce donjon ? Toute progression non sauvegardée sera perdue.", func():
+				var cfg := Data.decode_code(text)
+				if cfg.is_empty():
+					Form.alert(_modal_layer, "Ce code est invalide ou illisible.")
+					return
+				Data.ensure_defaults(cfg)
+				Data.config = cfg
+				Data.save_config()
+				Data.own_dungeon_launched = false
+				Data.launch(cfg, "custom", Data.ADMIN_LOCK)))
 
 func _import_json() -> void:
 	Files.pick_text(self, func(text: String):
-		var data := Saves.parse_import(text)
-		if data.is_empty():
-			Dialogs.notice(_modal_layer, "Import impossible", "Ce fichier ne contient pas de sauvegarde ou de configuration reconnue.")
-		elif not data.save.is_empty():
-			Data.launch_save(data)
-		else:
-			Data.config = data.config
-			Data.save_config()
-			Dialogs.notice(_modal_layer, "Configuration importée", "La configuration a été enregistrée. Elle est modifiable dans l'administration."))
+		if not Saves.is_valid_json(text):
+			Form.alert(_modal_layer, "Ce fichier n'est pas un JSON de sauvegarde valide.")
+			return
+		if not Data.launch_import(Saves.parse_import(text)):
+			Form.alert(_modal_layer, "Ce fichier ne contient pas de sauvegarde ou de configuration reconnue."))

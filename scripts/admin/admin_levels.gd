@@ -1,20 +1,45 @@
 class_name AdminLevels
 extends RefCounted
-## Onglet « Niveaux » : liste des niveaux, carte (pinceaux, redimensionnement, placement), monstres, objets, réglages.
+## Onglet « Niveaux » (`#adminLevels` de l'original) : liste des niveaux (230 px | 1fr), éditeur à onglets Carte / Monstres /
+## Objets / Réglages, placement en temps réel (bannière « 🎯 Cliquez sur la carte pour placer »), escaliers, marchand ambulant.
+## Mêmes textes, bornes et comportements que le JS 14048-14715 de la référence.
 
-const THEMES := [["stone", "Pierre (classique)"], ["dirt", "Pyramide"], ["damp", "Cachot humide"], ["ruins", "Ruines effondrées"], ["ice", "Glace"], ["lava", "Lave"], ["temple", "Temple ancien"]]
+const THEMES := [["stone", "🧱 Pierre (classique)"], ["dirt", "🟤 Pyramide"], ["damp", "🟢 Cachot humide"], ["ruins", "🏛️ Ruines effondrées"], ["ice", "🧊 Glace"], ["lava", "🌋 Lave"], ["temple", "🏺 Temple ancien"]]
 const DIRS := [[0, "Nord"], [1, "Est"], [2, "Sud"], [3, "Ouest"]]
 const MAX_LEVELS := 8
+const ITEM_TYPES := [["potion", "Potion"], ["weapon", "Arme"], ["armor", "Armure"], ["jewelry", "Bijou"], ["key", "Clé"], ["scroll", "Parchemin"], ["trap", "Piège"], ["switch", "Interrupt."], ["fountain", "Fontaine"]]
+const PERKS := [["lifesteal", "🩸 Vol de vie"], ["crit", "💥 Critique"], ["thorns", "🌵 Renvoi"]]
+const BORDER := Color("5a4526")
+const GOLD_DIM := Color("a9793a")
+const GOLD_BRIGHT := Color("ffd88a")
+const PARCH_DIM := Color("b8a781")
 
 static var _sel := ""
 static var _tab := "map"
 static var _brush := "."
 static var _allow_rooms := false
-## Cible de placement en cours : {kind: monster|item|merchant|start, id: String} ou vide.
+## Cible de placement en cours : {kind: monster|item|merchant|start|teleport, id: String} ou vide.
 static var _placement: Dictionary = {}
+static var _admin: Node = null
+static var _list_box: VBoxContainer = null
+static var _sub_host: VBoxContainer = null
+static var _name_edit: LineEdit = null
+static var _status: Label = null
+static var _banner: PanelContainer = null
+static var _banner_name: Label = null
+static var _grid: MapEditorGrid = null
+static var _tab_buttons: Dictionary = {}
+static var _stairs_box: VBoxContainer = null
+static var _merchant_box: VBoxContainer = null
+static var _field_boxes: Dictionary = {}
+
+# ------------------------------------------------------------------ données
+
+static func _cfg() -> Dictionary:
+	return Data.admin_config()
 
 static func _levels() -> Array:
-	return Data.config.get("levels", [])
+	return _cfg().get("levels", [])
 
 static func _current() -> Dictionary:
 	for l in _levels():
@@ -26,70 +51,32 @@ static func _current() -> Dictionary:
 	_sel = str(ls[0].id)
 	return ls[0]
 
-static func build(host: VBoxContainer, admin: Node) -> void:
-	var lvl := _current()
-	# ------------------------------------------------ liste des niveaux
-	var lp := Form.panel(host, "Niveaux du donjon")
-	var levels := _levels()
-	for i in levels.size():
-		var l: Dictionary = levels[i]
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		var b := Button.new()
-		b.text = "%d. %s" % [i + 1, l.get("name", "?")]
-		b.toggle_mode = true
-		b.button_pressed = l.id == _sel
-		b.focus_mode = Control.FOCUS_NONE
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		var lid: String = l.id
-		b.pressed.connect(func():
-			_sel = lid
-			_placement = {}
-			admin.refresh_tab())
-		row.add_child(b)
-		var idx := i
-		for mv in [["↑", -1], ["↓", 1]]:
-			var mb := Button.new()
-			mb.text = mv[0]
-			mb.focus_mode = Control.FOCUS_NONE
-			var d: int = mv[1]
-			mb.disabled = (idx + d < 0) or (idx + d >= levels.size())
-			mb.pressed.connect(func():
-				var tmp = levels[idx]
-				levels[idx] = levels[idx + d]
-				levels[idx + d] = tmp
-				admin.refresh_tab())
-			row.add_child(mb)
-		lp.add_child(row)
-	Form.buttons(lp, [["+ Ajouter un niveau", func(): _add_level(admin)]])
-	if lvl.is_empty():
-		return
+static func _level_by_id(id) -> Dictionary:
+	for l in _levels():
+		if l.id == id:
+			return l
+	return {}
 
-	# ------------------------------------------------ éditeur du niveau
-	var ep := Form.panel(host, "Édition du niveau")
-	var name_edit := LineEdit.new()
-	name_edit.text = str(lvl.get("name", ""))
-	name_edit.custom_minimum_size = Vector2(300, 0)
-	name_edit.text_changed.connect(func(t: String): lvl["name"] = t)
-	name_edit.focus_exited.connect(func(): admin.refresh_tab())
-	Form.row(ep, "Nom du niveau", name_edit)
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 6)
-	var group := ButtonGroup.new()
-	for t in [["map", "Carte"], ["mon", "Monstres"], ["item", "Objets"], ["cfg", "Réglages"]]:
-		var tb := Button.new()
-		tb.text = t[1]
-		tb.toggle_mode = true
-		tb.button_group = group
-		tb.button_pressed = _tab == t[0]
-		tb.focus_mode = Control.FOCUS_NONE
-		var id: String = t[0]
-		tb.pressed.connect(func():
-			_tab = id
-			admin.refresh_tab())
-		tabs.add_child(tb)
-	ep.add_child(tabs)
+static func _find(list: Array, id: String) -> Dictionary:
+	for e in list:
+		if str(e.id) == id:
+			return e
+	return {}
+
+## `ensureLevelStairs` : escaliers déduits de la carte (action copiée depuis `stairsAction` si présente).
+static func _ensure_stairs(lvl: Dictionary) -> void:
+	if lvl.has("stairs"):
+		return
+	lvl["stairs"] = []
+	var rows: Array = lvl.mapRows
+	for y in rows.size():
+		var row := str(rows[y])
+		for x in row.length():
+			if row[x] == "S":
+				var action: Dictionary = (lvl.stairsAction as Dictionary).duplicate(true) if lvl.get("stairsAction") is Dictionary else {"type": "victory"}
+				lvl.stairs.append({"id": "stairs_%d_%d" % [x, y], "x": x, "y": y, "action": action})
+
+static func _prepare(lvl: Dictionary) -> void:
 	if not lvl.has("doors"):
 		lvl["doors"] = []
 	_ensure_stairs(lvl)
@@ -97,63 +84,37 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		lvl["monsters"] = []
 	if not lvl.has("items"):
 		lvl["items"] = []
-	match _tab:
-		"map": _map_tab(ep, admin, lvl)
-		"mon": _monsters_tab(ep, admin, lvl)
-		"item": _items_tab(ep, admin, lvl)
-		"cfg": _cfg_tab(ep, admin, lvl)
-	var actions := Form.buttons(ep, [["Enregistrer la configuration par défaut", admin.save], ["Supprimer ce niveau", func(): _delete_level(admin)]])
-	actions.add_theme_constant_override("separation", 10)
 
-# ------------------------------------------------------------------ données
+# API fournie par Data (agent « Général ») ; appels dynamiques pour rester valide tant qu'elle n'existe pas.
+static func _has_run() -> bool:
+	return Data.has_method("admin_has_run") and bool(Data.call("admin_has_run"))
 
-static func _ensure_stairs(lvl: Dictionary) -> void:
-	if lvl.has("stairs"):
-		return
-	lvl["stairs"] = []
-	var rows: Array = lvl.mapRows
-	for y in rows.size():
-		for x in str(rows[y]).length():
-			if str(rows[y])[x] == "S":
-				lvl.stairs.append({"id": "stairs_%d_%d" % [x, y], "x": x, "y": y, "action": {"type": "victory"}})
+static func _marker() -> Dictionary:
+	if Data.has_method("admin_party_marker"):
+		var m = Data.call("admin_party_marker")
+		if m is Dictionary:
+			return m
+	return {}
 
-static func _add_level(admin: Node) -> void:
-	if _levels().size() >= MAX_LEVELS:
-		Dialogs.notice(admin.modals(), "Limite atteinte", "Un donjon ne peut pas dépasser %d niveaux." % MAX_LEVELS)
-		return
-	var rows: Array = []
-	for y in 8:
-		rows.append("#".repeat(8))
-	var id := AdminUtil.new_id("lvl")
-	_levels().append({"id": id, "name": "Nouveau niveau", "theme": "stone", "mapRows": rows, "startX": 1, "startY": 1, "startDir": 1, "stairs": [], "doors": [], "monsters": [], "items": []})
-	_sel = id
-	_tab = "map"
-	admin.refresh_tab()
+static func _teleport_group(level_id: String, x: int, y: int) -> String:
+	if Data.has_method("admin_teleport_group"):
+		return str(Data.call("admin_teleport_group", level_id, x, y))
+	return "Aucune partie en cours — lancez ou reprenez une partie avant de téléporter le groupe."
 
-static func _delete_level(admin: Node) -> void:
-	if _levels().size() <= 1:
-		Dialogs.notice(admin.modals(), "Suppression impossible", "Il doit rester au moins un niveau.")
-		return
-	var go := func():
-		var removed := _sel
-		var ls := _levels()
-		for i in range(ls.size() - 1, -1, -1):
-			if ls[i].id == removed:
-				ls.remove_at(i)
-		for l in ls:
-			for st in l.get("stairs", []):
-				var a: Dictionary = st.get("action", {})
-				if a.get("type") == "level" and a.get("targetId") == removed:
-					st["action"] = {"type": "victory"}
-		_sel = str(ls[0].id)
-		admin.refresh_tab()
-	Dialogs.confirm(admin.modals(), "Supprimer le niveau", "Supprimer ce niveau définitivement ?", go, "Supprimer")
+static func _teleport_village() -> String:
+	if Data.has_method("admin_teleport_village"):
+		return str(Data.call("admin_teleport_village"))
+	return "Aucune partie en cours — lancez ou reprenez une partie avant de téléporter le groupe."
+
+static func _alert(text: String) -> void:
+	Dialogs.notice(_admin.modals(), "", text)
 
 static func _too_close_to_stairs(lvl: Dictionary, x: int, y: int, min_dist: int = 3) -> bool:
 	var rows: Array = lvl.mapRows
 	for sy in rows.size():
-		for sx in str(rows[sy]).length():
-			if str(rows[sy])[sx] == "S" and maxi(absi(sx - x), absi(sy - y)) < min_dist:
+		var row := str(rows[sy])
+		for sx in row.length():
+			if row[sx] == "S" and maxi(absi(sx - x), absi(sy - y)) < min_dist:
 				return true
 	return false
 
@@ -173,133 +134,742 @@ static func _would_make_room(lvl: Dictionary, x: int, y: int) -> bool:
 				return true
 	return false
 
-static func _find(list: Array, id: String) -> Dictionary:
-	for e in list:
-		if e.id == id:
-			return e
-	return {}
+# ------------------------------------------------------------------ outils d'interface
 
-# ------------------------------------------------------------------ onglet Carte
+static func _px(v: float) -> float:
+	return UiMetrics.css(v)
+
+static func _fs(rem: float) -> int:
+	return int(round(UiMetrics.rem(rem)))
+
+## Nombre tel que l'affiche JavaScript (entier sans « .0 », plus court aller-retour sinon).
+static func _js_num(v: float) -> String:
+	if is_nan(v) or is_inf(v):
+		return "NaN" if is_nan(v) else ("Infinity" if v > 0.0 else "-Infinity")
+	if v == floorf(v) and absf(v) < 1e15:
+		return str(int(v))
+	for d in range(1, 18):
+		var s := String.num(v, d)
+		if s.to_float() == v:
+			return s
+	return str(v)
+
+static func _fmt(v) -> String:
+	if v == null:
+		return ""
+	if v is float or v is int:
+		return _js_num(float(v))
+	return str(v)
+
+## `x||d` de JavaScript pour un nombre.
+static func _or(v, d: float) -> float:
+	if v == null:
+		return d
+	var f := float(v) if (v is int or v is float) else (str(v).to_float() if str(v).is_valid_float() else 0.0)
+	return d if (f == 0.0 or is_nan(f)) else f
+
+## Valeur numérique stockée : entier si possible (comme JSON), sinon flottant.
+static func _store(v: float) -> Variant:
+	if is_nan(v) or is_inf(v):
+		return 0
+	return int(v) if v == floorf(v) and absf(v) < 1e15 else v
+
+## `Number(text)` (champ vide ou invalide → 0 via `||`).
+static func _parse(t: String) -> float:
+	var s := t.strip_edges()
+	return s.to_float() if s.is_valid_float() else 0.0
+
+static func _field_box(focus: bool, pad: Vector2) -> StyleBoxFlat:
+	var key := "%s|%s" % [focus, pad]
+	if not _field_boxes.has(key):
+		var b := StyleBoxFlat.new()
+		b.bg_color = Color("150f08")
+		b.border_color = GOLD_DIM if focus else BORDER
+		b.set_border_width_all(1)
+		b.set_corner_radius_all(5)
+		b.content_margin_left = _px(pad.x)
+		b.content_margin_right = _px(pad.x)
+		b.content_margin_top = _px(pad.y)
+		b.content_margin_bottom = _px(pad.y)
+		_field_boxes[key] = b
+	return _field_boxes[key]
+
+static func _style_edit(e: LineEdit, rem: float, pad: Vector2) -> void:
+	e.add_theme_stylebox_override("normal", _field_box(false, pad))
+	e.add_theme_stylebox_override("focus", _field_box(true, pad))
+	e.add_theme_stylebox_override("read_only", _field_box(false, pad))
+	e.add_theme_font_size_override("font_size", _fs(rem))
+	e.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+
+static func _lbl(text: String, rem: float, color: Color = PARCH_DIM, italic: bool = false) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", _fs(rem))
+	l.add_theme_color_override("font_color", color)
+	if italic:
+		l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+## Bouton compact (`button` de l'original) ; `primary` = texte or clair.
+static func _btn(text: String, cb: Callable, rem: float = 0.8, primary: bool = false, margins: Vector2 = Vector2(10, 5)) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", _fs(rem))
+	var cm := [int(_px(margins.x)), int(_px(margins.y)), int(_px(margins.x)), int(_px(margins.y))]
+	b.add_theme_stylebox_override("normal", UiTheme.tbox("btn_n", [10, 10, 10, 10], cm))
+	b.add_theme_stylebox_override("hover", UiTheme.tbox("btn_h", [10, 10, 10, 10], cm))
+	b.add_theme_stylebox_override("pressed", UiTheme.tbox("btn_p", [10, 10, 10, 10], cm))
+	b.add_theme_stylebox_override("disabled", UiTheme.tbox("btn_d", [10, 10, 10, 10], cm))
+	if primary:
+		b.add_theme_color_override("font_color", GOLD_BRIGHT)
+	if cb.is_valid():
+		b.pressed.connect(cb)
+	return b
+
+static func _tipped(c: Control, tip: String) -> Control:
+	c.tooltip_text = tip
+	return c
+
+## Liste déroulante compacte (`select` de l'original) ; `on_pick` reçoit la valeur de l'option.
+static func _dd(options: Array, current, on_pick: Callable, rem: float = 0.74, min_w: float = 0.0, tip: String = "") -> OptionButton:
+	var o := OptionButton.new()
+	o.focus_mode = Control.FOCUS_NONE
+	o.fit_to_longest_item = min_w <= 0.0
+	o.clip_text = min_w > 0.0
+	o.tooltip_text = tip
+	o.add_theme_font_size_override("font_size", _fs(rem))
+	o.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	if min_w > 0.0:
+		o.custom_minimum_size.x = _px(min_w)
+	var sel := 0
+	var found := false
+	for i in options.size():
+		o.add_item(str(options[i][1]))
+		if not found and str(options[i][0]) == str(current):
+			sel = i
+			found = true
+	if options.size() > 0:
+		o.select(sel)
+	o.item_selected.connect(func(i: int): on_pick.call(options[i][0]))
+	return o
+
+static func _chk(checked: bool, on_toggle: Callable, tip: String = "", disabled: bool = false, text: String = "") -> CheckBox:
+	var c := CheckBox.new()
+	c.focus_mode = Control.FOCUS_NONE
+	c.button_pressed = checked
+	c.disabled = disabled
+	c.tooltip_text = tip
+	if text != "":
+		c.text = text
+		c.add_theme_font_size_override("font_size", _fs(0.72))
+	c.toggled.connect(func(on: bool): on_toggle.call(on))
+	return c
+
+## Champ « input type=number » : la valeur est enregistrée en direct ; à Entrée / perte de focus le texte est réécrit avec la
+## valeur réellement conservée (bornes appliquées). `setter(v: float, final: bool)` renvoie la valeur stockée.
+static func _num(shown, w: float, setter: Callable, tip: String = "", rem: float = 0.74, placeholder: String = "") -> LineEdit:
+	var e := LineEdit.new()
+	e.text = _fmt(shown)
+	e.placeholder_text = placeholder
+	e.custom_minimum_size.x = _px(maxf(w, 42.0))
+	e.tooltip_text = tip
+	e.context_menu_enabled = false
+	e.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	e.select_all_on_focus = false
+	e.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_style_edit(e, rem, Vector2(5, 5))
+	var ok := RegEx.create_from_string("^[0-9eE.+\\-]*$")
+	var last := [e.text]
+	var apply := func(final: bool):
+		var v := _parse(e.text)
+		var stored = setter.call(v, final)
+		if final:
+			e.text = _fmt(stored)
+			last[0] = e.text
+	e.text_changed.connect(func(t: String):
+		if ok.search(t) == null:
+			var c := e.caret_column - 1
+			e.text = last[0]
+			e.caret_column = clampi(c, 0, e.text.length())
+			return
+		last[0] = t
+		apply.call(false))
+	e.text_submitted.connect(func(_t: String):
+		apply.call(true)
+		e.release_focus())
+	e.focus_exited.connect(func(): apply.call(true))
+	return e
+
+## Champ texte enregistré en direct dans `target[key]`.
+static func _text(target: Dictionary, key: String, w: float, rem: float = 0.74, pad: Vector2 = Vector2(5, 5), placeholder: String = "") -> LineEdit:
+	var e := LineEdit.new()
+	e.text = str(target.get(key, ""))
+	e.placeholder_text = placeholder
+	e.custom_minimum_size.x = _px(w)
+	_style_edit(e, rem, pad)
+	e.text_changed.connect(func(t: String): target[key] = t)
+	return e
+
+static func _set_plain(target: Dictionary, key: String, extra: Callable = Callable()) -> Callable:
+	return func(v: float, _final: bool):
+		target[key] = _store(v)
+		if extra.is_valid():
+			extra.call()
+		return target[key]
+
+static func _set_clamped(target: Dictionary, key: String, lo: float, hi: float) -> Callable:
+	return func(v: float, _final: bool):
+		target[key] = _store(clampf(v, lo, hi))
+		return target[key]
+
+## Ligne `.field-row` : libellé de 140 px (0,75 rem) + champs, passage à la ligne autorisé.
+static func _frow(parent: Control, label: String, hint: String = "", min_w: float = 140.0) -> HFlowContainer:
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_bottom", 6)
+	parent.add_child(m)
+	var f := HFlowContainer.new()
+	f.add_theme_constant_override("h_separation", 8)
+	f.add_theme_constant_override("v_separation", 4)
+	m.add_child(f)
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.custom_minimum_size.x = _px(min_w)
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	box.add_child(_lbl(label, 0.75))
+	if hint != "":
+		box.add_child(_lbl(hint, 0.74, PARCH_DIM, true))
+	f.add_child(box)
+	return f
+
+static func _field_row_edit(rem: float = 0.85) -> Vector2:
+	return Vector2(9, 7)
+
+## Ligne de boutons `.admin-actions`.
+static func _actions(parent: Control, specs: Array, top: float = 14.0, bottom: float = 0.0) -> HFlowContainer:
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_top", int(maxf(0.0, top - 4.0)))
+	m.add_theme_constant_override("margin_bottom", int(bottom))
+	parent.add_child(m)
+	var f := HFlowContainer.new()
+	f.add_theme_constant_override("h_separation", 8)
+	f.add_theme_constant_override("v_separation", 8)
+	m.add_child(f)
+	for sp in specs:
+		f.add_child(_btn(str(sp[0]), sp[1], 0.8, sp.size() > 2 and sp[2]))
+	return f
+
+static func _clear(box: Control) -> void:
+	for c in box.get_children():
+		box.remove_child(c)
+		c.queue_free()
+
+## Style `.icon-pick-btn` (38×38, fond #1c1610, liseré #5a4526, coins 6) appliqué au bouton d'icône.
+static func _icon_btn(b: Button) -> Button:
+	b.custom_minimum_size = Vector2(_px(38), _px(38))
+	b.add_theme_constant_override("icon_max_width", int(_px(28)))
+	for st in ["normal", "pressed", "focus"]:
+		var s := StyleBoxFlat.new()
+		s.bg_color = Color("1c1610")
+		s.border_color = BORDER
+		s.set_border_width_all(1)
+		s.set_corner_radius_all(6)
+		b.add_theme_stylebox_override(st, s)
+	var h := StyleBoxFlat.new()
+	h.bg_color = Color("1c1610")
+	h.border_color = GOLD_DIM
+	h.set_border_width_all(1)
+	h.set_corner_radius_all(6)
+	b.add_theme_stylebox_override("hover", h)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return b
+
+## Ligne en pointillés (séparateur de l'encart « Légendaire »).
+class DashLine extends Control:
+	func _init() -> void:
+		custom_minimum_size = Vector2(0, 1)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var x := 0.0
+		while x < size.x:
+			draw_line(Vector2(x, 0.5), Vector2(minf(x + 3.0, size.x), 0.5), Color("5a4526"), 1.0)
+			x += 6.0
+
+## Rangée : 230 px | 1fr, empilée sous 780 px.
+class AdaptiveRow extends BoxContainer:
+	var left: Control = null
+	func _init() -> void:
+		vertical = false
+		add_theme_constant_override("separation", 14)
+	func _ready() -> void:
+		get_viewport().size_changed.connect(_adapt)
+		_adapt()
+	func _adapt() -> void:
+		if left == null:
+			return
+		var narrow := get_viewport_rect().size.x <= UiMetrics.css(780.0)
+		vertical = narrow
+		left.custom_minimum_size.x = 0.0 if narrow else UiMetrics.css(230.0)
+		left.size_flags_horizontal = Control.SIZE_FILL if not narrow else Control.SIZE_EXPAND_FILL
+
+# ------------------------------------------------------------------ cadre : liste | éditeur
+
+static func build(host: VBoxContainer, admin: Node) -> void:
+	_admin = admin
+	_tab_buttons = {}
+	_grid = null
+	_banner = null
+	_stairs_box = null
+	_merchant_box = null
+	var layout := AdaptiveRow.new()
+	layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.add_child(layout)
+	# ---- colonne gauche : liste des niveaux
+	var lp := OrnatePanel.new("Niveaux du donjon")
+	layout.add_child(lp)
+	layout.left = lp
+	var link := RichTextLabel.new()
+	link.bbcode_enabled = true
+	link.fit_content = true
+	link.scroll_active = false
+	link.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	link.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	link.add_theme_font_size_override("normal_font_size", _fs(0.74))
+	link.add_theme_color_override("default_color", GOLD_DIM)
+	link.text = "[center][url=tuto][u]%s[/u][/url][/center]" % admin.tr("🧭 Besoin d'aide ? Voir l'étape « Niveaux » du tutoriel").replace("[", "[lb]")
+	link.meta_clicked.connect(func(_m): DocModal.topics(admin.modals(), "🧭 Tutoriel de création", "tutorial", "levels"))
+	link.meta_hover_started.connect(func(_m): link.add_theme_color_override("default_color", GOLD_BRIGHT))
+	link.meta_hover_ended.connect(func(_m): link.add_theme_color_override("default_color", GOLD_DIM))
+	lp.body.add_child(link)
+	_list_box = VBoxContainer.new()
+	_list_box.add_theme_constant_override("separation", 5)
+	lp.body.add_child(_list_box)
+	var add := _btn("+ Ajouter un niveau", func(): _add_level(), 0.8, true, Vector2(6, 10))
+	add.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lp.body.add_child(add)
+	# ---- colonne droite : éditeur
+	var ep := OrnatePanel.new("Édition du niveau")
+	ep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.add_child(ep)
+	var nrow := _frow(ep.body, "Nom du niveau")
+	_name_edit = LineEdit.new()
+	_name_edit.custom_minimum_size.x = _px(208)
+	_style_edit(_name_edit, 0.85, Vector2(9, 7))
+	_name_edit.text_changed.connect(func(t: String):
+		var l := _current()
+		if not l.is_empty():
+			l["name"] = t
+			_render_list())
+	nrow.add_child(_name_edit)
+	var tabs := HFlowContainer.new()
+	tabs.add_theme_constant_override("h_separation", 5)
+	tabs.add_theme_constant_override("v_separation", 5)
+	ep.body.add_child(tabs)
+	var group := ButtonGroup.new()
+	for t in [["map", "🗺 Carte"], ["mon", "👹 Monstres"], ["item", "💎 Objets"], ["cfg", "⚙ Réglages"]]:
+		var tb := _btn(str(t[1]), Callable(), 0.72, false, Vector2(12, 6))
+		tb.toggle_mode = true
+		tb.button_group = group
+		tb.button_pressed = _tab == t[0]
+		var id: String = t[0]
+		tb.pressed.connect(func():
+			_tab = id
+			_render_sub())
+		for st in ["pressed", "hover_pressed"]:
+			tb.add_theme_stylebox_override(st, UiTheme.tbox("btn_h", [10, 10, 10, 10], [int(_px(12)), int(_px(6)), int(_px(12)), int(_px(6))]))
+		tb.add_theme_color_override("font_pressed_color", GOLD_BRIGHT)
+		tb.add_theme_color_override("font_hover_pressed_color", GOLD_BRIGHT)
+		tabs.add_child(tb)
+		_tab_buttons[id] = tb
+	var sp := Control.new()
+	sp.custom_minimum_size = Vector2(0, 6)
+	ep.body.add_child(sp)
+	_sub_host = VBoxContainer.new()
+	_sub_host.add_theme_constant_override("separation", 4)
+	_sub_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ep.body.add_child(_sub_host)
+	_status = _lbl("", 0.7, Color("7a6a52"))
+	var acts := _actions(ep.body, [["💾 Enregistrer la configuration par défaut", func(): admin.confirm_save(_status), true], ["🗑 Supprimer ce niveau", func(): _delete_level()]])
+	ep.body.add_child(_status)
+	_render_list()
+	_render_editor()
+
+static func _row_box(sel: bool, hover: bool) -> StyleBoxFlat:
+	var b := StyleBoxFlat.new()
+	b.bg_color = Color(0.91, 0.71, 0.36, 0.08) if sel else Color(1, 1, 1, 0.02)
+	b.border_color = GOLD_DIM if sel else (BORDER if hover else Color(0, 0, 0, 0))
+	b.set_border_width_all(1)
+	b.set_corner_radius_all(6)
+	b.content_margin_left = _px(8)
+	b.content_margin_right = _px(8)
+	b.content_margin_top = _px(8)
+	b.content_margin_bottom = _px(8)
+	return b
+
+static func _render_list() -> void:
+	if _list_box == null or not is_instance_valid(_list_box):
+		return
+	_clear(_list_box)
+	var levels := _levels()
+	for i in levels.size():
+		var l: Dictionary = levels[i]
+		var lid := str(l.id)
+		var sel := lid == _sel
+		var row := PanelContainer.new()
+		row.add_theme_stylebox_override("panel", _row_box(sel, false))
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		row.mouse_entered.connect(func():
+			if is_instance_valid(row) and lid != _sel:
+				row.add_theme_stylebox_override("panel", _row_box(false, true)))
+		row.mouse_exited.connect(func():
+			if is_instance_valid(row):
+				row.add_theme_stylebox_override("panel", _row_box(lid == _sel, false)))
+		row.gui_input.connect(func(ev: InputEvent):
+			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+				_select(lid))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 4)
+		row.add_child(h)
+		var nm := _lbl(str(l.get("name", "")), 0.82, GOLD_BRIGHT if sel else UiTheme.PARCH)
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.clip_text = true
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		nm.custom_minimum_size.x = 10
+		h.add_child(nm)
+		var mini := HBoxContainer.new()
+		mini.add_theme_constant_override("separation", 3)
+		h.add_child(mini)
+		var idx := i
+		for d in [["↑", -1], ["↓", 1]]:
+			var dd: int = d[1]
+			mini.add_child(_btn(str(d[0]), func():
+				var ls := _levels()
+				if idx + dd >= 0 and idx + dd < ls.size():
+					var tmp = ls[idx]
+					ls[idx] = ls[idx + dd]
+					ls[idx + dd] = tmp
+					_render_list(), 0.65, false, Vector2(6, 2)))
+		_list_box.add_child(row)
+
+static func _select(id: String) -> void:
+	_sel = id
+	if str(_placement.get("kind", "")) != "teleport":
+		_placement = {}
+	_render_list()
+	_render_editor()
+
+## `renderLevelEditor` : champ du nom + contenu de l'onglet courant.
+static func _render_editor() -> void:
+	var lvl := _current()
+	if _name_edit == null or not is_instance_valid(_name_edit):
+		return
+	if lvl.is_empty():
+		_name_edit.text = ""
+		_clear(_sub_host)
+		return
+	_prepare(lvl)
+	_name_edit.text = str(lvl.get("name", ""))
+	for k in _tab_buttons:
+		(_tab_buttons[k] as Button).set_pressed_no_signal(k == _tab)
+	_render_sub()
+
+static func _render_sub() -> void:
+	if _sub_host == null or not is_instance_valid(_sub_host):
+		return
+	_clear(_sub_host)
+	_banner = null
+	_grid = null
+	_stairs_box = null
+	_merchant_box = null
+	var lvl := _current()
+	if lvl.is_empty():
+		return
+	_prepare(lvl)
+	for k in _tab_buttons:
+		(_tab_buttons[k] as Button).set_pressed_no_signal(k == _tab)
+	match _tab:
+		"map": _map_sub(_sub_host, lvl)
+		"mon": _monsters_sub(_sub_host, lvl)
+		"item": _items_sub(_sub_host, lvl)
+		"cfg": _cfg_sub(_sub_host, lvl)
+
+static func _add_level() -> void:
+	if _levels().size() >= MAX_LEVELS:
+		_alert("Un donjon ne peut pas dépasser 8 niveaux.")
+		return
+	var rows: Array = []
+	for y in 8:
+		rows.append("#".repeat(8))
+	var id := "lvl_%d" % Time.get_ticks_msec()
+	_levels().append({"id": id, "name": "Nouveau niveau", "theme": "stone", "mapRows": rows, "startX": 1, "startY": 1, "startDir": 1, "stairs": [], "doors": [], "monsters": [], "items": []})
+	_sel = id
+	_render_list()
+	_render_editor()
+
+static func _delete_level() -> void:
+	if _levels().size() <= 1:
+		_alert("Il doit rester au moins un niveau.")
+		return
+	var go := func():
+		var removed := _sel
+		var ls := _levels()
+		for i in range(ls.size() - 1, -1, -1):
+			if ls[i].id == removed:
+				ls.remove_at(i)
+		for l in ls:
+			for st in l.get("stairs", []):
+				var a: Dictionary = st.get("action", {})
+				if a.get("type") == "level" and a.get("targetId") == removed:
+					st["action"] = {"type": "victory"}
+		_sel = str(ls[0].id)
+		_render_list()
+		_render_editor()
+	Dialogs.confirm(_admin.modals(), "", "Supprimer ce niveau définitivement ?", go)
+
+# ------------------------------------------------------------------ placement
 
 static func _placement_name(lvl: Dictionary) -> String:
 	match str(_placement.get("kind", "")):
-		"monster": return str(_find(lvl.monsters, str(_placement.id)).get("name", "le monstre"))
-		"item": return str(_find(lvl.items, str(_placement.id)).get("name", "l'objet"))
+		"monster": return str(_find(lvl.monsters, str(_placement.id)).get("name", ""))
+		"item": return str(_find(lvl.items, str(_placement.id)).get("name", ""))
 		"merchant": return "le marchand ambulant"
+		"teleport": return "le groupe (téléportation)"
 	return "le point de départ"
 
-static func _map_tab(ep: VBoxContainer, admin: Node, lvl: Dictionary) -> void:
-	if not _placement.is_empty():
-		var banner := HBoxContainer.new()
-		banner.add_theme_constant_override("separation", 10)
-		banner.add_child(AdminUtil.label("Cliquez sur la carte pour placer : " + _placement_name(lvl), 15, UiTheme.GOLD))
-		var cancel := Button.new()
-		cancel.text = "Annuler"
-		cancel.focus_mode = Control.FOCUS_NONE
-		cancel.pressed.connect(func():
-			_placement = {}
-			admin.refresh_tab())
-		banner.add_child(cancel)
-		ep.add_child(banner)
+## `updatePlacementBanner` : encadré or (12 %), liseré or terni, rayon 6.
+static func _update_banner() -> void:
+	if _banner == null or not is_instance_valid(_banner):
+		return
+	if _placement.is_empty():
+		_banner.visible = false
+		return
+	_banner.visible = true
+	_banner_name.text = _placement_name(_current())
+
+static func _build_banner(parent: Control) -> void:
+	_banner = PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.91, 0.71, 0.36, 0.12)
+	sb.border_color = GOLD_DIM
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(6)
+	sb.content_margin_left = _px(12)
+	sb.content_margin_right = _px(12)
+	sb.content_margin_top = _px(8)
+	sb.content_margin_bottom = _px(8)
+	_banner.add_theme_stylebox_override("panel", sb)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	_banner.add_child(h)
+	var span := HBoxContainer.new()
+	span.add_theme_constant_override("separation", 0)
+	span.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	span.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var pre := _lbl("🎯 Cliquez sur la carte pour placer :", 0.8, UiTheme.PARCH)
+	span.add_child(pre)
+	var sp := Control.new()
+	sp.custom_minimum_size = Vector2(5, 0)
+	span.add_child(sp)
+	_banner_name = _lbl("", 0.8, UiTheme.PARCH)
+	_banner_name.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	span.add_child(_banner_name)
+	h.add_child(span)
+	h.add_child(_btn("Annuler", func():
+		_placement = {}
+		_update_banner(), 0.7, false, Vector2(10, 4)))
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_bottom", 6)
+	m.add_child(_banner)
+	parent.add_child(m)
+	_banner.visible = false
+	_update_banner()
+
+static func _start_placement(kind: String, id: String = "") -> void:
+	_placement = {"kind": kind, "id": id}
+	_tab = "map"
+	_render_sub()
+
+# ------------------------------------------------------------------ onglet Carte
+
+static func _radio_icon(on: bool) -> Texture2D:
+	var n := 16
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var c := Vector2(7.5, 7.5)
+	for y in n:
+		for x in n:
+			var d := Vector2(x, y).distance_to(c)
+			var col := Color(0, 0, 0, 0)
+			if on:
+				if d <= 7.2 and d > 5.0:
+					col = Color("0075ff")
+				elif d <= 5.0 and d > 3.6:
+					col = Color.WHITE
+				elif d <= 3.6:
+					col = Color("0075ff")
+			else:
+				if d <= 7.2 and d > 6.2:
+					col = Color("767676")
+				elif d <= 6.2:
+					col = Color.WHITE
+			if col.a > 0.0:
+				var edge := clampf(7.7 - d, 0.0, 1.0)
+				col.a *= edge
+			img.set_pixel(x, y, col)
+	return ImageTexture.create_from_image(img)
+
+static func _map_sub(ep: VBoxContainer, lvl: Dictionary) -> void:
+	_build_banner(ep)
 	# dimensions
 	var rows: Array = lvl.mapRows
 	var dims := {"w": str(rows[0]).length(), "h": rows.size()}
-	var dl := AdminUtil.flow(ep)
-	AdminUtil.chip(dl, "Largeur (max 60)", AdminUtil.mini_number(dims, "w", 4, 60, 8))
-	AdminUtil.chip(dl, "Hauteur (max 60)", AdminUtil.mini_number(dims, "h", 4, 60, 8))
-	var resize := Button.new()
-	resize.text = "Redimensionner"
-	resize.focus_mode = Control.FOCUS_NONE
-	resize.pressed.connect(func():
-		var W := clampi(int(dims.w), 4, 60)
-		var H := clampi(int(dims.h), 4, 60)
-		var old: Array = lvl.mapRows
-		var nr: Array = []
-		for y in H:
-			var row := ""
-			for x in W:
-				row += str(old[y])[x] if (y < old.size() and x < str(old[0]).length()) else "#"
-			nr.append(row)
-		lvl["mapRows"] = nr
-		admin.refresh_tab())
-	dl.add_child(resize)
+	var dl := HFlowContainer.new()
+	dl.add_theme_constant_override("h_separation", 8)
+	dl.add_theme_constant_override("v_separation", 4)
+	var dm := MarginContainer.new()
+	dm.add_theme_constant_override("margin_bottom", 6)
+	dm.add_child(dl)
+	ep.add_child(dm)
+	var cap60 := func(key: String) -> Callable:
+		return func(v: float, _final: bool):
+			if v > 60.0:
+				dims[key] = 60.0
+			else:
+				dims[key] = v
+			return dims[key]
+	for spec in [["Largeur", "w"], ["Hauteur", "h"]]:
+		var lb := HBoxContainer.new()
+		lb.add_theme_constant_override("separation", 4)
+		lb.custom_minimum_size.x = _px(140)
+		lb.add_child(_lbl(str(spec[0]), 0.75))
+		lb.add_child(_lbl("(max 60)", 0.74, PARCH_DIM, true))
+		dl.add_child(lb)
+		var key: String = spec[1]
+		var ne := _num(dims[key], 70, cap60.call(key), "", 0.85)
+		_style_edit(ne, 0.85, Vector2(9, 7))
+		ne.custom_minimum_size.x = _px(70)
+		dl.add_child(ne)
+	dl.add_child(_btn("Redimensionner", func(): _resize(lvl, dims)))
 	# pinceaux
-	var bl := AdminUtil.flow(ep)
-	bl.add_child(AdminUtil.label("Pinceau :", 14, UiTheme.DIM))
+	var bl := HFlowContainer.new()
+	bl.add_theme_constant_override("h_separation", 14)
+	bl.add_theme_constant_override("v_separation", 4)
+	bl.add_child(_lbl("Pinceau :", 0.8))
 	var group := ButtonGroup.new()
-	for br in [[".", "Sol"], ["#", "Mur"], ["D", "Porte"], ["S", "Escalier"]]:
-		var b := Button.new()
-		b.text = br[1]
-		b.toggle_mode = true
-		b.button_group = group
-		b.button_pressed = _brush == br[0]
-		b.focus_mode = Control.FOCUS_NONE
+	var ric := _radio_icon(true)
+	var ric0 := _radio_icon(false)
+	for br in [[".", "🟫 Sol"], ["#", "⬛ Mur"], ["D", "🚪 Porte"], ["S", "✨ Escalier"]]:
+		var cb := CheckBox.new()
+		cb.text = str(br[1])
+		cb.toggle_mode = true
+		cb.button_group = group
+		cb.button_pressed = _brush == br[0]
+		cb.focus_mode = Control.FOCUS_NONE
+		cb.add_theme_font_size_override("font_size", _fs(0.8))
+		cb.add_theme_icon_override("checked", ric)
+		cb.add_theme_icon_override("unchecked", ric0)
+		cb.add_theme_icon_override("radio_checked", ric)
+		cb.add_theme_icon_override("radio_unchecked", ric0)
+		cb.add_theme_constant_override("h_separation", 5)
 		var ch: String = br[0]
-		b.pressed.connect(func(): _brush = ch)
-		bl.add_child(b)
-	var cb := CheckBox.new()
-	cb.text = "Autoriser les salles (test)"
-	cb.tooltip_text = "Désactive temporairement la règle « couloirs d'une seule case de large »."
-	cb.focus_mode = Control.FOCUS_NONE
-	cb.button_pressed = _allow_rooms
-	cb.toggled.connect(func(on: bool): _allow_rooms = on)
-	bl.add_child(cb)
+		cb.pressed.connect(func(): _brush = ch)
+		bl.add_child(cb)
+	var bm := MarginContainer.new()
+	bm.add_theme_constant_override("margin_bottom", 6)
+	bm.add_child(bl)
+	ep.add_child(bm)
+	var rl := HFlowContainer.new()
+	var rm := MarginContainer.new()
+	rm.add_theme_constant_override("margin_bottom", 6)
+	rm.add_child(rl)
+	ep.add_child(rm)
+	var rooms := CheckBox.new()
+	rooms.text = "🧪 Autoriser les salles (test) — désactive temporairement la limite \"couloirs à une case\""
+	rooms.focus_mode = Control.FOCUS_NONE
+	rooms.button_pressed = _allow_rooms
+	rooms.add_theme_font_size_override("font_size", _fs(0.78))
+	rooms.toggled.connect(func(on: bool): _allow_rooms = on)
+	rl.add_child(rooms)
 	# grille
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var grid := MapEditorGrid.new()
-	scroll.add_child(grid)
-	grid.set_level(lvl)
+	_grid = MapEditorGrid.new()
+	scroll.add_child(_grid)
+	_grid.party_marker = _marker()
+	_grid.set_level(lvl)
 	ep.add_child(scroll)
-	grid.cell_pressed.connect(func(x: int, y: int, badge: String): _on_press(admin, lvl, grid, x, y, badge))
-	grid.cell_dragged.connect(func(x: int, y: int):
-		if _placement.is_empty() and (_brush == "." or _brush == "#"):
-			_paint(admin, lvl, grid, x, y))
-	Form.hint(ep, "Cliquez ou faites glisser pour peindre. Les pastilles dans les coins indiquent un monstre (en haut à gauche) ou un objet (en bas à droite) : cliquez dessus pour le retirer du niveau.")
+	_grid.cell_pressed.connect(func(x: int, y: int): _on_cell(lvl, x, y))
+	_grid.badge_pressed.connect(func(x: int, y: int, kind: String, id: String): _on_badge(lvl, kind, id))
+	Form.hint(ep, "Cliquez sur une case pour peindre. Les icônes dans les coins indiquent un monstre / objet déjà présent — cliquez directement sur cette icône pour le retirer du niveau.", _fs(0.74))
 
-static func _on_press(admin: Node, lvl: Dictionary, grid: MapEditorGrid, x: int, y: int, badge: String) -> void:
-	if not _placement.is_empty():
-		_place(admin, lvl, x, y)
-		return
-	if badge.begins_with("mon:"):
-		var id := badge.substr(4)
+static func _refresh_grid() -> void:
+	if _grid != null and is_instance_valid(_grid):
+		_grid.party_marker = _marker()
+		_grid.refresh()
+
+static func _resize(lvl: Dictionary, dims: Dictionary) -> void:
+	var W := clampi(int(_or(dims.w, 8.0)), 4, 60)
+	var H := clampi(int(_or(dims.h, 8.0)), 4, 60)
+	var old: Array = lvl.mapRows
+	var nr: Array = []
+	for y in H:
+		var row := ""
+		for x in W:
+			row += str(old[y])[x] if (y < old.size() and x < str(old[0]).length()) else "#"
+		nr.append(row)
+	lvl["mapRows"] = nr
+	_render_sub()
+
+## Clic sur une pastille retirable : retire l'entité du niveau (`onMapGridClick`).
+static func _on_badge(lvl: Dictionary, kind: String, id: String) -> void:
+	if kind == "mon":
 		var arr: Array = lvl.monsters
-		for i in range(arr.size() - 1, -1, -1):
-			if arr[i].id == id:
+		for i in arr.size():
+			if str(arr[i].id) == id:
 				arr.remove_at(i)
-		grid.refresh()
-		return
-	if badge.begins_with("item:"):
-		var id2 := badge.substr(5)
-		var items: Array = lvl.items
-		for i in range(items.size() - 1, -1, -1):
-			if items[i].id == id2:
-				items.remove_at(i)
-		for m in lvl.monsters:
-			if m.get("lootItemId") == id2:
-				m["lootItemId"] = ""
-			if m.get("lootItemId2") == id2:
-				m["lootItemId2"] = ""
-		grid.refresh()
-		return
-	_paint(admin, lvl, grid, x, y)
+				break
+	else:
+		_remove_item(lvl, id)
+	_refresh_grid()
 
-static func _place(admin: Node, lvl: Dictionary, x: int, y: int) -> void:
-	var kind := str(_placement.get("kind", ""))
-	match kind:
+static func _remove_item(lvl: Dictionary, id: String) -> void:
+	var items: Array = lvl.items
+	for i in items.size():
+		if str(items[i].id) == id:
+			items.remove_at(i)
+			break
+	for m in lvl.monsters:
+		if m.get("lootItemId") == id:
+			m["lootItemId"] = ""
+		if m.get("lootItemId2") == id:
+			m["lootItemId2"] = ""
+
+## Clic sur une case : placement en cours, sinon peinture (`onMapCellPaint`).
+static func _on_cell(lvl: Dictionary, x: int, y: int) -> void:
+	if not _placement.is_empty():
+		_place(lvl, x, y)
+		return
+	_paint(lvl, x, y)
+
+static func _place(lvl: Dictionary, x: int, y: int) -> void:
+	match str(_placement.get("kind", "")):
 		"monster":
 			if _too_close_to_stairs(lvl, x, y):
-				admin.say("Un monstre ne peut pas être placé à moins de 3 cases d'un escalier : le joueur ne doit jamais tomber sur un combat en changeant de niveau.")
+				_alert("Un monstre ne peut pas être placé à moins de 3 cases d'un escalier/d'une arche — le joueur ne doit jamais tomber sur un combat en changeant de niveau.")
 				return
 			var m := _find(lvl.monsters, str(_placement.id))
-			m["x"] = x
-			m["y"] = y
+			if not m.is_empty():
+				m["x"] = x
+				m["y"] = y
 		"item":
 			var it := _find(lvl.items, str(_placement.id))
-			it["x"] = x
-			it["y"] = y
+			if not it.is_empty():
+				it["x"] = x
+				it["y"] = y
 		"merchant":
 			if not (lvl.get("travelingMerchant") is Dictionary):
 				lvl["travelingMerchant"] = {"x": x, "y": y, "patrolRadius": 4, "lootSlotCount": 6, "lootItemIds": []}
@@ -309,17 +879,25 @@ static func _place(admin: Node, lvl: Dictionary, x: int, y: int) -> void:
 		"start":
 			lvl["startX"] = x
 			lvl["startY"] = y
+		"teleport":
+			if str(lvl.mapRows[y])[x] == "#":
+				_alert("Case murée : choisissez une case de sol.")
+				return
+			var err: String = _teleport_group(str(lvl.id), x, y)
+			if err != "":
+				_alert(err)
+				_placement = {}
+				_update_banner()
+				return
 	_placement = {}
-	admin.refresh_tab()
+	_render_sub()
 
-static func _paint(admin: Node, lvl: Dictionary, grid: MapEditorGrid, x: int, y: int) -> void:
+static func _paint(lvl: Dictionary, x: int, y: int) -> void:
 	var rows: Array = lvl.mapRows
 	if _brush == "." and not _allow_rooms and _would_make_room(lvl, x, y):
-		admin.say("Impossible : cela créerait une salle de plusieurs cases de sol adjacentes. Les couloirs doivent rester larges d'une seule case.")
+		_alert("Impossible : cela créerait une salle de plusieurs cases de sol adjacentes. Les couloirs doivent rester larges d'une seule case.")
 		return
 	var row := str(rows[y])
-	if row[x] == _brush:
-		return
 	rows[y] = row.substr(0, x) + _brush + row.substr(x + 1)
 	var doors: Array = lvl.doors
 	var stairs: Array = lvl.stairs
@@ -333,321 +911,564 @@ static func _paint(admin: Node, lvl: Dictionary, grid: MapEditorGrid, x: int, y:
 		doors.append({"id": "door_%d_%d_%d" % [x, y, Time.get_ticks_msec()], "x": x, "y": y, "locked": true})
 	elif _brush == "S":
 		stairs.append({"id": "stairs_%d_%d_%d" % [x, y, Time.get_ticks_msec()], "x": x, "y": y, "action": {"type": "victory"}})
-	grid.refresh()
+	_refresh_grid()
 
 # ------------------------------------------------------------------ onglet Monstres
 
-static func _loot_options(lvl: Dictionary) -> Array:
-	var out: Array = [["", "— aucun —"]]
-	for it in lvl.items:
-		if str(it.get("type", "")) != "decor":
-			out.append([it.id, AdminUtil.item_label(it)])
+static func _mon_derived(m: Dictionary) -> Dictionary:
+	var max_hp := 5.0 + _or(m.get("con"), 8.0) * 2.8
+	var amin := maxf(1.0, floorf(_or(m.get("force"), 8.0) / 2.5))
+	var amax := amin + 1.0 + floorf(_or(m.get("dex"), 8.0) / 3.3)
+	return {"maxHp": max_hp, "atkMin": amin, "atkMax": amax}
+
+static func _preview_text(m: Dictionary) -> String:
+	var d := _mon_derived(m)
+	return "PV%s·%d-%d" % [_js_num(d.maxHp), int(d.atkMin), int(d.atkMax)]
+
+static func _door_options(lvl: Dictionary) -> Array:
+	var out: Array = [["", "— Aucune —"]]
+	for d in lvl.get("doors", []):
+		out.append([d.id, "Porte (%d,%d)" % [int(d.x), int(d.y)]])
 	return out
 
-static func _monsters_tab(ep: VBoxContainer, admin: Node, lvl: Dictionary) -> void:
-	var add_mon := func():
-		lvl.monsters.append({"id": AdminUtil.new_id("mon"), "name": "Nouveau monstre", "icon": "@icon:mon_orc", "x": int(lvl.startX), "y": int(lvl.startY), "force": 8, "dex": 8, "con": 8, "speed": 8, "resistPhys": 0, "resistMagic": 0, "xpReward": 10, "goldReward": 5, "abilitySpellId": "", "abilityChance": 30, "enrageThreshold": 0, "patrolRadius": 3, "attackSpeed": 2, "opensDoorId": "", "startHidden": false, "isBoss": false, "lootItemId": "", "lootChance": 100, "lootItemId2": "", "lootChance2": 100})
-		admin.refresh_tab()
-	Form.buttons(ep, [["+ Ajouter un monstre", add_mon]])
-	if (lvl.monsters as Array).is_empty():
-		Form.hint(ep, "Aucun monstre sur ce niveau.")
-	var damage_spells: Array = [["", "— attaque simple —"]]
-	for s in Data.config.get("spells", []):
-		if s.get("mode", "damage") == "damage":
-			damage_spells.append([s.id, AdminUtil.spell_label(s)])
-	for m in lvl.monsters:
-		var b := Form.panel(ep, str(m.get("name", "Monstre")))
-		var top := AdminUtil.flow(b)
-		top.add_child(IconPicker.button(admin.modals(), m, "icon", Callable(), 36.0))
-		var e := LineEdit.new()
-		e.text = str(m.get("name", ""))
-		e.custom_minimum_size = Vector2(190, 0)
-		e.text_changed.connect(func(t: String): m["name"] = t)
-		AdminUtil.chip(top, "Nom", e)
-		top.add_child(AdminUtil.label("Position %d,%d" % [int(m.x), int(m.y)], 14, UiTheme.DIM))
-		var place := Button.new()
-		place.text = "Placer sur la carte"
-		place.focus_mode = Control.FOCUS_NONE
-		var mid: String = m.id
-		place.pressed.connect(func():
-			_placement = {"kind": "monster", "id": mid}
-			_tab = "map"
-			admin.refresh_tab())
-		top.add_child(place)
-		var rm := Button.new()
-		rm.text = "Supprimer"
-		rm.focus_mode = Control.FOCUS_NONE
-		rm.pressed.connect(func():
-			(lvl.monsters as Array).erase(m)
-			admin.refresh_tab())
-		top.add_child(rm)
+static func _loot_button(lvl: Dictionary, m: Dictionary, key: String, tip: String) -> Button:
+	var cur = null
+	var id := str(m.get(key, ""))
+	if id != "":
+		cur = _find(lvl.items, id)
+		if (cur as Dictionary).is_empty():
+			cur = null
+	var label := "— Aucun —" if cur == null else "%s %s" % [AdminUtil.icon_text_fallback(str(cur.get("icon", ""))), cur.get("name", "")]
+	var b := _btn(label, func():
+		LootPicker.open(_admin.modals(), lvl.items, func(picked: String):
+			m[key] = picked
+			_render_sub.call_deferred()), 0.8, false, Vector2(6, 10))
+	b.tooltip_text = tip
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var font := b.get_theme_font("font")
+	var want := font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, _fs(0.8)).x + _px(24)
+	b.custom_minimum_size.x = minf(want, _px(150))
+	return b
 
-		var st := AdminUtil.flow(b)
-		var preview := AdminUtil.label("", 14, UiTheme.DIM)
-		var upd := func():
-			var hp := 5.0 + float(m.get("con", 8)) * 2.8
-			var amin := maxi(1, int(floor(float(m.get("force", 8)) / 2.5)))
-			var amax := amin + 1 + int(floor(float(m.get("dex", 8)) / 3.3))
-			preview.text = "PV %d · Attaque %d-%d" % [int(hp), amin, amax]
-		AdminUtil.chip(st, "Force", AdminUtil.mini_number(m, "force", 1, 999, 8, upd))
-		AdminUtil.chip(st, "Dex", AdminUtil.mini_number(m, "dex", 1, 999, 8, upd))
-		AdminUtil.chip(st, "Con", AdminUtil.mini_number(m, "con", 1, 999, 8, upd))
-		var spd := AdminUtil.mini_number(m, "speed", 0, 99, 8)
-		spd.tooltip_text = "Détermine l'ordre de passage dans la file d'initiative, pas la cadence d'attaque."
-		AdminUtil.chip(st, "Vitesse", spd)
-		st.add_child(preview)
-		upd.call()
-		var rs := AdminUtil.flow(b)
-		AdminUtil.chip(rs, "Résist. phys. (%)", AdminUtil.mini_number(m, "resistPhys", 0, 100))
-		AdminUtil.chip(rs, "Résist. magique (%)", AdminUtil.mini_number(m, "resistMagic", 0, 100))
-		AdminUtil.chip(rs, "XP", AdminUtil.mini_number(m, "xpReward", 0, 99999, 10))
-		AdminUtil.chip(rs, "Or", AdminUtil.mini_number(m, "goldReward", 0, 99999))
-		var ab := AdminUtil.flow(b)
-		var on_ab := func(v):
-			m["abilitySpellId"] = v
-			admin.refresh_tab()
-		AdminUtil.chip(ab, "Capacité spéciale", AdminUtil.dropdown(damage_spells, m.get("abilitySpellId", ""), on_ab, 240.0))
-		if str(m.get("abilitySpellId", "")) != "":
-			AdminUtil.chip(ab, "Chance (%)", AdminUtil.mini_number(m, "abilityChance", 0, 100, 30))
-		AdminUtil.chip(ab, "Rage à PV (%)", AdminUtil.mini_number(m, "enrageThreshold", 0, 100))
-		AdminUtil.chip(ab, "Rayon de patrouille", AdminUtil.mini_number(m, "patrolRadius", 0, 20))
-		var sp := HBoxContainer.new()
-		var slider := HSlider.new()
-		slider.min_value = 1.0
-		slider.max_value = 3.0
-		slider.step = 0.1
-		slider.value = float(m.get("attackSpeed", 2))
-		slider.custom_minimum_size = Vector2(130, 0)
-		slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var sl := AdminUtil.label("%.1f s" % slider.value, 14)
-		slider.value_changed.connect(func(v: float):
-			m["attackSpeed"] = v
-			sl.text = "%.1f s" % v)
-		sp.add_theme_constant_override("separation", 6)
-		sp.add_child(slider)
-		sp.add_child(sl)
-		sp.tooltip_text = "Temps entre deux attaques automatiques."
-		AdminUtil.chip(ab, "Cadence d'attaque", sp)
-		var on_door := func(v): m["opensDoorId"] = v
-		AdminUtil.chip(ab, "Ouvre à sa mort", AdminUtil.dropdown(AdminItems.door_options(lvl), m.get("opensDoorId", ""), on_door, 190.0))
-		var lo := AdminUtil.flow(b)
-		var lopts := _loot_options(lvl)
-		var on_l1 := func(v): m["lootItemId"] = v
-		var on_l2 := func(v): m["lootItemId2"] = v
-		AdminUtil.chip(lo, "Butin 1", AdminUtil.dropdown(lopts, m.get("lootItemId", ""), on_l1, 200.0))
-		AdminUtil.chip(lo, "Chance (%)", AdminUtil.mini_number(m, "lootChance", 0, 100, 100))
-		AdminUtil.chip(lo, "Butin 2", AdminUtil.dropdown(lopts, m.get("lootItemId2", ""), on_l2, 200.0))
-		AdminUtil.chip(lo, "Chance (%)", AdminUtil.mini_number(m, "lootChance2", 0, 100, 100))
-		var fl := AdminUtil.flow(b)
-		var boss := CheckBox.new()
-		boss.text = "Boss"
-		boss.tooltip_text = "Monstre de fin de niveau, affichage imposant (incompatible avec un groupe)."
-		boss.focus_mode = Control.FOCUS_NONE
-		boss.button_pressed = bool(m.get("isBoss", false))
-		boss.disabled = bool(m.get("isGroup", false))
-		boss.toggled.connect(func(on: bool):
-			m["isBoss"] = on
-			if on:
-				m["isGroup"] = false
-			admin.refresh_tab())
-		fl.add_child(boss)
-		var grp := CheckBox.new()
-		grp.text = "Groupe"
-		grp.tooltip_text = "Apparaît en groupe de 2 ou 3 exemplaires (incompatible avec un boss)."
-		grp.focus_mode = Control.FOCUS_NONE
-		grp.button_pressed = bool(m.get("isGroup", false))
-		grp.disabled = bool(m.get("isBoss", false))
-		grp.toggled.connect(func(on: bool):
-			m["isGroup"] = on
-			if on:
-				m["isBoss"] = false
-				if not m.has("groupSize"):
-					m["groupSize"] = 2
-			admin.refresh_tab())
-		fl.add_child(grp)
-		if bool(m.get("isGroup", false)):
-			var on_gs := func(v): m["groupSize"] = int(v)
-			AdminUtil.chip(fl, "Taille", AdminUtil.dropdown([[2, "2"], [3, "3"]], m.get("groupSize", 2), on_gs, 70.0))
-		Form.check(fl, "Caché (révélé par un interrupteur)", m, "startHidden")
+static func _monsters_sub(host: VBoxContainer, lvl: Dictionary) -> void:
+	var headers := ["Icône", "Nom", "Position", "For", "Dex", "Con", "Vitesse", "Aperçu", "Rés. Phys.%", "Rés. Mag.%", "XP", "Or", "Capacité (chance %)", "Seuil rage %", "Zone", "Vitesse d'attaque", "Ouvre porte", "Butin", "Chance %", "Butin 2", "Chance 2 %", "Boss", "Groupe", "Caché", "", ""]
+	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 42, 90, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
+	var g := AdminTable.create(host, headers, widths)
+	var spells: Array = [["", "— Attaque simple —"]]
+	for s in _cfg().get("spells", []):
+		if s.get("mode") == "damage":
+			spells.append([s.id, AdminUtil.spell_label(s)])
+	for m in lvl.monsters:
+		_monster_row(g, lvl, m, spells)
+	var ab := Form.buttons(host, [["+ Ajouter un monstre", func(): _add_monster(lvl)]])
+	ab.get_child(0).add_theme_font_size_override("font_size", _fs(0.8))
+
+static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spells: Array) -> void:
+	var mid := str(m.id)
+	AdminTable.cell(g, _icon_btn(IconPicker.button(_admin.modals(), m, "icon", Callable(), 26.0)))
+	AdminTable.cell(g, _text(m, "name", 90))
+	AdminTable.text_cell(g, "%d,%d" % [int(m.x), int(m.y)], false, 0.72).clip_text = false
+	var prev := _lbl(_preview_text(m), 0.6)
+	var upd := func(): prev.text = _preview_text(m)
+	for k in ["force", "dex", "con"]:
+		var key: String = k
+		var set_stat := func(v: float, final: bool):
+			m[key] = _store(v)
+			upd.call()
+			return _or(m[key], 8.0)
+		AdminTable.cell(g, _num(_or(m.get(key), 8.0), 36, set_stat))
+	var set_speed := func(v: float, _f: bool):
+		m["speed"] = _store(v)
+		return m["speed"]
+	AdminTable.cell(g, _num(m.get("speed", 8), 36, set_speed, "Vitesse (determine l'ordre de passage dans la file d'initiative — pas la cadence d'attaque)"))
+	AdminTable.cell(g, prev)
+	AdminTable.cell(g, _num(_or(m.get("resistPhys"), 0.0), 38, _set_clamped(m, "resistPhys", 0, 100), "Résistance physique (%)"))
+	AdminTable.cell(g, _num(_or(m.get("resistMagic"), 0.0), 38, _set_clamped(m, "resistMagic", 0, 100), "Résistance magique (%)"))
+	var set_xp := func(v: float, _f: bool):
+		m["xpReward"] = _store(v)
+		return _or(m["xpReward"], 10.0)
+	AdminTable.cell(g, _num(_or(m.get("xpReward"), 10.0), 40, set_xp))
+	var set_gold := func(v: float, _f: bool):
+		m["goldReward"] = _store(v)
+		return _or(m["goldReward"], 0.0)
+	AdminTable.cell(g, _num(_or(m.get("goldReward"), 0.0), 40, set_gold, "Or gagné à la mort de ce monstre"))
+	# capacité spéciale (+ chance si une capacité est choisie)
+	var cap := HBoxContainer.new()
+	cap.add_theme_constant_override("separation", 4)
+	cap.custom_minimum_size.x = _px(220)
+	var sel := _dd(spells, m.get("abilitySpellId", ""), func(v):
+		m["abilitySpellId"] = v
+		_render_sub.call_deferred(), 0.68, 0.0, "Capacité spéciale (remplace parfois l'attaque de base)")
+	sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cap.add_child(sel)
+	if str(m.get("abilitySpellId", "")) != "":
+		var set_ch := func(v: float, _f: bool):
+			m["abilityChance"] = _store(clampf(v, 0.0, 100.0))
+			return m["abilityChance"]
+		cap.add_child(_num(m.get("abilityChance", 30), 48, set_ch, "Chance d'utiliser la capacité (%)"))
+	AdminTable.cell(g, cap)
+	AdminTable.cell(g, _num(_or(m.get("enrageThreshold"), 0.0), 40, _set_clamped(m, "enrageThreshold", 0, 100), "Seuil de PV (%) déclenchant la rage (boss uniquement, 0=désactivé)"))
+	var set_zone := func(v: float, _f: bool):
+		m["patrolRadius"] = _store(maxf(0.0, v))
+		return m["patrolRadius"]
+	AdminTable.cell(g, _num(_or(m.get("patrolRadius"), 0.0), 38, set_zone, "Rayon de déplacement automatique autour de sa position de départ (0=statique)"))
+	# cadence d'attaque : curseur 1–3 s
+	var sp := HBoxContainer.new()
+	sp.add_theme_constant_override("separation", 3)
+	var asv := float(m.get("attackSpeed", 2))
+	var slider := HSlider.new()
+	slider.min_value = 1.0
+	slider.max_value = 3.0
+	slider.step = 0.1
+	slider.value = asv
+	slider.custom_minimum_size = Vector2(_px(64), 0)
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slider.tooltip_text = "Rapidité d'attaque automatique : temps entre deux attaques (1s = très rapide, 3s = lent)"
+	var sl := _lbl("%.1fs" % asv, 0.65)
+	slider.value_changed.connect(func(v: float):
+		m["attackSpeed"] = _store(clampf(v if v != 0.0 else 2.0, 1.0, 3.0))
+		sl.text = "%.1fs" % v)
+	sp.add_child(slider)
+	sp.add_child(sl)
+	AdminTable.cell(g, sp)
+	AdminTable.cell(g, _dd(_door_options(lvl), m.get("opensDoorId", ""), func(v): m["opensDoorId"] = v, 0.74, 100))
+	AdminTable.cell(g, _loot_button(lvl, m, "lootItemId", "Objet créé dans la liste ci-dessous, associé comme butin"))
+	AdminTable.cell(g, _num(m.get("lootChance", 100), 44, func(v: float, _f: bool):
+		m["lootChance"] = _store(v)
+		return m["lootChance"], "Chance de laisser tomber le butin (%)"))
+	AdminTable.cell(g, _loot_button(lvl, m, "lootItemId2", "Second emplacement de butin (ex. clé de donjon en plus du butin normal) — deux au maximum par monstre"))
+	AdminTable.cell(g, _num(m.get("lootChance2", 100), 44, func(v: float, _f: bool):
+		m["lootChance2"] = _store(v)
+		return m["lootChance2"], "Chance de laisser tomber ce second butin (%)"))
+	# boss / groupe (exclusifs)
+	var boss := _chk(bool(m.get("isBoss", false)), func(on: bool):
+		m["isBoss"] = on
+		if on:
+			m["isGroup"] = false
+		_render_sub.call_deferred(), "Affichage imposant, monstre de fin de niveau (incompatible avec un groupe)", bool(m.get("isGroup", false)))
+	var bc := CenterContainer.new()
+	bc.add_child(boss)
+	AdminTable.cell(g, bc)
+	var gh := HBoxContainer.new()
+	gh.add_theme_constant_override("separation", 2)
+	gh.add_child(_chk(bool(m.get("isGroup", false)), func(on: bool):
+		m["isGroup"] = on
+		if on:
+			m["isBoss"] = false
+			if _or(m.get("groupSize"), 0.0) == 0.0:
+				m["groupSize"] = 2
+		_render_sub.call_deferred(), "Ce monstre apparaît en groupe de 2 ou 3 exemplaires identiques au combat (incompatible avec un boss)", bool(m.get("isBoss", false))))
+	if bool(m.get("isGroup", false)):
+		gh.add_child(_dd([[2, "2"], [3, "3"]], 3 if int(_or(m.get("groupSize"), 2.0)) == 3 else 2, func(v): m["groupSize"] = 3 if int(v) == 3 else 2, 0.65, 38, "Nombre de monstres dans le groupe"))
+	AdminTable.cell(g, gh)
+	var hc := CenterContainer.new()
+	hc.add_child(_chk(bool(m.get("startHidden", false)), func(on: bool): m["startHidden"] = on, "Caché tant qu'un interrupteur ne le révèle pas"))
+	AdminTable.cell(g, hc)
+	AdminTable.cell(g, _tipped(_btn("🎯", func(): _start_placement("monster", mid), 0.8, false, Vector2(10, 10)), "Placer sur la carte"))
+	AdminTable.cell(g, _btn("🗑", func():
+		(lvl.monsters as Array).erase(m)
+		_render_sub.call_deferred(), 0.8, false, Vector2(10, 10)))
+
+static func _add_monster(lvl: Dictionary) -> void:
+	lvl.monsters.append({"id": "mon_%d" % Time.get_ticks_msec(), "name": "Nouveau monstre", "icon": "👹", "x": int(lvl.startX), "y": int(lvl.startY), "force": 8, "dex": 8, "con": 8, "resistPhys": 0, "resistMagic": 0, "xpReward": 10, "goldReward": 5, "abilitySpellId": "", "abilityChance": 30, "enrageThreshold": 0, "patrolRadius": 3, "attackSpeed": 2, "opensDoorId": "", "startHidden": false, "isBoss": false, "lootItemId": "", "lootChance": 100, "lootItemId2": "", "lootChance2": 100})
+	_render_sub()
 
 # ------------------------------------------------------------------ onglet Objets
 
-static func _items_tab(ep: VBoxContainer, admin: Node, lvl: Dictionary) -> void:
-	var add_item := func():
-		lvl.items.append({"id": AdminUtil.new_id("item"), "name": "Nouvel objet", "icon": "@icon:potion_heal", "x": int(lvl.startX), "y": int(lvl.startY), "type": "potion", "heal": 5, "startHidden": false})
-		admin.refresh_tab()
-	Form.buttons(ep, [["+ Ajouter un objet", add_item]])
-	var any := false
-	for it in lvl.items:
-		if str(it.get("type", "")) == "decor":
-			continue
-		any = true
-		var b := Form.panel(ep, str(it.get("name", "Objet")))
-		var top := AdminUtil.flow(b)
-		top.add_child(IconPicker.button(admin.modals(), it, "icon", Callable(), 36.0))
-		var e := LineEdit.new()
-		e.text = str(it.get("name", ""))
-		e.custom_minimum_size = Vector2(190, 0)
-		e.text_changed.connect(func(t: String): it["name"] = t)
-		AdminUtil.chip(top, "Nom", e)
-		var on_type := func(v):
-			it["type"] = v
-			admin.refresh_tab()
-		AdminUtil.chip(top, "Type", AdminUtil.dropdown(AdminItems.LEVEL_TYPES, it.get("type", "potion"), on_type, 150.0))
-		top.add_child(AdminUtil.label("Position %d,%d" % [int(it.x), int(it.y)], 14, UiTheme.DIM))
-		var place := Button.new()
-		place.text = "Placer sur la carte"
-		place.focus_mode = Control.FOCUS_NONE
-		var iid: String = it.id
-		place.pressed.connect(func():
-			_placement = {"kind": "item", "id": iid}
-			_tab = "map"
-			admin.refresh_tab())
-		top.add_child(place)
-		var rm := Button.new()
-		rm.text = "Supprimer"
-		rm.focus_mode = Control.FOCUS_NONE
-		rm.pressed.connect(func():
-			(lvl.items as Array).erase(it)
+## `clampItemStat` de l'original.
+static func _clamp_item_stat(it: Dictionary, field: String, v: float) -> float:
+	if ["heal", "trapDmgMin", "trapDmgMax"].has(field):
+		return maxf(1.0, v)
+	if (field == "bonusAtkMin" or field == "bonusAtkMax") and it.get("type") == "weapon":
+		return maxf(1.0, v)
+	if ["bonusForce", "bonusDex", "bonusCon", "bonusInt", "bonusSpeed"].has(field):
+		return clampf(v, 0.0, 100.0)
+	if ["bonusAtkMin", "bonusAtkMax", "bonusHp", "bonusSpellDmg"].has(field):
+		return maxf(0.0, v)
+	return v
+
+static func _item_stat(it: Dictionary, field: String, shown: float, w: float, tip: String = "") -> LineEdit:
+	var setter := func(v: float, _f: bool):
+		it[field] = _store(_clamp_item_stat(it, field, v))
+		return it[field]
+	return _num(shown, w, setter, tip)
+
+static func _stat_label(text: String, rem: float = 0.7, dim: bool = false) -> Label:
+	return _lbl(text, rem, PARCH_DIM if dim else UiTheme.PARCH)
+
+static func _boosts(row: Control, it: Dictionary) -> void:
+	for x in [["For", "bonusForce", "Bonus Force"], ["Dex", "bonusDex", "Bonus Dextérité"], ["Con", "bonusCon", "Bonus Constitution"], ["Int", "bonusInt", "Bonus Intelligence"], ["Vit", "bonusSpeed", "Bonus Vitesse (initiative)"]]:
+		row.add_child(_lbl(str(x[0]), 0.62))
+		row.add_child(_item_stat(it, str(x[1]), _or(it.get(x[1]), 0.0), 26, str(x[2])))
+
+## Encart « ✨ Légendaire » (filet pointillé, case, bonus + valeur en %).
+static func _legendary(root: VBoxContainer, it: Dictionary) -> void:
+	var sp := Control.new()
+	sp.custom_minimum_size = Vector2(0, 6)
+	root.add_child(sp)
+	root.add_child(DashLine.new())
+	var sp2 := Control.new()
+	sp2.custom_minimum_size = Vector2(0, 6)
+	root.add_child(sp2)
+	root.add_child(_chk(bool(it.get("legendary", false)), func(on: bool):
+		it["legendary"] = on
+		_render_sub.call_deferred(), "", false, "✨ Légendaire"))
+	if bool(it.get("legendary", false)):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 4)
+		h.add_child(_dd(PERKS, it.get("legendaryPerk", ""), func(v): it["legendaryPerk"] = v, 0.74))
+		h.add_child(_num(_or(it.get("legendaryValue"), 15.0), 44, func(v: float, _f: bool):
+			it["legendaryValue"] = _store(v)
+			return it["legendaryValue"], "Valeur du bonus (%)"))
+		h.add_child(_stat_label("%"))
+		root.add_child(h)
+
+static func _classes_allowing(spell_id: String) -> Array:
+	var out: Array = []
+	for c in _cfg().get("classes", []):
+		if AdminUtil.eff_spells(c).has(spell_id):
+			out.append(str(c.get("name", "")))
+	return out
+
+## `itemDetailsHtml` : champs propres au type de l'objet.
+static func _item_details(it: Dictionary, lvl: Dictionary) -> Control:
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 0)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	root.add_child(row)
+	match str(it.get("type", "")):
+		"potion":
+			row.add_child(_item_stat(it, "heal", _or(it.get("heal"), 0.0), 44, "Soin"))
+			row.add_child(_stat_label("PV"))
+			row.add_child(_item_stat(it, "staminaRestore", _or(it.get("staminaRestore"), 0.0), 44, "Endurance"))
+			row.add_child(_stat_label("End."))
+		"weapon":
+			var wt: Array = []
+			for w in AdminUtil.weapon_types():
+				wt.append([w.id, w.label])
+			row.add_child(_dd(wt, it.get("weaponType", ""), func(v): it["weaponType"] = v, 0.62, 52))
+			row.add_child(_item_stat(it, "bonusAtkMin", _or(it.get("bonusAtkMin"), 0.0), 32, "Bonus min"))
+			row.add_child(_stat_label("-"))
+			row.add_child(_item_stat(it, "bonusAtkMax", _or(it.get("bonusAtkMax"), 0.0), 32, "Bonus max"))
+			_boosts(row, it)
+			_legendary(root, it)
+		"armor":
+			var slots: Array = []
+			for s in Data.constants.get("SLOT_TYPES", []):
+				if s.id != "weapon" and s.id != "accessory":
+					slots.append([s.id, s.label])
+			row.add_child(_dd(slots, it.get("slot", ""), func(v): it["slot"] = v, 0.74, 90))
+			row.add_child(_item_stat(it, "bonusHp", _or(it.get("bonusHp"), 0.0), 30, "Bonus PV (tank)"))
+			row.add_child(_stat_label("PV"))
+			row.add_child(_item_stat(it, "bonusAtkMin", _or(it.get("bonusAtkMin"), 0.0), 28, "Bonus attaque min (guerrier/archer)"))
+			row.add_child(_stat_label("-"))
+			row.add_child(_item_stat(it, "bonusAtkMax", _or(it.get("bonusAtkMax"), 0.0), 28, "Bonus attaque max"))
+			row.add_child(_stat_label("Atq"))
+			row.add_child(_item_stat(it, "bonusSpellDmg", _or(it.get("bonusSpellDmg"), 0.0), 28, "Bonus dégâts de sort (mage)"))
+			row.add_child(_stat_label("Sort"))
+			_boosts(row, it)
+			_legendary(root, it)
+		"jewelry":
+			row.add_child(_item_stat(it, "bonusHp", _or(it.get("bonusHp"), 0.0), 30, "Bonus PV"))
+			row.add_child(_stat_label("PV"))
+			row.add_child(_item_stat(it, "bonusAtkMin", _or(it.get("bonusAtkMin"), 0.0), 28, "Bonus attaque min"))
+			row.add_child(_stat_label("-"))
+			row.add_child(_item_stat(it, "bonusAtkMax", _or(it.get("bonusAtkMax"), 0.0), 28, "Bonus attaque max"))
+			row.add_child(_stat_label("Atq"))
+			row.add_child(_item_stat(it, "bonusSpellDmg", _or(it.get("bonusSpellDmg"), 0.0), 28, "Bonus dégâts de sort"))
+			row.add_child(_stat_label("Sort"))
+			_boosts(row, it)
+			_legendary(root, it)
+		"key":
+			row.add_child(_dd(_door_options(lvl), it.get("opensDoorId", ""), func(v): it["opensDoorId"] = v, 0.74, 100))
+		"trap":
+			row.add_child(_item_stat(it, "trapDmgMin", _or(it.get("trapDmgMin"), 1.0), 34, "Dégâts min"))
+			row.add_child(_stat_label("-"))
+			row.add_child(_item_stat(it, "trapDmgMax", _or(it.get("trapDmgMax"), 4.0), 34, "Dégâts max"))
+			var pc := _chk(bool(it.get("permanent", false)), func(on: bool): it["permanent"] = on, "", false, "Permanent")
+			row.add_child(pc)
+		"switch":
+			var doors: Array = [["", "🚪 Porte : aucune"]]
+			for d in lvl.get("doors", []):
+				doors.append([d.id, "🚪 Porte (%d,%d)" % [int(d.x), int(d.y)]])
+			var mons: Array = [["", "👹 Monstre : aucun"]]
 			for m in lvl.monsters:
-				if m.get("lootItemId") == iid:
-					m["lootItemId"] = ""
-				if m.get("lootItemId2") == iid:
-					m["lootItemId2"] = ""
-			admin.refresh_tab())
-		top.add_child(rm)
-		AdminItems.fields(b, it, admin, lvl)
-		Form.check(b, "Caché tant qu'un interrupteur ne le révèle pas (ou réservé au butin d'un monstre)", it, "startHidden")
-	if not any:
-		Form.hint(ep, "Aucun objet sur ce niveau.")
+				mons.append([m.id, "👹 %s %s" % [AdminUtil.icon_text_fallback(str(m.get("icon", ""))), m.get("name", "")]])
+			var its: Array = [["", "💎 Objet : aucun"]]
+			for o in lvl.items:
+				if o.id != it.id:
+					its.append([o.id, "💎 %s %s" % [AdminUtil.icon_text_fallback(str(o.get("icon", ""))), o.get("name", "")]])
+			row.add_child(_dd(doors, it.get("switchOpensDoorId", ""), func(v): it["switchOpensDoorId"] = v, 0.74))
+			row.add_child(_dd(mons, it.get("switchRevealMonsterId", ""), func(v): it["switchRevealMonsterId"] = v, 0.74))
+			row.add_child(_dd(its, it.get("switchRevealItemId", ""), func(v): it["switchRevealItemId"] = v, 0.74))
+			row.add_child(_text(it, "message", 180, 0.74, Vector2(5, 5), "Message affiché"))
+		"fountain":
+			var h := _lbl("Restaure PV + endurance du groupe. Délai réglable dans Général.", 0.74, PARCH_DIM, true)
+			row.add_child(h)
+		"scroll":
+			var so: Array = []
+			for s in _cfg().get("spells", []):
+				so.append([s.id, AdminUtil.spell_label(s)])
+			if so.is_empty():
+				so.append(["", "— Aucun sort défini —"])
+			var hint := _lbl("", 0.74, PARCH_DIM, true)
+			var upd := func():
+				var sid := str(it.get("spellId", ""))
+				if sid == "":
+					hint.text = "—"
+				else:
+					var names := _classes_allowing(sid)
+					hint.text = ", ".join(names) if not names.is_empty() else "aucune classe"
+			row.add_child(_dd(so, it.get("spellId", ""), func(v):
+				it["spellId"] = v
+				upd.call(), 0.74, 150))
+			upd.call()
+			row.add_child(hint)
+		_:
+			row.add_child(_lbl("—", 0.7))
+	return root
+
+static func _items_sub(host: VBoxContainer, lvl: Dictionary) -> void:
+	var headers := ["Icône", "Nom", "Type", "Position", "Détails", "Caché", "", ""]
+	var widths := [38, 75, 78, 40, 0, 15, 0, 0]
+	var g := AdminTable.create(host, headers, widths)
+	for it in lvl.items:
+		if str(it.get("type", "")) != "decor":
+			_item_row(g, lvl, it)
+	var ab := Form.buttons(host, [["+ Ajouter un objet", func(): _add_item(lvl)]])
+	ab.get_child(0).add_theme_font_size_override("font_size", _fs(0.8))
+
+static func _item_row(g: GridContainer, lvl: Dictionary, it: Dictionary) -> void:
+	var iid := str(it.id)
+	AdminTable.cell(g, _icon_btn(IconPicker.button(_admin.modals(), it, "icon", Callable(), 26.0)))
+	AdminTable.cell(g, _text(it, "name", 75, 0.68, Vector2(3, 2)))
+	AdminTable.cell(g, _dd(ITEM_TYPES, it.get("type", ""), func(v):
+		it["type"] = v
+		_render_sub.call_deferred(), 0.65, 78))
+	AdminTable.text_cell(g, "%d,%d" % [int(it.x), int(it.y)], false, 0.72)
+	AdminTable.cell(g, _item_details(it, lvl))
+	var hc := CenterContainer.new()
+	hc.add_child(_chk(bool(it.get("startHidden", false)), func(on: bool): it["startHidden"] = on, "Caché tant qu'un interrupteur ne le révèle pas (ou objet réservé au butin d'un monstre)"))
+	AdminTable.cell(g, hc)
+	AdminTable.cell(g, _tipped(_btn("🎯", func(): _start_placement("item", iid), 0.8, false, Vector2(10, 10)), "Placer sur la carte"))
+	AdminTable.cell(g, _btn("🗑", func():
+		_remove_item(lvl, iid)
+		_render_sub.call_deferred(), 0.8, false, Vector2(10, 10)))
+
+static func _add_item(lvl: Dictionary) -> void:
+	lvl.items.append({"id": "item_%d" % Time.get_ticks_msec(), "name": "Nouvel objet", "icon": "💎", "x": int(lvl.startX), "y": int(lvl.startY), "type": "potion", "startHidden": false})
+	_render_sub()
 
 # ------------------------------------------------------------------ onglet Réglages
 
-static func _slider(parent: Control, label: String, target: Dictionary, key: String, lo: float, hi: float, def: float) -> void:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 8)
+static func _light_slider(ep: Control, label: String, lvl: Dictionary, key: String, lo: float, hi: float, def: float) -> void:
+	var r := _frow(ep, label)
 	var s := HSlider.new()
 	s.min_value = lo
 	s.max_value = hi
 	s.step = 0.05
-	s.value = float(target.get(key, def)) if target.get(key) != null else def
-	s.custom_minimum_size = Vector2(200, 0)
+	var cur: float = float(lvl[key]) if lvl.get(key) != null else def
+	s.value = cur
+	s.custom_minimum_size = Vector2(_px(160), 0)
 	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var v := AdminUtil.label("%.2f" % s.value, 14)
+	var v := _lbl("%.2f" % cur, 0.74, PARCH_DIM, true)
+	v.custom_minimum_size.x = _px(34)
 	s.value_changed.connect(func(x: float):
-		target[key] = x
-		v.text = "%.2f" % x)
-	h.add_child(s)
-	h.add_child(v)
-	Form.row(parent, label, h)
+		var q := snappedf(x, 0.05)
+		lvl[key] = q
+		v.text = "%.2f" % q)
+	r.add_child(s)
+	r.add_child(v)
 
-static func _cfg_tab(ep: VBoxContainer, admin: Node, lvl: Dictionary) -> void:
-	var on_theme := func(v): lvl["theme"] = v
-	Form.row(ep, "Thème visuel", AdminUtil.dropdown(THEMES, lvl.get("theme", "stone"), on_theme, 240.0))
-	_slider(ep, "Lumière ambiante", lvl, "lightAmbient", 0.1, 1.6, 1.1)
-	_slider(ep, "Intensité des torches", lvl, "lightTorch", 0.2, 2.6, 1.4)
-	var sf := AdminUtil.flow(ep)
-	AdminUtil.chip(sf, "Départ X", AdminUtil.mini_number(lvl, "startX", 0, 59, 1))
-	AdminUtil.chip(sf, "Y", AdminUtil.mini_number(lvl, "startY", 0, 59, 1))
-	var on_dir := func(v): lvl["startDir"] = int(v)
-	AdminUtil.chip(sf, "Direction", AdminUtil.dropdown(DIRS, int(lvl.get("startDir", 1)), on_dir, 110.0))
-	var pick := Button.new()
-	pick.text = "Choisir le départ sur la carte"
-	pick.focus_mode = Control.FOCUS_NONE
-	pick.pressed.connect(func():
-		_placement = {"kind": "start"}
-		_tab = "map"
-		admin.refresh_tab())
-	sf.add_child(pick)
+static func _cfg_sub(ep: VBoxContainer, lvl: Dictionary) -> void:
+	var tr_ := _frow(ep, "Thème visuel")
+	tr_.add_child(_dd(THEMES, lvl.get("theme", "stone"), func(v): lvl["theme"] = v, 0.85, 0))
+	_light_slider(ep, "💡 Lumière ambiante", lvl, "lightAmbient", 0.1, 1.6, 1.1)
+	_light_slider(ep, "🔥 Intensité des torches", lvl, "lightTorch", 0.2, 2.6, 1.4)
+	for spec in [["Position de départ X", "startX"], ["Position de départ Y", "startY"]]:
+		var key: String = spec[1]
+		var r := _frow(ep, str(spec[0]))
+		var e := _num(lvl.get(key, 0), 70, func(v: float, _f: bool):
+			lvl[key] = _store(v)
+			return lvl[key], "", 0.85)
+		_style_edit(e, 0.85, Vector2(9, 7))
+		e.custom_minimum_size.x = _px(70)
+		r.add_child(e)
+	var rd := _frow(ep, "Direction de départ")
+	rd.add_child(_dd(DIRS, int(lvl.get("startDir", 1)), func(v): lvl["startDir"] = int(v), 0.85))
+	_actions(ep, [
+		["🚩 Choisir le départ sur la carte", func(): _start_placement("start")],
+		["🧭 Téléporter le groupe ici (tests)", func(): _pick_teleport()],
+		["🏘️ Téléporter au village (tests)", func(): _go_village()]], 0.0, 14.0)
+	ep.add_child(_lbl("Escaliers de ce niveau", 1.0, UiTheme.PARCH))
+	_stairs_box = VBoxContainer.new()
+	_stairs_box.add_theme_constant_override("separation", 12)
+	ep.add_child(_stairs_box)
+	_render_stairs(lvl)
+	var h := Form.hint(ep, "Peignez ✨ sur la carte (onglet Carte) pour ajouter un escalier, puis choisissez sa destination ici — chaque escalier peut mener vers un niveau différent.", _fs(0.74))
+	ep.add_child(_lbl("🧙 Marchand ambulant", 1.0, UiTheme.PARCH))
+	_merchant_box = VBoxContainer.new()
+	_merchant_box.add_theme_constant_override("separation", 4)
+	ep.add_child(_merchant_box)
+	_render_merchant(lvl)
 
-	ep.add_child(AdminUtil.label("Escaliers de ce niveau", 15, UiTheme.GOLD))
+static func _pick_teleport() -> void:
+	if not _has_run():
+		_alert("Aucune partie en cours — lancez ou reprenez une partie avant de téléporter le groupe.")
+		return
+	_start_placement("teleport")
+
+static func _go_village() -> void:
+	var err: String = _teleport_village()
+	if err != "":
+		_alert(err)
+
+# ---- escaliers
+
+static func _card_box() -> StyleBoxFlat:
+	var b := StyleBoxFlat.new()
+	b.bg_color = Color(1, 1, 1, 0.02)
+	b.border_color = BORDER
+	b.set_border_width_all(1)
+	b.set_corner_radius_all(8)
+	b.content_margin_left = _px(10)
+	b.content_margin_right = _px(10)
+	b.content_margin_top = _px(8)
+	b.content_margin_bottom = _px(8)
+	return b
+
+static func _render_stairs(lvl: Dictionary) -> void:
+	if _stairs_box == null or not is_instance_valid(_stairs_box):
+		return
+	_clear(_stairs_box)
+	_ensure_stairs(lvl)
 	var stairs: Array = lvl.stairs
 	if stairs.is_empty():
-		Form.hint(ep, "Aucun escalier sur ce niveau pour l'instant. Peignez un escalier sur la carte, puis choisissez sa destination ici.")
+		_stairs_box.add_child(_lbl("Aucun escalier sur ce niveau pour l'instant.", 0.74, PARCH_DIM, true))
+		return
 	var others: Array = []
 	for l in _levels():
 		if l.id != lvl.id:
-			others.append([l.id, str(l.get("name", "?"))])
+			others.append([l.id, str(l.get("name", ""))])
 	for st in stairs:
-		var box := Form.panel(ep, "Escalier en (%d,%d)" % [int(st.x), int(st.y)])
-		var act: Dictionary = Form.sub(st, "action")
-		var on_type := func(v):
-			if v == "victory":
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _card_box())
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		card.add_child(v)
+		var hd := HBoxContainer.new()
+		hd.add_theme_constant_override("separation", 8)
+		hd.add_child(_lbl("✨", 1.2, UiTheme.PARCH))
+		var tl := _lbl("Escalier en (%d,%d)" % [int(st.x), int(st.y)], 0.8, UiTheme.PARCH)
+		tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hd.add_child(tl)
+		v.add_child(hd)
+		var sp := Control.new()
+		sp.custom_minimum_size = Vector2(0, 6)
+		v.add_child(sp)
+		var act: Dictionary = st.get("action", {})
+		if not (st.get("action") is Dictionary):
+			st["action"] = act
+		var ra := _frow(v, "Action")
+		ra.add_child(_dd([["victory", "Terminer la partie (victoire)"], ["level", "Aller vers un autre niveau"]], act.get("type", "victory"), func(val):
+			if val == "victory":
 				st["action"] = {"type": "victory"}
 			else:
-				st["action"] = {"type": "level", "targetId": others[0][0] if not others.is_empty() else ""}
-			admin.refresh_tab()
-		Form.row(box, "Action", AdminUtil.dropdown([["victory", "Terminer la partie (victoire)"], ["level", "Aller vers un autre niveau"]], act.get("type", "victory"), on_type, 280.0))
+				st["action"] = {"type": "level", "targetId": others[0][0] if not others.is_empty() else null}
+			_render_stairs.call_deferred(lvl), 0.85))
 		if act.get("type") == "level":
-			var on_target := func(v): act["targetId"] = v
-			Form.row(box, "Niveau cible", AdminUtil.dropdown(others, act.get("targetId", ""), on_target, 260.0))
-			var af := AdminUtil.flow(box)
-			for k in [["Arrivée X", "targetX"], ["Y", "targetY"]]:
-				var key: String = k[1]
-				var le := LineEdit.new()
-				le.placeholder_text = "départ"
-				le.custom_minimum_size = Vector2(80, 0)
-				le.text = str(act[key]) if act.has(key) and str(act[key]) != "" else ""
-				le.text_changed.connect(func(t: String):
-					if t.strip_edges() == "":
-						act.erase(key)
-					elif t.strip_edges().is_valid_int():
-						act[key] = int(t))
-				AdminUtil.chip(af, k[0], le)
+			var target := _level_by_id(act.get("targetId"))
+			var rt := _frow(v, "Niveau cible")
+			rt.add_child(_dd(others, act.get("targetId", ""), func(val):
+				act["targetId"] = val
+				_render_stairs.call_deferred(lvl), 0.85))
+			var rx := _frow(v, "Arrivée X")
+			rx.add_child(_raw_num(act, "targetX", 60, _fmt(target.get("startX", 0)) if not target.is_empty() else "0"))
+			var ylab := _lbl("Y", 0.75)
+			ylab.custom_minimum_size.x = _px(20)
+			rx.add_child(ylab)
+			rx.add_child(_raw_num(act, "targetY", 60, _fmt(target.get("startY", 0)) if not target.is_empty() else "0"))
+			var rdir := _frow(v, "Direction d'arrivée")
 			var dir_opts: Array = [["", "Par défaut du niveau"]]
 			for d in DIRS:
 				dir_opts.append([str(d[0]), d[1]])
 			var cur_dir := ""
 			if act.has("targetDir") and str(act.targetDir) != "":
-				cur_dir = str(int(act.targetDir))
-			var on_td := func(v):
-				if v == "":
-					act.erase("targetDir")
-				else:
-					act["targetDir"] = int(v)
-			AdminUtil.chip(af, "Direction d'arrivée", AdminUtil.dropdown(dir_opts, cur_dir, on_td, 190.0))
-			Form.hint(box, "Laissez X/Y vides pour arriver au point de départ du niveau. Pour un aller-retour, ajoutez un second escalier dans le niveau cible réglé pour revenir ici.")
+				cur_dir = str(int(_parse(str(act.targetDir))))
+			rdir.add_child(_dd(dir_opts, cur_dir, func(val): act["targetDir"] = val, 0.85))
+			var hint := "Laissez X/Y vides pour arriver au point de départ du niveau. Pour un aller-retour libre, ajoutez un second escalier dans « %s » réglé pour revenir ici avec ses propres coordonnées." % (str(target.get("name", "")) if not target.is_empty() else "ce niveau")
+			Form.hint(v, hint, _fs(0.74))
+		_stairs_box.add_child(card)
 
-	ep.add_child(AdminUtil.label("Marchand ambulant", 15, UiTheme.GOLD))
+## Champ numérique conservant le texte tel quel (« Arrivée X / Y » : l'original stocke la valeur saisie, vide = départ du niveau).
+static func _raw_num(target: Dictionary, key: String, w: float, placeholder: String) -> LineEdit:
+	var e := LineEdit.new()
+	e.text = str(target[key]) if target.has(key) and target[key] != null else ""
+	e.placeholder_text = placeholder
+	e.custom_minimum_size.x = _px(w)
+	e.context_menu_enabled = false
+	e.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	_style_edit(e, 0.85, Vector2(9, 7))
+	var ok := RegEx.create_from_string("^[0-9eE.+\\-]*$")
+	var last := [e.text]
+	e.text_changed.connect(func(t: String):
+		if ok.search(t) == null:
+			var c := e.caret_column - 1
+			e.text = last[0]
+			e.caret_column = clampi(c, 0, e.text.length())
+			return
+		last[0] = t
+		var s := t.strip_edges()
+		target[key] = s if (s == "" or s.is_valid_float()) else "")
+	return e
+
+# ---- marchand ambulant
+
+static func _render_merchant(lvl: Dictionary) -> void:
+	if _merchant_box == null or not is_instance_valid(_merchant_box):
+		return
+	_clear(_merchant_box)
+	var box := _merchant_box
 	var tm = lvl.get("travelingMerchant")
 	if not (tm is Dictionary):
-		Form.hint(ep, "Aucun marchand sur ce niveau.")
-		var add_tm := func():
+		Form.hint(box, "Aucun marchand sur ce niveau.", _fs(0.74))
+		_actions(box, [["🧙 Ajouter un marchand ambulant sur ce niveau", func():
 			lvl["travelingMerchant"] = {"x": int(lvl.startX), "y": int(lvl.startY), "patrolRadius": 4, "lootSlotCount": 6, "lootItemIds": []}
-			admin.refresh_tab()
-		Form.buttons(ep, [["Ajouter un marchand ambulant sur ce niveau", add_tm]])
+			_render_merchant(lvl)]], 0.0)
 		return
-	var mf := AdminUtil.flow(ep)
-	mf.add_child(AdminUtil.label("Position %d,%d" % [int(tm.x), int(tm.y)], 14, UiTheme.DIM))
-	var pm := Button.new()
-	pm.text = "Placer sur la carte"
-	pm.focus_mode = Control.FOCUS_NONE
-	pm.pressed.connect(func():
-		_placement = {"kind": "merchant"}
-		_tab = "map"
-		admin.refresh_tab())
-	mf.add_child(pm)
-	AdminUtil.chip(mf, "Rayon de patrouille", AdminUtil.mini_number(tm, "patrolRadius", 0, 30, 4))
-	var count := 8 if int(tm.get("lootSlotCount", 6)) == 8 else 6
-	var on_cnt := func(v):
-		tm["lootSlotCount"] = int(v)
-		admin.refresh_tab()
-	AdminUtil.chip(mf, "Objets en vente", AdminUtil.dropdown([[6, "6"], [8, "8"]], count, on_cnt, 70.0))
-	Form.hint(ep, "Emplacements laissés vides : le marchand proposera un objet aléatoire à la place, comme le marchand itinérant généré automatiquement.")
+	var count := 8 if int(_or(tm.get("lootSlotCount"), 6.0)) == 8 else 6
 	if not (tm.get("lootItemIds") is Array):
 		tm["lootItemIds"] = []
 	var ids: Array = tm.lootItemIds
+	var rp := _frow(box, "Position")
+	rp.add_child(_lbl("%d, %d" % [int(tm.x), int(tm.y)], 1.0, UiTheme.PARCH))
+	rp.add_child(_tipped(_btn("🎯", func(): _start_placement("merchant"), 0.8, false, Vector2(10, 10)), "Placer sur la carte"))
+	var rr := _frow(box, "Rayon de patrouille")
+	var e := _num(_or(tm.get("patrolRadius"), 4.0), 60, func(v: float, _f: bool):
+		tm["patrolRadius"] = _store(maxf(0.0, v))
+		return tm["patrolRadius"], "", 0.85)
+	_style_edit(e, 0.85, Vector2(9, 7))
+	e.custom_minimum_size.x = _px(60)
+	rr.add_child(e)
+	var rc := _frow(box, "Nombre d'objets en vente")
+	rc.add_child(_dd([[6, "6"], [8, "8"]], count, func(v):
+		tm["lootSlotCount"] = 8 if int(v) == 8 else 6
+		_render_merchant.call_deferred(lvl), 0.85))
+	Form.hint(box, "Emplacements laissés vides : le marchand proposera un objet aléatoire à la place, comme pour le marchand itinérant généré automatiquement.", _fs(0.74))
 	var lib: Array = [["", "— vide —"]]
-	for it in Data.config.get("itemLibrary", []):
-		lib.append([it.id, AdminUtil.item_label(it)])
-	var sf2 := AdminUtil.flow(ep)
+	for it in _cfg().get("itemLibrary", []):
+		lib.append([it.id, str(it.get("name", ""))])
 	for i in count:
 		var slot := i
-		while ids.size() <= slot:
-			ids.append("")
-		var on_slot := func(v): ids[slot] = v
-		AdminUtil.chip(sf2, "Emplacement %d" % (i + 1), AdminUtil.dropdown(lib, ids[slot], on_slot, 220.0))
-	var rm_tm := func():
+		var rs := _frow(box, "Emplacement %d" % (i + 1))
+		var cur := str(ids[slot]) if slot < ids.size() and ids[slot] != null else ""
+		rs.add_child(_dd(lib, cur, func(v):
+			while ids.size() <= slot:
+				ids.append("")
+			ids[slot] = v, 0.85))
+	_actions(box, [["🗑 Retirer le marchand de ce niveau", func():
 		lvl["travelingMerchant"] = null
-		admin.refresh_tab()
-	Form.buttons(ep, [["Retirer le marchand de ce niveau", rm_tm]])
+		_render_merchant(lvl)]], 10.0)

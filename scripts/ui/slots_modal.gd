@@ -1,9 +1,11 @@
 class_name SlotsModal
 extends RefCounted
-## Fenêtre des 10 emplacements de sauvegarde : charger, sauvegarder / écraser, supprimer, exporter / importer un fichier.
+## Fenêtre des 10 emplacements de sauvegarde : charger, sauvegarder / écraser, supprimer (l'export / import de fichier est dans le menu 💾).
 
-## `snapshot` : () -> {"config", "save", "origin"} (vide hors partie). `on_load` reçoit {"config", "save", "origin"}.
-static func open(host: Node, snapshot: Callable, on_load: Callable, on_saved: Callable = Callable()) -> Modal:
+## `snapshot` : () -> {"config", "save", "origin"} (vide hors partie). `on_load` reçoit {"config", "save", "origin", "log"}.
+## `opts` (facultatif) : "log" (Callable(texte) : ajoute une ligne au journal de la partie), "status" (Callable(texte) : état du menu 💾),
+## "current_origin" (provenance de la partie en cours, pour « · différent du contexte actuel »).
+static func open(host: Node, snapshot: Callable, on_load: Callable, on_saved: Callable = Callable(), opts: Dictionary = {}) -> Modal:
 	var m := Modal.open_framed(host, "💾 Emplacements de sauvegarde", 560.0)
 	var can_save := snapshot.is_valid()
 	var list := VBoxContainer.new()
@@ -15,33 +17,21 @@ static func open(host: Node, snapshot: Callable, on_load: Callable, on_saved: Ca
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
 	m.content.add_child(scroll)
-	var status := AdminUtil.label("", 14, UiTheme.DIM)
-	m.content.add_child(status)
 	var fill := Callable()
 	fill = func():
 		for ch in list.get_children():
 			ch.queue_free()
 		for i in Saves.SLOTS:
-			list.add_child(_row(i, can_save, snapshot, on_load, m, fill, status, on_saved))
+			list.add_child(_row(i, can_save, snapshot, on_load, m, fill, on_saved, opts))
 	fill.call()
-	var btns: Array = []
-	if can_save:
-		btns.append({"text": "Exporter (JSON)", "cb": func():
-			var snap: Dictionary = snapshot.call()
-			Files.save_text(host, "sauvegarde.json", Saves.export_text(snap.config, snap.save, snap.origin), func(t): status.text = t)})
-	btns.append({"text": "Importer (JSON)", "cb": func():
-		Files.pick_text(host, func(text: String):
-			var data := Saves.parse_import(text)
-			if data.is_empty() or data.save.is_empty():
-				status.text = "Ce fichier ne contient pas de sauvegarde reconnue."
-				return
-			m.close()
-			on_load.call(data))})
-	btns.append({"text": "Fermer", "cb": func(): m.close()})
-	m.set_buttons(btns, true)
 	return m
 
-static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, m: Modal, fill: Callable, status: Label, on_saved: Callable) -> Control:
+static func _say(opts: Dictionary, key: String, text: String) -> void:
+	var cb: Callable = opts.get(key, Callable())
+	if cb.is_valid():
+		cb.call(text)
+
+static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, m: Modal, fill: Callable, on_saved: Callable, opts: Dictionary) -> Control:
 	var sm := Saves.summary(i)
 	var panel := PanelContainer.new()
 	var rsb := StyleBoxFlat.new()    # .slot-row : fond rgba(255,255,255,.03), filet #5a4526, coins 8 px, padding 12/14
@@ -67,19 +57,25 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 		info.add_child(_hint("Vide"))
 	else:
 		info.add_child(_title("Emplacement %d — %s" % [i + 1, sm.title]))
-		var when := Time.get_datetime_string_from_unix_time(int(sm.savedAt / 1000.0), true) if sm.savedAt > 0 else ""
-		for t in [Saves.origin_label(sm.origin), sm.party, when]:
+		var origin_text := Saves.origin_label(sm.origin)
+		var cur := str(opts.get("current_origin", ""))
+		if cur != "" and cur != str(sm.origin):
+			origin_text += " · différent du contexte actuel"
+		for t in [origin_text, sm.party, Saves.local_date(float(sm.savedAt))]:
 			info.add_child(_hint(str(t)))
 	var save_here := func():
 		var snap: Dictionary = snapshot.call()
+		var t := Time.get_time_dict_from_system()
 		if Saves.write_slot(i, snap.config, snap.save, snap.origin):
-			status.text = "Partie sauvegardée dans l'emplacement %d." % (i + 1)
+			_say(opts, "log", "💾 Partie sauvegardée dans l'emplacement %d." % (i + 1))
+			_say(opts, "status", "Sauvegardé à %02d:%02d:%02d" % [t.hour, t.minute, t.second])
 			if on_saved.is_valid():
 				m.close()
 				on_saved.call(i)
 				return
 		else:
-			status.text = "La sauvegarde a échoué."
+			_say(opts, "log", "La sauvegarde a échoué.")
+			_say(opts, "status", "Échec de la sauvegarde.")
 		fill.call()
 	if not sm.is_empty():
 		var lb := Button.new()
@@ -89,10 +85,14 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 		lb.pressed.connect(func():
 			var d := Saves.read_slot(i)
 			if d.is_empty() or not (d.get("save") is Dictionary):
-				status.text = "Emplacement illisible."
+				if (opts.get("log", Callable()) as Callable).is_valid():
+					_say(opts, "log", "Erreur lors du chargement de cet emplacement.")
+				else:
+					Form.alert(m.get_parent(), "Erreur lors du chargement de cet emplacement.")
 				return
 			m.close()
-			on_load.call({"config": d.get("config", {}), "save": d.save, "origin": str(d.get("dungeonOrigin", "random"))}))
+			on_load.call({"config": d.get("config", {}), "save": d.save, "origin": str(d.get("dungeonOrigin", "random")),
+				"log": "📂 Partie chargée depuis l'emplacement %d." % (i + 1)}))
 		row.add_child(lb)
 	if sm.is_empty() and not can_save:
 		row.add_child(_hint("—"))
@@ -109,9 +109,9 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 		db.focus_mode = Control.FOCUS_NONE
 		_style(db, false, true)
 		db.pressed.connect(func():
-			Dialogs.confirm(m.get_parent(), "Supprimer", "Supprimer définitivement la sauvegarde de l'emplacement %d ?" % (i + 1), func():
+			Dialogs.confirm(m.get_parent(), "", "Supprimer définitivement la sauvegarde de l'emplacement %d ?" % (i + 1), func():
 				Saves.delete_slot(i)
-				fill.call(), "Supprimer"))
+				fill.call()))
 		row.add_child(db)
 	return panel
 

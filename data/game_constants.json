@@ -1564,5 +1564,843 @@
   "180": "Gantelet d'or au rubis",
   "181": "Poing de pierre",
   "182": "Poing de fer noir"
- }
+ },
+ "ICON_CATALOG": [
+  [
+   "Épées",
+   [
+    [
+     "sword_short",
+     "Épée courte"
+    ],
+    [
+     "sword_long",
+     "Épée longue"
+    ],
+    [
+     "sword_broad",
+     "Épée large"
+    ],
+    [
+     "sword_rapier",
+     "Rapière"
+    ],
+    [
+     "sword_saber",
+     "Sabre courbe"
+    ],
+    [
+     "sword_black",
+     "Épée noire"
+    ],
+    [
+     "sword_fire",
+     "Épée de feu"
+    ],
+    [
+     "sword_ice",
+     "Épée de givre"
+    ],
+    [
+     "sword_holy",
+     "Épée sacrée"
+    ],
+    [
+     "sword_poison",
+     "Épée empoisonnée"
+    ],
+    [
+     "sword_arcane",
+     "Épée arcanique"
+    ],
+    [
+     "sword_void",
+     "Épée du néant"
+    ]
+   ]
+  ],
+  [
+   "Haches",
+   [
+    [
+     "axe_hand",
+     "Hachette"
+    ],
+    [
+     "axe_war",
+     "Hache de guerre"
+    ],
+    [
+     "axe_double",
+     "Hache double"
+    ],
+    [
+     "axe_black",
+     "Hache noire"
+    ],
+    [
+     "axe_fire",
+     "Hache de feu"
+    ],
+    [
+     "axe_ice",
+     "Hache de givre"
+    ],
+    [
+     "axe_royal",
+     "Hache royale"
+    ],
+    [
+     "axe_demon",
+     "Hache démoniaque"
+    ]
+   ]
+  ],
+  [
+   "Arcs & arbalètes",
+   [
+    [
+     "bow_short",
+     "Arc court"
+    ],
+    [
+     "bow_long",
+     "Arc long"
+    ],
+    [
+     "bow_crossbow",
+     "Arbalète"
+    ],
+    [
+     "bow_elf",
+     "Arc elfique"
+    ],
+    [
+     "bow_dark",
+     "Arc sombre"
+    ],
+    [
+     "bow_heavy",
+     "Arbalète lourde"
+    ]
+   ]
+  ],
+  [
+   "Bâtons & orbes",
+   [
+    [
+     "staff_basic",
+     "Bâton simple"
+    ],
+    [
+     "staff_rune",
+     "Bâton runique"
+    ],
+    [
+     "staff_fire",
+     "Bâton de feu"
+    ],
+    [
+     "staff_holy",
+     "Bâton sacré"
+    ],
+    [
+     "staff_nature",
+     "Bâton de nature"
+    ],
+    [
+     "staff_ice",
+     "Bâton de givre"
+    ],
+    [
+     "staff_shadow",
+     "Bâton d'ombre"
+    ],
+    [
+     "staff_royal",
+     "Bâton royal"
+    ],
+    [
+     "staff_poison",
+     "Bâton empoisonné"
+    ],
+    [
+     "staff_demon",
+     "Bâton démoniaque"
+    ]
+   ]
+  ],
+  [
+   "Masses & fléaux",
+   [
+    [
+     "mace_basic",
+     "Masse simple"
+    ],
+    [
+     "mace_spiked",
+     "Masse à pointes"
+    ],
+    [
+     "mace_flail",
+     "Fléau d'armes"
+    ],
+    [
+     "mace_war",
+     "Marteau de guerre"
+    ],
+    [
+     "mace_royal",
+     "Fléau royal"
+    ],
+    [
+     "mace_holy",
+     "Masse sacrée"
+    ]
+   ]
+  ],
+  [
+   "Dagues",
+   [
+    [
+     "dagger_basic",
+     "Dague simple"
+    ],
+    [
+     "dagger_wavy",
+     "Dague sinueuse"
+    ],
+    [
+     "dagger_fire",
+     "Dague de feu"
+    ],
+    [
+     "dagger_ice",
+     "Dague de givre"
+    ],
+    [
+     "dagger_poison",
+     "Dague empoisonnée"
+    ],
+    [
+     "dagger_void",
+     "Dague d'ombre"
+    ]
+   ]
+  ],
+  [
+   "Casques",
+   [
+    [
+     "helm_basic",
+     "Casque simple"
+    ],
+    [
+     "helm_horned",
+     "Casque à cornes"
+    ],
+    [
+     "helm_crown",
+     "Couronne"
+    ],
+    [
+     "helm_wizard",
+     "Chapeau de mage"
+    ],
+    [
+     "helm_winged",
+     "Casque ailé"
+    ],
+    [
+     "helm_visor",
+     "Heaume à visière"
+    ],
+    [
+     "helm_cap",
+     "Capuche simple"
+    ],
+    [
+     "helm_druid",
+     "Couronne de druide"
+    ],
+    [
+     "helm_demon",
+     "Casque démoniaque"
+    ],
+    [
+     "helm_royal",
+     "Couronne royale"
+    ]
+   ]
+  ],
+  [
+   "Armures",
+   [
+    [
+     "chest_leather",
+     "Armure de cuir"
+    ],
+    [
+     "chest_chain",
+     "Cotte de mailles"
+    ],
+    [
+     "chest_plate",
+     "Armure de plates"
+    ],
+    [
+     "chest_robe",
+     "Robe de mage"
+    ],
+    [
+     "chest_scale",
+     "Armure écailles"
+    ],
+    [
+     "chest_dark",
+     "Armure sombre"
+    ],
+    [
+     "chest_royal",
+     "Robe royale"
+    ],
+    [
+     "chest_bark",
+     "Armure d'écorce"
+    ],
+    [
+     "chest_bone",
+     "Armure osseuse"
+    ]
+   ]
+  ],
+  [
+   "Bottes",
+   [
+    [
+     "boots_leather",
+     "Bottes de cuir"
+    ],
+    [
+     "boots_iron",
+     "Bottes de fer"
+    ],
+    [
+     "boots_winged",
+     "Bottes ailées"
+    ],
+    [
+     "boots_sandal",
+     "Sandales"
+    ],
+    [
+     "boots_dark",
+     "Bottes sombres"
+    ],
+    [
+     "boots_royal",
+     "Bottes royales"
+    ],
+    [
+     "boots_fur",
+     "Bottes fourrées"
+    ]
+   ]
+  ],
+  [
+   "Bijoux",
+   [
+    [
+     "ring_ruby",
+     "Anneau rubis"
+    ],
+    [
+     "ring_sapphire",
+     "Anneau saphir"
+    ],
+    [
+     "ring_gold",
+     "Anneau d'or"
+    ],
+    [
+     "amulet_green",
+     "Amulette verte"
+    ],
+    [
+     "amulet_purple",
+     "Amulette pourpre"
+    ],
+    [
+     "amulet_ruby",
+     "Amulette rubis"
+    ],
+    [
+     "medallion_gold",
+     "Médaillon doré"
+    ],
+    [
+     "medallion_holy",
+     "Médaillon sacré"
+    ],
+    [
+     "pendant_sapphire",
+     "Pendentif saphir"
+    ],
+    [
+     "pendant_shadow",
+     "Pendentif d'ombre"
+    ]
+   ]
+  ],
+  [
+   "Potions",
+   [
+    [
+     "potion_heal",
+     "Potion de soin"
+    ],
+    [
+     "potion_endurance",
+     "Potion d'endurance"
+    ],
+    [
+     "potion_mana",
+     "Potion de mana"
+    ],
+    [
+     "potion_stamina",
+     "Élixir d'endurance"
+    ],
+    [
+     "potion_poison",
+     "Fiole de poison"
+    ],
+    [
+     "potion_strength",
+     "Potion de force"
+    ],
+    [
+     "potion_antidote",
+     "Antidote"
+    ],
+    [
+     "potion_speed",
+     "Potion de vitesse"
+    ],
+    [
+     "potion_superior",
+     "Élixir supérieur"
+    ]
+   ]
+  ],
+  [
+   "Sorts",
+   [
+    [
+     "spell_fireball",
+     "Boule de feu"
+    ],
+    [
+     "spell_firebolt",
+     "Lance de feu"
+    ],
+    [
+     "spell_iceshard",
+     "Éclat de givre"
+    ],
+    [
+     "spell_blizzard",
+     "Blizzard"
+    ],
+    [
+     "spell_holylight",
+     "Lumière sacrée"
+    ],
+    [
+     "spell_holyaura",
+     "Aura sacrée"
+    ],
+    [
+     "spell_arcanebolt",
+     "Éclat arcanique"
+    ],
+    [
+     "spell_arcanestar",
+     "Étoile arcanique"
+    ],
+    [
+     "spell_naturewhirl",
+     "Tourbillon naturel"
+    ],
+    [
+     "spell_thorns",
+     "Ronces"
+    ],
+    [
+     "spell_shadowwisp",
+     "Volute d'ombre"
+    ],
+    [
+     "spell_shadowblade",
+     "Lame d'ombre"
+    ],
+    [
+     "spell_lightning",
+     "Éclair"
+    ],
+    [
+     "spell_storm",
+     "Orage"
+    ]
+   ]
+  ],
+  [
+   "Monstres",
+   [
+    [
+     "mon_skeleton",
+     "Squelette",
+     1
+    ],
+    [
+     "mon_spider",
+     "Araignée",
+     1
+    ],
+    [
+     "mon_wolf",
+     "Loup-garou",
+     1
+    ],
+    [
+     "mon_zombie",
+     "Zombie",
+     1
+    ],
+    [
+     "mon_rat",
+     "Rat",
+     1
+    ],
+    [
+     "mon_ghost",
+     "Fantôme",
+     1
+    ],
+    [
+     "mon_imp",
+     "Diablotin",
+     1
+    ],
+    [
+     "mon_ogre",
+     "Ogre",
+     1
+    ],
+    [
+     "mon_slime",
+     "Gluant",
+     1
+    ],
+    [
+     "mon_orc",
+     "Orc pillard",
+     1
+    ],
+    [
+     "mon_mimic",
+     "Mimique",
+     1
+    ],
+    [
+     "mon_harpy",
+     "Harpie",
+     1
+    ],
+    [
+     "mon_minotaur",
+     "Minotaure",
+     1
+    ],
+    [
+     "mon_elemental",
+     "Élémentaire de feu",
+     1
+    ],
+    [
+     "mon_iceelemental",
+     "Élémentaire de glace",
+     1
+    ],
+    [
+     "mon_beholder",
+     "Béholder",
+     1
+    ],
+    [
+     "mon_skeletonarcher",
+     "Squelette archer",
+     1
+    ],
+    [
+     "mon_lizardman",
+     "Homme-lézard",
+     1
+    ],
+    [
+     "mon_gnoll",
+     "Gnoll",
+     1
+    ],
+    [
+     "mon_mummy",
+     "Momie",
+     1
+    ],
+    [
+     "mon_darkpanther",
+     "Panthère infernale",
+     1
+    ],
+    [
+     "mon_stonegolem",
+     "Golem de pierre",
+     1
+    ],
+    [
+     "mon_drake",
+     "Drake",
+     1
+    ]
+   ]
+  ],
+  [
+   "Boss",
+   [
+    [
+     "boss_dragon",
+     "Dragon",
+     1
+    ],
+    [
+     "boss_demonlord",
+     "Seigneur démon",
+     1
+    ],
+    [
+     "boss_troll",
+     "Troll géant",
+     1
+    ],
+    [
+     "boss_lich",
+     "Liche",
+     1
+    ],
+    [
+     "boss_kraken",
+     "Kraken",
+     1
+    ],
+    [
+     "boss_golem",
+     "Golem de pierre",
+     1
+    ],
+    [
+     "boss_spider",
+     "Araignée titanesque",
+     1
+    ],
+    [
+     "boss_wraith",
+     "Spectre des ombres",
+     1
+    ]
+   ]
+  ],
+  [
+   "Divers",
+   [
+    [
+     "misc_key",
+     "Clé"
+    ],
+    [
+     "misc_chest",
+     "Coffre"
+    ],
+    [
+     "misc_door",
+     "Porte"
+    ],
+    [
+     "misc_trap",
+     "Piège à pointes"
+    ],
+    [
+     "misc_lever",
+     "Interrupteur"
+    ],
+    [
+     "misc_scroll",
+     "Parchemin"
+    ],
+    [
+     "misc_coins",
+     "Pièces d'or"
+    ],
+    [
+     "misc_gem",
+     "Gemme"
+    ],
+    [
+     "misc_shield",
+     "Bouclier"
+    ],
+    [
+     "misc_banner",
+     "Bannière"
+    ],
+    [
+     "misc_tombstone",
+     "Pierre tombale"
+    ],
+    [
+     "misc_anvil",
+     "Enclume"
+    ],
+    [
+     "misc_cauldron",
+     "Chaudron"
+    ],
+    [
+     "misc_bell",
+     "Cloche"
+    ],
+    [
+     "misc_mirror",
+     "Miroir"
+    ],
+    [
+     "misc_crystalball",
+     "Boule de cristal"
+    ],
+    [
+     "misc_fountain",
+     "Fontaine"
+    ]
+   ]
+  ],
+  [
+   "Décoration",
+   [
+    [
+     "decor_statue",
+     "Statue de gardien"
+    ],
+    [
+     "decor_banner",
+     "Bannière ancienne"
+    ],
+    [
+     "decor_brazier",
+     "Brasero rituel"
+    ],
+    [
+     "decor_cauldron",
+     "Chaudron bouillonnant"
+    ],
+    [
+     "decor_bell",
+     "Cloche bénie"
+    ],
+    [
+     "decor_mirror",
+     "Miroir enchanté"
+    ],
+    [
+     "decor_crystalball",
+     "Boule de cristal"
+    ],
+    [
+     "decor_armor",
+     "Présentoir d'armure"
+    ],
+    [
+     "decor_tombstone",
+     "Pierre tombale"
+    ],
+    [
+     "decor_anvil",
+     "Enclume runique"
+    ],
+    [
+     "decor_cobweb",
+     "Toile d'araignée"
+    ],
+    [
+     "decor_rug",
+     "Tapis usé"
+    ],
+    [
+     "decor_barrel",
+     "Tonneau défoncé"
+    ],
+    [
+     "decor_cage",
+     "Cage rouillée"
+    ],
+    [
+     "decor_skeleton",
+     "Ossements épars"
+    ]
+   ]
+  ],
+  [
+   "Emblèmes de classe",
+   [
+    [
+     "classicon_berserker",
+     "Berserker"
+    ],
+    [
+     "classicon_paladin",
+     "Paladin"
+    ],
+    [
+     "classicon_magearcher",
+     "Mage-Archer"
+    ],
+    [
+     "classicon_bladedancer",
+     "Danselame"
+    ],
+    [
+     "classicon_thief",
+     "Voleur"
+    ],
+    [
+     "classicon_assassin",
+     "Assassin"
+    ],
+    [
+     "classicon_elementalist",
+     "Élémentaliste"
+    ],
+    [
+     "classicon_warlock",
+     "Sorcier"
+    ],
+    [
+     "classicon_cleric",
+     "Clerc"
+    ],
+    [
+     "classicon_crusader",
+     "Croisé"
+    ]
+   ]
+  ]
+ ]
 }

@@ -47,6 +47,7 @@ var panel_map: OrnatePanel
 var panel_bag: OrnatePanel
 var panel_log: OrnatePanel
 var panel_menu: OrnatePanel
+var save_menu: SaveMenu
 
 var _root: Control
 var footer: Label
@@ -493,35 +494,12 @@ func _build_parts() -> void:
 	panel_log.body.add_child(log_panel)
 	panel_menu = OrnatePanel.new("")
 	panel_menu.name = "Menu"
-	var sm := MenuButton.new()
-	sm.text = "💾 Sauvegarde"
-	sm.focus_mode = Control.FOCUS_NONE
-	sm.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	sm.custom_minimum_size = Vector2(0, UiMetrics.css(44.0))
-	sm.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	sm.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
-	sm.add_theme_color_override("font_color", Color("e2d2b0"))
-	sm.add_theme_color_override("font_hover_color", Color("ffd88a"))
-	var sst := IronBox.button_styles()
-	for k in sst:
-		var ib: IronBox = sst[k]
-		ib.rivets = false
-		ib.radius_css = 3.0
-		sm.add_theme_stylebox_override(k, ib)
-	sm.get_popup().add_item("💾 Sauvegarder", 0)
-	sm.get_popup().add_item("📂 Charger", 1)
-	sm.get_popup().add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
-	sm.get_popup().id_pressed.connect(func(i: int): menu_pressed.emit("Sauvegarder" if i == 0 else "Charger"))
-	panel_menu.body.add_child(sm)
-	var arrow := Label.new()
-	arrow.text = "▼"
-	arrow.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
-	arrow.add_theme_color_override("font_color", Color("b9a880"))
-	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	arrow.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-	arrow.offset_right = -UiMetrics.css(14.0)
-	arrow.offset_left = -UiMetrics.css(30.0)
-	sm.add_child(arrow)
+	save_menu = SaveMenu.new()
+	save_menu.slots_pressed.connect(func(): menu_pressed.emit("Slots"))
+	save_menu.new_pressed.connect(func(): menu_pressed.emit("Nouveau"))
+	save_menu.export_pressed.connect(func(): menu_pressed.emit("Exporter"))
+	save_menu.import_pressed.connect(func(): menu_pressed.emit("Importer"))
+	panel_menu.body.add_child(save_menu)
 
 # ------------------------------------------------------------------ dispositions
 
@@ -736,6 +714,10 @@ func _process(_d: float) -> void:
 			_flash.color.a = 0.55
 			create_tween().tween_property(_flash, "color:a", 0.0, 0.5)
 	_refresh_pouch(on)
+	if save_menu != null:
+		# `#viewPlay.in-combat .save-menu-panel{opacity:.4;pointer-events:none;filter:grayscale(1)}` : sauvegarde indisponible en combat
+		save_menu.locked = on
+		panel_menu.modulate = Color(0.62, 0.62, 0.62, 0.4) if on else Color.WHITE
 	pad.visible = not on
 	_comp.visible = not on
 	view_controls.visible = not on

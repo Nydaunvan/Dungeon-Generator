@@ -30,10 +30,16 @@ func _ready() -> void:
 	var cfg: Dictionary = Data.active()
 	print("Donjon : ", cfg.get("title", "?"))
 	var resume := not Data.pending_save.is_empty()
+	var pend_log := Data.pending_log
+	var pend_transient := Data.pending_transient
 	if resume:
-		gs = GameState.from_save(cfg, Saves.normalize(Data.pending_save))
+		var sv: Dictionary = Saves.normalize(Data.pending_save)
+		Saves.migrate_save(sv, cfg)
+		gs = GameState.from_save(cfg, sv)
 		level_index = clampi(gs.level_index, 0, (cfg.levels as Array).size() - 1)
 		Data.pending_save = {}
+		Data.pending_log = ""
+		Data.pending_transient = {}
 	else:
 		gs = GameState.create(cfg)
 		if (cfg.levels as Array).size() > 0:
@@ -110,7 +116,31 @@ func _ready() -> void:
 	layout.stage.gui_input.connect(_on_stage_input)
 	load_level(level_index, resume)
 	if resume:
-		gs.add_log("📂 Partie chargée.")
+		if not pend_transient.is_empty():
+			_restore_transient(pend_transient)
+		if pend_log != "":
+			gs.add_log(pend_log)
+		if ctrl.in_combat():
+			ctrl.refresh.call_deferred()    # reprise au milieu d'un combat (retour de l'administration)
+
+## Champs non sauvegardés de la partie suspendue (jauges de combat, ordre des tours, membre visé) : rétablis à la reprise
+## depuis l'administration, comme le STATE unique de l'original qui ne les perdait pas.
+func _transient() -> Dictionary:
+	var g: Dictionary = {}
+	var seq := 0
+	if ctrl != null and ctrl.combat != null:
+		g = ctrl.combat.gauges.duplicate()
+		seq = ctrl.combat.turn_seq
+	return {"gauges": g, "turn_seq": seq, "selected_member": gs.selected_member.duplicate(), "level_id": str(level.get("id", ""))}
+
+func _restore_transient(tr: Dictionary) -> void:
+	gs.selected_member = (tr.get("selected_member", {}) as Dictionary).duplicate()
+	if ctrl.combat != null and str(tr.get("level_id", "")) == str(level.get("id", "")):
+		ctrl.combat.turn_seq = int(tr.get("turn_seq", 0))
+		var g: Dictionary = tr.get("gauges", {})
+		for k in g:
+			ctrl.combat.gauges[k] = float(g[k])
+		ctrl.combat.ensure_gauges()
 
 ## Case d'arrivée d'un escalier (resolveStairs de l'original) : coordonnées de l'action si elles existent, sinon départ du niveau ;
 ## jamais dans un mur ni sur un escalier (on se décale sur une case voisine) et on ne regarde jamais un mur / un escalier.
@@ -529,7 +559,7 @@ func _prompt_save_on_level(target: Dictionary) -> void:
 		return
 	tls["stairsPromptShown"] = true
 	Dialogs.confirm(_modals(), "🚪 Nouveau niveau du donjon", "C'est le bon moment pour sauvegarder votre progression.",
-		func(): SlotsModal.open(_modals(), snapshot, Data.launch_save), "💾 Sauvegarder maintenant", "Continuer sans sauvegarder")
+		func(): SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts()), "💾 Sauvegarder maintenant", "Continuer sans sauvegarder")
 
 func _on_menu(name: String) -> void:
 	match name:
@@ -538,21 +568,97 @@ func _on_menu(name: String) -> void:
 		"Son": SoundModal.open(_modals())
 		"Lang": pass   # la préférence est enregistrée ; les textes suivent la langue choisie
 		"Carte": _toggle_map()
-		"Journal":
-			var lm := Modal.open(_modals(), "📜 Historique du journal", 640.0)
-			if gs.log_lines.is_empty():
-				lm.add_text("Rien à afficher pour le moment.", UiTheme.DIM, 14)
-			for line in gs.log_lines:
-				lm.add_text(_strip_tags(str(line)), UiTheme.PARCH, 13)
-			lm.set_buttons([{"text": "Fermer", "cb": func(): lm.close()}])
+		"Journal": _open_full_log()
 		"Stats": StatsModal.open(_modals(), gs)
 		"Admin":
 			Data.resume_game = snapshot()
 			Sound.stop_ambient()
 			Data.open_admin()
-		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save)
+		"Slots":
+			if not ctrl.in_combat():
+				SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
+		"Nouveau":
+			Dialogs.confirm(_modals(), "", "Commencer une nouvelle partie ? La progression actuelle non sauvegardée sera perdue.", _restart)
+		"Exporter":
+			var snap := snapshot()
+			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin))
+		"Importer": Files.pick_text(_modals(), _import_text)
+		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message("« %s » : à venir" % name)
+
+## Options de la fenêtre des emplacements : journal, état du menu 💾, provenance de la partie en cours.
+func _slot_opts() -> Dictionary:
+	return {"log": func(t: String): gs.add_log(t), "status": layout.save_menu.set_status,
+		"current_origin": "" if (gs.game_over or gs.won) else Data.play_origin}
+
+## « ⬆ Importer » du menu 💾 : fichier de sauvegarde ou de configuration (`importSaveFile`).
+func _import_text(text: String) -> void:
+	if not Saves.is_valid_json(text):
+		Form.alert(_modals(), "Ce fichier n'est pas un JSON de sauvegarde valide.")
+		return
+	if not Data.launch_import(Saves.parse_import(text)):
+		Form.alert(_modals(), "Ce fichier ne contient pas de sauvegarde ou de configuration reconnue.")
+
+## « 📖 Grimoire complet de l'aventure » (`openFullLogModal`) : tout le journal, séparateurs d'expédition compris.
+func _open_full_log() -> void:
+	var lm := Modal.open_framed(_modals(), "📖 Grimoire complet de l'aventure", 640.0)
+	if gs.full_log.is_empty():
+		lm.add_text("Rien à afficher pour le moment.", UiTheme.DIM, 14, true)
+	var first := true
+	for e in gs.full_log:
+		if str(e.get("type", "entry")) == "divider":
+			var d := Label.new()
+			d.text = "⚔️ " + str(e.get("text", "")).to_upper()
+			d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			d.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+			d.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82)))
+			d.add_theme_color_override("font_color", Color("ffd88a"))
+			var box := VBoxContainer.new()
+			box.add_theme_constant_override("separation", int(UiMetrics.css(6.0)))
+			if not first:
+				var sp := Control.new()
+				sp.custom_minimum_size = Vector2(0, UiMetrics.css(18.0))
+				box.add_child(sp)
+			box.add_child(d)
+			var ln := ColorRect.new()
+			ln.color = Color(0.66, 0.47, 0.23, 0.35)
+			ln.custom_minimum_size = Vector2(0, 1)
+			box.add_child(ln)
+			lm.content.add_child(box)
+		else:
+			var l := Label.new()
+			l.text = _strip_tags(str(e.get("text", "")))
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			l.custom_minimum_size = Vector2(120, 0)
+			l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.8)))
+			var hit := bool(e.get("playerHit", false))
+			l.add_theme_color_override("font_color", Color("ffb4b4") if hit else UiTheme.PARCH)
+			if hit:
+				l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+			lm.content.add_child(l)
+		first = false
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if is_instance_valid(lm):
+		var sc: ScrollContainer = lm._scroll
+		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
+
+## Bouton de fenêtre au style de `.modal-actions > button`.
+func _modal_button(text: String, cb: Callable, primary: bool = false) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, UiMetrics.css(40.0))
+	var st := IronBox.modal_styles(primary)
+	for k in st:
+		b.add_theme_stylebox_override(k, st[k])
+	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.9)))
+	b.add_theme_color_override("font_color", Color("ffd88a") if primary else Color("e2d2b0"))
+	b.pressed.connect(cb)
+	return b
 
 ## « Quitter la partie en cours » (leaveGameOverlay de l'original).
 func _leave_game() -> void:
@@ -567,18 +673,32 @@ func _leave_game() -> void:
 	var btns: Array = [
 		{"text": "💾 Sauvegarder et quitter", "primary": true, "cb": func():
 			m.close()
-			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home())},
+			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
 	]
 	if origin != "original":
 		btns.append({"text": "📤 Exporter le donjon (fichier JSON) et quitter", "primary": false, "cb": func():
 			m.close()
 			var snap := snapshot()
-			Files.save_text(_modals(), "sauvegarde.json", Saves.export_text(snap.config, snap.save, snap.origin), func(_t): Data.go_home())})
+			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin), func(_t): Data.go_home())})
 	btns.append({"text": "Quitter sans sauvegarder", "primary": false, "cb": func():
 		m.close()
 		Data.go_home()})
 	btns.append({"text": "Annuler, rester dans la partie", "primary": false, "cb": func(): m.close()})
 	m.set_buttons(btns)
+	if origin == "custom":
+		# section « 📋 Générer un code à partager » (donjons personnalisés), entre l'export et « Quitter sans sauvegarder »
+		var sec := VBoxContainer.new()
+		var out: TextEdit = null
+		var status: Label = null
+		var gen := _modal_button("📋 Générer un code à partager", func():
+			Form.generate_code(gs.cfg, out, status))
+		sec.add_child(gen)
+		out = Form.code_area(sec, "", true, 70.0, 6.0)
+		out.visible = false
+		status = Form.status_label(sec)
+		var row: Node = m._buttons_row
+		row.add_child(sec)
+		row.move_child(sec, 2 if origin != "original" else 1)
 
 ## Instantané de la partie pour une sauvegarde.
 func snapshot() -> Dictionary:
@@ -586,13 +706,13 @@ func snapshot() -> Dictionary:
 	gs.px = rig.gx
 	gs.py = rig.gy
 	gs.pdir = rig.dir
-	return {"config": gs.cfg, "save": gs.to_save(), "origin": Data.play_origin}
+	return {"config": gs.cfg, "save": gs.to_save(), "origin": Data.play_origin, "transient": _transient()}
 
 func _modals() -> Node:
 	return _modal_layer
 
 func _restart() -> void:
-	Data.launch(Data.active(), Data.play_origin)
+	Data.launch(Data.active(), Data.play_origin, Data.ADMIN_KEEP)
 
 static func _strip_tags(s: String) -> String:
 	var re := RegEx.new()
@@ -663,12 +783,11 @@ func _show_victory() -> void:
 # ------------------------------------------------------------------ village et expéditions successives
 
 func _enter_village() -> void:
-	if not gs.in_village:
-		gs.village_prev = {"levels": gs.cfg.levels, "level_index": level_index, "x": rig.gx, "y": rig.gy, "dir": rig.dir}
-	gs.cfg["levels"] = [Village.build_level()]
-	gs.in_village = true
-	gs.won = false
-	gs.game_over = false
+	gs.level_index = level_index
+	gs.px = rig.gx
+	gs.py = rig.gy
+	gs.pdir = rig.dir
+	gs.enter_village()
 	load_level(0)
 
 func _return_to_dungeon() -> void:
@@ -686,6 +805,8 @@ func _return_to_dungeon() -> void:
 func _continue_next() -> void:
 	var go := func(mods: Array):
 		Village.next_dungeon(gs, mods)
+		# séparateur « Expédition n°N — titre » du journal complet, juste avant la ligne d'annonce
+		gs.full_log.insert(maxi(0, gs.full_log.size() - 1), {"type": "divider", "text": "Expédition n°%d — %s" % [gs.run_number, str(gs.cfg.get("title", ""))]})
 		load_level(0)
 	if gs.run_mods_chosen:
 		go.call((gs.cfg.get("runModifierIds", []) as Array).duplicate())

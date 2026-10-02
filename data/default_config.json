@@ -1,5 +1,6 @@
 {
  "title": "Les Catacombes Maudites de Vaelthorn",
+ "adminPassword": "admin123",
  "turnTimerEnabled": true,
  "turnTimerSeconds": 5,
  "staminaSettings": {

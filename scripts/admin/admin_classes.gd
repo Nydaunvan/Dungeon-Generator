@@ -1,42 +1,131 @@
 class_name AdminClasses
 extends RefCounted
-## Onglet « Classes » : armes et sorts autorisés, progression, talents, évolutions.
+## Onglet « Classes » : un seul panneau, deux groupes (classes de base / évoluées), une carte par classe (armes et sorts
+## autorisés, progression, talents, évolution). Portage de renderClassTable et de ses fonctions d'édition.
 
-const TALENT_EFFECTS := [
-	["bonusForce", "Force"], ["bonusDex", "Dextérité"], ["bonusCon", "Constitution"], ["bonusInt", "Intelligence"],
-	["bonusHp", "PV max"], ["bonusStamina", "Endurance max"], ["bonusAtkMin", "Dégâts min (arme)"], ["bonusAtkMax", "Dégâts max (arme)"],
-	["bonusSpellDmg", "Dégâts/soin de sort"], ["critChance", "% Chances de critique"], ["lifestealPct", "% Vol de vie"],
-	["resistPhys", "% Résistance physique"], ["resistMagic", "% Résistance magique"],
-]
+## Cartes de la dernière construction (identifiant → nœud), pour faire défiler jusqu'à une classe nouvellement créée.
+static var _cards: Dictionary = {}
 
-static var _talents_open: Dictionary = {}
+static func T(s: String) -> String:
+	return AdminChars.T(s)
+
+static func _max_sp() -> int:
+	return int(Data.constants.get("MAX_SPELLS_PER_CHARACTER", 6))
 
 static func build(host: VBoxContainer, admin: Node) -> void:
-	var cfg: Dictionary = Data.config
-	var head := Form.panel(host, "Classes")
-	Form.hint(head, "Les classes de base (Guerrier, Archer, Roublard, Mage, Prêtre, Barde) évoluent en classes évoluées, qui dépendent d'une classe de base. Armes autorisées, sorts autorisés, progression par niveau et talents se règlent ici.")
-	Form.buttons(head, [["Ajouter une classe", func(): _add_modal(admin)], ["Enregistrer", admin.save]])
+	var cfg: Dictionary = Data.admin_config()
 	var classes: Array = cfg.get("classes", [])
+	# normalisation de TOUTES les classes (renderClassTable) : progression, évolutions, listes autorisées
 	for cls in classes:
 		cls["spellProgression"] = cls.get("spellProgression", [])
 		cls["allowedWeaponTypes"] = cls.get("allowedWeaponTypes", [])
 		cls["allowedSpellIds"] = cls.get("allowedSpellIds", [])
-	head.add_child(AdminUtil.label("Classes de base", 16, UiTheme.GOLD))
+		var to = cls.get("evolvesTo")
+		if not (to is Array):
+			to = [null, null]
+		while (to as Array).size() < 2:
+			(to as Array).append(null)
+		cls["evolvesTo"] = to
+	# talents : un palier pour CHAQUE classe avant de dessiner (sinon Talents.source perdrait ceux des autres classes)
+	AdminClassTalents.ensure_all(cfg)
+	_cards.clear()
+	var head := Form.panel(host, "Classes")
+	Form.hint(head, "Chaque classe détermine les types d'armes et les sorts qu'un personnage de cette classe peut utiliser.")
+	var status := AdminChars.status_label()
+	AdminChars.actions_row(head, [
+		AdminChars.action_btn("+ Ajouter une classe", func(): _add_modal(admin, cfg)),
+		AdminChars.action_btn("💾 Enregistrer la configuration par défaut", func(): admin.confirm_save(status), true)])
+	head.add_child(status)
+	var cards := VBoxContainer.new()
+	cards.add_theme_constant_override("separation", int(AdminChars.cpx(12.0)))
+	head.add_child(cards)
+	var base_group := _group(cards, "⭐ Classes de base", true)
+	var adv_group := _group(cards, "🔶 Classes évoluées", false)
 	for cls in classes:
-		if AdminUtil.is_base(cls):
-			_card(host, admin, cls)
-	var adv := Form.panel(host, "Classes évoluées")
-	adv.add_child(AdminUtil.label("Chacune dépend d'une classe de base dont elle hérite les armes.", 13, UiTheme.DIM))
-	for cls in classes:
-		if not AdminUtil.is_base(cls):
-			_card(host, admin, cls)
+		var is_base := AdminUtil.is_base(cls)
+		_card(base_group if is_base else adv_group, admin, cfg, cls, is_base, status)
 
-static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
-	var cfg: Dictionary = Data.config
-	var is_base := AdminUtil.is_base(cls)
-	var b := Form.panel(host, str(cls.get("name", "Classe")))
-	var top := AdminUtil.flow(b)
-	top.add_child(IconPicker.button(admin.modals(), cls, "icon", admin.refresh_tab))
+static func _group(parent: Control, title: String, first: bool) -> VBoxContainer:
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_bottom", int(AdminChars.cpx(6.0)))
+	parent.add_child(m)
+	var g := VBoxContainer.new()
+	g.add_theme_constant_override("separation", int(AdminChars.cpx(10.0)))
+	m.add_child(g)
+	var t := MarginContainer.new()
+	t.add_theme_constant_override("margin_top", 0 if first else int(AdminChars.cpx(14.0)))
+	t.add_theme_constant_override("margin_bottom", int(AdminChars.cpx(2.0)))
+	var tv := VBoxContainer.new()
+	tv.add_theme_constant_override("separation", int(AdminChars.cpx(5.0)))
+	t.add_child(tv)
+	var l := Label.new()
+	l.text = title.to_upper()
+	var fv := FontVariation.new()
+	fv.base_font = UiTheme.font("res://assets/fonts/Spectral-Bold.ttf")
+	fv.spacing_glyph = int(roundf(AdminChars.cpx(0.06 * 0.82 * 18.0)))
+	l.add_theme_font_override("font", fv)
+	l.add_theme_font_size_override("font_size", AdminChars.fpx(0.82))
+	l.add_theme_color_override("font_color", AdminChars.GOLD_BRIGHT)
+	tv.add_child(l)
+	var line := ColorRect.new()
+	line.color = AdminChars.GOLD_DIM
+	line.custom_minimum_size.y = maxf(1.0, AdminChars.cpx(1.0))
+	tv.add_child(line)
+	g.add_child(t)
+	return g
+
+static func _section(parent: Control, label: String) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 0)
+	parent.add_child(v)
+	v.add_child(AdminChars.csection_label(label))
+	return v
+
+## Note « 🔗 Hérite aussi de **base** : … » (hint italique, nom de la base en gras).
+static func _inherit_note(parent: Control, base_name: String, items: Array) -> void:
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_top", int(AdminChars.cpx(5.0)))
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.custom_minimum_size.x = 120.0
+	var sz := AdminChars.fpx(0.74)
+	for k in ["normal_font_size", "bold_font_size", "italics_font_size", "bold_italics_font_size"]:
+		r.add_theme_font_size_override(k, sz)
+	r.add_theme_font_override("normal_font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	r.add_theme_font_override("bold_font", UiTheme.font("res://assets/fonts/Spectral-BoldItalic.ttf"))
+	r.add_theme_color_override("default_color", AdminChars.PDIM)
+	var esc := func(s: String) -> String: return s.replace("[", "[lb]")
+	r.text = T("🔗 Hérite aussi de %s : %s") % ["[b]%s[/b]" % esc.call(base_name), esc.call(", ".join(items))]
+	m.add_child(r)
+	parent.add_child(m)
+
+static func _card(parent: Control, admin: Node, cfg: Dictionary, cls: Dictionary, is_base: bool, status: Label) -> void:
+	var card := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(1, 1, 1, 0.02)
+	sb.border_color = AdminChars.GOLD_DIM if is_base else AdminChars.BORDER
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = AdminChars.cpx(12.0)
+	sb.content_margin_right = AdminChars.cpx(12.0)
+	sb.content_margin_top = AdminChars.cpx(10.0)
+	sb.content_margin_bottom = AdminChars.cpx(10.0)
+	card.add_theme_stylebox_override("panel", sb)
+	parent.add_child(card)
+	_cards[str(cls.get("id", ""))] = card
+	var b := VBoxContainer.new()
+	b.add_theme_constant_override("separation", int(AdminChars.cpx(8.0)))
+	card.add_child(b)
+
+	# en-tête : icône, nom, 🗑
+	var hdr := HBoxContainer.new()
+	hdr.add_theme_constant_override("separation", int(AdminChars.cpx(8.0)))
+	b.add_child(hdr)
+	hdr.add_child(AdminChars.icon_btn(admin, cls, "icon", admin.refresh_tab))
 	if is_base:
 		var opts: Array = []
 		for n in AdminUtil.BASE_ARCHETYPES:
@@ -44,288 +133,327 @@ static func _card(host: VBoxContainer, admin: Node, cls: Dictionary) -> void:
 		var on_name := func(v):
 			cls["name"] = v
 			admin.refresh_tab()
-		top.add_child(AdminUtil.dropdown(opts, cls.get("name", ""), on_name, 200.0))
+		var sel := AdminChars.select(opts, cls.get("name", ""), on_name, 100.0, 0.85, 9.0, 7.0, true)
+		sel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hdr.add_child(sel)
 	else:
-		var e := LineEdit.new()
-		e.text = str(cls.get("name", ""))
-		e.custom_minimum_size = Vector2(200, 0)
-		e.text_submitted.connect(func(t: String):
-			cls["name"] = t
-			admin.refresh_tab())
-		e.focus_exited.connect(func(): cls["name"] = e.text)
-		top.add_child(e)
+		var e := AdminChars.line_edit(str(cls.get("name", "")), 100.0, 0.85, 9.0, 7.0)
+		e.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		e.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		e.text_changed.connect(func(t: String): cls["name"] = t)
+		AdminChars.on_commit(e, func(_t: String): admin.refresh_tab())
+		hdr.add_child(e)
+	var rm := AdminChars.small_btn("🗑", 0.8, 6.0, 10.0)
+	rm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	rm.pressed.connect(func(): _remove(admin, cfg, cls))
+	hdr.add_child(rm)
+
+	# classe évoluée : dépendance
+	if not is_base:
+		var dm := MarginContainer.new()
+		dm.add_theme_constant_override("margin_top", int(AdminChars.cpx(2.0)))
+		dm.add_theme_constant_override("margin_bottom", int(AdminChars.cpx(8.0)))
+		var dh := HBoxContainer.new()
+		dh.add_theme_constant_override("separation", int(AdminChars.cpx(6.0)))
+		dm.add_child(dh)
+		var dl := Label.new()
+		dl.text = "🔗 Dépend de la classe de base :"
+		dl.add_theme_font_size_override("font_size", AdminChars.fpx(0.72))
+		dh.add_child(dl)
 		var dep: Array = []
 		for n in AdminUtil.BASE_ARCHETYPES:
 			dep.append([n, n])
 		var on_dep := func(v):
 			cls["evolvesFrom"] = v
 			admin.refresh_tab()
-		AdminUtil.chip(top, "Dépend de", AdminUtil.dropdown(dep, cls.get("evolvesFrom", "Guerrier"), on_dep, 160.0))
-	var rm := Button.new()
-	rm.text = "Supprimer"
-	rm.focus_mode = Control.FOCUS_NONE
-	rm.pressed.connect(func(): _remove(admin, cls))
-	top.add_child(rm)
+		dh.add_child(AdminChars.select(dep, cls.get("evolvesFrom", ""), on_dep, 60.0, 0.8, 6.0, 10.0, true))
+		b.add_child(dm)
 
-	# armes
-	b.add_child(AdminUtil.label("Armes autorisées", 14, UiTheme.GOLD))
-	var wf := AdminUtil.flow(b)
+	var base := AdminChars.base_of(cfg, cls)
+
+	# armes autorisées
+	var ws := _section(b, "Armes autorisées")
+	var wf := AdminChars.flow(ws, 16.0, 5.0)
 	for w in AdminUtil.weapon_types():
 		var wid: String = w.id
-		var cb := CheckBox.new()
-		cb.focus_mode = Control.FOCUS_NONE
-		cb.text = str(w.label)
-		cb.button_pressed = (cls.allowedWeaponTypes as Array).has(wid)
-		cb.toggled.connect(func(on: bool):
+		var on_w := func(on: bool):
 			var arr: Array = cls.allowedWeaponTypes
 			if on and not arr.has(wid):
 				arr.append(wid)
 			elif not on:
-				arr.erase(wid))
-		wf.add_child(cb)
-	var base := AdminUtil.base_of(cls)
+				arr.erase(wid)
+		wf.add_child(AdminChars.chk(str(w.label), 0.74, (cls.allowedWeaponTypes as Array).has(wid), on_w))
 	if not base.is_empty() and not (base.get("allowedWeaponTypes", []) as Array).is_empty():
 		var names: Array = []
 		for wid in base.allowedWeaponTypes:
 			names.append(AdminUtil.weapon_label(str(wid)))
-		Form.hint(b, "Hérite aussi de %s : %s" % [base.name, ", ".join(names)])
+		_inherit_note(ws, str(base.name), names)
 
 	# sorts autorisés
-	var max_sp := int(Data.constants.get("MAX_SPELLS_PER_CHARACTER", 6))
-	b.add_child(AdminUtil.label("Sorts autorisés (attribution manuelle ou parchemin) — %d maximum" % max_sp, 14, UiTheme.GOLD))
-	var sf := AdminUtil.flow(b)
-	for s in cfg.get("spells", []):
-		var sid: String = s.id
-		var cb := CheckBox.new()
-		cb.focus_mode = Control.FOCUS_NONE
-		cb.text = AdminUtil.spell_label(s)
-		cb.button_pressed = (cls.allowedSpellIds as Array).has(sid)
-		cb.toggled.connect(func(on: bool):
-			var arr: Array = cls.allowedSpellIds
-			if on:
-				if arr.size() >= max_sp:
-					cb.set_pressed_no_signal(false)
-					admin.say("%s : %d sorts/capacités maximum par classe." % [cls.name, max_sp])
-					return
-				if not arr.has(sid):
-					arr.append(sid)
-			else:
-				arr.erase(sid)
-				for p in cfg.get("party", []):
-					if p.get("classId") == cls.get("id"):
-						(p.get("spellsKnown", []) as Array).erase(sid))
-		sf.add_child(cb)
+	var max_sp := _max_sp()
+	var ss := _section(b, "Sorts autorisés (via attribution manuelle ou parchemin)")
+	var spells: Array = cfg.get("spells", [])
+	if spells.is_empty():
+		ss.add_child(AdminChars.dim_hint("Aucun sort défini."))
+	else:
+		var sf := AdminChars.flow(ss, 16.0, 5.0)
+		for s in spells:
+			var sid: String = s.id
+			var cb := AdminChars.chk(AdminUtil.spell_label(s), 0.74, (cls.allowedSpellIds as Array).has(sid), Callable())
+			cb.toggled.connect(func(on: bool):
+				var arr: Array = cls.allowedSpellIds
+				if on:
+					if arr.size() >= max_sp:
+						cb.set_pressed_no_signal(false)
+						status.text = T("❌ %s : %d sorts/capacités maximum autorisés par classe (plafond fixe, jamais dépassable — un personnage ne peut de toute façon jamais en connaître plus).") % [str(cls.get("name", "")), max_sp]
+						return
+					if not arr.has(sid):
+						arr.append(sid)
+				else:
+					arr.erase(sid)
+					for p in cfg.get("party", []):
+						if p.get("classId") == cls.get("id"):
+							(p.get("spellsKnown", []) as Array).erase(sid))
+			sf.add_child(cb)
 	if not base.is_empty() and not (base.get("allowedSpellIds", []) as Array).is_empty():
 		var names2: Array = []
 		for sid in base.allowedSpellIds:
-			var sp := Data.spell_by_id(str(sid))
+			var sp := AdminChars.spell_by_id(cfg, str(sid))
 			names2.append(AdminUtil.spell_label(sp) if not sp.is_empty() else str(sid))
-		Form.hint(b, "Hérite aussi de %s : %s" % [base.name, ", ".join(names2)])
+		_inherit_note(ss, str(base.name), names2)
 
-	# progression
-	b.add_child(AdminUtil.label("Progression automatique par niveau", 14, UiTheme.GOLD))
+	# progression automatique par niveau
+	_progression(b, admin, cfg, cls)
+
+	# talents (toujours visibles)
+	AdminClassTalents.section(b, admin, cfg, cls)
+
+	# évolution (classes de base)
+	if is_base:
+		_evolution(b, admin, cfg, cls)
+
+static func _progression(b: VBoxContainer, admin: Node, cfg: Dictionary, cls: Dictionary) -> void:
+	var ps := _section(b, "Progression automatique par niveau")
 	var prog: Array = cls.spellProgression
 	if prog.is_empty():
-		Form.hint(b, "Aucune progression définie : les sorts autorisés restent à attribuer manuellement ou via parchemin.")
-	var pf := AdminUtil.flow(b)
-	for i in prog.size():
-		var p: Dictionary = prog[i]
-		var s2 := Data.spell_by_id(str(p.get("spellId", "")))
-		var chip := Button.new()
-		chip.focus_mode = Control.FOCUS_NONE
-		chip.text = "Niv. %d → %s ✕" % [int(p.level), AdminUtil.spell_label(s2) if not s2.is_empty() else "?"]
-		var pidx := i
-		chip.pressed.connect(func():
-			prog.remove_at(pidx)
-			admin.refresh_tab())
-		pf.add_child(chip)
-	var add_row := AdminUtil.flow(b)
-	var draft := {"level": 3, "spellId": ""}
+		ps.add_child(AdminChars.dim_hint("Aucune progression définie — les sorts autorisés restent à attribuer manuellement ou via parchemin."))
+	else:
+		var pf := AdminChars.flow(ps, 19.0, 9.0)
+		for i in prog.size():
+			var p: Dictionary = prog[i]
+			var s2 := AdminChars.spell_by_id(cfg, str(p.get("spellId", "")))
+			var pidx := i
+			pf.add_child(_chip(T("Niv.%s → %s") % [AdminChars.num_text(p.get("level", 1)), AdminUtil.spell_label(s2) if not s2.is_empty() else "?"], func():
+				prog.remove_at(pidx)
+				admin.refresh_tab()))
+	var row := AdminChars.flow(null, 6.0, 6.0)
+	var mt := MarginContainer.new()
+	mt.add_theme_constant_override("margin_top", int(AdminChars.cpx(6.0)))
+	mt.add_child(row)
+	ps.add_child(mt)
+	var lvl_edit := AdminChars.line_edit("3", 56.0, 0.85, 9.0, 7.0)
+	lvl_edit.tooltip_text = "Niveau"
+	lvl_edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(lvl_edit)
 	var spell_opts: Array = []
-	for s in cfg.get("spells", []):
+	var spells: Array = cfg.get("spells", [])
+	if spells.is_empty():
+		spell_opts.append(["", "— Aucun sort défini —"])
+	for s in spells:
 		spell_opts.append([s.id, AdminUtil.spell_label(s)])
-	if not spell_opts.is_empty():
-		draft.spellId = spell_opts[0][0]
-	AdminUtil.chip(add_row, "Niveau", AdminUtil.mini_number(draft, "level", 1, 60, 3))
-	var on_spell := func(v): draft.spellId = v
-	add_row.add_child(AdminUtil.dropdown(spell_opts, draft.spellId, on_spell, 240.0))
+	var spell_sel := AdminChars.select(spell_opts, "", func(_v): pass, 120.0, 0.85, 9.0, 7.0, true)
+	spell_sel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(spell_sel)
 	var add := Button.new()
 	add.text = "+ Ajouter"
 	add.focus_mode = Control.FOCUS_NONE
+	add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	add.pressed.connect(func():
-		var sid2 := str(draft.spellId)
+		var n = AdminChars.parse_num(lvl_edit.text)
+		var level: float = maxf(1.0, float(n) if float(n) != 0.0 else 1.0)
+		var level_v: Variant = int(level) if is_equal_approx(level, roundf(level)) else level
+		var sid2 := str(spell_opts[spell_sel.selected][0]) if spell_sel.selected >= 0 else ""
 		if sid2 == "":
 			return
 		for q in prog:
-			if int(q.level) == int(draft.level) and q.spellId == sid2:
-				admin.say("Cette classe apprend déjà ce sort à ce niveau.")
+			if is_equal_approx(float(q.level), level) and q.spellId == sid2:
+				AdminChars.alert(admin, T("Cette classe apprend déjà ce sort à ce niveau précis."))
 				return
 		var allowed: Array = cls.allowedSpellIds
 		if not allowed.has(sid2):
-			if allowed.size() >= max_sp:
-				admin.say("%s a déjà %d sorts autorisés : retirez-en un avant d'en ajouter à la progression." % [cls.name, max_sp])
+			if allowed.size() >= _max_sp():
+				AdminChars.alert(admin, T("Impossible : %s a déjà atteint son maximum de %d sorts/capacités autorisés. Retirez-en un avant d'ajouter celui-ci à la progression.") % [str(cls.get("name", "")), _max_sp()])
 				return
 			allowed.append(sid2)
-		prog.append({"level": int(draft.level), "spellId": sid2})
-		prog.sort_custom(func(x, y): return int(x.level) < int(y.level))
+		prog.append({"level": level_v, "spellId": sid2})
+		_stable_sort(prog)
 		admin.refresh_tab())
-	add_row.add_child(add)
+	row.add_child(add)
 
-	# évolution
-	if is_base:
-		b.add_child(AdminUtil.label("Évolution de classe", 14, UiTheme.GOLD))
-		var ev := AdminUtil.flow(b)
-		AdminUtil.chip(ev, "Niveau requis", AdminUtil.mini_number(cls, "evolveLevel", 1, 60, 5, admin.refresh_tab))
-		var to: Array = cls.get("evolvesTo", [null, null])
-		while to.size() < 2:
-			to.append(null)
-		cls["evolvesTo"] = to
-		var cand: Array = [["", "— aucune —"]]
-		for c in cfg.classes:
-			if not AdminUtil.is_base(c) and str(c.get("evolvesFrom", "")) == str(cls.name):
-				cand.append([c.id, "%s %s" % [c.get("icon", "") if AdminUtil.is_emoji_icon(str(c.get("icon", ""))) else "", c.name]])
-		for slot in 2:
-			var sl := slot
-			var on_evo := func(v): to[sl] = v if v != "" else null
-			ev.add_child(AdminUtil.dropdown(cand, to[sl] if to[sl] != null else "", on_evo, 220.0))
-		Form.hint(b, "Voies d'évolution : classes évoluées dont la dépendance pointe vers cette classe de base.")
+## Tri par niveau STABLE (clé secondaire = ordre d'insertion), comme `Array.prototype.sort` de JS.
+static func _stable_sort(prog: Array) -> void:
+	var tmp: Array = []
+	for i in prog.size():
+		tmp.append([prog[i], i])
+	tmp.sort_custom(func(a, b):
+		var la := float(a[0].level)
+		var lb := float(b[0].level)
+		if is_equal_approx(la, lb):
+			return a[1] < b[1]
+		return la < lb)
+	prog.clear()
+	for t in tmp:
+		prog.append(t[0])
 
-	# talents
-	var open: bool = bool(_talents_open.get(cls.id, false))
-	var tog := Button.new()
-	tog.text = ("▾ Talents" if open else "▸ Talents") + " (un choix par palier)"
-	tog.focus_mode = Control.FOCUS_NONE
-	tog.pressed.connect(func():
-		_talents_open[cls.id] = not open
-		admin.refresh_tab())
-	b.add_child(tog)
-	if open:
-		_talents(b, admin, cls)
+## Pastille « .tag-chip » : texte + croix (rouge au survol).
+static func _chip(text: String, on_remove: Callable) -> Control:
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("1c1610")
+	sb.border_color = AdminChars.BORDER
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = AdminChars.cpx(9.0)
+	sb.content_margin_right = AdminChars.cpx(4.0)
+	sb.content_margin_top = AdminChars.cpx(2.0)
+	sb.content_margin_bottom = AdminChars.cpx(2.0)
+	p.add_theme_stylebox_override("panel", sb)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", int(AdminChars.cpx(4.0)))
+	p.add_child(h)
+	var l := Label.new()
+	l.text = text
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	l.add_theme_font_size_override("font_size", AdminChars.fpx(0.68))
+	h.add_child(l)
+	var x := Button.new()
+	x.text = "×"
+	x.flat = true
+	x.focus_mode = Control.FOCUS_NONE
+	x.add_theme_font_size_override("font_size", AdminChars.fpx(0.85))
+	x.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	x.add_theme_color_override("font_color", AdminChars.PDIM)
+	x.add_theme_color_override("font_hover_color", Color("c23b3b"))
+	x.add_theme_color_override("font_pressed_color", Color("c23b3b"))
+	var e := StyleBoxEmpty.new()
+	e.content_margin_left = AdminChars.cpx(4.0)
+	e.content_margin_right = AdminChars.cpx(4.0)
+	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
+		x.add_theme_stylebox_override(st, e)
+	x.pressed.connect(on_remove)
+	h.add_child(x)
+	return p
 
-static func _track(cls_id: String) -> Array:
-	var cfg: Dictionary = Data.config
-	if not (cfg.get("classTalents") is Dictionary):
-		cfg["classTalents"] = {}
-	var all: Dictionary = cfg.classTalents
-	if not all.has(cls_id):
-		if Data.class_talents.has(cls_id):
-			all[cls_id] = Data.class_talents[cls_id].duplicate(true)
-		else:
-			var arr: Array = []
-			for lvl in Data.constants.get("TALENT_LEVELS", [5, 10, 15, 20, 25]):
-				var opts: Array = []
-				for k in ["A", "B"]:
-					opts.append({"id": "%s_lv%d_%s" % [cls_id, int(lvl), k], "icon": "⭐", "labelFr": "Talent " + k, "labelEn": "Talent " + k, "descFr": "", "descEn": "", "effects": {}})
-				arr.append({"level": int(lvl), "options": opts})
-			all[cls_id] = arr
-	return all[cls_id]
+static func _evolution(b: VBoxContainer, admin: Node, cfg: Dictionary, cls: Dictionary) -> void:
+	var es := _section(b, "Évolution de classe")
+	var fr := HBoxContainer.new()
+	fr.add_theme_constant_override("separation", int(AdminChars.cpx(8.0)))
+	var fl := Label.new()
+	fl.text = "Niveau requis"
+	fl.custom_minimum_size.x = AdminChars.cpx(140.0)
+	fl.add_theme_font_size_override("font_size", AdminChars.fpx(0.75))
+	fl.add_theme_color_override("font_color", AdminChars.PDIM)
+	fr.add_child(fl)
+	var on_lvl := func(v):
+		cls["evolveLevel"] = int(float(v))
+		admin.refresh_tab()
+		return null
+	var ne := AdminChars.num_edit(cls.get("evolveLevel", 0), 70.0, 0.85, on_lvl, 9.0, 7.0, true)
+	ne.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fr.add_child(ne)
+	var frm := MarginContainer.new()
+	frm.add_theme_constant_override("margin_bottom", int(AdminChars.cpx(10.0)))
+	frm.add_child(fr)
+	es.add_child(frm)
+	var to: Array = cls.evolvesTo
+	var cand: Array = [["", "— aucune —"]]
+	for c in cfg.get("classes", []):
+		if c.get("id") != cls.get("id") and not AdminUtil.is_base(c) and str(c.get("evolvesFrom", "")) == str(cls.get("name", "")):
+			cand.append([c.id, "%s %s" % [AdminUtil.icon_text_fallback(str(c.get("icon", ""))), c.name]])
+	var ef := AdminChars.flow(es, 8.0, 8.0)
+	for slot in 2:
+		var sl := slot
+		var on_evo := func(v): to[sl] = v if v != "" else null
+		var cur = to[sl] if to[sl] != null else ""
+		ef.add_child(AdminChars.select(cand, cur, on_evo, 0.0, 0.85, 9.0, 7.0, false, [], true))
+	es.add_child(_evo_hint())
 
-static func _talents(b: VBoxContainer, admin: Node, cls: Dictionary) -> void:
-	var tracks := _track(str(cls.id))
-	var evolve_at := int(cls.get("evolveLevel", 0))
-	var warn_unreachable: bool = AdminUtil.is_base(cls) and evolve_at > 0 and (cls.get("evolvesTo", []) as Array).any(func(x): return x != null and x != "")
-	for tr in tracks:
-		var lvl := int(tr.level)
-		var unreachable: bool = warn_unreachable and lvl > evolve_at
-		var box := VBoxContainer.new()
-		box.add_theme_constant_override("separation", 4)
-		if unreachable:
-			box.modulate.a = 0.45
-		box.add_child(AdminUtil.label("Niveau %d%s" % [lvl, ("  — inaccessible : %s évolue au niveau %d, seuls les talents de la classe évoluée comptent ensuite" % [cls.name, evolve_at]) if unreachable else ""], 14, UiTheme.GOLD if not unreachable else UiTheme.DIM))
-		for opt in tr.options:
-			var o: Dictionary = opt
-			var line := AdminUtil.flow(box)
-			line.add_child(IconPicker.button(admin.modals(), o, "icon", admin.refresh_tab, 32.0))
-			for f in [["Nom FR", "labelFr", 150.0], ["Name EN", "labelEn", 150.0], ["Desc. FR", "descFr", 230.0], ["Desc. EN", "descEn", 230.0]]:
-				var e := LineEdit.new()
-				e.placeholder_text = f[0]
-				e.text = str(o.get(f[1], ""))
-				e.custom_minimum_size = Vector2(f[2], 0)
-				var key: String = f[1]
-				e.text_changed.connect(func(t: String): o[key] = t)
-				line.add_child(e)
-			var fx: Dictionary = Form.sub(o, "effects")
-			var used: Array = fx.keys()
-			for k in used:
-				var key2: String = k
-				var eo := OptionButton.new()
-				eo.focus_mode = Control.FOCUS_NONE
-				var sel := 0
-				for i in TALENT_EFFECTS.size():
-					eo.add_item(TALENT_EFFECTS[i][1])
-					if TALENT_EFFECTS[i][0] == key2:
-						sel = i
-					elif fx.has(TALENT_EFFECTS[i][0]):
-						eo.set_item_disabled(i, true)
-				eo.select(sel)
-				eo.item_selected.connect(func(i: int):
-					var nk: String = TALENT_EFFECTS[i][0]
-					if nk == key2 or fx.has(nk):
-						return
-					var val = fx[key2]
-					fx.erase(key2)
-					fx[nk] = val
-					admin.refresh_tab())
-				line.add_child(eo)
-				var sp := SpinBox.new()
-				sp.min_value = -999
-				sp.max_value = 999
-				sp.step = 1
-				sp.value = float(fx[key2])
-				sp.custom_minimum_size = Vector2(90, 0)
-				sp.value_changed.connect(func(v: float): fx[key2] = int(v))
-				line.add_child(sp)
-				var del := Button.new()
-				del.text = "✕"
-				del.focus_mode = Control.FOCUS_NONE
-				del.pressed.connect(func():
-					fx.erase(key2)
-					admin.refresh_tab())
-				line.add_child(del)
-			if used.size() < TALENT_EFFECTS.size():
-				var plus := Button.new()
-				plus.text = "+ effet"
-				plus.focus_mode = Control.FOCUS_NONE
-				plus.pressed.connect(func():
-					for d in TALENT_EFFECTS:
-						if not fx.has(d[0]):
-							fx[d[0]] = 1
-							break
-					admin.refresh_tab())
-				line.add_child(plus)
-		b.add_child(box)
+static func _evo_hint() -> Control:
+	var l := Label.new()
+	l.text = "\nVoies d’évolution : classes évoluées dont la dépendance pointe vers cette classe de base."
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size.x = 120.0
+	l.add_theme_font_size_override("font_size", AdminChars.fpx(0.74))
+	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	l.add_theme_color_override("font_color", AdminChars.PDIM)
+	return l
 
-static func _remove(admin: Node, cls: Dictionary) -> void:
-	var classes: Array = Data.config.classes
+static func _remove(admin: Node, cfg: Dictionary, cls: Dictionary) -> void:
+	var classes: Array = cfg.classes
 	if classes.size() <= 1:
-		Dialogs.notice(admin.modals(), "Suppression impossible", "Il doit rester au moins une classe.")
+		AdminChars.alert(admin, T("Il doit rester au moins une classe."))
 		return
 	var go := func():
 		classes.erase(cls)
 		var fallback: String = str(classes[0].id)
-		for p in Data.config.get("party", []):
+		for p in cfg.get("party", []):
 			if p.get("classId") == cls.get("id"):
 				p["classId"] = fallback
 				p["spellsKnown"] = []
 		admin.refresh_tab()
-	Dialogs.confirm(admin.modals(), "Supprimer la classe", "Supprimer la classe %s ?" % cls.name, go, "Supprimer")
+	Dialogs.confirm(admin.modals(), "", "Supprimer la classe %s ?" % str(cls.get("name", "")), go)
 
-static func _add_modal(admin: Node) -> void:
-	var m := Modal.open(admin.modals(), "Ajouter une classe", 440.0)
+## Fenêtre « Nouvelle classe » (type, dépendance), puis création et défilement jusqu'à la nouvelle carte.
+static func _add_modal(admin: Node, cfg: Dictionary) -> void:
+	var m := Modal.open(admin.modals(), "Nouvelle classe", 380.0)
 	var st := {"type": "base", "dep": "Guerrier"}
-	m.content.add_child(AdminUtil.dropdown([["base", "Classe de base"], ["advanced", "Classe évoluée"]], "base", func(v): st.type = v))
-	var deps: Array = []
+	var frow := func(label: String, field: Control) -> HBoxContainer:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", int(AdminChars.cpx(8.0)))
+		var l := Label.new()
+		l.text = label
+		l.custom_minimum_size.x = AdminChars.cpx(100.0)
+		l.add_theme_font_size_override("font_size", AdminChars.fpx(0.75))
+		l.add_theme_color_override("font_color", AdminChars.PDIM)
+		h.add_child(l)
+		h.add_child(field)
+		m.content.add_child(h)
+		return h
+	var dep_opts: Array = []
 	for n in AdminUtil.BASE_ARCHETYPES:
-		deps.append([n, n])
-	m.add_text("Pour une classe évoluée : classe de base dont elle dépend", UiTheme.DIM, 13)
-	m.content.add_child(AdminUtil.dropdown(deps, "Guerrier", func(v): st.dep = v))
+		dep_opts.append([n, n])
+	var rows := {}
+	var on_type := func(v):
+		st.type = v
+		rows.dep.visible = v == "advanced"
+		m.call_deferred("_fit")
+		admin.get_tree().create_timer(0.05).timeout.connect(func():
+			if is_instance_valid(m):
+				m._fit())
+	frow.call("Type", AdminChars.select([["base", "Classe de base"], ["advanced", "Classe évoluée"]], "base", on_type, 100.0, 0.85, 9.0, 7.0, true))
+	rows["dep"] = frow.call("Dépend de", AdminChars.select(dep_opts, "Guerrier", func(v): st.dep = v, 100.0, 0.85, 9.0, 7.0, true))
+	rows.dep.visible = false
+	var mh := AdminChars.dim_hint("Une classe évoluée n'est accessible qu'en évoluant depuis la classe de base choisie ici.")
+	mh.custom_minimum_size.x = 280.0
+	m.content.add_child(mh)
 	var go := func():
 		var cls: Dictionary
 		if st.type == "base":
-			cls = {"id": AdminUtil.new_id("class"), "name": "Guerrier", "icon": "🧝", "baseSpeed": 8, "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": [], "evolvesTo": [null, null], "evolveLevel": 5}
+			cls = {"id": AdminUtil.new_id("class"), "name": "Guerrier", "icon": "🧝", "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": [], "evolvesTo": [null, null], "evolveLevel": 5}
 		else:
-			cls = {"id": AdminUtil.new_id("class"), "name": "Nouvelle évolution", "icon": "🧝", "baseSpeed": 8, "evolvesFrom": st.dep, "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": []}
-		Data.config.classes.append(cls)
+			cls = {"id": AdminUtil.new_id("class"), "name": "Nouvelle évolution", "icon": "🧝", "evolvesFrom": st.dep, "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": []}
+		cfg.classes.append(cls)
 		m.close()
-		admin.refresh_tab()
-	m.set_buttons([{"text": "Ajouter", "cb": go}, {"text": "Annuler", "cb": func(): m.close()}])
+		await admin.refresh_tab()
+		await admin.get_tree().create_timer(0.06).timeout
+		var card = _cards.get(str(cls.id))
+		if card != null and is_instance_valid(card) and admin._scroll != null:
+			var sc: ScrollContainer = admin._scroll
+			var want: float = card.global_position.y + card.size.y * 0.5 - (sc.global_position.y + sc.size.y * 0.5)
+			sc.scroll_vertical = int(sc.scroll_vertical + want)
+	m.set_buttons([{"text": "Annuler", "primary": false, "cb": func(): m.close()}, {"text": "Créer", "primary": true, "cb": go}])
+	# la hauteur du corps défilant est calculée avant que le texte du hint soit mis en page : on la refait un instant après
+	admin.get_tree().create_timer(0.05).timeout.connect(func():
+		if is_instance_valid(m):
+			m._fit())
