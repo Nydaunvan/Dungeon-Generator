@@ -213,7 +213,10 @@ func _init() -> void:
 			"arcane":
 				var sid2 := str(args.get("spell", "spell_arc1"))
 				Engine.time_scale = 0.15
-				main._on_fx3d(sid2)
+				if args.has("action"):
+					main._on_fx(str(args.action))
+				else:
+					main._on_fx3d(sid2)
 				for i in int(args.get("frames", 30)):
 					await create_timer(0.2, true, false, true).timeout
 					root.get_texture().get_image().save_png(out + "_arc_%02d.png" % i)

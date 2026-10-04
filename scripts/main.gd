@@ -742,7 +742,11 @@ static func _strip_tags(s: String) -> String:
 	return re.sub(s, "", true)
 
 func _on_fx(type: String) -> void:
-	layout.fx_layer.play(type)
+	if SpellFxStyles.has_action(type):       # coups, piège, interrupteur, fontaine : effets 3D
+		var st: CombatStage = level_node.stage if level_node != null else null
+		SpellFxStyles.cast_action(layout.world, rig.camera, type, st.target_point() if st != null and st.active else {})
+	else:
+		layout.fx_layer.play(type)
 	if type == "hit" or type == "trap":
 		_shake()
 

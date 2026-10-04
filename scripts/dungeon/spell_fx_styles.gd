@@ -641,6 +641,7 @@ func _generic_burst(at: Vector3, target: Dictionary, col: Color) -> void:
 
 func _tint_for(kind: String) -> Color:
 	match kind:
+		"fountain": return Color(0.4, 0.82, 1.0)
 		"haste": return Color(0.55, 0.95, 1.0)
 		"stamina": return Color(0.45, 0.95, 0.85)
 		"vigor": return Color(1.0, 0.82, 0.4)
@@ -775,3 +776,157 @@ func _sleep(target: Dictionary, ctx: Dictionary) -> void:
 				lb.outline_modulate.a = a * 0.8)
 		_emit(at, _spark_tex(), 8, 0.9, 0.2, 0.7, 0.05, 0.1,
 			_ramp(Color(0.8, 0.8, 1, 0), Color(0.7, 0.7, 1.0, 0.8), Color(0.5, 0.5, 1.0, 0)), Vector3(0, 0.3, 0), 180.0, up, 0.3)
+
+# =====================================================================================================
+# ACTIONS : coups d'arme, coups reçus, piège, interrupteur, fontaine (remplacent l'ancien emoji animé 2D).
+# =====================================================================================================
+
+const ACTIONS := ["sword", "dagger", "axe", "mace", "staff", "bow", "unarmed", "hit", "trap", "switch", "fountain"]
+
+static func has_action(kind: String) -> bool:
+	return ACTIONS.has(kind)
+
+static func cast_action(host: Node, camera: Camera3D, kind: String, target: Dictionary) -> void:
+	if camera == null or not ACTIONS.has(kind):
+		return
+	var fx := SpellFxStyles.new()
+	fx.name = "ActionFx"
+	fx.cam = camera
+	host.add_child(fx)
+	fx._action(kind, target)
+
+func _action(kind: String, target: Dictionary) -> void:
+	match kind:
+		"sword": _wp_sword(target)
+		"dagger": _wp_dagger(target)
+		"axe": _wp_axe(target)
+		"mace": _wp_mace(target)
+		"staff": _wp_staff(target)
+		"bow": _arrow(target)
+		"unarmed": _wp_punch(target)
+		"hit": _party_hit()
+		"trap": _trap_fx()
+		"switch": _switch_fx()
+		"fountain": _heal({"ally": 1}, true, "fountain")
+
+## Croissant de lame : balaie le centre du monstre selon `ang0` (rad), puis étincelles.
+func _blade_arc(at: Vector3, size: float, tint: Color, ang0: float, sweep_vec: Vector2, delay: float, dur: float, grow: float) -> void:
+	var right := cam.global_transform.basis.x
+	var up := cam.global_transform.basis.y
+	var cr := _sprite(_crescent_tex(), Color(tint, 0.0), 1.1 * size, at)
+	(cr.mat as StandardMaterial3D).no_depth_test = true
+	_later(delay, func():
+		if not is_instance_valid(cr.node):
+			return
+		_add(cr, dur, func(u: float):
+			var e := 1.0 - pow(1.0 - u, 3.0)
+			var k := e - 0.5
+			(cr.node as Node3D).position = at + right * (sweep_vec.x * k * size) + up * (sweep_vec.y * k * size)
+			(cr.node as Node3D).rotation.z = ang0 + e * deg_to_rad(95.0) * signf(sweep_vec.x if sweep_vec.x != 0.0 else 1.0)
+			(cr.node as Node3D).scale = Vector3(1.0 + e * grow, 0.8, 1.0) * 1.1 * size
+			(cr.mat as StandardMaterial3D).albedo_color = Color(tint, minf(1.0, u * 10.0) * (1.0 - u * u))))
+
+func _wp_sword(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var size := _tsize(target, 0.8, 0.9, 2.0)
+	_blade_arc(at, size, Color(0.88, 0.95, 1.0), deg_to_rad(-55.0), Vector2(0.77, -0.63), 0.0, 0.2, 0.5)
+	_later(0.08, func(): _hit_sparks(at, target))
+
+func _wp_dagger(target: Dictionary) -> void:
+	# deux estocades rapides en X : petits croissants fins, puis étincelles
+	var at := _end_point(target)
+	var size := _tsize(target, 0.8, 0.9, 2.0)
+	_blade_arc(at, size * 0.7, Color(0.9, 0.97, 1.0), deg_to_rad(-40.0), Vector2(0.9, -0.9), 0.0, 0.14, 0.2)
+	_blade_arc(at, size * 0.7, Color(0.9, 0.97, 1.0), deg_to_rad(40.0), Vector2(-0.9, -0.9), 0.09, 0.14, 0.2)
+	_later(0.06, func(): _flash(_spark_tex(), Color(1, 1, 1, 1), at, 0.2 * size, 0.9 * size, 0.14))
+	_later(0.14, func(): _hit_sparks(at, target))
+
+func _wp_axe(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var size := _tsize(target, 0.9, 1.0, 2.2)
+	_blade_arc(at, size * 1.2, Color(1.0, 0.85, 0.55), deg_to_rad(80.0), Vector2(0.0, -1.7), 0.0, 0.24, 0.4)
+	_later(0.1, func():
+		_hit_sparks(at, target)
+		_flash(_arcane_tex(), Color(1.0, 0.8, 0.5, 0.8), at, 0.5 * size, 2.4 * size, 0.24)
+		_emit(at - cam.global_transform.basis.y * 0.5, _smoke_tex(), 4, 0.5, 0.3, 0.8, 0.5, 0.8,
+			_ramp(Color(0.8, 0.7, 0.55, 0), Color(0.75, 0.65, 0.5, 0.45), Color(0.5, 0.45, 0.35, 0)), Vector3.ZERO, 180.0, Vector3.UP, 0.2, true, false))
+
+func _wp_mace(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var size := _tsize(target, 0.9, 1.0, 2.2)
+	_flash(_arcane_tex(), Color(1.0, 0.92, 0.7, 1.0), at, 0.5 * size, 2.8 * size, 0.26)
+	_ring("ring_mace", Color(1.0, 0.85, 0.5), at, 0.3 * size, 2.2 * size, 0.34)
+	_later(0.06, func(): _ring("ring_mace", Color(1.0, 0.85, 0.5), at, 0.2 * size, 1.5 * size, 0.3))
+	_emit(at, _spark_tex(), 12 if _lite() else 20, 0.5, 2.0 * size, 4.4 * size, 0.07, 0.16,
+		_ramp(Color(1, 1, 0.85, 1), Color(1, 0.75, 0.35, 0.9), Color(1, 0.5, 0.1, 0)), Vector3(0, -5.0, 0), 180.0, Vector3.UP, 0.06)
+	_emit(at, _smoke_tex(), 5, 0.6, 0.4, 1.0, 0.6, 1.0,
+		_ramp(Color(0.8, 0.7, 0.55, 0), Color(0.75, 0.65, 0.5, 0.5), Color(0.5, 0.45, 0.35, 0)), Vector3.ZERO, 180.0, Vector3.UP, 0.25 * size, true, false)
+
+func _wp_staff(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var size := _tsize(target)
+	_flash(_arcane_tex(), Color(0.85, 0.8, 1.0, 1.0), at, 0.4 * size, 1.9 * size, 0.24)
+	var star := _sprite(_rays_tex(), Color(0.8, 0.75, 1.0, 0.9), 1.0, at)
+	(star.mat as StandardMaterial3D).no_depth_test = true
+	_add(star, 0.3, func(u: float):
+		(star.node as Node3D).scale = Vector3.ONE * (0.4 + u * 1.2) * size
+		(star.node as Node3D).rotation.z = u * 0.6
+		(star.mat as StandardMaterial3D).albedo_color.a = 0.9 * (1.0 - u))
+	_ring("ring_staff", Color(0.75, 0.65, 1.0), at, 0.3 * size, 1.6 * size, 0.3)
+	_emit(at, _spark_tex(), 10, 0.5, 1.0 * size, 2.6 * size, 0.06, 0.13,
+		_ramp(Color(1, 1, 1, 1), Color(0.75, 0.65, 1.0, 0.9), Color(0.5, 0.4, 1.0, 0)), Vector3(0, -1.0, 0), 180.0, Vector3.UP, 0.05)
+
+func _wp_punch(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var size := _tsize(target)
+	var star := _sprite(_rays_tex(), Color(1.0, 0.9, 0.6, 0.95), 1.0, at)
+	(star.mat as StandardMaterial3D).no_depth_test = true
+	_add(star, 0.28, func(u: float):
+		(star.node as Node3D).scale = Vector3.ONE * (0.5 + (1.0 - pow(1.0 - u, 2.0)) * 1.6) * size
+		(star.node as Node3D).rotation.z = 0.2
+		(star.mat as StandardMaterial3D).albedo_color.a = 0.95 * (1.0 - u))
+	_flash(_arcane_tex(), Color(1.0, 0.95, 0.8, 1.0), at, 0.4 * size, 1.8 * size, 0.2)
+	_ring("ring_punch", Color(1.0, 0.85, 0.5), at, 0.2 * size, 1.4 * size, 0.28)
+	_emit(at, _spark_tex(), 8, 0.4, 1.5 * size, 3.5 * size, 0.06, 0.12,
+		_ramp(Color(1, 1, 0.9, 1), Color(1, 0.8, 0.45, 0.9), Color(1, 0.5, 0.1, 0)), Vector3(0, -4.0, 0), 180.0, Vector3.UP, 0.04)
+
+## Coup reçu par le groupe : trois griffures rouges en travers de la vue + voile rouge qui s'estompe.
+func _party_hit() -> void:
+	var right := cam.global_transform.basis.x
+	var up := cam.global_transform.basis.y
+	var base := cam.global_position + _fwd() * 1.6 - up * 0.15
+	var veil := _sprite(_arcane_tex(), Color(1.0, 0.1, 0.05, 0.0), 6.0, cam.global_position + _fwd() * 1.2)
+	(veil.mat as StandardMaterial3D).no_depth_test = true
+	_add(veil, 0.4, func(u: float):
+		(veil.mat as StandardMaterial3D).albedo_color.a = 0.45 * (1.0 - u) * minf(1.0, u * 12.0))
+	for i in 3:
+		var off := (float(i) - 1.0) * 0.5
+		var cr := _sprite(_crescent_tex(), Color(1.0, 0.25, 0.2, 0.0), 1.5, base + right * off)
+		(cr.mat as StandardMaterial3D).no_depth_test = true
+		var delay := 0.05 * i
+		_later(delay, func():
+			if not is_instance_valid(cr.node):
+				return
+			_add(cr, 0.26, func(u: float):
+				var e := 1.0 - pow(1.0 - u, 3.0)
+				(cr.node as Node3D).position = base + right * (off + (e - 0.5) * 0.5) + up * ((0.5 - e) * 0.9)
+				(cr.node as Node3D).rotation.z = deg_to_rad(40.0) + e * 0.3
+				(cr.node as Node3D).scale = Vector3(0.55, 1.5, 1.0) * 1.3
+				(cr.mat as StandardMaterial3D).albedo_color = Color(1.0, 0.3, 0.22, minf(1.0, u * 8.0) * (1.0 - u * u))))
+	_emit(base, _spark_tex(), 10, 0.5, 1.0, 3.0, 0.06, 0.13,
+		_ramp(Color(1, 0.7, 0.6, 1), Color(1, 0.25, 0.2, 0.9), Color(0.8, 0.1, 0.05, 0)), Vector3(0, -2.0, 0), 180.0, Vector3.UP, 0.3)
+
+func _trap_fx() -> void:
+	var at := cam.global_position + _fwd() * 1.8 - cam.global_transform.basis.y * 0.5
+	_flash(_arcane_tex(), Color(1.0, 0.25, 0.15, 0.9), at, 0.6, 4.0, 0.4, true)
+	_ring("ring_trap", Color(1.0, 0.3, 0.2), at, 0.4, 3.0, 0.4)
+	_emit(at, _spark_tex(), 16, 0.6, 1.5, 4.0, 0.07, 0.15,
+		_ramp(Color(1, 0.8, 0.6, 1), Color(1, 0.3, 0.2, 0.9), Color(0.7, 0.1, 0.05, 0)), Vector3(0, -3.0, 0), 180.0, Vector3.UP, 0.1)
+
+func _switch_fx() -> void:
+	var at := cam.global_position + _fwd() * 2.0
+	var col := Color(0.9, 0.75, 0.4)
+	_flash(_arcane_tex(), Color(col, 0.8), at, 0.4, 2.0, 0.35, true)
+	_ring("ring_switch", col, at, 0.3, 1.8, 0.4)
+	_emit(at, _spark_tex(), 10, 0.5, 0.8, 2.2, 0.06, 0.12,
+		_ramp(Color(1, 0.95, 0.7, 1), Color(col, 0.9), Color(col, 0)), Vector3(0, -1.0, 0), 180.0, Vector3.UP, 0.05)
