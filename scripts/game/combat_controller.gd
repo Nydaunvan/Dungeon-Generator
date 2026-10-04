@@ -18,6 +18,12 @@ var rig: PlayerRig
 var view: LevelView
 var _busy: bool = false
 var _turn_elapsed: float = 0.0
+# --- porte de présentation : le combat ne s'affiche qu'une fois le reste terminé (piège, fenêtre, effet visuel),
+# --- et ne se retire qu'une fois l'effet visuel du dernier coup terminé.
+var _combat_live: bool = false     # le combat est « affiché » (la porte est franchie)
+var _gate_pending: bool = false    # un combat attend que la porte s'ouvre
+var _hold_until: int = 0           # petite respiration après la dernière fenêtre / le dernier effet
+var _draining: bool = false
 
 func setup(state: GameState, r: PlayerRig) -> void:
 	gs = state
@@ -41,8 +47,34 @@ func sync_position() -> void:
 	combat.pos = Vector2i(rig.gx, rig.gy)
 	combat.dir = rig.dir
 
-func in_combat() -> bool:
+## Le moteur de combat est-il engagé ? (logique, sans délai de présentation)
+func model_in_combat() -> bool:
 	return combat != null and combat.in_combat()
+
+## Fenêtres ouvertes ou effet visuel en cours : on laisse finir avant d'enchaîner.
+func _gate_busy() -> bool:
+	if SpellFx3D.busy() or not get_tree().get_nodes_in_group("modal").is_empty():
+		_hold_until = Time.get_ticks_msec() + 350
+		return true
+	return Time.get_ticks_msec() < _hold_until
+
+## Le combat est-il à l'écran ? Il apparaît quand piège / fenêtre / effet visuel sont terminés,
+## et reste affiché jusqu'à la fin de l'effet visuel du dernier coup.
+func in_combat() -> bool:
+	if combat == null:
+		return false
+	if combat.in_combat():
+		if _combat_live:
+			return true
+		if _gate_busy():
+			_gate_pending = true
+			return false
+		_combat_live = true
+		return true
+	if _combat_live and (_draining or SpellFx3D.busy()):
+		return true
+	_combat_live = false
+	return false
 
 func monster_at(x: int, y: int) -> Dictionary:
 	return combat.monster_at(x, y) if combat != null else {}
@@ -50,10 +82,15 @@ func monster_at(x: int, y: int) -> Dictionary:
 ## À appeler après chaque déplacement du joueur.
 func refresh() -> void:
 	sync_position()
-	if not in_combat():
+	if not model_in_combat():
 		combat.gauges.clear()
 		changed.emit()
 		return
+	if not _combat_live and _gate_busy():
+		_gate_pending = true      # un piège, une fenêtre ou un effet est en cours : le combat se lancera ensuite
+		changed.emit()
+		return
+	_combat_live = true
 	# se tourner vers l'adversaire s'il n'est pas en face
 	var eng := combat.engaged()
 	if int(eng.dir) != rig.dir:
@@ -66,11 +103,11 @@ func step_tick() -> void:
 	if combat == null or gs.game_over:
 		return
 	sync_position()
-	if in_combat():
+	if model_in_combat():
 		return
 	for c in gs.party:
 		combat.tick_char(c)
-	_drain()
+	await _drain()
 	changed.emit()
 
 func attack() -> void:
@@ -159,19 +196,19 @@ func card_pressed(char_id: String) -> void:
 		changed.emit()
 
 func flee() -> void:
-	if not in_combat() or _busy:
+	if not model_in_combat() or _busy:
 		return
 	do_flee()
 
 func do_flee() -> void:
-	if not in_combat() or _busy:
+	if not model_in_combat() or _busy:
 		return
 	sync_position()
 	var dest := combat.flee()
 	if dest.x >= 0:
 		rig.teleport(dest)
 	sync_position()
-	_drain()
+	await _drain()
 	changed.emit()
 
 func skip_active_turn(reason: String) -> void:
@@ -183,27 +220,30 @@ func skip_active_turn(reason: String) -> void:
 	_after_action()
 
 func _after_action() -> void:
-	_drain()
+	var was_busy := _busy
+	_busy = true            # pas d'autre action tant que l'effet visuel n'est pas terminé
+	await _drain()
+	_busy = was_busy
 	_turn_elapsed = 0.0
 	changed.emit()
-	if in_combat():
+	if model_in_combat():
 		_run_turns()
 
 func _run_turns() -> void:
 	if _busy:
 		return
 	_busy = true
-	while in_combat():
+	while model_in_combat():
 		var r := combat.advance()
-		_drain()
+		await _drain()
 		if r.kind != "monster":
 			break
 		changed.emit()
 		await get_tree().create_timer(MONSTER_DELAY).timeout
-		if not in_combat():
+		if not model_in_combat():
 			break
 		combat.monster_act(str(r.key))
-		_drain()
+		await _drain()
 		changed.emit()
 	_busy = false
 	_turn_elapsed = 0.0
@@ -212,17 +252,28 @@ func _run_turns() -> void:
 func _drain() -> void:
 	var evs := combat.events.duplicate()
 	combat.events.clear()
+	# 1) les effets visuels partent tout de suite
+	var rest: Array = []
 	for e in evs:
 		match str(e.type):
-			"popup":
-				popup.emit(str(e.text), e.color)
 			"fx":
 				fx.emit(str(e.fx))
 			"fx3d":
 				fx3d.emit(str(e.spell), e.get("ctx", {}))
+			_:
+				rest.append(e)
+	# 2) le reste (chiffres, mort d'un monstre, porte, fin de partie) attend la fin de l'effet visuel
+	if SpellFx3D.busy():
+		_draining = true
+		await SpellFx3D.wait_idle(get_tree())
+		_draining = false
+	for e in rest:
+		match str(e.type):
+			"popup":
+				popup.emit(str(e.text), e.color)
 			"monster_died":
 				view.entities.remove_monster(str(e.id))
-				if not in_combat() and not combat.summary.is_empty():
+				if not model_in_combat() and not combat.summary.is_empty():
 					combat_won.emit(combat.take_summary())
 			"door_open":
 				combat.lstate().get_or_add("opened_doors", {})[str(e.id)] = true
@@ -232,7 +283,7 @@ func _drain() -> void:
 
 ## Part (0..1) du temps de réflexion restant pour le personnage dont c'est le tour.
 func turn_timer_fraction() -> float:
-	if not _timer_enabled() or not in_combat() or _busy:
+	if not _timer_enabled() or not model_in_combat() or _busy:
 		return -1.0
 	return clampf(1.0 - _turn_elapsed / _timer_seconds(), 0.0, 1.0)
 
@@ -243,7 +294,10 @@ func _timer_seconds() -> float:
 	return clampf(float(gs.cfg.get("turnTimerSeconds", 5)), 3.0, 10.0)
 
 func _process(delta: float) -> void:
-	if combat == null or _busy or gs.game_over or not _timer_enabled() or not in_combat():
+	if _gate_pending and combat != null and not _gate_busy():
+		_gate_pending = false
+		refresh()
+	if combat == null or _busy or gs.game_over or not _timer_enabled() or not model_in_combat():
 		return
 	if not get_tree().get_nodes_in_group("modal").is_empty():
 		return   # fenêtre ouverte : le chronomètre de tour est en pause

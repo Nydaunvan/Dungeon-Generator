@@ -25,6 +25,7 @@ static func cast_spell(host: Node, camera: Camera3D, spell_id: String, target: D
 	fx.cam = camera
 	host.add_child(fx)
 	fx._run(spell_id, target, ctx)
+	fx._started = true
 
 func _run(spell_id: String, target: Dictionary, ctx: Dictionary) -> void:
 	var style := str(ctx.get("style", "arcane"))
@@ -136,7 +137,7 @@ func _emit(at: Vector3, tex: Texture2D, amount: int, life: float, vmin: float, v
 	add_child(p)
 	p.emitting = true
 	if one_shot:
-		_later(life + 0.25, func(): pass)
+		_keep(life + 0.25)
 		get_tree().create_timer(life + 0.2).timeout.connect(func():
 			if is_instance_valid(p):
 				p.queue_free())
@@ -144,7 +145,7 @@ func _emit(at: Vector3, tex: Texture2D, amount: int, life: float, vmin: float, v
 
 func _stop_emitter(p: CPUParticles3D, life: float) -> void:
 	p.emitting = false
-	_later(life + 0.1, func(): pass)
+	_keep(life + 0.1)
 	get_tree().create_timer(life + 0.05).timeout.connect(func():
 		if is_instance_valid(p):
 			p.queue_free())
@@ -469,7 +470,7 @@ func _ice_burst(at: Vector3, target: Dictionary) -> void:
 	sh.scale_amount_curve = _shrink_curve()
 	add_child(sh)
 	sh.emitting = true
-	_later(0.9, func(): pass)
+	_keep(0.9)
 	get_tree().create_timer(0.8).timeout.connect(func():
 		if is_instance_valid(sh): sh.queue_free())
 	_emit(at, _spark_tex(), 12 if _lite() else 26, 0.9, 0.4, 1.6, 0.05, 0.12,
@@ -794,6 +795,7 @@ static func cast_action(host: Node, camera: Camera3D, kind: String, target: Dict
 	fx.cam = camera
 	host.add_child(fx)
 	fx._action(kind, target)
+	fx._started = true
 
 func _action(kind: String, target: Dictionary) -> void:
 	match kind:

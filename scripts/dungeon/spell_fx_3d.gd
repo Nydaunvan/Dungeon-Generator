@@ -11,6 +11,34 @@ var cam: Camera3D
 var _parts: Array = []     # {node, mat, t0, dur, fn}
 var _t: float = 0.0
 
+# --- suivi des effets en cours : le combat attend la FIN de l'effet visuel avant de retirer un monstre, de
+# --- conclure un combat ou d'en lancer un nouveau (voir CombatController).
+static var _live: Array = []
+var _started: bool = false     # vrai une fois l'effet entièrement lancé
+var _vis_pending: int = 0      # appels différés qui produiront encore du visuel
+
+func _enter_tree() -> void:
+	_live.append(self)
+
+func _exit_tree() -> void:
+	_live.erase(self)
+
+## Reste-t-il du visuel à jouer (sprites animés, impacts différés) ? Les particules qui s'éteignent ne comptent pas.
+func visual_active() -> bool:
+	return not _started or not _parts.is_empty() or _vis_pending > 0
+
+static func busy() -> bool:
+	for fx in _live:
+		if is_instance_valid(fx) and (fx as SpellFx3D).visual_active():
+			return true
+	return false
+
+## Attend que plus aucun effet ne joue (avec une sécurité de 4 s).
+static func wait_idle(tree: SceneTree) -> void:
+	var t0 := Time.get_ticks_msec()
+	while busy() and Time.get_ticks_msec() - t0 < 4000:
+		await tree.process_frame
+
 static func has(spell_id: String) -> bool:
 	return TABLE.has(spell_id)
 
@@ -92,10 +120,20 @@ var _pending: int = 0
 
 func _later(sec: float, fn: Callable) -> void:
 	_pending += 1
+	_vis_pending += 1
 	get_tree().create_timer(sec).timeout.connect(func():
+		if not is_instance_valid(self):
+			return
 		_pending -= 1
+		fn.call()
+		_vis_pending -= 1)
+
+## Garde le nœud en vie (particules qui finissent) sans compter comme du visuel à attendre.
+func _keep(sec: float) -> void:
+	_pending += 1
+	get_tree().create_timer(sec).timeout.connect(func():
 		if is_instance_valid(self):
-			fn.call())
+			_pending -= 1)
 
 ## Lance l'effet. `target` = {"pos", "h"} du combattant visé (vide : devant la caméra).
 static func cast(host: Node, camera: Camera3D, spell_id: String, target: Dictionary) -> void:
@@ -109,6 +147,7 @@ static func cast(host: Node, camera: Camera3D, spell_id: String, target: Diction
 		"arcane": fx._arcane(target)
 		"holy": fx._holy(target)
 		"fire": fx._fire(target)
+	fx._started = true
 
 func _fwd() -> Vector3:
 	return -cam.global_transform.basis.z
@@ -357,7 +396,7 @@ func _arcane_burst(at: Vector3, target: Dictionary) -> void:
 		var tw := create_tween()
 		tw.tween_property(lamp, "light_energy", 0.0, 0.3)
 		tw.tween_callback(lamp.queue_free)
-	_later(0.8, func(): pass)   # garde le nœud en vie le temps que les particules finissent
+	_keep(0.8)   # garde le nœud en vie le temps que les particules finissent
 	get_tree().create_timer(0.8).timeout.connect(func():
 		if is_instance_valid(shards): shards.queue_free()
 		if is_instance_valid(sparks): sparks.queue_free())
@@ -539,7 +578,7 @@ func _fire_burst(at: Vector3, target: Dictionary) -> void:
 		var tw := create_tween()
 		tw.tween_property(lamp, "light_energy", 0.0, 0.45)
 		tw.tween_callback(lamp.queue_free)
-	_later(1.0, func(): pass)
+	_keep(1.0)
 	get_tree().create_timer(1.0).timeout.connect(func():
 		if is_instance_valid(chunks): chunks.queue_free()
 		if is_instance_valid(rising): rising.queue_free())
@@ -666,6 +705,6 @@ func _holy(target: Dictionary) -> void:
 		var tw := create_tween()
 		tw.tween_property(lamp, "light_energy", 0.0, 0.6)
 		tw.tween_callback(lamp.queue_free)
-	_later(1.0, func(): pass)
+	_keep(1.0)
 	get_tree().create_timer(1.0).timeout.connect(func():
 		if is_instance_valid(motes): motes.queue_free())

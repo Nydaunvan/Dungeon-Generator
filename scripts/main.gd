@@ -246,6 +246,8 @@ func _sync_stage() -> void:
 	if not ctrl.in_combat():
 		stage.exit()
 		return
+	if not ctrl.model_in_combat():
+		return       # dernier coup en cours d'affichage : la scène reste telle quelle jusqu'à la fin de l'effet
 	var eng := ctrl.combat.engaged()
 	var def: Dictionary = eng.monster
 	var mst: Dictionary = ctrl.combat.lstate().monsters[str(def.id)]
@@ -263,7 +265,10 @@ func _on_stage_input(ev: InputEvent) -> void:
 	var idx := level_node.stage.pick(ev.position)
 	if idx < 0:
 		return
-	var def: Dictionary = ctrl.combat.engaged().monster
+	var eng_now := ctrl.combat.engaged()
+	if eng_now.is_empty():
+		return
+	var def: Dictionary = eng_now.monster
 	gs.selected_member[str(def.id)] = idx
 	ctrl.changed.emit()
 
@@ -868,7 +873,8 @@ func _update_music() -> void:
 	var boss := false
 	if combat:
 		var eng := ctrl.combat.engaged()
-		boss = bool(eng.monster.get("isBoss", false))
+		if not eng.is_empty():
+			boss = bool(eng.monster.get("isBoss", false))
 	if combat and not _was_combat:
 		Sound.sfx("combat_start")
 		_pulse_combat_enter()
