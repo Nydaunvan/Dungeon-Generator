@@ -214,6 +214,15 @@ func target_point() -> Dictionary:
 			best = _visual_center(e)
 	return best
 
+## Centres visibles de TOUS les combattants affichés (sorts de zone).
+func target_points() -> Array:
+	var out: Array = []
+	for k in _nodes:
+		var e: Dictionary = _nodes[k]
+		if e.node.visible:
+			out.append(_visual_center(e))
+	return out
+
 static var _centroids: Dictionary = {}   # clé texture+cellule -> Rect2 (centre de masse en x,y ; taille visible en size)
 
 ## Centre de masse des pixels opaques du sprite (les cases des planches ont de la marge transparente et des

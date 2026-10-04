@@ -746,9 +746,20 @@ func _on_fx(type: String) -> void:
 	if type == "hit" or type == "trap":
 		_shake()
 
-func _on_fx3d(spell_id: String) -> void:
-	var tgt: Dictionary = layout_stage_target()
-	SpellFx3D.cast(layout.world, rig.camera, spell_id, tgt)
+func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
+	var st: CombatStage = level_node.stage if level_node != null else null
+	var active: bool = st != null and st.active
+	var tgt: Dictionary = st.target_point() if active else {}
+	var c := ctx.duplicate()
+	if not c.has("style"):       # appel hors combat (outils) : on retrouve style / mode dans la définition du sort
+		for sp in gs.cfg.get("spells", []):
+			if str(sp.get("id", "")) == spell_id:
+				c["style"] = str(sp.get("style", "arcane"))
+				c["mode"] = str(sp.get("mode", "damage"))
+				c["status"] = str(sp.get("statusEffect", ""))
+				break
+	c["targets"] = st.target_points() if active else []
+	SpellFxStyles.cast_spell(layout.world, rig.camera, spell_id, tgt, c)
 
 func layout_stage_target() -> Dictionary:
 	var st: CombatStage = level_node.stage if level_node != null else null

@@ -336,8 +336,16 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	# HTML : le compteur global n'est incrémenté que pour un sort de dégâts sur cible unique
 	if mode == "damage":
 		gs.stats["spellsCast"] = int(gs.stats.get("spellsCast", 0)) + 1
-	events.append({"type": "fx", "fx": "spell" + str(spell.get("style", "arcane"))})
-	events.append({"type": "fx3d", "spell": spell_id})
+	# l'effet visuel est entièrement 3D (SpellFxStyles) ; le contexte dit où et comment le jouer
+	var caster_idx := -1
+	var ally_idx := -1
+	for pi in gs.party.size():
+		if str(gs.party[pi].id) == str(caster.id):
+			caster_idx = pi
+		if not ally.is_empty() and str(gs.party[pi].id) == str(ally.id):
+			ally_idx = pi
+	events.append({"type": "fx3d", "spell": spell_id, "ctx": {"style": str(spell.get("style", "arcane")), "mode": mode,
+		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", ""))}})
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:
