@@ -30,6 +30,9 @@ func _ready() -> void:
 	var cfg: Dictionary = Data.active()
 	print("Donjon : ", cfg.get("title", "?"))
 	var resume := not Data.pending_save.is_empty()
+	# Pendant la construction (répartie sur plusieurs images derrière l'écran de chargement), la scène reste figée.
+	process_mode = Node.PROCESS_MODE_DISABLED
+	await Loader.step(0.08, L.t("loading.etape_sauvegarde") if resume else L.t("loading.etape_equipe_nouvelle"))
 	var pend_log := Data.pending_log
 	var pend_transient := Data.pending_transient
 	if resume:
@@ -47,6 +50,7 @@ func _ready() -> void:
 	for c in gs.party:
 		print("%s -> PV %d, ATK %d-%d, vitesse %d" % [c.name, c.maxHp, c.atkMin, c.atkMax, c.effSpeed])
 
+	await Loader.step(0.2, L.t("loading.etape_equipe"))
 	_setup_environment()
 	rig = PlayerRig.new()
 	rig.blocked.connect(_on_blocked)
@@ -63,6 +67,7 @@ func _ready() -> void:
 	ctrl.fx.connect(_on_fx)
 	ctrl.fx3d.connect(_on_fx3d)
 
+	await Loader.step(0.32, L.t("loading.etape_interface"))
 	var ui := CanvasLayer.new()
 	add_child(ui)
 	var bg := TextureRect.new()
@@ -114,7 +119,9 @@ func _ready() -> void:
 	ctrl.changed.connect(_update_music)
 	ctrl.changed.connect(_sync_stage)
 	layout.stage.gui_input.connect(_on_stage_input)
+	await Loader.step(0.55, L.t("loading.etape_donjon"))
 	load_level(level_index, resume)
+	await Loader.step(0.92, L.t("loading.etape_reprise") if resume else "")
 	if resume:
 		if not pend_transient.is_empty():
 			_restore_transient(pend_transient)
@@ -122,6 +129,8 @@ func _ready() -> void:
 			gs.add_log(pend_log)
 		if ctrl.in_combat():
 			ctrl.refresh.call_deferred()    # reprise au milieu d'un combat (retour de l'administration)
+	process_mode = Node.PROCESS_MODE_INHERIT
+	Loader.finish()
 
 ## Champs non sauvegardés de la partie suspendue (jauges de combat, ordre des tours, membre visé) : rétablis à la reprise
 ## depuis l'administration, comme le STATE unique de l'original qui ne les perdait pas.

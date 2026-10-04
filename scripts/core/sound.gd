@@ -19,6 +19,9 @@ var _shimmer: Timer
 var _shimmer_kind: String = ""
 var _bus_sfx: int = -1
 var _bus_music: int = -1
+var _yielding: bool = false     # pendant le préchargement : la synthèse rend la main entre deux étapes (barre de progression, page Web vivante)
+var _unlocked: bool = false
+var preloaded: bool = false
 
 const THEME_AMBIENT := {
 	"stone": {"freqs": [65.4, 98.0], "type": "sine", "gain": 0.16, "shimmer": ""},
@@ -47,10 +50,12 @@ func _ready() -> void:
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.bus = "SFX"
+		p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM   # Web : lecture « stream » (le mode « échantillon » ignore les bus créés par code)
 		add_child(p)
 		_pool.append(p)
 	_music = AudioStreamPlayer.new()
 	_music.bus = "Music"
+	_music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_music)
 	_shimmer = Timer.new()
 	_shimmer.timeout.connect(_on_shimmer)
@@ -119,10 +124,20 @@ func _play(stream: AudioStream) -> void:
 func sfx(name: String, arg = null) -> void:
 	if not enabled:
 		return
+	_play(_sfx_stream(name, arg))
+
+## Intensité de monster_approach arrondie au dixième : un petit nombre de variantes, toutes préchargées.
+func _norm_arg(name: String, arg):
+	if name == "monster_approach":
+		return snappedf(clampf(float(arg if arg != null else 1.0), 0.1, 1.0), 0.1)
+	return arg
+
+func _sfx_stream(name: String, arg) -> AudioStreamWAV:
+	arg = _norm_arg(name, arg)
 	var key := name + "|" + str(arg)
 	if not _cache.has(key):
 		_cache[key] = _build_sfx(name, arg)
-	_play(_cache[key])
+	return _cache[key]
 
 func sfx_later(delay: float, name: String, arg = null) -> void:
 	get_tree().create_timer(delay).timeout.connect(func(): sfx(name, arg))
@@ -205,6 +220,7 @@ func _spell(b: Synth, style: String) -> void:
 # ------------------------------------------------------------------ ambiance et musique
 
 ## Lance l'ambiance du thème (ou la musique de boss). Sans effet si déjà en cours.
+## (Coroutine : si la musique n'a pas été préchargée, elle est synthétisée ici ; sinon tout est immédiat.)
 func ambient(theme: String, boss: bool = false) -> void:
 	var key := "boss" if boss else (theme if THEME_AMBIENT.has(theme) else "stone")
 	if key == _ambient_key:
@@ -212,7 +228,14 @@ func ambient(theme: String, boss: bool = false) -> void:
 	stop_ambient()
 	_ambient_key = key
 	if not _cache.has("amb|" + key):
-		_cache["amb|" + key] = _build_boss() if boss else _build_ambient(THEME_AMBIENT[key])
+		var built: AudioStreamWAV
+		if boss:
+			built = await _build_boss()
+		else:
+			built = await _build_ambient(THEME_AMBIENT[key])
+		_cache["amb|" + key] = built
+		if _ambient_key != key:
+			return   # une autre ambiance a été demandée entre-temps
 	_music.stream = _cache["amb|" + key]
 	_music.play()
 	if not boss:
@@ -228,16 +251,33 @@ func stop_ambient() -> void:
 func _on_shimmer() -> void:
 	if not enabled or randf() > 0.45:
 		return
+	_play(_shimmer_stream(_shimmer_kind, randi() % SHIMMER_VARIANTS))
+
+const SHIMMER_VARIANTS := 4
+
+## Petit son aléatoire de l'ambiance, en quelques hauteurs prédéfinies (toutes préchargées, aucun calcul pendant le jeu).
+func _shimmer_stream(kind: String, v: int) -> AudioStreamWAV:
+	var key := "shim|%s|%d" % [kind, v]
+	if _cache.has(key):
+		return _cache[key]
+	var r := float(v) / float(SHIMMER_VARIANTS - 1)
 	var b := Synth.new(RATE)
-	match _shimmer_kind:
-		"shimmer": b.tone(1800.0 + randf() * 800.0, 0.3, "sine", 0.05, 0.012, 0.5, 0.0, 0.0, true)
-		"drip": b.tone(900.0 + randf() * 300.0, 0.08, "sine", 0.055, 0.012, 0.15)
+	match kind:
+		"shimmer": b.tone(1800.0 + r * 800.0, 0.3, "sine", 0.05, 0.012, 0.5, 0.0, 0.0, true)
+		"drip": b.tone(900.0 + r * 300.0, 0.08, "sine", 0.055, 0.012, 0.15)
 		"crackle": b.noise(0.05, "highpass", 2500.0, 1.0, 0.05, 0.004, 0.05)
 		"wind": b.noise(0.6, "lowpass", 500.0, 0.4, 0.035, 0.3, 0.4)
-		"bell": b.tone(1046.0 + randf() * 400.0, 0.5, "sine", 0.04, 0.012, 0.8, 0.0, 0.0, true)
-	_play(b.to_stream(false))
+		"bell": b.tone(1046.0 + r * 400.0, 0.5, "sine", 0.04, 0.012, 0.8, 0.0, 0.0, true)
+	var st := b.to_stream(false)
+	_cache[key] = st
+	return st
 
-func _build_ambient(cfg: Dictionary) -> AudioStreamWAV:
+## Laisse respirer la page pendant le préchargement (une image) : la barre avance, le navigateur ne se fige pas.
+func _breath() -> void:
+	if _yielding:
+		await get_tree().process_frame
+
+func _build_ambient(cfg: Dictionary) -> AudioStreamWAV:   # coroutine (voir _breath)
 	var seconds := 8.0
 	var b := Synth.new(AMBIENT_RATE, seconds)
 	var freqs: Array = cfg.freqs
@@ -247,13 +287,15 @@ func _build_ambient(cfg: Dictionary) -> AudioStreamWAV:
 		var lfo: float = maxf(1.0, round((0.05 + i * 0.02 + 0.01) * seconds)) / seconds
 		for dt in [-5.0, 5.0]:
 			b.pad_voice(f * pow(2.0, dt / 1200.0), str(cfg.type), vg, lfo, vg * 0.35)
+			await _breath()
 	return b.to_stream(true)
 
-func _build_boss() -> AudioStreamWAV:
+func _build_boss() -> AudioStreamWAV:   # coroutine (voir _breath)
 	var beat := 0.4348
 	var bar_len := beat * 4.0
 	var b := Synth.new(RATE, bar_len * 4.0)
 	for bar in 4:
+		await _breath()
 		var o := bar * bar_len
 		if bar < 2:
 			for i in 8:
@@ -291,6 +333,77 @@ func _build_boss() -> AudioStreamWAV:
 					b.tone(f, 0.3, "sawtooth", 0.22, 0.012, 0.35, st, 0.0, true)
 				b.noise(0.1, "lowpass", 110.0, 0.7, 0.16, 0.004, 0.15, st)
 	return b.to_stream(true)
+
+# ------------------------------------------------------------------ préchargement
+
+const PRELOAD_SWINGS := ["sword", "axe", "dagger", "staff", "bow", "mace", "unarmed"]
+const PRELOAD_SPELLS := ["fire", "ice", "holy", "nature", "shadow", "physical", "bard", "arcane"]
+const PRELOAD_PLAIN := ["footstep", "door_creak", "door_locked", "hit", "monster_attack", "pickup", "level_up", "evolve", "down",
+	"game_over", "victory", "fountain", "heal", "blocked", "combat_start"]
+
+## Synthétise à l'avance tous les sons du jeu : effets, petits sons d'ambiance, nappes de chaque thème, musique de boss.
+## `progress.call(fraction, texte)` est appelé au fil de l'eau ; la synthèse rend la main à chaque étape (page Web vivante).
+func preload_all(progress: Callable = Callable()) -> void:
+	if preloaded:
+		if progress.is_valid():
+			progress.call(1.0, "")
+		return
+	var jobs: Array = []   # {label, w, fn}
+	var lbl_sfx := L.t("loading.sons_effets")
+	var lbl_amb := L.t("loading.sons_ambiances")
+	var lbl_boss := L.t("loading.sons_boss")
+	for n in PRELOAD_PLAIN:
+		jobs.append({"label": lbl_sfx, "w": 1.0, "fn": func(): _sfx_stream(n, null)})
+	for w in PRELOAD_SWINGS:
+		jobs.append({"label": lbl_sfx, "w": 0.6, "fn": func(): _sfx_stream("swing", w)})
+	for st in PRELOAD_SPELLS:
+		jobs.append({"label": lbl_sfx, "w": 0.8, "fn": func(): _sfx_stream("spell", st)})
+	for i in range(1, 11):
+		jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): _sfx_stream("monster_approach", i / 10.0)})
+	for up in [true, false]:
+		jobs.append({"label": lbl_sfx, "w": 1.0, "fn": func(): _sfx_stream("stairs", up)})
+	for kind in ["shimmer", "drip", "crackle", "wind", "bell"]:
+		for v in SHIMMER_VARIANTS:
+			jobs.append({"label": lbl_amb, "w": 0.4, "fn": func(): _shimmer_stream(kind, v)})
+	for key in THEME_AMBIENT:
+		jobs.append({"label": lbl_amb, "w": 6.0, "fn": func(): await _preload_music(key, false)})
+	jobs.append({"label": lbl_boss, "w": 8.0, "fn": func(): await _preload_music("boss", true)})
+	var total := 0.0
+	for j in jobs:
+		total += float(j.w)
+	var done := 0.0
+	_yielding = true
+	var t0 := Time.get_ticks_msec()
+	for j in jobs:
+		if progress.is_valid():
+			progress.call(done / total, j.label)
+		await j.fn.call()
+		done += float(j.w)
+		await get_tree().process_frame
+	_yielding = false
+	preloaded = true
+	if progress.is_valid():
+		progress.call(1.0, "")
+	print("[Sound] %d sons préchargés en %.1f s" % [_cache.size(), (Time.get_ticks_msec() - t0) / 1000.0])
+
+func _preload_music(key: String, boss: bool) -> void:
+	if _cache.has("amb|" + key):
+		return
+	if boss:
+		_cache["amb|boss"] = await _build_boss()
+	else:
+		_cache["amb|" + key] = await _build_ambient(THEME_AMBIENT[key])
+
+## À appeler après un geste de l'utilisateur (clic, touche, toucher) : les navigateurs n'autorisent le son qu'à partir de là.
+## Joue un petit carillon de confirmation et trace l'état de l'audio dans la console du navigateur (F12).
+func unlock() -> void:
+	if _unlocked:
+		return
+	_unlocked = true
+	print("[Sound] audio : sortie « %s », %d Hz, latence %.0f ms, %d bus, lecture %s, son %s" % [
+		AudioServer.get_output_device(), int(AudioServer.get_mix_rate()), AudioServer.get_output_latency() * 1000.0,
+		AudioServer.bus_count, "stream", "activé" if enabled else "coupé"])
+	sfx("pickup")
 
 # ------------------------------------------------------------------ synthèse
 
@@ -416,12 +529,17 @@ class Synth:
 
 	## Voix continue d'une nappe (gain modulé par un LFO) sur la durée fixe de la boucle.
 	func pad_voice(freq: float, kind: String, gain: float, lfo_freq: float, lfo_depth: float) -> void:
+		var inc := freq / rate
+		var lfo_w := TAU * lfo_freq / rate
 		var phase := 0.0
-		for i in fixed_len:
-			var t := float(i) / rate
-			phase += freq / rate
-			var g := gain + sin(TAU * lfo_freq * t) * lfo_depth
-			data[i] += _wave(kind, phase) * g
+		if kind == "sine":
+			for i in fixed_len:
+				phase += inc
+				data[i] += sin(TAU * phase) * (gain + sin(lfo_w * i) * lfo_depth)
+		else:
+			for i in fixed_len:
+				phase += inc
+				data[i] += _wave(kind, phase) * (gain + sin(lfo_w * i) * lfo_depth)
 
 	func to_stream(loop: bool) -> AudioStreamWAV:
 		var st := AudioStreamWAV.new()

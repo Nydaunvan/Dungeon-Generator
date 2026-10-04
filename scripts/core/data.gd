@@ -132,7 +132,7 @@ func launch(cfg: Dictionary, origin: String, admin_mode: int = ADMIN_AUTO) -> vo
 	pending_log = ""
 	play_config = cfg.duplicate(true)
 	play_origin = origin
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	Loader.go("res://scenes/main.tscn", "game")
 
 ## Partie à restaurer au prochain lancement de la scène de jeu (vide = nouvelle partie).
 var pending_save: Dictionary = {}
@@ -158,6 +158,7 @@ func launch_save(data: Dictionary, admin_mode: int = ADMIN_AUTO) -> void:
 	var sv: Dictionary = (data.save as Dictionary).duplicate(true)
 	var log_text := str(data.get("log", ""))
 	launch(cfg, origin, admin_mode)
+	Loader.set_kind("save")
 	pending_save = sv
 	pending_log = log_text
 
@@ -469,13 +470,13 @@ func create_own_dungeon() -> void:
 	admin_unlocked = true
 	play_origin = "custom"
 	own_dungeon_launched = false
-	get_tree().change_scene_to_file("res://scenes/admin.tscn")
+	Loader.go("res://scenes/admin.tscn", "admin")
 
 ## Partie en cours mise de côté pendant qu'on ouvre l'administration depuis le jeu : {"config", "save", "origin", "transient"}.
 var resume_game: Dictionary = {}
 
 func open_admin() -> void:
-	get_tree().change_scene_to_file("res://scenes/admin.tscn")
+	Loader.go("res://scenes/admin.tscn", "admin")
 
 ## Retour à l'accueil (`switchView('home')`) : verrouille l'administration et oublie la partie suspendue.
 func go_home() -> void:
@@ -483,4 +484,4 @@ func go_home() -> void:
 	admin_unlocked = false
 	play_origin = "original"
 	Sound.stop_ambient()
-	get_tree().change_scene_to_file("res://scenes/home.tscn")
+	Loader.go("res://scenes/home.tscn", "home")
