@@ -15,6 +15,7 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	var torches := TorchLayer.new()
 	torches.name = "Torches"
 	view.add_child(torches)
+	view.torches = torches
 
 	var outdoor := bool(level.get("outdoor", false))
 	var path_cells: Array = level.get("pathCells", [])

@@ -206,6 +206,7 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) ->
 	if not bool(level.get("outdoor", false)):
 		env.ambient_light_energy = float(level.get("lightAmbient", 1.1))
 		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4
+		level_node.torches.light_scale = float(level.get("lightTorch", 1.4)) / 1.4
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig, gs)
 	layout.minimap.merchant_cell = func():

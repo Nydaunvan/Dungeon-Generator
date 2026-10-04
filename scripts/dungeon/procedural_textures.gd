@@ -20,6 +20,26 @@ static func glow() -> Texture2D:
 	_cache["glow"] = t
 	return t
 
+## Volute de fumée : disque très doux, bord irrégulier (bruit), blanc — la teinte vient des particules.
+static func smoke() -> Texture2D:
+	if _cache.has("smoke"):
+		return _cache["smoke"]
+	var size := 64
+	var noise := FastNoiseLite.new()
+	noise.seed = 7
+	noise.frequency = 0.06
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	for y in size:
+		for x in size:
+			var d := Vector2((x + 0.5) / size * 2.0 - 1.0, (y + 0.5) / size * 2.0 - 1.0).length()
+			var edge := 1.0 - smoothstep(0.1, 1.0, d)
+			var k := 0.6 + 0.4 * (noise.get_noise_2d(x, y) * 0.5 + 0.5)
+			img.set_pixel(x, y, Color(1, 1, 1, pow(edge, 1.5) * k))
+	img.generate_mipmaps()
+	var tex := ImageTexture.create_from_image(img)
+	_cache["smoke"] = tex
+	return tex
+
 static func flame() -> Texture2D:
 	if _cache.has("flame"):
 		return _cache["flame"]

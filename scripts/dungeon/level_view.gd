@@ -5,6 +5,7 @@ extends Node3D
 var grid: DungeonGrid
 var doors: Dictionary = {}   # id de porte -> Array[MeshInstance3D]
 var entities: EntityLayer
+var torches: TorchLayer
 var stage: CombatStage
 
 var opening: Dictionary = {}  # id -> true pendant l'animation : la porte reste infranchissable
