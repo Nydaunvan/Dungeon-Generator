@@ -14,7 +14,7 @@ var _pct: Label
 var _tip: Label
 var _bar
 var _seal: TextureRect
-var _gate: Button
+var _gate: Label
 var _gate_hint: Label
 var _bar_box: Control
 var _embers: CPUParticles2D
@@ -140,15 +140,18 @@ func _build() -> void:
 	_pct.size = Vector2(100, 26)
 	_bar_box.add_child(_pct)
 
-	_gate = Button.new()
-	_gate.text = L.t("loading.entrer")
-	_gate.custom_minimum_size = Vector2(200, 32)
-	_gate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_gate.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	_gate.add_theme_font_size_override("font_size", 16)
+	# simple texte (plus de bouton), sur la même ligne que le pourcentage, entre l'étape et le « % »
+	_gate = _label(L.t("loading.entrer"), UiTheme.F_TITLE_BOLD, 17, UiTheme.GOLD)
+	_gate.position = Vector2(240, 346)
+	_gate.size = Vector2(400, 26)
+	_gate.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_gate.mouse_filter = Control.MOUSE_FILTER_STOP
+	_gate.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_gate.visible = false
-	_gate.pressed.connect(func(): entered.emit())
-	col.add_child(_gate)
+	_gate.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			entered.emit())
+	_bar_box.add_child(_gate)
 	_gate_hint = _label(L.t("loading.entrer_indice"), UiTheme.F_BODY_ITALIC, 16, UiTheme.DIM)
 	_gate_hint.visible = false
 	col.add_child(_gate_hint)
@@ -209,7 +212,6 @@ func show_gate() -> void:
 	_bar_box.visible = true
 	_gate.visible = true
 	_gate_hint.visible = true
-	_gate.grab_focus()
 
 func is_full() -> bool:
 	return _shown >= 0.999
