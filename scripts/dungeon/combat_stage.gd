@@ -79,6 +79,8 @@ func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
 				_wall(parts["wall"], ctr, fwd, half)
 	var mesh := ArrayMesh.new()
 	for k in ["wall", "floor", "ceil"]:
+		if k == "wall":
+			parts[k].generate_tangents()   # nécessaires à la carte de normales du mur
 		parts[k].commit(mesh)
 		mesh.surface_set_material(mesh.get_surface_count() - 1, mats[k])
 	_arena = MeshInstance3D.new()

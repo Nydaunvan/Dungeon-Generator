@@ -60,6 +60,8 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	for k in ["wall", "floor", "ceil", "path"]:
 		if counts[k] == 0:
 			continue
+		if k == "wall":
+			parts[k].generate_tangents()   # nécessaires à la carte de normales du mur
 		parts[k].commit(mesh)
 		var mat: Material = theme.get(k)
 		if outdoor and k == "floor":
