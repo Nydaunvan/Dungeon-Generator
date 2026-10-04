@@ -123,7 +123,7 @@ func _build() -> void:
 	col.add_child(_spacer(16))
 
 	_bar_box = Control.new()
-	_bar_box.custom_minimum_size = Vector2(880, 380)
+	_bar_box.custom_minimum_size = Vector2(880, 400)
 	_bar_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_bar_box)
 	_bar = SwordBar.new()
@@ -131,12 +131,12 @@ func _build() -> void:
 	_bar_box.add_child(_bar)
 	_step = _label("", UiTheme.F_BODY, 17, UiTheme.PARCH)
 	_step.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_step.position = Vector2(44, 338)
+	_step.position = Vector2(44, 346)
 	_step.size = Vector2(560, 26)
 	_bar_box.add_child(_step)
 	_pct = _label("0 %", UiTheme.F_TITLE, 17, UiTheme.GOLD)
 	_pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_pct.position = Vector2(736, 338)
+	_pct.position = Vector2(736, 346)
 	_pct.size = Vector2(100, 26)
 	_bar_box.add_child(_pct)
 
