@@ -41,6 +41,12 @@ var _falls: MeshInstance3D
 
 static var _stone_mat: StandardMaterial3D
 
+## Textures de la pierre : deux jeux, 2048 px (Windows) et 1024 px (Web et mobile). Chaque export ne garde que le sien
+## (filtres d'exclusion dans export_presets.cfg) ; dans l'éditeur, le choix dépend de la plateforme.
+const STONE_HD := "res://assets/themes/fountain_hd/"
+const STONE_LITE := "res://assets/themes/fountain_lite/"
+const STONE_TILE := 0.7            # répétitions par mètre : la texture couvre ~1,4 m de pierre
+
 # ------------------------------------------------------------------ shaders
 
 const WATER_COMMON := """
@@ -224,9 +230,39 @@ func _apply(force: bool) -> void:
 
 # ------------------------------------------------------------------ pierre
 
+static func _stone_dir() -> String:
+	var small := OS.has_feature("web") or OS.has_feature("mobile")
+	var order := [STONE_LITE, STONE_HD] if small else [STONE_HD, STONE_LITE]
+	for d in order:
+		if ResourceLoader.exists(d + "albedo.jpg"):
+			return d
+	return ""
+
 static func _stone_material() -> StandardMaterial3D:
 	if _stone_mat != null:
 		return _stone_mat
+	var dir := _stone_dir()
+	if dir != "":
+		var pm := StandardMaterial3D.new()
+		pm.albedo_texture = load(dir + "albedo.jpg")
+		pm.vertex_color_use_as_albedo = true     # mousse et humidité au pied, ligne d'eau
+		pm.normal_enabled = true
+		pm.normal_texture = load(dir + "normal.png")
+		pm.normal_scale = 1.0
+		var orm: Texture2D = load(dir + "orm.jpg")   # R = occlusion, G = rugosité
+		pm.ao_enabled = true
+		pm.ao_texture = orm
+		pm.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+		pm.ao_light_affect = 0.6
+		pm.roughness = 1.0
+		pm.roughness_texture = orm
+		pm.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+		pm.metallic_specular = 0.4
+		pm.texture_repeat = true
+		pm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		_stone_mat = pm
+		return pm
+	# repli : pierre générée à partir d'un bruit (si les textures sont absentes)
 	var noise := FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
@@ -259,10 +295,10 @@ static func _stone_material() -> StandardMaterial3D:
 static func _stone_color(p: Vector3) -> Color:
 	var c := Color(1, 1, 1)
 	var wet := clampf(1.0 - (p.y - 0.07) / 0.42, 0.0, 1.0)
-	c = c.lerp(Color(0.55, 0.62, 0.45), wet * 0.42)
+	c = c.lerp(Color(0.5, 0.6, 0.4), wet * 0.6)
 	var line := clampf(1.0 - absf(p.y - POOL_Y_ON) / 0.05, 0.0, 1.0)
 	c = c.darkened(line * 0.22)
-	var v := sin(p.x * 11.0 + p.z * 7.0 + p.y * 5.0) * 0.035 + sin(p.x * 23.0 - p.z * 19.0) * 0.02
+	var v := sin(p.x * 11.0 + p.z * 7.0 + p.y * 5.0) * 0.02 + sin(p.x * 23.0 - p.z * 19.0) * 0.012
 	return Color(c.r + v, c.g + v, c.b + v, 1.0)
 
 func _build_stone() -> void:
@@ -272,7 +308,7 @@ func _build_stone() -> void:
 	var basin := [Vector2(1.10, 0.0), Vector2(1.15, 0.05), Vector2(1.15, 0.08), Vector2(1.06, 0.08), Vector2(1.06, 0.27), Vector2(1.10, 0.28), Vector2(1.10, 0.33), Vector2(1.06, 0.34), Vector2(1.06, 0.46),
 		Vector2(1.13, 0.50), Vector2(1.13, 0.60), Vector2(0.93, 0.60), Vector2(0.91, 0.58), Vector2(0.91, 0.20),
 		Vector2(0.88, 0.16), Vector2(0.40, 0.16)]
-	_lathe(st, basin, 8, true, Vector3.ZERO, 1.3)
+	_lathe(st, basin, 8, true, Vector3.ZERO, STONE_TILE)
 	# colonne, vasque haute et fleuron
 	var col := [Vector2(0.38, 0.16), Vector2(0.38, 0.24), Vector2(0.31, 0.29), Vector2(0.20, 0.34), Vector2(0.17, 0.40),
 		Vector2(0.17, 0.68), Vector2(0.22, 0.72), Vector2(0.22, 0.79), Vector2(0.17, 0.83), Vector2(0.17, 1.00),
@@ -280,7 +316,7 @@ func _build_stone() -> void:
 		Vector2(LIP_R, 1.41), Vector2(0.56, 1.42), Vector2(BOWL_R, 1.40), Vector2(0.50, 1.30), Vector2(0.40, 1.24),
 		Vector2(0.20, 1.215), Vector2(0.09, 1.21), Vector2(0.09, 1.50), Vector2(0.13, 1.53), Vector2(0.14, 1.59),
 		Vector2(0.11, 1.65), Vector2(0.06, 1.70), Vector2(0.0, TIP_Y)]
-	_lathe(st, col, 28, false, Vector3.ZERO, 1.3)
+	_lathe(st, col, 28, false, Vector3.ZERO, STONE_TILE)
 	# huit bornes sculptées aux angles du bassin, coiffées d'une boule
 	for i in 8:
 		var a := TAU * float(i) / 8.0
@@ -289,7 +325,7 @@ func _build_stone() -> void:
 		for k in 7:
 			var ang := float(k) / 6.0 * PI * 0.5
 			post.append(Vector2(0.075 * cos(ang), 0.64 + 0.075 * sin(ang) + 0.02))
-		_lathe(st, post, 10, false, o, 3.0)
+		_lathe(st, post, 10, false, o, STONE_TILE * 1.5)
 	st.generate_tangents()
 	var mesh := st.commit()
 	mesh.surface_set_material(0, _stone_material())
