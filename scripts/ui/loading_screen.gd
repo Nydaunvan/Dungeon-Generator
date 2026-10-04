@@ -12,7 +12,7 @@ var _sub: Label
 var _step: Label
 var _pct: Label
 var _tip: Label
-var _bar: LoadingBar
+var _bar
 var _seal: TextureRect
 var _gate: Button
 var _gate_hint: Label
@@ -100,7 +100,7 @@ func _build() -> void:
 	center.add_child(col)
 
 	var seal_box := Control.new()
-	seal_box.custom_minimum_size = Vector2(150, 150)
+	seal_box.custom_minimum_size = Vector2(120, 120)
 	seal_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	seal_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(seal_box)
@@ -108,12 +108,12 @@ func _build() -> void:
 	_seal.texture = load("res://assets/home/seal.png")
 	_seal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_seal.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_seal.size = Vector2(150, 150)
-	_seal.pivot_offset = Vector2(75, 75)
+	_seal.size = Vector2(120, 120)
+	_seal.pivot_offset = Vector2(60, 60)
 	_seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	seal_box.add_child(_seal)
 
-	_title = _label(L.t("loading.titre"), UiTheme.F_DISPLAY_BOLD, 58, UiTheme.GOLD)
+	_title = _label(L.t("loading.titre"), UiTheme.F_DISPLAY_BOLD, 54, UiTheme.GOLD)
 	_title.add_theme_constant_override("outline_size", 8)
 	_title.add_theme_color_override("font_outline_color", Color(0.07, 0.04, 0.02))
 	col.add_child(_title)
@@ -122,21 +122,20 @@ func _build() -> void:
 	col.add_child(_spacer(16))
 
 	_bar_box = Control.new()
-	_bar_box.custom_minimum_size = Vector2(560, 74)
+	_bar_box.custom_minimum_size = Vector2(780, 250)
 	_bar_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_bar_box)
-	_bar = LoadingBar.new()
+	_bar = LavaBar3D.new()
 	_bar.position = Vector2(0, 0)
-	_bar.size = Vector2(560, 26)
 	_bar_box.add_child(_bar)
 	_step = _label("", UiTheme.F_BODY, 17, UiTheme.PARCH)
 	_step.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_step.position = Vector2(4, 38)
-	_step.size = Vector2(450, 26)
+	_step.position = Vector2(24, 208)
+	_step.size = Vector2(560, 26)
 	_bar_box.add_child(_step)
 	_pct = _label("0 %", UiTheme.F_TITLE, 17, UiTheme.GOLD)
 	_pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_pct.position = Vector2(456, 38)
+	_pct.position = Vector2(660, 208)
 	_pct.size = Vector2(100, 26)
 	_bar_box.add_child(_pct)
 
