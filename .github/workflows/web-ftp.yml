@@ -70,9 +70,9 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ vars.FTP_PORT || '21' }}
+          protocol: ${{ vars.FTP_PROTOCOL || secrets.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || secrets.FTP_PORT || '21' }}
           local-dir: build/web/
-          server-dir: ${{ vars.FTP_DIR || './' }}
-          security: ${{ vars.FTP_SECURITY || 'strict' }}
+          server-dir: ${{ vars.FTP_DIR || secrets.FTP_DIR || './' }}
+          security: ${{ vars.FTP_SECURITY || secrets.FTP_SECURITY || 'strict' }}
           log-level: standard
