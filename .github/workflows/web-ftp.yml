@@ -1,0 +1,76 @@
+name: Export Web et envoi FTP
+
+# À chaque push sur la branche de migration : exporte le jeu en Web avec Godot 4.7.2,
+# garde l'export en pièce jointe de l'exécution, puis l'envoie par FTP/FTPS sur l'hébergement
+# si les secrets FTP_SERVER / FTP_USERNAME / FTP_PASSWORD sont renseignés.
+
+on:
+  push:
+    branches: [migration/donnees]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_BASE: https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
+
+jobs:
+  export-web:
+    runs-on: ubuntu-latest
+    env:
+      FTP_SERVER: ${{ secrets.FTP_SERVER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache de Godot et des modèles d'export
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Installer Godot et les modèles d'export Web
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin ~/.local/share/godot/export_templates
+          curl -fsSL -o /tmp/godot.zip "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+          curl -fsSL -o /tmp/templates.tpz "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          # seuls les modèles Web (sans multithread) sont utiles : on garde le cache léger
+          cp /tmp/templates/templates/web_nothreads_release.zip ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          cp /tmp/templates/templates/web_nothreads_debug.zip ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          cp /tmp/templates/templates/version.txt ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot.zip
+
+      - name: Importer les ressources puis exporter en Web
+        run: |
+          set -euo pipefail
+          GODOT=~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          chmod +x "$GODOT"
+          mkdir -p build/web
+          "$GODOT" --headless --path . --import
+          "$GODOT" --headless --path . --export-release "Web" build/web/index.html
+          ls -la build/web
+
+      - name: Garder l'export en pièce jointe (7 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: donjon-web
+          path: build/web
+          retention-days: 7
+
+      - name: Envoyer sur l'hébergement par FTP
+        if: env.FTP_SERVER != ''
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || '21' }}
+          local-dir: build/web/
+          server-dir: ${{ vars.FTP_DIR || './' }}
