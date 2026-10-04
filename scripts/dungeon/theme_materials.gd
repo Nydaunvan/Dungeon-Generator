@@ -29,6 +29,7 @@ static func for_theme(theme: String) -> Dictionary:
 		var wall := _stone_pbr("wall", STONE_WALL_REPEAT)
 		if wall != null:
 			mats["wall"] = wall
+			mats["ceil"] = wall   # plafond : même pierre que les murs
 		var floor_ := _stone_pbr("floor", STONE_FLOOR_REPEAT)
 		if floor_ != null:
 			mats["floor"] = floor_
