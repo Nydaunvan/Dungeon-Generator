@@ -1,20 +1,24 @@
 class_name SwordBar
 extends Control
 ## Barre de chargement « épée en feu » : l'épée du jeu, posée à l'horizontale (pommeau à gauche, pointe à droite),
-## s'embrase de la garde vers la pointe au fil du chargement. La lame rougit puis rayonne, des flammes montent sur toute
+## s'embrase de la garde vers la pointe, sur la lame seulement, au fil du chargement. La lame rougit puis rayonne, des flammes montent sur toute
 ## la partie chauffée, un front de feu plus vif avance, des braises et des étincelles s'échappent, de la fumée s'élève.
 ## À 100 %, la lame jette une gerbe d'étincelles.
 
 const SIZE_PX := Vector2(880, 330)
 const SWORD_POS := Vector2(40, 108)
 const SWORD_W := 800.0
-const BLADE_Y := 205.0            # axe de la lame dans le contrôle
-const BLADE_HALF := 36.0
+const BLADE_Y := 203.0            # axe de la lame dans le contrôle
+const BLADE_HALF := 35.0
+const BLADE_X0 := 0.30            # début de la lame (juste au-dessus de la garde), en fraction de la longueur de l'épée
+const BLADE_LEN := SWORD_W * (1.0 - BLADE_X0)
+const BLADE_PX := 40.0 + SWORD_W * BLADE_X0
 
 const SWORD_SHADER := """
 shader_type canvas_item;
 uniform float progress = 0.0;
 uniform float time_s = 0.0;
+uniform float x0 = 0.30;
 float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vnoise(vec2 p){
 	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -28,17 +32,19 @@ float fbm(vec2 p){
 void fragment(){
 	vec4 tex = texture(TEXTURE, UV);
 	float n = fbm(vec2(UV.x * 16.0 - time_s * 0.7, UV.y * 6.0 + time_s * 0.35));
-	float f = progress + (n - 0.5) * 0.035;
-	float lit = 1.0 - smoothstep(f - 0.03, f + 0.008, UV.x);
+	float f = x0 + progress * (1.0 - x0) + (n - 0.5) * 0.03;
+	float inblade = smoothstep(x0 - 0.004, x0 + 0.008, UV.x);          // la garde et la poignée ne brûlent pas
+	float lit = (1.0 - smoothstep(f - 0.03, f + 0.008, UV.x)) * inblade;
 	float behind = max(f - UV.x, 0.0);
-	float edge = exp(-abs(UV.x - f) * 38.0) * step(0.004, progress);
+	float edge = exp(-abs(UV.x - f) * 34.0) * step(0.004, progress) * inblade;
 	vec3 col = tex.rgb;
-	col = mix(col * vec3(0.8, 0.82, 0.9), col, lit);                 // acier froid, un peu éteint
+	vec3 cold = col * vec3(0.8, 0.82, 0.9);
+	col = mix(col, mix(cold, col, lit), inblade);                      // lame froide un peu éteinte
 	float lum = dot(col, vec3(0.3, 0.59, 0.11));
-	vec3 heat = mix(vec3(0.95, 0.18, 0.02), vec3(1.0, 0.72, 0.28), clamp(lum * 1.3 + n * 0.5 - 0.25, 0.0, 1.0));
-	float hot = lit * (0.36 * exp(-behind * 2.6) + 0.26 + 0.07 * sin(time_s * 6.0 + UV.x * 18.0));
-	col = mix(col, col * heat * 1.3 + heat * 0.12, hot);              // le métal rougit puis rayonne
-	col += vec3(1.0, 0.68, 0.28) * edge * 0.95;                       // front incandescent
+	vec3 heat = mix(vec3(0.1, 0.3, 0.95), vec3(0.65, 0.88, 1.0), clamp(lum * 1.3 + n * 0.5 - 0.25, 0.0, 1.0));
+	float hot = lit * (0.28 * exp(-behind * 2.6) + 0.2 + 0.06 * sin(time_s * 6.0 + UV.x * 18.0));
+	col = mix(col, col * heat * 1.3 + heat * 0.14, hot);              // le métal s'embrase en bleu
+	col += vec3(0.5, 0.78, 1.0) * edge * 0.95;                         // front incandescent
 	COLOR = vec4(col, tex.a);
 }
 """
@@ -48,7 +54,7 @@ shader_type canvas_item;
 render_mode blend_add;
 uniform float progress = 0.0;
 uniform float time_s = 0.0;
-uniform vec4 rect = vec4(0.045, 0.91, 0.62, 0.2);   // x0, x1, y centre, demi-hauteur (en fraction du contrôle)
+uniform vec4 rect = vec4(0.3, 0.91, 0.62, 0.2);   // x0, x1, y centre, demi-hauteur (en fraction du contrôle)
 void fragment(){
 	float x = (UV.x - rect.x) / (rect.y - rect.x);
 	float front = progress;
@@ -58,7 +64,7 @@ void fragment(){
 	float ends = smoothstep(-0.08, 0.04, x) * (1.0 - smoothstep(1.0, 1.1, x));
 	float flick = 0.88 + 0.12 * sin(time_s * 7.0) * sin(time_s * 3.1 + 1.0);
 	float a = lit * across * ends * flick * step(0.003, progress);
-	COLOR = vec4(vec3(1.0, 0.4, 0.09) * a * 0.5, a);
+	COLOR = vec4(vec3(0.22, 0.5, 1.0) * a * 0.55, a);
 }
 """
 
@@ -89,12 +95,12 @@ func _ready() -> void:
 	var hs := Shader.new()
 	hs.code = HALO_SHADER
 	_halo_mat.shader = hs
-	_halo_mat.set_shader_parameter("rect", Vector4(SWORD_POS.x / SIZE_PX.x, (SWORD_POS.x + SWORD_W) / SIZE_PX.x, BLADE_Y / SIZE_PX.y, 85.0 / SIZE_PX.y))
+	_halo_mat.set_shader_parameter("rect", Vector4(BLADE_PX / SIZE_PX.x, (SWORD_POS.x + SWORD_W) / SIZE_PX.x, BLADE_Y / SIZE_PX.y, 75.0 / SIZE_PX.y))
 	halo.material = _halo_mat
 	add_child(halo)
 
 	_smoke = _emitter(26, 2.2, Vector2(1, 8))
-	_smoke.color_ramp = _ramp([[0.0, Color(0.25, 0.2, 0.17, 0.0)], [0.25, Color(0.22, 0.18, 0.15, 0.2)], [1.0, Color(0.12, 0.1, 0.09, 0.0)]])
+	_smoke.color_ramp = _ramp([[0.0, Color(0.14, 0.18, 0.28, 0.0)], [0.25, Color(0.13, 0.17, 0.27, 0.2)], [1.0, Color(0.07, 0.09, 0.15, 0.0)]])
 	_smoke.texture = _soft_disc()
 	_smoke.material = null
 	_smoke.initial_velocity_min = 18.0
@@ -118,12 +124,13 @@ func _ready() -> void:
 	var ss := Shader.new()
 	ss.code = SWORD_SHADER
 	_sword_mat.shader = ss
+	_sword_mat.set_shader_parameter("x0", BLADE_X0)
 	_sword.material = _sword_mat
 	add_child(_sword)
 
 	var flame_tex := _flame_texture()
-	var fire_ramp := _ramp([[0.0, Color(1.0, 0.95, 0.7, 0.0)], [0.12, Color(1.0, 0.74, 0.3, 0.62)], [0.45, Color(1.0, 0.38, 0.07, 0.55)], [0.8, Color(0.75, 0.12, 0.03, 0.35)], [1.0, Color(0.3, 0.04, 0.02, 0.0)]])
-	_body = _emitter(120, 0.95, Vector2(10, 3))
+	var fire_ramp := _ramp([[0.0, Color(0.8, 0.95, 1.0, 0.0)], [0.12, Color(0.55, 0.8, 1.0, 0.45)], [0.45, Color(0.18, 0.45, 1.0, 0.45)], [0.8, Color(0.08, 0.16, 0.75, 0.35)], [1.0, Color(0.03, 0.05, 0.3, 0.0)]])
+	_body = _emitter(105, 0.95, Vector2(10, 3))
 	_body.texture = flame_tex
 	_body.color_ramp = fire_ramp
 	_body.initial_velocity_min = 22.0
@@ -149,7 +156,7 @@ func _ready() -> void:
 
 	_embers = _emitter(48, 2.1, Vector2(20, 5))
 	_embers.texture = _soft_disc()
-	_embers.color_ramp = _ramp([[0.0, Color(1.0, 0.85, 0.5, 0.0)], [0.1, Color(1.0, 0.7, 0.28, 1.0)], [0.7, Color(1.0, 0.35, 0.08, 0.8)], [1.0, Color(0.6, 0.1, 0.02, 0.0)]])
+	_embers.color_ramp = _ramp([[0.0, Color(0.7, 0.9, 1.0, 0.0)], [0.1, Color(0.55, 0.85, 1.0, 1.0)], [0.7, Color(0.2, 0.5, 1.0, 0.8)], [1.0, Color(0.05, 0.1, 0.6, 0.0)]])
 	_embers.initial_velocity_min = 25.0
 	_embers.initial_velocity_max = 95.0
 	_embers.gravity = Vector2(14, -22)
@@ -163,7 +170,7 @@ func _ready() -> void:
 
 	_sparks = _emitter(38, 0.9, Vector2(6, 14))
 	_sparks.texture = _soft_disc()
-	_sparks.color_ramp = _ramp([[0.0, Color(1.0, 1.0, 0.85, 1.0)], [0.4, Color(1.0, 0.72, 0.25, 0.95)], [1.0, Color(0.9, 0.2, 0.04, 0.0)]])
+	_sparks.color_ramp = _ramp([[0.0, Color(0.92, 1.0, 1.0, 1.0)], [0.4, Color(0.45, 0.8, 1.0, 0.95)], [1.0, Color(0.1, 0.3, 0.9, 0.0)]])
 	_sparks.initial_velocity_min = 90.0
 	_sparks.initial_velocity_max = 260.0
 	_sparks.gravity = Vector2(30, 190)
@@ -172,7 +179,7 @@ func _ready() -> void:
 	_sparks.scale_amount_max = 0.08
 	add_child(_sparks)
 
-	_burst = _emitter(160, 1.4, Vector2(380, 14))
+	_burst = _emitter(160, 1.4, Vector2(BLADE_LEN * 0.5, 14))
 	_burst.one_shot = true
 	_burst.explosiveness = 0.9
 	_burst.texture = _soft_disc()
@@ -183,7 +190,7 @@ func _ready() -> void:
 	_burst.spread = 90.0
 	_burst.scale_amount_min = 0.04
 	_burst.scale_amount_max = 0.11
-	_burst.position = Vector2(SWORD_POS.x + SWORD_W * 0.5, BLADE_Y - 20.0)
+	_burst.position = Vector2(BLADE_PX + BLADE_LEN * 0.5, BLADE_Y - 20.0)
 	add_child(_burst)
 
 func _emitter(amount: int, life: float, extents: Vector2) -> CPUParticles2D:
@@ -198,7 +205,7 @@ func _emitter(amount: int, life: float, extents: Vector2) -> CPUParticles2D:
 	var m := CanvasItemMaterial.new()
 	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	p.material = m
-	p.position = Vector2(SWORD_POS.x, BLADE_Y)
+	p.position = Vector2(BLADE_PX, BLADE_Y)
 	return p
 
 func _ramp(stops: Array) -> Gradient:
@@ -269,10 +276,10 @@ func _process(delta: float) -> void:
 	_halo_mat.set_shader_parameter("progress", v)
 	_halo_mat.set_shader_parameter("time_s", _t)
 	var on := v > 0.004
-	var len_px := SWORD_W * v
-	var x0 := SWORD_POS.x
+	var len_px := BLADE_LEN * v
+	var x0 := BLADE_PX
 	var top := BLADE_Y - BLADE_HALF * 0.75
-	# flammes sur toute la partie chauffée
+	# flammes sur toute la partie chauffée de la lame (jamais sur la garde ni la poignée)
 	_body.emitting = on
 	_body.position = Vector2(x0 + len_px * 0.5, top)
 	_body.emission_rect_extents = Vector2(maxf(len_px * 0.5, 2.0), 3.0)
