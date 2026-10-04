@@ -48,6 +48,44 @@ func _init() -> void:
 					main.gs.inventory.append({"type": "potion", "name": "Élixir", "icon": "@icon:spr_13", "staminaRestore": 40})
 				main.ctrl.refresh()
 				await create_timer(2.5).timeout
+			"fountain":
+				var g2: DungeonGrid = main.grid
+				var fi := {}
+				for it in main.level.items:
+					if str(it.get("type", "")) == "fountain":
+						fi = it
+						break
+				if fi.is_empty():
+					var sx0: int = main.rig.gx
+					var sy0: int = main.rig.gy
+					for dd in 4:
+						var vv: Vector2i = DungeonGrid.DIRS[dd]
+						if g2.is_walkable(sx0 + vv.x, sy0 + vv.y) and g2.is_walkable(sx0 + 2 * vv.x, sy0 + 2 * vv.y):
+							fi = {"id": "test_f", "type": "fountain", "name": "Fontaine", "icon": "@icon:misc_fountain", "x": sx0 + 2 * vv.x, "y": sy0 + 2 * vv.y}
+							break
+					main.level.items.append(fi)
+					main.level_node.entities.populate({"items": [fi]})
+					main.level_node.entities.fountain_ready = func(fid): return not main.gs.item_state(str(main.level.id), fid).has("usedAt")
+					main.level_node.entities.refresh_fountains(true)
+				if fi.is_empty():
+					print("pas de fontaine")
+				else:
+					for d in 4:
+						var v: Vector2i = DungeonGrid.DIRS[d]
+						var from := Vector2i(int(fi.x), int(fi.y)) - v
+						if g2.is_walkable(from.x, from.y):
+							main.rig.place(g2, from.x, from.y, d)
+							break
+					await create_timer(1.5).timeout
+					root.get_texture().get_image().save_png(out + "_fountain_avant.png")
+					main.rig.place(g2, int(fi.x), int(fi.y), main.rig.facing if "facing" in main.rig else 0)
+					await create_timer(0.8).timeout
+					root.get_texture().get_image().save_png(out + "_fountain_dessus.png")
+					main.inter._use_fountain(fi)
+					for m in root.get_children():
+						if m is Control and m.has_method("close"): m.close()
+					await create_timer(8.0).timeout
+					root.get_texture().get_image().save_png(out + "_fountain_apres.png")
 			"fx":
 				for sid in ["spell_fire1", "spell_arc1", "spell_holy1"]:
 					main._on_fx3d(sid)

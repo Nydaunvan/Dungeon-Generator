@@ -207,6 +207,14 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) ->
 			level_node.entities.remove_item(str(it.id))
 		elif bool(it.get("startHidden", false)) and not ist.get("hidden", true):
 			level_node.entities.set_item_visible(str(it.id), true)
+	var lvl_id := str(level.id)
+	level_node.entities.fountain_ready = func(fid: String) -> bool:
+		var fst := gs.item_state(lvl_id, fid)
+		if not fst.has("usedAt"):
+			return true
+		var cd := maxf(5.0, float(gs.cfg.get("fountainCooldownMinutes", 10))) * 60000.0
+		return Time.get_unix_time_from_system() * 1000.0 >= float(fst.usedAt) + cd
+	level_node.entities.refresh_fountains(true)
 	for m in level.get("monsters", []):
 		var mst: Dictionary = ls.monsters.get(str(m.id), {})
 		if bool(m.get("startHidden", false)) and not mst.is_empty() and not mst.get("hidden", true):

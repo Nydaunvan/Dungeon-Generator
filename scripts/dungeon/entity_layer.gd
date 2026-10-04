@@ -26,6 +26,12 @@ static var _mats: Dictionary = {}
 var monsters: Dictionary = {}   # Vector2i -> Array[{node, def}]
 var items: Dictionary = {}      # Vector2i -> Array[{node, def}]
 var merchant_node: MeshInstance3D = null
+var fountains: Dictionary = {}  # id -> Fountain3D
+## Renvoie true si la fontaine `id` est utilisable (délai de recharge écoulé). Fournie par main.gd.
+var fountain_ready: Callable = Callable()
+var _poll := 0.0
+const FOUNTAIN_SCALE := 0.8
+const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
 
 func populate(level: Dictionary) -> void:
 	if bool(level.get("outdoor", false)):
@@ -52,6 +58,20 @@ func populate(level: Dictionary) -> void:
 			add_child(dec)
 			_register(items, Vector2i(int(it.x), int(it.y)), dec, it)
 			continue
+		if type == "fountain":
+			var f := Fountain3D.new()
+			f.name = "Fountain_" + str(it.id)
+			f.scale = Vector3.ONE * FOUNTAIN_SCALE
+			var hsh := absi(str(it.id).hash())
+			var sx := 1.0 if (hsh & 1) == 0 else -1.0
+			var sz := 1.0 if (hsh & 2) == 0 else -1.0
+			f.position = Vector3(int(it.x) * LevelBuilder.CELL + sx * FOUNTAIN_OFFSET, 0.0, int(it.y) * LevelBuilder.CELL + sz * FOUNTAIN_OFFSET)
+			f.rotation.y = float(hsh % 8) * PI / 4.0
+			f.visible = not bool(it.get("startHidden", false))
+			add_child(f)
+			fountains[str(it.id)] = f
+			_register(items, Vector2i(int(it.x), int(it.y)), f, it)
+			continue
 		var n := _make_sprite(str(it.get("icon", "")), false, true)
 		if n == null:
 			continue
@@ -64,6 +84,24 @@ func populate(level: Dictionary) -> void:
 		add_child(n)
 		if type != "decor" or str(it.get("wall", "")) == "":
 			_register(items, p, n, it)
+
+## Met à jour l'eau des fontaines (active / tarie) ; `instant` : sans transition (chargement du niveau).
+func refresh_fountains(instant: bool = false) -> void:
+	if not fountain_ready.is_valid():
+		return
+	for id in fountains.keys():
+		var f = fountains[id]
+		if not is_instance_valid(f):
+			continue
+		var on: bool = fountain_ready.call(id)
+		if instant or f.active != on:
+			f.set_active(on, instant)
+
+func _process(delta: float) -> void:
+	_poll -= delta
+	if _poll <= 0.0 and not fountains.is_empty():
+		_poll = 1.0
+		refresh_fountains()
 
 ## PNJ fixe (forgeron, maître des talents) : grand sprite posé au sol.
 func add_npc(icon: String, x: int, y: int) -> void:
