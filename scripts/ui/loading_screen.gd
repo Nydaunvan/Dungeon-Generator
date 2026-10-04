@@ -142,9 +142,10 @@ func _build() -> void:
 
 	_gate = Button.new()
 	_gate.text = L.t("loading.entrer")
-	_gate.custom_minimum_size = Vector2(320, 58)
+	_gate.custom_minimum_size = Vector2(200, 32)
+	_gate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_gate.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	_gate.add_theme_font_size_override("font_size", 22)
+	_gate.add_theme_font_size_override("font_size", 16)
 	_gate.visible = false
 	_gate.pressed.connect(func(): entered.emit())
 	col.add_child(_gate)
