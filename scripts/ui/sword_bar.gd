@@ -8,7 +8,7 @@ extends Control
 const SIZE_PX := Vector2(880, 340)
 const SWORD_POS := Vector2(40, 75)
 const SWORD_W := 800.0
-const BLADE_X0 := 0.30            # début de la lame (juste au-dessus de la garde), en fraction de la longueur de l'épée
+const BLADE_X0 := 501.0 / 1800.0  # début de la lame (base, au ras de la garde), en fraction de la longueur de l'épée
 const PAD := 160                  # marge transparente (pixels de texture) où déborde l'aura
 
 const SHADER := """
@@ -18,6 +18,7 @@ uniform float progress = 0.0;
 uniform float time_s = 0.0;
 uniform float flash = 0.0;
 uniform float x0 = 0.30;
+uniform sampler2D mask : filter_linear_mipmap;      // la lame seule (sans garde ni poignée), détourée au pixel près
 uniform vec2 rect_px = vec2(900.0, 330.0);   // taille du rectangle en pixels d'écran
 uniform vec2 pad_map = vec2(0.0, 1.0);    // x = marge (fraction de la largeur), y = largeur de l'épée (fraction de la largeur du rectangle)
 
@@ -32,10 +33,11 @@ void fragment(){
 	float xs = (UV.x - pad_map.x) / pad_map.y;                         // 0..1 le long de l'épée
 	float n = vnoise(vec2(xs * 22.0 - time_s * 0.8, UV.y * 9.0)) * 0.65 + vnoise(vec2(xs * 50.0 - time_s * 1.7, UV.y * 17.0)) * 0.35;
 	float f = x0 + progress * (1.0 - x0) + (n - 0.5) * 0.02;
-	float inblade = smoothstep(x0 - 0.004, x0 + 0.01, xs);
-	float lit = (1.0 - smoothstep(f - 0.035, f + 0.006, xs)) * inblade;
+	float bm = texture(mask, UV).a;                                    // 1 sur la lame, 0 partout ailleurs
+	float inblade = bm;
+	float lit = (1.0 - smoothstep(f - 0.035, f + 0.006, xs)) * bm;
 	float behind = max(f - xs, 0.0);
-	float edge = exp(-abs(xs - f) * 30.0) * step(0.004, progress) * inblade;
+	float edge = exp(-abs(xs - f) * 30.0) * step(0.004, progress) * smoothstep(0.0, 0.5, bm);
 
 	// l'acier : froid et un peu éteint, puis gagné par l'énergie bleue
 	vec3 col = tex.rgb;
@@ -45,17 +47,16 @@ void fragment(){
 	col = mix(col, col * energy * 1.3 + energy * 0.14, hot);
 
 	// aura : l'alpha de l'épée, flouté à plusieurs échelles (mipmaps), épouse la lame
-	float g1 = textureLod(TEXTURE, UV, 1.6).a;
-	float g2 = textureLod(TEXTURE, UV, 3.0).a;
-	float g3 = textureLod(TEXTURE, UV, 4.6).a;
-	float dy = (UV.y - 0.5) * rect_px.y;                                  // distance à l'axe de la lame (pixels)
-	float g4 = exp(-dy * dy / (2.0 * 17.0 * 17.0));                       // halo serré, autour de l'axe
-	float g5 = exp(-dy * dy / (2.0 * 46.0 * 46.0));                       // halo large
+	float g1 = textureLod(mask, UV, 1.6).a;
+	float g2 = textureLod(mask, UV, 3.0).a;
+	float g3 = textureLod(mask, UV, 4.6).a;
+	float g4 = textureLod(mask, UV, 5.6).a;                              // halo plus large, toujours calqué sur la forme de la lame
+	float g5 = textureLod(mask, UV, 6.4).a;
 	float stream = 0.75 + 0.5 * vnoise(vec2(xs * 34.0 - time_s * 3.2, UV.y * 7.0));
 	float pulse = 0.92 + 0.08 * sin(time_s * 9.0) * sin(time_s * 2.3 + 1.0);
-	float aura = (g1 * 1.25 + g2 * 1.0 * stream + g3 * 0.85 + g4 * 0.7 * stream + g5 * 0.85) * (1.0 + flash * 0.9);
+	float aura = (g1 * 1.3 + g2 * 1.1 * stream + g3 * 1.0 + g4 * 0.95 * stream + g5 * 0.8) * (1.0 + flash * 0.9);
 	aura *= mix(1.0, 0.16, tex.a);                                      // sur le métal l'aura reste discrète
-	aura *= lit * pulse * inblade;
+	aura *= pulse * (1.0 - smoothstep(f - 0.035, f + 0.006, xs));        // l'aura suit la progression, sans déborder sur la garde (masque ci-dessus)
 	aura += edge * (g1 + g2) * 0.9 * (1.0 + flash) * mix(1.0, 0.2, tex.a);
 	vec3 a_col = mix(vec3(0.03, 0.14, 0.8), vec3(0.2, 0.58, 1.0), smoothstep(0.15, 0.8, aura));
 	a_col = mix(a_col, vec3(0.78, 0.94, 1.0), smoothstep(1.35, 2.3, aura));
@@ -96,6 +97,15 @@ func _ready() -> void:
 	padded.blit_rect(img, Rect2i(0, 0, w, h), Vector2i(PAD, PAD))
 	padded.generate_mipmaps()
 	var tex := ImageTexture.create_from_image(padded)
+	var mimg: Image = (load("res://assets/ui/sword_blade_mask.png") as Texture2D).get_image()
+	if mimg.is_compressed():
+		mimg.decompress()
+	mimg.convert(Image.FORMAT_RGBA8)
+	var mpad := Image.create(w + 2 * PAD, h + 2 * PAD, false, Image.FORMAT_RGBA8)
+	mpad.fill(Color(0, 0, 0, 0))
+	mpad.blit_rect(mimg, Rect2i(0, 0, w, h), Vector2i(PAD, PAD))
+	mpad.generate_mipmaps()
+	var mask_tex := ImageTexture.create_from_image(mpad)
 	var k := SWORD_W / float(w)                  # pixels d'écran par pixel de texture
 	_rect = TextureRect.new()
 	_rect.texture = tex
@@ -110,6 +120,7 @@ func _ready() -> void:
 	sh.code = SHADER
 	_mat.shader = sh
 	_mat.set_shader_parameter("rect_px", _rect.size)
+	_mat.set_shader_parameter("mask", mask_tex)
 	_mat.set_shader_parameter("x0", BLADE_X0)
 	_mat.set_shader_parameter("pad_map", Vector2(float(PAD) / padded.get_width(), float(w) / padded.get_width()))
 	_rect.material = _mat
