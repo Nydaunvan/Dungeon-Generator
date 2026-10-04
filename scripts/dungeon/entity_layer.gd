@@ -33,7 +33,7 @@ var _poll := 0.0
 const FOUNTAIN_SCALE := 0.8
 const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
 
-func populate(level: Dictionary) -> void:
+func populate(level: Dictionary, grid: DungeonGrid = null) -> void:
 	if bool(level.get("outdoor", false)):
 		if level.get("blacksmith") is Dictionary:
 			add_npc("@icon:blacksmith", int(level.blacksmith.x), int(level.blacksmith.y))
@@ -60,6 +60,9 @@ func populate(level: Dictionary) -> void:
 			continue
 		if type == "fountain":
 			var f := Fountain3D.new()
+			var nd: Vector2i = Vector2i.ZERO
+			if grid != null and not bool(level.get("outdoor", false)):
+				nd = LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id))
 			f.name = "Fountain_" + str(it.id)
 			f.scale = Vector3.ONE * FOUNTAIN_SCALE
 			var hsh := absi(str(it.id).hash())
@@ -67,6 +70,10 @@ func populate(level: Dictionary) -> void:
 			var sz := 1.0 if (hsh & 2) == 0 else -1.0
 			f.position = Vector3(int(it.x) * LevelBuilder.CELL + sx * FOUNTAIN_OFFSET, 0.0, int(it.y) * LevelBuilder.CELL + sz * FOUNTAIN_OFFSET)
 			f.rotation.y = float(hsh % 8) * PI / 4.0
+			if nd != Vector2i.ZERO:     # logée dans un décroché du mur, face au couloir
+				var pose := LevelBuilder.fountain_niche_pose(int(it.x), int(it.y), nd)
+				f.position = pose.pos
+				f.rotation.y = pose.yaw
 			f.visible = not bool(it.get("startHidden", false))
 			add_child(f)
 			fountains[str(it.id)] = f

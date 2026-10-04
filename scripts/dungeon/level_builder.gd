@@ -5,6 +5,9 @@ extends RefCounted
 ## Murs / sol / plafond : un seul mesh (3 surfaces) => très peu d'appels de dessin sur mobile.
 
 const CELL := 4.0
+const NICHE_HALF_W := 1.25    # demi-largeur du décroché de la fontaine
+const NICHE_H := 2.8          # hauteur du décroché
+const NICHE_DEPTH := 1.9      # profondeur dans le mur
 
 static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	var theme_name := str(level.get("theme", "stone"))
@@ -25,6 +28,13 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 		parts[k].begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var half := CELL * 0.5
+	var niches := {}      # Vector2i(case) -> Vector2i(direction du mur évidé)
+	if not outdoor:
+		for it in level.get("items", []):
+			if str(it.get("type", "")) == "fountain":
+				var nd := fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id))
+				if nd != Vector2i.ZERO:
+					niches[Vector2i(int(it.x), int(it.y))] = nd
 	for y in grid.height:
 		for x in grid.width:
 			var ch := grid.cell(x, y)
@@ -44,7 +54,9 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 				var n := grid.cell(x + d.x, y + d.y)
 				var edge := c + Vector3(d.x * half, 0.0, d.y * half)   # milieu de l'arête au sol
 				var rot := _rot(d)
-				if n == "#":
+				if n == "#" and niches.get(Vector2i(x, y), Vector2i.ZERO) == d:
+					_add_niche(parts, counts, torches, c, d, rot, theme_name)
+				elif n == "#":
 					_quad(parts["wall"], edge + Vector3(0, half, 0), Vector3.UP, Vector3(-d.x, 0, -d.y), half)
 					counts["wall"] += 1
 					if not outdoor and (x + y) % 2 == 0:   # ~1 pan de mur sur 2 porte une torche
@@ -76,7 +88,7 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	var ents := EntityLayer.new()
 	ents.name = "Entities"
 	view.add_child(ents)
-	ents.populate(level)
+	ents.populate(level, grid)
 	view.entities = ents
 	var stage := CombatStage.new()
 	stage.name = "CombatStage"
@@ -88,6 +100,69 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	else:
 		_add_columns(view, grid, theme.get("wall"))
 	return view
+
+## Direction du mur à évider pour loger la fontaine de la case (x, y), ou ZERO s'il n'y en a pas.
+## Préfère un mur dont les deux cases voisines de part et d'autre sont aussi pleines (mur franc).
+static func fountain_niche_dir(grid: DungeonGrid, x: int, y: int, id: String) -> Vector2i:
+	var cands: Array[Vector2i] = []
+	for d in DungeonGrid.DIRS:
+		if grid.cell(x + d.x, y + d.y) != "#":
+			continue
+		var p := Vector2i(-d.y, d.x)
+		if grid.cell(x + d.x + p.x, y + d.y + p.y) == "#" and grid.cell(x + d.x - p.x, y + d.y - p.y) == "#" \
+				and grid.cell(x + 2 * d.x, y + 2 * d.y) == "#":
+			cands.append(d)
+	if cands.is_empty():
+		return Vector2i.ZERO
+	return cands[absi(id.hash()) % cands.size()]
+
+## Position (monde) et lacet de la fontaine logée dans le décroché de la case (x, y) côté `d`.
+static func fountain_niche_pose(x: int, y: int, d: Vector2i) -> Dictionary:
+	var c := Vector3(x * CELL, 0.0, y * CELL)
+	return {"pos": c + Vector3(d.x, 0, d.y) * (CELL * 0.5 + NICHE_DEPTH * 0.5), "yaw": _rot(d)}
+
+## Rectangle (2 triangles) dans le plan (right, up) autour de `o`, s∈[s0,s1] le long de right, t∈[t0,t1] le long de up.
+## Les UV suivent la position (même échelle que les murs : 1 case = 0..1) pour que la texture se prolonge.
+static func _rect(st: SurfaceTool, o: Vector3, right: Vector3, up: Vector3, n: Vector3, s0: float, s1: float, t0: float, t1: float) -> void:
+	var h := CELL * 0.5
+	var uv := func(s: float, t: float) -> Vector2: return Vector2((s + h) / CELL, 1.0 - (t + h) / CELL)
+	var bl := o + right * s0 + up * t0
+	var br := o + right * s1 + up * t0
+	var tr := o + right * s1 + up * t1
+	var tl := o + right * s0 + up * t1
+	_v(st, bl, n, uv.call(s0, t0))
+	_v(st, tl, n, uv.call(s0, t1))
+	_v(st, tr, n, uv.call(s1, t1))
+	_v(st, bl, n, uv.call(s0, t0))
+	_v(st, tr, n, uv.call(s1, t1))
+	_v(st, br, n, uv.call(s1, t0))
+
+## Mur percé d'un décroché (niche) : montants + linteau, fond, deux flancs, sol et plafond ; deux torches de part et d'autre.
+static func _add_niche(parts: Dictionary, counts: Dictionary, torches: TorchLayer, c: Vector3, d: Vector2i, rot: float, theme_name: String) -> void:
+	var half := CELL * 0.5
+	var dv := Vector3(d.x, 0, d.y)
+	var n := -dv                                   # normale du mur vu depuis la case
+	var wc := c + dv * half + Vector3(0, half, 0)  # centre du pan de mur
+	var right := Vector3.UP.cross(n)
+	var w := NICHE_HALF_W
+	var t1 := NICHE_H - half
+	var wall: SurfaceTool = parts["wall"]
+	_rect(wall, wc, right, Vector3.UP, n, -half, -w, -half, half)
+	_rect(wall, wc, right, Vector3.UP, n, w, half, -half, half)
+	_rect(wall, wc, right, Vector3.UP, n, -w, w, t1, half)
+	var back := wc + dv * NICHE_DEPTH
+	_rect(wall, back, right, Vector3.UP, n, -w, w, -half, t1)
+	# flancs : plan x = ±w, profondeur le long de dv
+	_rect(wall, wc - right * w, dv, Vector3.UP, right, 0.0, NICHE_DEPTH, -half, t1)
+	_rect(wall, wc + right * w, -dv, Vector3.UP, -right, -NICHE_DEPTH, 0.0, -half, t1)
+	counts["wall"] += 7
+	# sol et plafond du décroché
+	_rect(parts["floor"], wc - Vector3(0, half, 0), right, dv, Vector3.UP, -w, w, 0.0, NICHE_DEPTH)
+	counts["floor"] += 1
+	_rect(parts["ceil"], wc + Vector3(0, t1, 0), -right, dv, Vector3.DOWN, -w, w, 0.0, NICHE_DEPTH)
+	counts["ceil"] += 1
+	for sgn in [-1.0, 1.0]:
+		torches.add_torch(c + dv * CELL * 0.49 + right * sgn * (w + 0.5) + Vector3(0, CELL * 0.62, 0), rot, theme_name)
 
 ## Colonnes aux angles : là où deux murs se rejoignent, et aux deux extrémités d'un mur isolé (port de buildDecor).
 static func _add_columns(view: LevelView, grid: DungeonGrid, wall_mat: Material) -> void:

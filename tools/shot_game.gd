@@ -64,9 +64,9 @@ func _init() -> void:
 							fi = {"id": "test_f", "type": "fountain", "name": "Fontaine", "icon": "@icon:misc_fountain", "x": sx0 + 2 * vv.x, "y": sy0 + 2 * vv.y}
 							break
 					main.level.items.append(fi)
-					main.level_node.entities.populate({"items": [fi]})
-					main.level_node.entities.fountain_ready = func(fid): return not main.gs.item_state(str(main.level.id), fid).has("usedAt")
-					main.level_node.entities.refresh_fountains(true)
+					main.load_level(main.level_index)
+					await create_timer(1.0).timeout
+					g2 = main.grid
 				if fi.is_empty():
 					print("pas de fontaine")
 				else:
