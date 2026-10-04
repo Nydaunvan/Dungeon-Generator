@@ -14,11 +14,27 @@ var booted := false
 var _busy := false
 var _keep: Array = []          # garde les ressources chargées en mémoire (le cache de Godot ne retient pas les ressources inutilisées)
 var _token := 0
+var _fade: Tween
+var _f0 := 1.0                 # facteur d'échelle de l'interface au moment où l'écran apparaît
 
 func _ready() -> void:
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+
+## Le jeu change l'échelle de l'interface en cours de chargement : on la compense pour que l'écran garde exactement la même taille.
+func _process(_delta: float) -> void:
+	if visible and screen != null:
+		_fit()
+
+func _fit() -> void:
+	var win := get_window()
+	var f := maxf(win.content_scale_factor, 0.001)
+	var base := minf(win.size.x / 1280.0, win.size.y / 720.0)
+	scale = Vector2.ONE * (_f0 / f)
+	screen.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	screen.position = Vector2.ZERO
+	screen.size = Vector2(win.size) / maxf(base * _f0, 0.001)
 
 func is_active() -> bool:
 	return _busy
@@ -26,12 +42,16 @@ func is_active() -> bool:
 # ------------------------------------------------------------------ écran
 
 func _show(subtitle: String) -> void:
-	if screen == null:
-		screen = LoadingScreen.new()
-		add_child(screen)
-	screen.reset()
+	# écran neuf à chaque chargement : aucun reste du précédent (barre, texte, fondu en cours)
+	if _fade != null and _fade.is_valid():
+		_fade.kill()
+	if screen != null:
+		screen.queue_free()
+	screen = LoadingScreen.new()
+	add_child(screen)
 	screen.set_subtitle(subtitle)
-	screen.modulate = Color.WHITE
+	_f0 = get_window().content_scale_factor
+	_fit()
 	visible = true
 	_busy = true
 	_token += 1
@@ -41,9 +61,9 @@ func _hide(fade: float = 0.4) -> void:
 	if screen == null or not visible:
 		return
 	var token := _token
-	var tw := create_tween()
-	tw.tween_property(screen, "modulate:a", 0.0, fade)
-	await tw.finished
+	_fade = create_tween()
+	_fade.tween_property(screen, "modulate:a", 0.0, fade)
+	await _fade.finished
 	if token == _token and not _busy:
 		visible = false
 
