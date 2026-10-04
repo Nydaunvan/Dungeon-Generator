@@ -74,3 +74,5 @@ jobs:
           port: ${{ vars.FTP_PORT || '21' }}
           local-dir: build/web/
           server-dir: ${{ vars.FTP_DIR || './' }}
+          security: ${{ vars.FTP_SECURITY || 'strict' }}
+          log-level: standard
