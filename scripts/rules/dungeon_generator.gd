@@ -354,8 +354,13 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		var behind := locked_rooms.filter(func(r): return not used.has(_key(r.x, r.y)))
 		if not behind.is_empty():
 			var room: Dictionary = choice(behind)
+			var want_fountain: bool = (not mod.noFountains) and randf() < 0.4
+			if want_fountain:   # la fontaine se loge dans un décroché du mur : on préfère une case qui a un mur
+				var walled := behind.filter(func(r): return _has_wall_side(grid, r.x, r.y))
+				if not walled.is_empty():
+					room = choice(walled)
 			used[_key(room.x, room.y)] = true
-			if not mod.noFountains and randf() < 0.4:
+			if want_fountain:
 				items.append({"id": "reward_fountain_%d" % i, "name": L.t("rules.dungeon_generator.fontaine_cachee"), "icon": "@icon:misc_fountain", "x": room.x, "y": room.y, "type": "fountain"})
 				fountain_here = true
 				since_fountain = 0
@@ -473,6 +478,15 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		var r: Dictionary = item_pool.pop_at(randi_range(0, item_pool.size() - 1))
 		used[_key(r.x, r.y)] = true
 		return r
+	# case libre adossée à un mur (pour loger une fontaine dans un décroché) ; à défaut, n'importe quelle case libre
+	var take_walled := func() -> Dictionary:
+		var walled := item_pool.filter(func(r): return _has_wall_side(grid, r.x, r.y))
+		if walled.is_empty():
+			return take.call()
+		var r: Dictionary = walled[randi_range(0, walled.size() - 1)]
+		item_pool.erase(r)
+		used[_key(r.x, r.y)] = true
+		return r
 	var item_mult := float(mod.itemMult)
 	var heal_tier := i / 3
 	var sta_tier := i / 3
@@ -525,7 +539,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			var sp: Dictionary = choice(spells)
 			items.append({"id": "scroll_gen_%d" % i, "name": L.t("common.parchemin_de") + str(sp.name), "icon": "@icon:misc_scroll", "x": r.x, "y": r.y, "type": "scroll", "spellId": sp.id})
 	if not fountain_here and not mod.noFountains and (i == 0 or since_fountain >= 2 or randf() < 0.45):
-		var r: Dictionary = take.call()
+		var r: Dictionary = take_walled.call()
 		if not r.is_empty():
 			items.append({"id": "fountain_gen_%d" % i, "name": L.t("rules.dungeon_generator.fontaine_de_vie"), "icon": "@icon:misc_fountain", "x": r.x, "y": r.y, "type": "fountain"})
 			fountain_here = true
@@ -626,6 +640,15 @@ func _near_door(doors: Array, gx: int, gy: int) -> bool:
 	return false
 
 ## Cherche une case de couloir à verrouiller : la sortie doit rester accessible et au moins `min_locked` salles être coupées.
+## Vrai si au moins un des 4 voisins de la case est un mur plein (là où un décroché peut être creusé).
+static func _has_wall_side(grid: Array, x: int, y: int) -> bool:
+	for d in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
+		var nx: int = x + d.x
+		var ny: int = y + d.y
+		if ny >= 0 and ny < grid.size() and nx >= 0 and nx < grid[0].size() and grid[ny][nx] == "#":
+			return true
+	return false
+
 func _try_locking_door(grid: Array, dist: Array, rooms: Array, candidates: Array, far: Dictionary, sx: int, sy: int, min_locked: int) -> Dictionary:
 	var tries := candidates.duplicate()
 	var best := {}

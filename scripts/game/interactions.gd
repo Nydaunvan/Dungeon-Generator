@@ -52,6 +52,22 @@ func bump_wall(x: int, y: int) -> void:
 		_log(L.t("game.interactions.un_mur_de_pierre_froide"))
 	last_bump = k
 
+## Avancer contre le mur d'un décroché de fontaine : propose de l'utiliser. Renvoie true si c'était le cas.
+func bump_fountain(tx: int, ty: int) -> bool:
+	if bool(level.get("outdoor", false)):
+		return false
+	for it in level.get("items", []):
+		if str(it.get("type", "")) != "fountain" or int(it.x) != rig.gx or int(it.y) != rig.gy:
+			continue
+		var st := gs.item_state(_lid(), str(it.id))
+		if st.get("taken", false) or st.get("hidden", bool(it.get("startHidden", false))):
+			continue
+		if LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id)) != Vector2i(tx - rig.gx, ty - rig.gy):
+			continue
+		_prompt_fountain(it)
+		return true
+	return false
+
 ## Après chaque pas : gain d'endurance puis objet éventuel sur la case.
 func step_stamina() -> void:
 	last_bump = ""
@@ -73,7 +89,10 @@ func step_items() -> void:
 			continue
 		match str(it.get("type", "")):
 			"trap": _prompt_trap(it)
-			"fountain": _prompt_fountain(it)
+			"fountain":
+				# fontaine logée dans un décroché : on l'utilise en avançant vers elle (comme une porte), pas en passant dessus
+				if LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id)) == Vector2i.ZERO or bool(level.get("outdoor", false)):
+					_prompt_fountain(it)
 			"switch": _trigger_switch(it)
 			"decor": _activate_decor(it)
 			_:

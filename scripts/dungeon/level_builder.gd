@@ -101,16 +101,12 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 		_add_columns(view, grid, theme.get("wall"))
 	return view
 
-## Direction du mur à évider pour loger la fontaine de la case (x, y), ou ZERO s'il n'y en a pas.
-## Préfère un mur dont les deux cases voisines de part et d'autre sont aussi pleines (mur franc).
+## Direction du mur à évider pour loger la fontaine de la case (x, y), ou ZERO s'il n'y a aucun mur autour.
+## Le décroché (2,5 × 1,9 u) tient tout entier dans la case pleine voisine ; le côté est choisi de façon stable d'après l'id.
 static func fountain_niche_dir(grid: DungeonGrid, x: int, y: int, id: String) -> Vector2i:
 	var cands: Array[Vector2i] = []
 	for d in DungeonGrid.DIRS:
-		if grid.cell(x + d.x, y + d.y) != "#":
-			continue
-		var p := Vector2i(-d.y, d.x)
-		if grid.cell(x + d.x + p.x, y + d.y + p.y) == "#" and grid.cell(x + d.x - p.x, y + d.y - p.y) == "#" \
-				and grid.cell(x + 2 * d.x, y + 2 * d.y) == "#":
+		if grid.cell(x + d.x, y + d.y) == "#":
 			cands.append(d)
 	if cands.is_empty():
 		return Vector2i.ZERO

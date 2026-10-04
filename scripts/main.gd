@@ -495,6 +495,8 @@ func _on_blocked(x: int, y: int) -> void:
 		Sound.sfx("blocked")
 		return
 	if grid.cell(x, y) == "#":
+		if inter.bump_fountain(x, y):
+			return
 		Sound.sfx("blocked")
 		inter.bump_wall(x, y)
 	match grid.cell(x, y):

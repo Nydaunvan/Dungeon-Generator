@@ -78,12 +78,14 @@ func _init() -> void:
 							break
 					await create_timer(1.5).timeout
 					root.get_texture().get_image().save_png(out + "_fountain_avant.png")
-					main.rig.place(g2, int(fi.x), int(fi.y), main.rig.facing if "facing" in main.rig else 0)
+					var nd: Vector2i = load("res://scripts/dungeon/level_builder.gd").fountain_niche_dir(g2, int(fi.x), int(fi.y), str(fi.id))
+					main.rig.place(g2, int(fi.x), int(fi.y), DungeonGrid.DIRS.find(nd))
 					await create_timer(0.8).timeout
+					main._on_blocked(int(fi.x) + nd.x, int(fi.y) + nd.y)   # avancer contre le décroché
+					await create_timer(0.6).timeout
 					root.get_texture().get_image().save_png(out + "_fountain_dessus.png")
 					main.inter._use_fountain(fi)
-					for m in root.get_children():
-						if m is Control and m.has_method("close"): m.close()
+					for m in get_nodes_in_group("modal"): m.close()
 					await create_timer(8.0).timeout
 					root.get_texture().get_image().save_png(out + "_fountain_apres.png")
 			"fx":
