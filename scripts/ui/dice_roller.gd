@@ -10,7 +10,7 @@ const RP := [0.0, 0.30, 0.68, 0.82, 0.92, 0.97, 0.995, 1.0]    # progression de 
 const XP := [0.0, 0.25, 0.60, 0.78, 0.90, 0.96, 0.99, 1.0]     # progression latérale
 const Y := [0.0, -1.0, 0.0, -0.55, 0.0, -0.25, 0.0, 0.0]       # hauteur relative
 const EASE_OUT := [true, false, true, false, true, false, true]
-const TILT_X := -24.0    # inclinaison de la vue (on voit le dé d'un peu au-dessus)
+const TILT_X := -24.0    # inclinaison de la vue gardée pendant le vol, résorbée à l'atterrissage
 const TILT_YAW := -30.0  # rotation « en biais » gardée pendant le vol, résorbée à l'atterrissage
 
 static var _face_mats: Array = []
@@ -62,7 +62,7 @@ func _ready() -> void:
 		var pivot := Node3D.new()
 		pivot.position = Vector3((-0.73 if i == 0 else 0.73), 0, 0)
 		var tilt := Node3D.new()
-		tilt.rotation_degrees = Vector3(TILT_X, 0.0, 0.0)     # au repos : posé à plat, arêtes horizontales
+		tilt.rotation_degrees = Vector3.ZERO     # au repos : posé bien à plat, face au joueur
 		pivot.add_child(tilt)
 		var cube := Node3D.new()
 		tilt.add_child(cube)
@@ -178,10 +178,10 @@ func _process(delta: float) -> void:
 		var rot: Vector3 = (a.from as Vector3) + (a.tot as Vector3) * rp
 		var x: float = float(a.x0) + (float(a.tx) - float(a.x0)) * xp
 		_apply(d, rot, x, y)
-		# Le biais n'existe qu'en vol : il s'installe au décollage et s'efface en fin de lancer,
-		# pour que les dés finissent à plat, posés comme sur une table.
+		# Le biais (inclinaison + rotation) n'existe qu'en vol : il s'installe au décollage et
+		# s'efface en fin de lancer, pour que les dés finissent parfaitement à plat.
 		var w := smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.78, 1.0, t))
-		(d.tilt as Node3D).rotation_degrees = Vector3(TILT_X, TILT_YAW * w, 0.0)
+		(d.tilt as Node3D).rotation_degrees = Vector3(TILT_X * w, TILT_YAW * w, 0.0)
 		if t >= 1.0:
 			d.busy = false
 			d.x = float(a.tx)
