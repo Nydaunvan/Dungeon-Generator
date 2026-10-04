@@ -16,7 +16,7 @@ const POOL := 7                  # rigs 3D en tout (dont ceux qui s'éteignent e
 const ACTIVE := 5                # torches les plus proches qui reçoivent un rig
 const ACTIVATE_R := 24.0         # distance max (unités) pour recevoir un rig
 const REFRESH := 0.15            # secondes entre deux réaffectations
-const FADE_SPEED := 3.5          # allumage / extinction d'un rig (≈ 0,3 s)
+const FADE_SPEED := 2.2          # allumage / extinction d'un rig (≈ 0,45 s) : fondu enchaîné avec la flamme plate
 const FLAME_H := 0.34            # hauteur de la flamme (m)
 const FLAME_R := 0.085           # rayon max de la flamme
 const FLAME_OFFSET := 0.11       # la flamme est tenue en avant du mur (sinon elle le traverse)
@@ -31,6 +31,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
 uniform vec4 flame_color : source_color = vec4(1.0, 0.7, 0.3, 1.0);
 uniform vec4 core_color : source_color = vec4(1.0, 0.93, 0.7, 1.0);
 uniform float gain = 1.1;
+uniform float fade = 1.0;
 
 varying float v_h;
 varying vec3 v_p;
@@ -81,7 +82,7 @@ void fragment() {
 	vec3 col = mix(flame_color.rgb, core_color.rgb, clamp(body * body * (1.0 - h * 0.8), 0.0, 1.0));
 	col = mix(col, flame_color.rgb * vec3(1.0, 0.45, 0.3), smoothstep(0.55, 1.0, h));
 	ALBEDO = col * gain;
-	ALPHA = clamp(a, 0.0, 1.0);
+	ALPHA = clamp(a, 0.0, 1.0) * fade;
 }
 """
 
@@ -91,6 +92,8 @@ class TorchFx extends RefCounted:
 	var flame_root: Node3D
 	var outer: MeshInstance3D
 	var inner: MeshInstance3D
+	var mat_outer: ShaderMaterial   # matériaux propres à chaque rig (fondu individuel)
+	var mat_inner: ShaderMaterial
 	var smoke: CPUParticles3D
 	var sparks: CPUParticles3D
 	var light: OmniLight3D
@@ -110,7 +113,6 @@ var _tick: float = 0.0
 static var _bowl_mats: Dictionary = {}
 static var _flame_shader: Shader
 static var _flame_mesh: ArrayMesh
-static var _flame_mats: Dictionary = {}
 static var _smoke_mat: StandardMaterial3D
 static var _spark_mat: StandardMaterial3D
 
@@ -176,6 +178,12 @@ func _make_rig() -> TorchFx:
 	r.inner.mesh = _get_flame_mesh()
 	r.inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	r.inner.scale = Vector3(0.52, 0.72, 0.52)
+	r.mat_outer = ShaderMaterial.new()
+	r.mat_outer.shader = _get_flame_shader()
+	r.mat_inner = ShaderMaterial.new()
+	r.mat_inner.shader = _get_flame_shader()
+	r.outer.material_override = r.mat_outer
+	r.inner.material_override = r.mat_inner
 	r.flame_root.add_child(r.inner)
 	r.smoke = _make_smoke()
 	r.root.add_child(r.smoke)
@@ -272,8 +280,7 @@ func _assign(r: TorchFx, ti: int) -> void:
 	t["rig"] = r
 	r.root.position = t.fpos
 	r.root.rotation.y = float(t.rot)
-	r.outer.material_override = _get_flame_mat(str(t.theme), false, flame)
-	r.inner.material_override = _get_flame_mat(str(t.theme), true, flame)
+	_tint_flame_mats(r, flame)
 	r.light.light_color = t.light_color
 	r.smoke.color = Color.WHITE.lerp(flame, 0.3)
 	r.sparks.color = Color.WHITE.lerp(flame, 0.3)
@@ -289,7 +296,7 @@ func _release(r: TorchFx) -> void:
 	if r.torch >= 0:
 		var t: Dictionary = _torches[r.torch]
 		t["rig"] = null
-		(t.bb_flame as Node3D).visible = true
+		_set_bb_alpha(t.bb_flame, 1.0)
 	r.torch = -1
 	r.level = 0.0
 	r.target = 0.0
@@ -332,11 +339,19 @@ func _update_rig(r: TorchFx, delta: float) -> void:
 	var p := _time * r.speed + r.phase
 	var fx := 1.0 + sin(p) * 0.06
 	var fy := 1.0 + sin(p * 1.8 + 1.0) * 0.12 + sin(p * 5.1) * 0.05
-	var s := maxf(r.level, 0.001)
+	var k := smoothstep(0.0, 1.0, r.level)
+	r.mat_outer.set_shader_parameter("fade", k)
+	r.mat_inner.set_shader_parameter("fade", k)
+	var s := lerpf(0.7, 1.0, k)          # la flamme 3D ne « pousse » pas de zéro : elle apparaît déjà formée
 	r.flame_root.scale = Vector3(fx * s, fy * s, fx * s)
 	var flick := 1.0 + sin(p) * 0.10 + sin(p * 2.7) * 0.06 + sin(p * 7.3) * 0.04
-	r.light.light_energy = LIGHT_ENERGY * light_scale * float(t.light_k) * r.level * flick
-	(t.bb_flame as Node3D).visible = r.level < 0.5
+	r.light.light_energy = LIGHT_ENERGY * light_scale * float(t.light_k) * k * flick
+	_set_bb_alpha(t.bb_flame, 1.0 - smoothstep(0.15, 0.85, r.level))   # la flamme plate s'efface pendant que la 3D apparaît
+
+## Opacité de la flamme billboard d'une torche (masquée quand elle devient invisible).
+func _set_bb_alpha(bb: MeshInstance3D, a: float) -> void:
+	(bb.material_override as StandardMaterial3D).albedo_color.a = a
+	bb.visible = a > 0.01
 
 # ---------------------------------------------------------------- ressources partagées
 
@@ -346,22 +361,15 @@ static func _get_flame_shader() -> Shader:
 		_flame_shader.code = FLAME_SHADER
 	return _flame_shader
 
-static func _get_flame_mat(theme: String, inner: bool, flame: Color) -> ShaderMaterial:
-	var key := "%s_%d" % [theme, 1 if inner else 0]
-	if _flame_mats.has(key):
-		return _flame_mats[key]
-	var m := ShaderMaterial.new()
-	m.shader = _get_flame_shader()
-	if inner:
-		m.set_shader_parameter("flame_color", flame.lerp(Color.WHITE, 0.55))
-		m.set_shader_parameter("core_color", Color(1.0, 0.97, 0.85).lerp(flame, 0.15))
-		m.set_shader_parameter("gain", 1.25)
-	else:
-		m.set_shader_parameter("flame_color", flame)
-		m.set_shader_parameter("core_color", flame.lerp(Color(1.0, 0.95, 0.75), 0.6))
-		m.set_shader_parameter("gain", 1.1)
-	_flame_mats[key] = m
-	return m
+static func _tint_flame_mats(r: TorchFx, flame: Color) -> void:
+	r.mat_outer.set_shader_parameter("flame_color", flame)
+	r.mat_outer.set_shader_parameter("core_color", flame.lerp(Color(1.0, 0.95, 0.75), 0.6))
+	r.mat_outer.set_shader_parameter("gain", 1.1)
+	r.mat_inner.set_shader_parameter("flame_color", flame.lerp(Color.WHITE, 0.55))
+	r.mat_inner.set_shader_parameter("core_color", Color(1.0, 0.97, 0.85).lerp(flame, 0.15))
+	r.mat_inner.set_shader_parameter("gain", 1.25)
+	r.mat_outer.set_shader_parameter("fade", 0.0)
+	r.mat_inner.set_shader_parameter("fade", 0.0)
 
 static func _flame_radius(h: float) -> float:
 	return FLAME_R * pow(maxf(sin(PI * pow(clampf(h, 0.0, 1.0), 0.65)), 0.0), 0.9)
