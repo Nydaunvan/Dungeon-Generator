@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c583em1pqleww"
-path="res://.godot/imported/sword_loading.png-131a58bc53e4c4725e5e47dd489b2d54.ctex"
+uid="uid://c3rqru8o4iws5"
+path="res://.godot/imported/sword_blade_mask_padded.png-840e5feeeca4251e988e317981427ba6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/sword_loading.png"
-dest_files=["res://.godot/imported/sword_loading.png-131a58bc53e4c4725e5e47dd489b2d54.ctex"]
+source_file="res://assets/ui/sword_blade_mask_padded.png"
+dest_files=["res://.godot/imported/sword_blade_mask_padded.png-840e5feeeca4251e988e317981427ba6.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

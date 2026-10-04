@@ -14,6 +14,7 @@ var booted := false
 var _busy := false
 var _keep: Array = []          # garde les ressources chargées en mémoire (le cache de Godot ne retient pas les ressources inutilisées)
 var _token := 0
+var _last_yield_us := 0
 var _fade: Tween
 var _f0 := 1.0                 # facteur d'échelle de l'interface au moment où l'écran apparaît
 
@@ -66,6 +67,12 @@ func _hide(fade: float = 0.4) -> void:
 	await _fade.finished
 	if token == _token and not _busy:
 		visible = false
+
+## Rend la main à l'affichage dès que ~8 ms de calcul se sont écoulées (écran de chargement fluide).
+func _slice() -> void:
+	if Time.get_ticks_usec() - _last_yield_us > 8000:
+		await get_tree().process_frame
+		_last_yield_us = Time.get_ticks_usec()
 
 func _frames(n: int = 2) -> void:
 	for i in n:
@@ -165,8 +172,8 @@ func finish() -> void:
 	if not _busy or screen == null:
 		return
 	screen.set_progress(1.0, L.t("loading.pret"))
-	await _frames(2)
-	await get_tree().create_timer(0.2).timeout
+	# quelques images derrière l'écran : les premières compilations de shaders se font ici, pas devant le joueur
+	await _frames(8)
 	_hide(0.45)
 
 # ------------------------------------------------------------------ étapes de chargement
@@ -175,7 +182,7 @@ func _load_fonts() -> void:
 	var names := _list("res://assets/fonts", ["ttf", "otf"])
 	for n in names:
 		UiTheme.font("res://assets/fonts/" + n)
-		await get_tree().process_frame
+		await _slice()
 
 func _load_images(base: float, weight: float) -> void:
 	var paths: Array = []
@@ -183,16 +190,12 @@ func _load_images(base: float, weight: float) -> void:
 		for n in _list("res://assets/" + d, IMAGE_EXT):
 			paths.append("res://assets/%s/%s" % [d, n])
 	var total := maxi(paths.size(), 1)
-	var last := Time.get_ticks_msec()
 	for i in paths.size():
 		var res := load(paths[i])
 		if res != null:
 			_keep.append(res)
-		# on ne rend la main qu'à intervalles réguliers (une image par fichier serait trop lent)
-		if Time.get_ticks_msec() - last > 30:
-			screen.set_progress(base + weight * float(i + 1) / total)
-			await get_tree().process_frame
-			last = Time.get_ticks_msec()
+		screen.set_progress(base + weight * float(i + 1) / total)
+		await _slice()
 	screen.set_progress(base + weight)
 
 func _build_decor() -> void:
@@ -200,12 +203,12 @@ func _build_decor() -> void:
 	_keep.append(ProceduralTextures.smoke())
 	_keep.append(ProceduralTextures.flame())
 	_keep.append(ProceduralTextures.arch())
-	await get_tree().process_frame
+	await _slice()
 	for theme in ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]:
 		_keep.append(ThemeMaterials.for_theme(theme))
 		_keep.append(ProceduralTextures.grille_material(theme))
 		_keep.append(ProceduralTextures.door(theme))
-		await get_tree().process_frame
+		await _slice()
 
 ## Noms de fichiers d'un dossier (sans les suffixes .import / .remap des exports), filtrés par extension.
 func _list(dir: String, exts: Array) -> Array:

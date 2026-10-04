@@ -19,6 +19,7 @@ var _shimmer: Timer
 var _shimmer_kind: String = ""
 var _bus_sfx: int = -1
 var _bus_music: int = -1
+var _last_yield_us: int = 0
 var _yielding: bool = false     # pendant le préchargement : la synthèse rend la main entre deux étapes (barre de progression, page Web vivante)
 var _unlocked: bool = false
 var preloaded: bool = false
@@ -274,8 +275,14 @@ func _shimmer_stream(kind: String, v: int) -> AudioStreamWAV:
 
 ## Laisse respirer la page pendant le préchargement (une image) : la barre avance, le navigateur ne se fige pas.
 func _breath() -> void:
-	if _yielding:
+	await _tick()
+
+## Rend la main à l'affichage dès que ~7 ms de calcul se sont écoulées : l'écran de chargement reste fluide, sans perdre de temps
+## à attendre une image entre deux petits calculs.
+func _tick() -> void:
+	if _yielding and Time.get_ticks_usec() - _last_yield_us > 7000:
 		await get_tree().process_frame
+		_last_yield_us = Time.get_ticks_usec()
 
 func _build_ambient(cfg: Dictionary) -> AudioStreamWAV:   # coroutine (voir _breath)
 	var seconds := 8.0
@@ -286,8 +293,12 @@ func _build_ambient(cfg: Dictionary) -> AudioStreamWAV:   # coroutine (voir _bre
 		var f: float = maxf(1.0, round(float(freqs[i]) * seconds)) / seconds   # nombre entier de périodes : boucle sans raccord
 		var lfo: float = maxf(1.0, round((0.05 + i * 0.02 + 0.01) * seconds)) / seconds
 		for dt in [-5.0, 5.0]:
-			b.pad_voice(f * pow(2.0, dt / 1200.0), str(cfg.type), vg, lfo, vg * 0.35)
-			await _breath()
+			var from_i := 0
+			while from_i < b.fixed_len:
+				var to_i := mini(from_i + 6000, b.fixed_len)
+				b.pad_voice(f * pow(2.0, dt / 1200.0), str(cfg.type), vg, lfo, vg * 0.35, from_i, to_i)
+				from_i = to_i
+				await _tick()
 	return b.to_stream(true)
 
 func _build_boss() -> AudioStreamWAV:   # coroutine (voir _breath)
@@ -311,9 +322,11 @@ func _build_boss() -> AudioStreamWAV:   # coroutine (voir _breath)
 					b.noise(0.08, "bandpass", 900.0, 0.6, 0.13, 0.004, 0.09, t0)
 			if bar == 1:
 				for i in 8:
+					await _tick()
 					b.tone(BOSS.melody1[i], 0.22, "triangle", 0.13, 0.012, 0.28, o + i * beat * 0.5, 0.0, true)
 		else:
 			for i in 16:
+				await _tick()
 				var t1: float = o + i * beat * 0.25
 				var dn := i % 4 == 0
 				var step := i % 4
@@ -327,6 +340,7 @@ func _build_boss() -> AudioStreamWAV:   # coroutine (voir _breath)
 					b.noise(0.08, "bandpass", 900.0, 0.6, 0.13, 0.004, 0.09, t1)
 			if bar == 3:
 				for i in 10:
+					await _tick()
 					b.tone(BOSS.melody2[i], 0.16, "sawtooth", 0.14, 0.012, 0.2, o + i * beat * 0.4, 0.0, true)
 				var st := o + beat * 4.0 - 0.05
 				for f in [BOSS.root, BOSS.fifth, BOSS.octave]:
@@ -373,13 +387,14 @@ func preload_all(progress: Callable = Callable()) -> void:
 		total += float(j.w)
 	var done := 0.0
 	_yielding = true
+	_last_yield_us = Time.get_ticks_usec()
 	var t0 := Time.get_ticks_msec()
 	for j in jobs:
 		if progress.is_valid():
 			progress.call(done / total, j.label)
 		await j.fn.call()
 		done += float(j.w)
-		await get_tree().process_frame
+		await _tick()
 	_yielding = false
 	preloaded = true
 	if progress.is_valid():
@@ -528,16 +543,18 @@ class Synth:
 			_put(i, lp * _env(t, 0.09, 0.06, 0.59))
 
 	## Voix continue d'une nappe (gain modulé par un LFO) sur la durée fixe de la boucle.
-	func pad_voice(freq: float, kind: String, gain: float, lfo_freq: float, lfo_depth: float) -> void:
+	func pad_voice(freq: float, kind: String, gain: float, lfo_freq: float, lfo_depth: float, from_i: int = 0, to_i: int = -1) -> void:
 		var inc := freq / rate
 		var lfo_w := TAU * lfo_freq / rate
-		var phase := 0.0
+		var phase := inc * from_i
+		if to_i < 0:
+			to_i = fixed_len
 		if kind == "sine":
-			for i in fixed_len:
+			for i in range(from_i, to_i):
 				phase += inc
 				data[i] += sin(TAU * phase) * (gain + sin(lfo_w * i) * lfo_depth)
 		else:
-			for i in fixed_len:
+			for i in range(from_i, to_i):
 				phase += inc
 				data[i] += _wave(kind, phase) * (gain + sin(lfo_w * i) * lfo_depth)
 

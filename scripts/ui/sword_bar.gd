@@ -31,6 +31,8 @@ float vnoise(vec2 p){
 void fragment(){
 	vec4 tex = texture(TEXTURE, UV);
 	float xs = (UV.x - pad_map.x) / pad_map.y;                         // 0..1 le long de l'épée
+	float g5 = textureLod(mask, UV, 6.4).a;
+	if (tex.a < 0.004 && g5 < 0.004) { discard; }     // loin de l'épée : rien à calculer (économie de GPU)
 	float n = vnoise(vec2(xs * 22.0 - time_s * 0.8, UV.y * 9.0)) * 0.65 + vnoise(vec2(xs * 50.0 - time_s * 1.7, UV.y * 17.0)) * 0.35;
 	float f = x0 + progress * (1.0 - x0) + (n - 0.5) * 0.02;
 	float bm = texture(mask, UV).a;                                    // 1 sur la lame, 0 partout ailleurs
@@ -51,7 +53,6 @@ void fragment(){
 	float g2 = textureLod(mask, UV, 3.0).a;
 	float g3 = textureLod(mask, UV, 4.6).a;
 	float g4 = textureLod(mask, UV, 5.6).a;                              // halo plus large, toujours calqué sur la forme de la lame
-	float g5 = textureLod(mask, UV, 6.4).a;
 	float stream = 0.75 + 0.5 * vnoise(vec2(xs * 34.0 - time_s * 3.2, UV.y * 7.0));
 	float pulse = 0.92 + 0.08 * sin(time_s * 9.0) * sin(time_s * 2.3 + 1.0);
 	float aura = (g1 * 1.3 + g2 * 1.1 * stream + g3 * 1.0 + g4 * 0.95 * stream + g5 * 0.8) * (1.0 + flash * 0.9);
@@ -85,34 +86,17 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _ready() -> void:
-	var src: Texture2D = load("res://assets/ui/sword_loading.png")
-	var img: Image = src.get_image()
-	if img.is_compressed():
-		img.decompress()
-	img.convert(Image.FORMAT_RGBA8)
-	var w := img.get_width()
-	var h := img.get_height()
-	var padded := Image.create(w + 2 * PAD, h + 2 * PAD, false, Image.FORMAT_RGBA8)
-	padded.fill(Color(0, 0, 0, 0))
-	padded.blit_rect(img, Rect2i(0, 0, w, h), Vector2i(PAD, PAD))
-	padded.generate_mipmaps()
-	var tex := ImageTexture.create_from_image(padded)
-	var mimg: Image = (load("res://assets/ui/sword_blade_mask.png") as Texture2D).get_image()
-	if mimg.is_compressed():
-		mimg.decompress()
-	mimg.convert(Image.FORMAT_RGBA8)
-	var mpad := Image.create(w + 2 * PAD, h + 2 * PAD, false, Image.FORMAT_RGBA8)
-	mpad.fill(Color(0, 0, 0, 0))
-	mpad.blit_rect(mimg, Rect2i(0, 0, w, h), Vector2i(PAD, PAD))
-	mpad.generate_mipmaps()
-	var mask_tex := ImageTexture.create_from_image(mpad)
-	var k := SWORD_W / float(w)                  # pixels d'écran par pixel de texture
+	# images prêtes à l'emploi (marge transparente pour l'aura, mipmaps générés à l'import) : rien à calculer ici
+	var tex: Texture2D = load("res://assets/ui/sword_loading_padded.png")
+	var mask_tex: Texture2D = load("res://assets/ui/sword_blade_mask_padded.png")
+	var padded_size := tex.get_size()
+	var k := SWORD_W / (padded_size.x - 2.0 * PAD)       # pixels d'écran par pixel de texture
 	_rect = TextureRect.new()
 	_rect.texture = tex
 	_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_rect.stretch_mode = TextureRect.STRETCH_SCALE
 	_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_rect.size = Vector2(padded.get_width(), padded.get_height()) * k
+	_rect.size = padded_size * k
 	_rect.position = SWORD_POS - Vector2(PAD, PAD) * k
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mat = ShaderMaterial.new()
@@ -122,7 +106,7 @@ func _ready() -> void:
 	_mat.set_shader_parameter("rect_px", _rect.size)
 	_mat.set_shader_parameter("mask", mask_tex)
 	_mat.set_shader_parameter("x0", BLADE_X0)
-	_mat.set_shader_parameter("pad_map", Vector2(float(PAD) / padded.get_width(), float(w) / padded.get_width()))
+	_mat.set_shader_parameter("pad_map", Vector2(float(PAD) / padded_size.x, (padded_size.x - 2.0 * PAD) / padded_size.x))
 	_rect.material = _mat
 	add_child(_rect)
 

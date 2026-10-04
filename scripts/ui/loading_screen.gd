@@ -66,7 +66,7 @@ func _build() -> void:
 	_embers = CPUParticles2D.new()
 	_embers.amount = 26
 	_embers.lifetime = 5.5
-	_embers.preprocess = 5.5
+	_embers.preprocess = 0.0
 	_embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	_embers.emission_rect_extents = Vector2(420, 4)
 	_embers.direction = Vector2(0, -1)
