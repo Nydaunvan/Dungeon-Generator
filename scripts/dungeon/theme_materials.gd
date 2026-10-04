@@ -4,12 +4,13 @@ extends RefCounted
 ## Thèmes PNG (damp, lava, temple) : rendu net (pixel-art) ; thèmes JPEG : rendu lissé, répété 3x3.
 
 const PIXEL_THEMES := ["damp", "lava", "temple"]
-## Mur « pierre » en vrai matériau 3D (couleur + normales + occlusion/rugosité) : deux jeux de textures dans le projet,
+## Mur et sol « pierre » en vrai matériau 3D (couleur + normales + occlusion/rugosité) : deux jeux de textures dans le projet,
 ## 2048 px pour l'exécutable Windows (stone_hd) et 1024 px pour le Web et le mobile (stone_lite).
 ## Chaque export ne garde que son jeu (filtres d'exclusion dans export_presets.cfg) ; dans l'éditeur on choisit selon la plateforme.
 const STONE_HD := "res://assets/themes/stone_hd/"
 const STONE_LITE := "res://assets/themes/stone_lite/"
-const STONE_WALL_REPEAT := 2.0   # répétitions de la texture par pan de mur (entier : les pans voisins se raccordent)
+const STONE_WALL_REPEAT := 2.0    # répétitions de la texture par pan de mur (entier : les pans voisins se raccordent)
+const STONE_FLOOR_REPEAT := 1.0   # idem pour une case de sol
 static var _cache: Dictionary = {}
 
 static func for_theme(theme: String) -> Dictionary:
@@ -25,9 +26,12 @@ static func for_theme(theme: String) -> Dictionary:
 	if theme == "damp":
 		mats["wall"].uv1_scale = Vector3(2, 2, 1)
 	if theme == "stone":
-		var pbr := _stone_wall()
-		if pbr != null:
-			mats["wall"] = pbr
+		var wall := _stone_pbr("wall", STONE_WALL_REPEAT)
+		if wall != null:
+			mats["wall"] = wall
+		var floor_ := _stone_pbr("floor", STONE_FLOOR_REPEAT)
+		if floor_ != null:
+			mats["floor"] = floor_
 	_cache[theme] = mats
 	return mats
 
@@ -56,15 +60,16 @@ static func _stone_dir() -> String:
 			return d
 	return ""
 
-static func _stone_wall() -> StandardMaterial3D:
+## part : "wall" ou "floor" (fichiers <part>_albedo.jpg, <part>_normal.png, <part>_orm.jpg).
+static func _stone_pbr(part: String, repeat: float) -> StandardMaterial3D:
 	var d := _stone_dir()
-	if d == "":
+	if d == "" or not ResourceLoader.exists(d + part + "_albedo.jpg"):
 		return null
 	var m := StandardMaterial3D.new()
-	m.albedo_texture = load(d + "wall_albedo.jpg")
+	m.albedo_texture = load(d + part + "_albedo.jpg")
 	m.normal_enabled = true
-	m.normal_texture = load(d + "wall_normal.png")
-	var orm: Texture2D = load(d + "wall_orm.jpg")   # R = occlusion ambiante, G = rugosité
+	m.normal_texture = load(d + part + "_normal.png")
+	var orm: Texture2D = load(d + part + "_orm.jpg")   # R = occlusion ambiante, G = rugosité
 	m.ao_enabled = true
 	m.ao_texture = orm
 	m.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
@@ -75,7 +80,7 @@ static func _stone_wall() -> StandardMaterial3D:
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.texture_repeat = true
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	m.uv1_scale = Vector3(STONE_WALL_REPEAT, STONE_WALL_REPEAT, 1)
+	m.uv1_scale = Vector3(repeat, repeat, 1)
 	return m
 
 static func placeholder(color: Color) -> StandardMaterial3D:
