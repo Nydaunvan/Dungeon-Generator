@@ -429,6 +429,7 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	var lp := OrnatePanel.new(L.t("admin.levels.niveaux_du_donjon"))
 	layout.add_child(lp)
 	layout.left = lp
+	layout._adapt()
 	var link := RichTextLabel.new()
 	link.bbcode_enabled = true
 	link.fit_content = true

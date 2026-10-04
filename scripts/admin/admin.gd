@@ -86,6 +86,7 @@ func _layout() -> void:
 	_root.offset_top = UiMetrics.css(12.0)
 	_root.offset_bottom = -UiMetrics.css(10.0)
 	_header.rescale()
+	_fit_wide.call_deferred()
 
 func _nav(n: String) -> void:
 	match n:
@@ -342,6 +343,26 @@ func _select_tab(id: String) -> void:
 		"spells": AdminSpells.build(_content_host, self)
 		"items": AdminItems.build(_content_host, self)
 		"levels": AdminLevels.build(_content_host, self)
+	_fit_wide.call_deferred()
+
+## Écran étroit (portrait) : une case à cocher ou un texte plus large que la page passe à la ligne au lieu de la déborder.
+func _fit_wide() -> void:
+	if _scroll == null or not is_inside_tree():
+		return
+	# la largeur du ScrollContainer suit son contenu : on part de celle de la fenêtre
+	var avail := size.x - UiMetrics.css(28.0) - UiMetrics.css(80.0)
+	_wrap_wide(_content_host, avail)
+
+func _wrap_wide(n: Node, avail: float) -> void:
+	for ch in n.get_children():
+		if ch is ScrollContainer:
+			continue
+		if ch is Control and (ch is CheckBox or ch is Label) and (ch as Control).get_combined_minimum_size().x > avail:
+			(ch as Control).set("autowrap_mode", TextServer.AUTOWRAP_WORD_SMART)
+			(ch as Control).custom_minimum_size.x = avail
+			if ch is CheckBox:
+				(ch as CheckBox).alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_wrap_wide(ch, avail)
 
 ## Recharge l'onglet courant (après une modification qui change sa structure).
 func refresh_tab() -> void:

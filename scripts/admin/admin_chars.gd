@@ -223,8 +223,9 @@ static func action_btn(text: String, cb: Callable, primary: bool = false) -> But
 static func actions_row(parent: Control, buttons: Array) -> void:
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_top", int(cpx(10.0)))
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", int(cpx(8.0)))
+	var h := HFlowContainer.new()
+	h.add_theme_constant_override("h_separation", int(cpx(8.0)))
+	h.add_theme_constant_override("v_separation", int(cpx(8.0)))
 	for b in buttons:
 		h.add_child(b)
 	m.add_child(h)
