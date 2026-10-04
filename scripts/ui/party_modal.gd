@@ -254,6 +254,9 @@ func _spell_card(p: Control, sid: String, known: bool) -> void:
 	sb.content_margin_top = 10
 	sb.content_margin_bottom = 10
 	card.add_theme_stylebox_override("panel", sb)
+	card.mouse_entered.connect(func(): SpellTip.show_for(card, sp))
+	card.mouse_exited.connect(SpellTip.hide_tip)
+	card.tree_exiting.connect(SpellTip.hide_tip)
 	if not known:
 		card.modulate = Color(0.6, 0.58, 0.55, 0.5)
 	var v := VBoxContainer.new()

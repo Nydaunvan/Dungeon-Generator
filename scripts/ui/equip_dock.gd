@@ -730,6 +730,11 @@ func _build_drawer(c: Dictionary) -> Control:
 				var l := _label(L.fa(L.t("ui.equip_dock.endurance_recharge"), [("" if ic.begins_with("@icon:") else ic), sp.name, Interactions.spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))]), 13)
 				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				l.custom_minimum_size = Vector2(200, 0)
+				l.mouse_filter = Control.MOUSE_FILTER_STOP
+				var spell_def: Dictionary = sp
+				l.mouse_entered.connect(func(): SpellTip.show_for(l, spell_def))
+				l.mouse_exited.connect(SpellTip.hide_tip)
+				l.tree_exiting.connect(SpellTip.hide_tip)
 				_drawer_inner.add_child(l)
 	_drawer_clip.custom_minimum_size = Vector2(0, 0)
 	if details_open:

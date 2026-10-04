@@ -3,6 +3,7 @@ extends PanelContainer
 ## Infobulle de sort (nom + fiche technique), affichée au-dessus d'un bouton. Port de showCardSpellTip.
 
 static var _inst: SpellTip
+static var _layer: CanvasLayer
 
 var _label: RichTextLabel
 
@@ -47,17 +48,25 @@ static func _inst_for(host: Control) -> SpellTip:
 		_inst.visible = false
 		_inst.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_inst.z_index = 4000
-		_inst.add_theme_stylebox_override("panel", UiTheme.box(Color("140e08", 0.97), Color("8a6a3a"), 2, 6))
+		_inst.add_theme_stylebox_override("panel", FloatingTip.TipBox.new())
 		_inst._label = RichTextLabel.new()
 		_inst._label.bbcode_enabled = true
 		_inst._label.fit_content = true
 		_inst._label.scroll_active = false
 		_inst._label.custom_minimum_size = Vector2(260, 0)
 		_inst._label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_inst._label.add_theme_font_override("normal_font", UiTheme.font(UiTheme.F_BODY))
+		_inst._label.add_theme_font_override("bold_font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+		_inst._label.add_theme_color_override("default_color", Color("efe1c2"))
 		_inst._label.add_theme_font_size_override("normal_font_size", 14)
 		_inst._label.add_theme_font_size_override("bold_font_size", 15)
 		_inst.add_child(_inst._label)
-		host.get_tree().root.add_child(_inst)
+		# couche dédiée : sans elle l'infobulle serait dessinée SOUS les CanvasLayer de l'interface
+		_layer = CanvasLayer.new()
+		_layer.name = "SpellTipLayer"
+		_layer.layer = 210
+		_layer.add_child(_inst)
+		host.get_tree().root.add_child(_layer)
 	return _inst
 
 static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0) -> void:

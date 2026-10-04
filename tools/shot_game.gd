@@ -28,6 +28,9 @@ func _init() -> void:
 				main.wand.paused_if = func(): return true
 				var g: DungeonGrid = main.grid
 				var found := false
+				if args.has("monicon"):
+					for mm in main.level.monsters:
+						mm["icon"] = str(args.monicon)
 				var lst: Dictionary = main.ctrl.combat.lstate().monsters
 				for m in main.level.monsters:
 					var st: Dictionary = lst.get(str(m.id), {})
@@ -194,6 +197,27 @@ func _init() -> void:
 					root.warp_mouse(pos)
 					Input.parse_input_event(ev)
 				await create_timer(0.6).timeout
+			"spelltip":
+				var mage: Dictionary = main.gs.party[3]
+				main.gs.active_char_id = str(mage.id)
+				main.ctrl.refresh()
+				await create_timer(0.6).timeout
+				var sb: Control = main.layout.spell_bar._slots[int(args.get("slot", 0))]
+				var sp_pos := sb.get_global_rect().get_center()
+				var sev := InputEventMouseMotion.new()
+				sev.position = sp_pos
+				sev.global_position = sp_pos
+				root.warp_mouse(sp_pos)
+				Input.parse_input_event(sev)
+				await create_timer(0.8).timeout
+			"arcane":
+				var sid2 := str(args.get("spell", "spell_arc1"))
+				Engine.time_scale = 0.15
+				main._on_fx3d(sid2)
+				for i in int(args.get("frames", 30)):
+					await create_timer(0.2, true, false, true).timeout
+					root.get_texture().get_image().save_png(out + "_arc_%02d.png" % i)
+				Engine.time_scale = 1.0
 			"closedock":
 				main.dock.close()
 				await create_timer(0.5).timeout

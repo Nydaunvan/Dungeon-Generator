@@ -125,6 +125,7 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			add_child(node)
 			e = {"node": node, "halo": null, "idx": idx, "h": float(node.get_meta("h"))}
 			_nodes[key] = e
+			_sprite_mass(node)      # précalcule le centre visible (visée des sorts)
 		var h: float = e.h
 		var gap := maxf(2.6, h * 1.15)
 		var slot := float(pos) - float(n - 1) / 2.0
@@ -199,7 +200,8 @@ func pick(pos: Vector2) -> int:
 				best = int(e.idx)
 	return best
 
-## Point visé par les sorts : le combattant ciblé (ou le premier visible). {"pos": Vector3, "h": float} ou {} sans cible.
+## Point visé par les sorts : le CENTRE VISIBLE du combattant ciblé (ou du premier visible), quel que soit le monstre.
+## {"pos": Vector3, "h": float (hauteur visible), "w": float (largeur visible)} ou {} sans cible.
 func target_point() -> Dictionary:
 	var best: Dictionary = {}
 	for k in _nodes:
@@ -207,7 +209,71 @@ func target_point() -> Dictionary:
 		if not e.node.visible:
 			continue
 		if e.halo != null and e.halo.visible:
-			return {"pos": e.node.global_position, "h": float(e.h)}
+			return _visual_center(e)
 		if best.is_empty():
-			best = {"pos": e.node.global_position, "h": float(e.h)}
+			best = _visual_center(e)
 	return best
+
+static var _centroids: Dictionary = {}   # clé texture+cellule -> Rect2 (centre de masse en x,y ; taille visible en size)
+
+## Centre de masse des pixels opaques du sprite (les cases des planches ont de la marge transparente et des
+## ancrages différents : le centre du quad n'est pas le centre de la créature). Calculé une fois par sprite.
+func _visual_center(e: Dictionary) -> Dictionary:
+	var node: MeshInstance3D = e.node
+	var h: float = e.h
+	var info := _sprite_mass(node)           # centre (0..1, y vers le bas) et taille (0..1) de la partie visible
+	var right := camera.global_transform.basis.x if camera != null else Vector3.RIGHT
+	var up := camera.global_transform.basis.y if camera != null else Vector3.UP
+	var mirror := -1.0 if node.scale.x < 0.0 else 1.0
+	var c: Vector2 = info.center
+	var pos: Vector3 = node.global_position + right * ((c.x - 0.5) * h * mirror) + up * ((0.5 - c.y) * h)
+	return {"pos": pos, "h": h * float(info.size.y), "w": h * float(info.size.x)}
+
+static func _sprite_mass(node: MeshInstance3D) -> Dictionary:
+	var mat := node.material_override as StandardMaterial3D
+	if mat == null or mat.albedo_texture == null:
+		return {"center": Vector2(0.5, 0.5), "size": Vector2(0.6, 0.6)}
+	var tex: Texture2D = mat.albedo_texture
+	var key := "%d|%.4f|%.4f" % [tex.get_rid().get_id(), mat.uv1_offset.x, mat.uv1_offset.y]
+	if _centroids.has(key):
+		return _centroids[key]
+	var res := {"center": Vector2(0.5, 0.5), "size": Vector2(0.6, 0.6)}
+	var img := tex.get_image()
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var W := img.get_width()
+		var H := img.get_height()
+		# région de la cellule dans la planche (uv1_scale / uv1_offset)
+		var r := Rect2i(int(mat.uv1_offset.x * W), int(mat.uv1_offset.y * H), int(mat.uv1_scale.x * W), int(mat.uv1_scale.y * H))
+		r = r.intersection(Rect2i(0, 0, W, H))
+		if r.size.x > 0 and r.size.y > 0:
+			var sub := img.get_region(r)
+			var sc := 64.0 / float(maxi(sub.get_width(), sub.get_height()))
+			if sc < 1.0:
+				sub.resize(maxi(1, int(sub.get_width() * sc)), maxi(1, int(sub.get_height() * sc)), Image.INTERPOLATE_BILINEAR)
+			var sw := sub.get_width()
+			var sh := sub.get_height()
+			var sx := 0.0
+			var sy := 0.0
+			var tot := 0.0
+			var minx := sw
+			var maxx := 0
+			var miny := sh
+			var maxy := 0
+			for y in sh:
+				for x in sw:
+					var a := sub.get_pixel(x, y).a
+					if a > 0.35:
+						sx += x * a
+						sy += y * a
+						tot += a
+						minx = mini(minx, x)
+						maxx = maxi(maxx, x)
+						miny = mini(miny, y)
+						maxy = maxi(maxy, y)
+			if tot > 0.0:
+				res = {"center": Vector2((sx / tot + 0.5) / float(sw), (sy / tot + 0.5) / float(sh)),
+					"size": Vector2(float(maxx - minx + 1) / float(sw), float(maxy - miny + 1) / float(sh))}
+	_centroids[key] = res
+	return res
