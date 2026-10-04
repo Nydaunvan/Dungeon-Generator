@@ -221,11 +221,56 @@ func _init() -> void:
 					await create_timer(0.2, true, false, true).timeout
 					root.get_texture().get_image().save_png(out + "_arc_%02d.png" % i)
 				Engine.time_scale = 1.0
+			"shop":
+				main.gs.gold = int(args.get("gold", 250))
+				if args.has("bag"):
+					for i in 5:
+						main.gs.inventory.append({"id": "pp%d" % i, "type": "potion", "name": "Potion de soin", "icon": "@icon:potion_heal", "heal": 25})
+					main.gs.inventory.append({"id": "k1", "type": "key", "name": "Clé rouillée", "icon": "@icon:misc_key"})
+					main.gs.inventory.append({"id": "sc1", "type": "scroll", "name": "Parchemin de Boule de feu", "icon": "@icon:misc_scroll", "spellId": "spell_fire1"})
+					main.gs.inventory.append({"id": "w1", "type": "weapon", "weaponType": "sword", "name": "Épée de fer", "icon": "@icon:spr_1", "bonusAtkMin": 3, "bonusAtkMax": 6, "bonusForce": 1})
+				var mm: Dictionary = {"x": main.rig.gx, "y": main.rig.gy, "discovered": true, "offers": null}
+				main.inter.open_merchant(mm)
+				await create_timer(0.8).timeout
+				if args.has("tab"):
+					var want := str(args.tab)
+					for bt in _all_buttons(root):
+						if bt.text == want:
+							bt.button_pressed = true
+							bt.pressed.emit()
+							break
+					await create_timer(0.5).timeout
+				if args.has("pick"):
+					var pn := int(args.pick)
+					var cards := []
+					for bt in _all_buttons(root):
+						if bt.custom_minimum_size == Vector2(104, 118):
+							cards.append(bt)
+					if pn < cards.size():
+						cards[pn].pressed.emit()
+					await create_timer(0.5).timeout
+			"merch":
+				var g3: DungeonGrid = main.grid
+				for dd in 4:
+					var v3: Vector2i = DungeonGrid.DIRS[dd]
+					if g3.is_walkable(main.rig.gx + 2 * v3.x, main.rig.gy + 2 * v3.y) and g3.is_walkable(main.rig.gx + v3.x, main.rig.gy + v3.y):
+						main.rig.face(dd)
+						main.level_node.entities.add_merchant(main.rig.gx + v3.x * int(args.get("dist", 2)), main.rig.gy + v3.y * int(args.get("dist", 2)), false)
+						break
+				await create_timer(1.0).timeout
 			"closedock":
 				main.dock.close()
 				await create_timer(0.5).timeout
 		await _snap(out + "_" + step + ".png")
 	quit()
+
+func _all_buttons(n: Node) -> Array:
+	var out: Array = []
+	if n is Button:
+		out.append(n)
+	for c in n.get_children():
+		out.append_array(_all_buttons(c))
+	return out
 
 func _snap(path: String) -> void:
 	await process_frame

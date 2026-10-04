@@ -122,10 +122,11 @@ func add_npc(icon: String, x: int, y: int) -> void:
 func add_merchant(x: int, y: int, big: bool = false) -> void:
 	if merchant_node != null:
 		merchant_node.queue_free()
-	var n := _make_sprite("@icon:merchant", big, false)
+	var icon := "@icon:merchant" if big else "@icon:merchant_dungeon"   # le village garde son marchand d'origine
+	var n := _make_sprite(icon, big, false, 1.0 if big else 1.2)
 	if n == null:
 		return
-	_place_on_floor(n, Vector2i(x, y), "@icon:merchant")
+	_place_on_floor(n, Vector2i(x, y), icon)
 	add_child(n)
 	merchant_node = n
 
