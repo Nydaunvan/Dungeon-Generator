@@ -1,16 +1,20 @@
 class_name DocModal
 extends RefCounted
 ## Fenêtres de documentation : guide de l'aventurier, tutoriel de création et journal des versions.
-## Les textes viennent de data/help.json, data/tutorial.json et data/changelog.json (extraits du jeu HTML).
+## Les textes viennent de data/lang/help.<langue>.json, data/lang/tutorial.<langue>.json et data/changelog.json (extraits du jeu HTML).
 
 static var _cache: Dictionary = {}
 
+## `help` et `tutorial` ont un fichier par langue (data/lang/<nom>.<langue>.json) ; le journal des versions est unique.
 static func _load(name: String) -> Array:
-	if not _cache.has(name):
-		var f := FileAccess.open("res://data/%s.json" % name, FileAccess.READ)
+	var path := "res://data/%s.json" % name
+	if name != "changelog":
+		path = "res://data/lang/%s.%s.json" % [name, "en" if TranslationServer.get_locale().begins_with("en") else "fr"]
+	if not _cache.has(path):
+		var f := FileAccess.open(path, FileAccess.READ)
 		var parsed = JSON.parse_string(f.get_as_text()) if f != null else null
-		_cache[name] = parsed if parsed is Array else []
-	return _cache[name]
+		_cache[path] = parsed if parsed is Array else []
+	return _cache[path]
 
 static func _rich(text: String) -> RichTextLabel:
 	var r := RichTextLabel.new()
@@ -37,13 +41,12 @@ static func topics(host: Node, title: String, data_name: String, start_id: Strin
 	var doc := _rich("")
 	m.content.add_child(doc)
 	var group := ButtonGroup.new()
-	var en: bool = TranslationServer.get_locale().begins_with("en")
 	var show := func(i: int):
-		doc.text = str(items[i].get("textEn", items[i].text)) if en else str(items[i].text)
+		doc.text = str(items[i].text)
 		m.call_deferred("_fit")
 	for i in items.size():
 		var b := Button.new()
-		b.text = str(items[i].get("labelEn", items[i].label)) if en else str(items[i].label)
+		b.text = str(items[i].label)
 		b.toggle_mode = true
 		b.button_group = group
 		b.focus_mode = Control.FOCUS_NONE

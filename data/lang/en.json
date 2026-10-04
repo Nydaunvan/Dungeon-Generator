@@ -958,7 +958,8 @@
   "core.files.echec_enregistrement": "Saving failed.",
   "ui.equip_dock.jeter_definitivement": "Permanently discard %s? This cannot be undone, the item will be lost.",
   "ui.trap_modal.plafonnee": " (capped)",
-  "game.interactions.objet": "item"
+  "game.interactions.objet": "item",
+  "common.ok": "OK"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -1,0 +1,42 @@
+[
+ {
+  "id": "intro",
+  "label": "🧭 Overview",
+  "text": "[font_size=20][color=#e8b45c]🧭 Overview[/color][/font_size]\n\nThis tutorial guides you step by step to create your first playable dungeon, from the home screen (« Create your own dungeon » banner) to the first in-game test. It is also reachable via the « 🧭 New here? » link on the home screen.\n\nUnlike the 📖 Adventurer's guide (which explains how to [b]play[/b] a dungeon that's already built), this tutorial explains how to [b]build[/b] a dungeon in the admin.\n\n💡 This panel stays available at all times while you build, via the \"🧭 Tutorial\" button at the top of the admin.\n\n💡 The [b]Classes[/b], [b]Spells / Abilities[/b] and [b]Base items[/b] tabs carry a [b]🎲 shared[/b] badge: this catalog is also the random dungeon's, so saving it as the default configuration affects it too."
+ },
+ {
+  "id": "general",
+  "label": "1️⃣ General",
+  "text": "[font_size=20][color=#e8b45c]1️⃣ General tab[/color][/font_size]\n\nGive your dungeon a [b]title[/b], and set an [b]admin password[/b] if needed, in case you plan to share it.\n\nAlso set the global values: [b]stamina[/b] cost of attacks and spells, stamina gained per hit taken or per move, fountain recharge time, XP ratio granted for healing, and the chance for boss loot to be [b]✨ legendary[/b] in randomly generated dungeons."
+ },
+ {
+  "id": "chars",
+  "label": "2️⃣ Characters",
+  "text": "[font_size=20][color=#e8b45c]2️⃣ Characters tab[/color][/font_size]\n\nBuild the [b]starting party[/b]: [b]portrait[/b], icon, name, base class, stats and starting equipment (drawn from the item library defined in the Base items tab). The party is generated with the dungeon: you edit each character, but cannot add or remove any.\n\nThe button in the [b]Portrait[/b] column opens the grid of the 48 portraits, grouped by class (or « No portrait » to keep the class icon). The choice applies to every game mode and to the game in progress as well."
+ },
+ {
+  "id": "classes",
+  "label": "3️⃣ Classes",
+  "text": "[font_size=20][color=#e8b45c]3️⃣ Classes tab[/color][/font_size]\n\nAdjust the [b]base classes[/b] and their [b]evolutions[/b] (stats, allowed weapons, accessible spells). An evolved class is unlocked automatically in-game at a given level.\n\nEach class also shows its [b]talents[/b]: 5 tiers (levels 5/10/15/20/25), each with two editable choices (icon, name, description) and a dropdown to pick the associated bonus type (Strength, Critical, Resistance, Max HP...) with a free value — multiple effects can be combined on a single talent."
+ },
+ {
+  "id": "spells",
+  "label": "4️⃣ Spells / Abilities",
+  "text": "[font_size=20][color=#e8b45c]4️⃣ Spells / Abilities tab[/color][/font_size]\n\nCreate the [b]spells and special abilities[/b] usable in combat: damage, healing, status effect, matching animation. Set each one's [b]stamina cost[/b] and [b]cooldown[/b] — the more powerful a spell, the more it should cost and/or the slower it should recharge."
+ },
+ {
+  "id": "items",
+  "label": "5️⃣ Base items",
+  "text": "[font_size=20][color=#e8b45c]5️⃣ Base items tab[/color][/font_size]\n\nThis library is used for characters' [b]starting equipment[/b] (weapons, armor, jewelry, potions...). It's independent from levels: an item placed on the floor in a level is set separately, in the Levels tab.\n\nOn a weapon, armor, or jewelry item, a [b]✨ Legendary[/b] checkbox lets you hand-craft a unique item: choose its special bonus (Lifesteal, Critical, or Thorns) and its value."
+ },
+ {
+  "id": "levels",
+  "label": "6️⃣ Levels",
+  "text": "[font_size=20][color=#e8b45c]6️⃣ Levels tab[/color][/font_size]\n\nThis is where you build the [b]map[/b] for each level, sub-tab by sub-tab:\n\n🗺 [b]Map[/b]: paint walls and floors by clicking, place the starting point, stairs (exit or level change) and doors (locked or not).\n\n👹 [b]Monsters[/b]: add the level's monsters (stats, position, possible loot), and designate a boss if needed. The [b]Speed[/b] field determines how often it gets a turn in the combat initiative queue against the party (the higher the value, the more often it acts) — not to be confused with its [b]patrol zone[/b], which governs its autonomous movement through the corridor. The [b]Group[/b] checkbox lets you spawn 2 or 3 copies of the same monster side by side: they only count as a single turn slot, but have higher total HP and improved loot. A monster can't be both a boss and part of a group.\n\n💎 [b]Items[/b]: place potions (healing or stamina), weapons, armor, keys, traps (permanent spikes or single-use traps) directly on the map. Players can try to [b]pick them[/b]: chance and damage (as a % of max HP, the trap's fixed damage acting as a minimum) are set in the administration, “Traps — lockpicking” panel. A weapon, armor, or jewelry item can also be made [b]✨ legendary[/b] here, with its own special bonus.\n\n⚙ [b]Settings[/b]: the level's visual theme (walls/floor/ambient sound), starting position/direction, stairs, and an optional [b]🧙 traveling merchant[/b] specific to this level (position on the map, patrol radius, 6 or 8 sale slots picked from the item library — slots left empty are filled automatically via random generation).\n\nUse \"+ Add a level\" to chain several floors, connected by stairs.\n\n💡 A level larger than 100×100 isn't allowed (limit shown next to the Width/Height fields). Beyond 50×50, a loading indicator appears while these menus are prepared.\n\n👑 Ideally plan for one boss per level (tick the \"Boss\" checkbox on a monster): the victory screen doesn't require it, but it's more satisfying for the player. A dungeon with no boss at all is still playable, just less memorable.\n\n🧱 On the map, the brush refuses to paint a floor tile if it would create a 2×2 block of adjacent floor tiles (a \"room\") — a message explains it when that happens. Corridors must stay one tile wide, for consistency with the rest of the game.\n\n🚫 A monster can never be placed less than 2 tiles from a staircase (whether by hand or during random generation): the player should never run into a fight right after changing level.\n\n🧭 The \"Teleport the party here (tests)\" button, next to the starting point picker, instantly moves the current party anywhere on the displayed map (even to a different level) — handy for testing a specific area without walking there."
+ },
+ {
+  "id": "test",
+  "label": "7️⃣ Testing",
+  "text": "[font_size=20][color=#e8b45c]7️⃣ Testing your dungeon[/color][/font_size]\n\nThe [b]▶ Play this dungeon[/b] button, always visible at the top of the admin, launches a fresh game with the current configuration.\n\nOnce in-game, the [b]🛠 Admin[/b] button stays available in the menu bar: you can go back at any time to adjust your dungeon, then return exactly where you were with the [b]◀ Resume where you left off[/b] button — handy for testing your changes without losing progress.\n\n💡 Test regularly in small steps: add a room or a monster, play a few steps, adjust, repeat."
+ }
+]

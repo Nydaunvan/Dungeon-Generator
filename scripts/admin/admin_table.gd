@@ -12,7 +12,7 @@ static func create(parent: Control, headers: Array, min_widths: Array = []) -> G
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(sc)
-	var g := GridContainer.new()
+	var g := AdminGrid.new()
 	g.columns = headers.size()
 	g.add_theme_constant_override("h_separation", int(UiMetrics.css(10.0)))
 	g.add_theme_constant_override("v_separation", int(UiMetrics.css(8.0)))

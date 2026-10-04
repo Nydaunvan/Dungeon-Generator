@@ -5,7 +5,7 @@ extends RefCounted
 static func notice(host: Node, title: String, text: String) -> Modal:
 	var m := Modal.open(host, title, 420.0)
 	m.add_text(text, UiTheme.PARCH, 15)
-	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.ok"), "cb": func(): m.close()}])
 	return m
 
 static func _then(m: Modal, cb: Callable) -> Callable:
