@@ -1,16 +1,26 @@
 class_name TorchLayer
 extends Node3D
-## Torches murales. Toutes les torches du niveau ont la même flamme 3D en volume (shader animé), un halo et un
-## bougeoir illustré. Pour rester léger sur mobile / Web, ces éléments sont regroupés en quelques MultiMesh
-## (une poignée d'appels de dessin pour tout le niveau) et animés par le shader : aucun calcul par torche côté CPU.
+## Torches murales. Chaque torche est un vrai objet 3D (plaque murale, bras, anneau, manche incliné, tête enveloppée,
+## braise) qui porte une flamme 3D en volume (shader animé) et un halo. La flamme est posée à partir de la géométrie
+## de la torche (FLAME_BASE_LOCAL) : elle reste calée sur la tête quel que soit l'angle de vue.
+## Pour rester léger sur mobile / Web, tout est regroupé en quelques MultiMesh (une poignée d'appels de dessin
+## pour tout le niveau) et animé par le shader : aucun calcul par torche côté CPU.
 ## Seules les torches proches du joueur reçoivent en plus un « rig » mutualisé : vraie lumière vacillante,
 ## fumée légère qui s'évapore et étincelles rares.
 
-const SHEET := "res://assets/sheets/wall_torches.webp"
-const SHEET_COUNT := 5
-const THEME_MODEL := {"stone": 0, "dirt": 1, "damp": 2, "ruins": 3, "ice": 2, "lava": 0, "temple": 4, "village_forward": 4, "village_return": 2}
-const FLAME_ANCHOR := [Vector2(0.088, 0.273), Vector2(0.063, 0.273), Vector2(0.085, 0.273),
-	Vector2(0.092, 0.273), Vector2(0.088, 0.234)]
+# --- géométrie de la torche, repère local : origine = point d'accroche, +Y = haut, +Z = vers l'intérieur de la salle,
+# --- le mur est en Z = WALL_Z (les torches sont posées à 4 cm du mur)
+const WALL_Z := -0.04
+const SH_BOT := Vector3(0.0, -0.24, 0.045)     # bas du manche
+const SH_TOP := Vector3(0.0, 0.07, 0.175)      # haut du manche (incliné de ~23° vers l'avant)
+const HEAD_LEN := 0.07                         # la tête dépasse du manche de cette longueur
+const EMBER_Y := 0.012                         # épaisseur de la braise
+## Pied de la flamme : centre de la braise, au sommet de la tête (même repère local).
+static var FLAME_BASE_LOCAL: Vector3 = _ember_center() + Vector3(0.0, EMBER_Y - 0.006, 0.0)
+## Teinte du bois / fer par thème (multipliée dans la couleur des sommets).
+const TORCH_TINT := {"stone": Color(1, 1, 1), "dirt": Color(1.0, 0.92, 0.78), "damp": Color(0.82, 0.95, 0.88),
+	"ruins": Color(0.93, 0.9, 0.88), "ice": Color(0.78, 0.88, 1.0), "lava": Color(0.78, 0.68, 0.66),
+	"temple": Color(1.0, 0.9, 0.62), "village_forward": Color(1.0, 0.9, 0.62), "village_return": Color(0.82, 0.95, 0.88)}
 
 # --- réglages (à ajuster à l'œil) ---
 const POOL := 7                  # rigs (lumière + fumée + étincelles) en tout, dont ceux qui s'éteignent en fondu
@@ -20,7 +30,6 @@ const REFRESH := 0.15            # secondes entre deux réaffectations
 const FADE_SPEED := 2.2          # allumage / extinction d'un rig (≈ 0,45 s)
 const FLAME_H := 0.34            # hauteur de la flamme (m)
 const FLAME_R := 0.085           # rayon max de la flamme
-const FLAME_OFFSET := 0.11       # la flamme est tenue en avant du mur (sinon elle le traverse)
 const LIGHT_ENERGY := 1.1
 const LIGHT_RANGE := 7.5
 const SMOKE_ALPHA := 0.45        # opacité max de la fumée (légère mais lisible)
@@ -127,11 +136,11 @@ class TorchFx extends RefCounted:
 
 var light_scale := 1.0      # intensité des torches du niveau (réglage « lightTorch » de l'admin / 1,4)
 
-var _torches: Array = []    # {fpos, gpos, bowl_pos, model, rot, theme, flame, glow, light_color, light_k, rig}
+var _torches: Array = []    # {pos, fpos, gpos, rot, theme, flame, glow, light_color, light_k, rig}
 var _rigs: Array = []
 var _time: float = 0.0
 var _tick: float = 0.0
-static var _bowl_mats: Dictionary = {}
+static var _torch_mesh: ArrayMesh
 static var _flame_shader: Shader
 static var _glow_shader: Shader
 static var _flame_mesh: ArrayMesh
@@ -148,31 +157,28 @@ func _ready() -> void:
 func add_torch(pos: Vector3, rot: float, theme: String) -> void:
 	var cfg: Dictionary = Data.constants.get("CANDELABRA_THEME", {})
 	var c: Dictionary = cfg.get(theme, cfg.get("stone", {}))
-	var idx: int = THEME_MODEL.get(theme, 0)
-	# décalage latéral exprimé dans le repère du mur (même rotation que le JS)
-	var side := func(x: float, y: float) -> Vector3:
-		return Vector3(x * cos(rot), y, -x * sin(rot))
-	var anchor: Vector2 = FLAME_ANCHOR[idx]
+	var basis := Basis(Vector3.UP, rot)       # +Z local = vers l'intérieur de la salle
 	var flame_col := _hex(int(c.get("flame", 0xffb050)))
 	var glow_col := _hex(int(c.get("glow", 0xffb060)))
-	var inward := Vector3(sin(rot), 0.0, cos(rot))
+	var base := pos + basis * FLAME_BASE_LOCAL   # pied de la flamme = braise de la torche
 	_torches.append({
-		"fpos": pos + side.call(anchor.x, anchor.y - FLAME_H * 0.44) + inward * FLAME_OFFSET,   # pied de la flamme, tenu en avant du mur
-		"gpos": pos + side.call(anchor.x, anchor.y),
-		"bowl_pos": pos + side.call(0.09, -0.04 + (0.5 - 0.08) * 0.36),
-		"model": idx, "rot": rot, "theme": theme, "flame": flame_col, "glow": glow_col,
+		"pos": pos,
+		"fpos": base,
+		"gpos": base + Vector3(0.0, FLAME_H * 0.44, 0.0),
+		"rot": rot, "theme": theme, "flame": flame_col, "glow": glow_col,
 		"light_color": glow_col.lerp(flame_col, 0.35),
 		"light_k": clampf(float(c.get("glowOpacity", 0.75)) / 0.75, 0.6, 1.3),
 		"rig": null})
 
 # ---------------------------------------------------------------- lots (MultiMesh)
 
-## Regroupe toutes les torches en quelques MultiMesh : flamme + cœur + halo par thème, bougeoirs par modèle.
+## Regroupe toutes les torches en quelques MultiMesh : flamme + cœur + halo par thème, et un seul lot pour les torches 3D.
 func _build_batches() -> void:
 	if _torches.is_empty():
 		return
 	var by_theme := {}
-	var by_model := {}
+	var bodies: Array = []
+	var tints: Array = []
 	for t in _torches:
 		var th: String = t.theme
 		if not by_theme.has(th):
@@ -182,21 +188,29 @@ func _build_batches() -> void:
 		g.flame.append(Transform3D(b, t.fpos))
 		g.inner.append(Transform3D(b.scaled_local(Vector3(0.52, 0.72, 0.52)), t.fpos))
 		g.glow.append(Transform3D(Basis.IDENTITY, t.gpos))
-		var mi: int = t.model
-		if not by_model.has(mi):
-			by_model[mi] = []
-		by_model[mi].append(Transform3D(Basis.IDENTITY, t.bowl_pos))
+		bodies.append(Transform3D(b, t.pos))
+		tints.append(TORCH_TINT.get(th, Color.WHITE))
 	var glow_quad := QuadMesh.new()
 	glow_quad.size = Vector2(0.5, 0.5)
-	var bowl_quad := QuadMesh.new()
-	bowl_quad.size = Vector2(0.36, 0.36)
 	for th in by_theme:
 		var g: Dictionary = by_theme[th]
 		add_child(_multimesh(glow_quad, g.glow, _get_glow_mat(str(th), g.gc)))
 		add_child(_multimesh(_get_flame_mesh(), g.flame, _get_flame_mat(str(th), false, g.fc)))
 		add_child(_multimesh(_get_flame_mesh(), g.inner, _get_flame_mat(str(th), true, g.fc)))
-	for mi in by_model:
-		add_child(_multimesh(bowl_quad, by_model[mi], _bowl_material(int(mi))))
+	# torches 3D : matériaux portés par le maillage (bois / fer éclairés, braise lumineuse), teinte par instance
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = _get_torch_mesh()
+	mm.instance_count = bodies.size()
+	for i in bodies.size():
+		mm.set_instance_transform(i, bodies[i])
+		mm.set_instance_color(i, tints[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = "TorchBodies"
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mmi)
 
 static func _multimesh(mesh: Mesh, xforms: Array, mat: Material) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
@@ -493,18 +507,116 @@ static func _get_spark_mat() -> StandardMaterial3D:
 static func _hex(v: int) -> Color:
 	return Color.hex((v << 8) | 0xff)
 
-static func _bowl_material(idx: int) -> StandardMaterial3D:
-	if _bowl_mats.has(idx):
-		return _bowl_mats[idx]
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	m.billboard_keep_scale = true
-	m.albedo_texture = load(SHEET)
-	m.uv1_scale = Vector3(1.0 / SHEET_COUNT, 1.0, 1.0)
-	m.uv1_offset = Vector3(float(idx) / SHEET_COUNT, 0.0, 0.0)
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_bowl_mats[idx] = m
-	return m
+# ---------------------------------------------------------------- modèle 3D de la torche
+
+static func _shaft_axis() -> Vector3:
+	return (SH_TOP - SH_BOT).normalized()
+
+## Centre du dessus de la tête (prolongement du manche).
+static func _head_top() -> Vector3:
+	return SH_TOP + _shaft_axis() * HEAD_LEN
+
+## Centre de la braise : juste au-dessus de la calotte carbonisée.
+static func _ember_center() -> Vector3:
+	return _head_top() + _shaft_axis() * 0.012
+
+static func _get_torch_mesh() -> ArrayMesh:
+	if _torch_mesh != null:
+		return _torch_mesh
+	var wood := Color(0.27, 0.17, 0.09)
+	var cloth := Color(0.36, 0.27, 0.15)
+	var char_ := Color(0.07, 0.05, 0.035)
+	var iron := Color(0.17, 0.17, 0.18)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var ax := _shaft_axis()
+	# plaque murale + quatre rivets
+	_box(st, Vector3(0.0, 0.0, WALL_Z + 0.014 + 0.002), Vector3(0.055, 0.11, 0.014), iron)
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			var c := Vector3(0.03 * sx, 0.07 * sy, WALL_Z + 0.032)
+			_frustum(st, c, c + Vector3(0.0, 0.0, 0.008), 0.009, 0.006, 6, iron.lightened(0.12), true)
+	# bras horizontal, renfort en diagonale et anneau qui tient le manche
+	var ring_c := SH_BOT + ax * (0.21 / ax.y)         # point du manche à y = -0.03
+	_box(st, Vector3(0.0, -0.03, (WALL_Z + 0.03 + ring_c.z) * 0.5), Vector3(0.012, 0.012, (ring_c.z - WALL_Z - 0.03) * 0.5), iron)
+	_frustum(st, Vector3(0.0, -0.16, WALL_Z + 0.03), Vector3(0.0, -0.05, ring_c.z - 0.012), 0.010, 0.009, 6, iron, true)
+	_frustum(st, ring_c - ax * 0.016, ring_c + ax * 0.016, 0.033, 0.033, 12, iron, false)
+	# manche de bois, bagues de fer et pommeau
+	_frustum(st, SH_BOT - ax * 0.025, SH_BOT, 0.012, 0.021, 10, wood, true)
+	_frustum(st, SH_BOT, SH_TOP, 0.021, 0.026, 12, wood, true)
+	for k in [0.18, 0.4]:
+		var pc := SH_BOT.lerp(SH_TOP, k)
+		_frustum(st, pc - ax * 0.007, pc + ax * 0.007, 0.029, 0.029, 12, iron, false)
+	# tête : étoffe enroulée qui s'évase, cerclage de fer, calotte carbonisée
+	var h0 := SH_BOT.lerp(SH_TOP, 0.8)
+	var top := _head_top()
+	var mid := h0.lerp(top, 0.55)
+	_frustum(st, h0, mid, 0.029, 0.047, 12, cloth, true)
+	_frustum(st, mid, top, 0.047, 0.057, 12, cloth.darkened(0.25), true)
+	_frustum(st, top - ax * 0.026, top - ax * 0.012, 0.060, 0.060, 12, iron, false)
+	_frustum(st, top, top + ax * 0.012, 0.057, 0.050, 12, char_, true)
+	var body := st.commit()
+	# braise (surface lumineuse) : petit dôme horizontal au sommet de la tête
+	var em := SurfaceTool.new()
+	em.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var e0 := _ember_center()
+	_frustum(em, e0, e0 + Vector3(0.0, EMBER_Y, 0.0), 0.046, 0.026, 10, Color.WHITE, true)
+	em.commit(body)
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.82
+	mat.metallic_specular = 0.3
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	body.surface_set_material(0, mat)
+	var glow := StandardMaterial3D.new()
+	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	glow.albedo_color = Color(1.0, 0.45, 0.12)
+	body.surface_set_material(1, glow)
+	_torch_mesh = body
+	return body
+
+static func _v(st: SurfaceTool, p: Vector3, n: Vector3, c: Color) -> void:
+	st.set_color(c)
+	st.set_normal(n)
+	st.add_vertex(p)
+
+## Tronc de cône d'axe a→b (rayons ra, rb). Sens horaire vu de l'extérieur (face avant de Godot).
+static func _frustum(st: SurfaceTool, a: Vector3, b: Vector3, ra: float, rb: float, seg: int, c: Color, caps: bool) -> void:
+	var axis := (b - a)
+	var len_ := axis.length()
+	axis = axis / len_
+	var u := axis.cross(Vector3.RIGHT if absf(axis.x) < 0.9 else Vector3.UP).normalized()
+	var v := axis.cross(u)      # (u, v, axis) direct
+	u = v.cross(axis)
+	for i in seg:
+		var a0 := TAU * float(i) / seg
+		var a1 := TAU * float(i + 1) / seg
+		var r0 := u * cos(a0) + v * sin(a0)
+		var r1 := u * cos(a1) + v * sin(a1)
+		var n0 := (r0 * len_ + axis * (ra - rb)).normalized()
+		var n1 := (r1 * len_ + axis * (ra - rb)).normalized()
+		var pa0 := a + r0 * ra
+		var pa1 := a + r1 * ra
+		var pb0 := b + r0 * rb
+		var pb1 := b + r1 * rb
+		_v(st, pa0, n0, c); _v(st, pb0, n0, c); _v(st, pb1, n1, c)
+		_v(st, pa0, n0, c); _v(st, pb1, n1, c); _v(st, pa1, n1, c)
+		if caps:
+			_v(st, b, axis, c); _v(st, pb1, axis, c); _v(st, pb0, axis, c)
+			_v(st, a, -axis, c); _v(st, pa0, -axis, c); _v(st, pa1, -axis, c)
+
+## Boîte alignée sur les axes locaux (centre, demi-dimensions).
+static func _box(st: SurfaceTool, center: Vector3, h: Vector3, c: Color) -> void:
+	for n in [Vector3.RIGHT, Vector3.LEFT, Vector3.UP, Vector3.DOWN, Vector3.BACK, Vector3.FORWARD]:
+		var up := Vector3.UP if absf(n.y) < 0.5 else Vector3.BACK
+		var r: Vector3 = up.cross(n)
+		var hr := absf(r.x) * h.x + absf(r.y) * h.y + absf(r.z) * h.z
+		var hu := absf(up.x) * h.x + absf(up.y) * h.y + absf(up.z) * h.z
+		var hn := absf(n.x) * h.x + absf(n.y) * h.y + absf(n.z) * h.z
+		var o: Vector3 = center + n * hn
+		var bl := o - r * hr - up * hu
+		var tl := o - r * hr + up * hu
+		var tr := o + r * hr + up * hu
+		var br := o + r * hr - up * hu
+		_v(st, bl, n, c); _v(st, tl, n, c); _v(st, tr, n, c)
+		_v(st, bl, n, c); _v(st, tr, n, c); _v(st, br, n, c)

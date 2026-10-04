@@ -86,7 +86,6 @@
   ]
  },
  "sheets": {
-  "wall_torches": "assets/sheets/wall_torches.webp",
   "items_sheet": "assets/sheets/items_sheet.webp",
   "monsters_sheet": "assets/sheets/monsters_sheet.webp"
  },
