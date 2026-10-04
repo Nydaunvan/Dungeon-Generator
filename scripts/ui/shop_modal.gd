@@ -2,11 +2,11 @@ class_name ShopModal
 extends RefCounted
 ## Fenêtre de boutique (marchand ambulant ou marchand du village) : acheter, vendre, comparer avec l'équipement d'un personnage.
 
-const CATS := [["items", "Équipement"], ["potions", "Potions"], ["keys", "Clés et parchemins"]]
+const CATS := [["items", "common.equipement"], ["potions", "Potions"], ["keys", "ui.shop_modal.cles_et_parchemins"]]
 
 ## `offers` est modifié en place (les objets achetés disparaissent). `on_change` est appelé après chaque transaction.
 static func open(host: Node, gs: GameState, offers: Array, village: bool, on_change: Callable = Callable()) -> Modal:
-	var m := Modal.open(host, "Le Marchand" if village else "Le Marchand Itinérant", 760.0)
+	var m := Modal.open(host, L.t("ui.shop_modal.le_marchand") if village else L.t("ui.shop_modal.le_marchand_itinerant"), 760.0)
 	var st := {"tab": "buy", "cat": "items", "who": str(gs.active_char_id), "qty": {}, "msg": ""}
 	var gold := AdminUtil.label("", 17, UiTheme.GOLD)
 	m.content.add_child(gold)
@@ -33,13 +33,13 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 		refresh.call()
 
 	refresh = func():
-		gold.text = "%d pièces d'or" % gs.gold
+		gold.text = L.fa(L.t("ui.shop_modal.pieces_or"), gs.gold)
 		msg.text = str(st.msg)
 		for box in [who_bar, tab_bar, cat_bar, list]:
 			for ch in box.get_children():
 				ch.queue_free()
 		# personnage de comparaison
-		who_bar.add_child(AdminUtil.label("Comparer avec :", 13, UiTheme.DIM))
+		who_bar.add_child(AdminUtil.label(L.t("ui.shop_modal.comparer_avec"), 13, UiTheme.DIM))
 		var wg := ButtonGroup.new()
 		for c in gs.party:
 			var b := Button.new()
@@ -54,7 +54,7 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 				refresh.call())
 			who_bar.add_child(b)
 		var tg := ButtonGroup.new()
-		for t in [["buy", "Acheter"], ["sell", "Vendre"]]:
+		for t in [["buy", L.t("ui.shop_modal.acheter")], ["sell", L.t("ui.shop_modal.vendre")]]:
 			var b := Button.new()
 			b.text = t[1]
 			b.toggle_mode = true
@@ -70,7 +70,7 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 		var cg := ButtonGroup.new()
 		for c in CATS:
 			var b := Button.new()
-			b.text = ("Parchemins" if (village and c[0] == "keys") else c[1])
+			b.text = (L.t("common.parchemins") if (village and c[0] == "keys") else c[1])
 			b.toggle_mode = true
 			b.button_group = cg
 			b.button_pressed = st.cat == c[0]
@@ -83,7 +83,7 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 		_fill(list, gs, offers, st, done, refresh)
 		m.call_deferred("_fit")
 	refresh.call()
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m
 
 static func _tip(it: Dictionary, gs: GameState, who: String) -> String:
@@ -96,9 +96,9 @@ static func _tip(it: Dictionary, gs: GameState, who: String) -> String:
 		var eq: Dictionary = eq_v if eq_v is Dictionary else {}
 		lines.append("")
 		if eq.is_empty():
-			lines.append("%s n'a rien d'équipé à cet emplacement." % c.name)
+			lines.append(L.fa(L.t("ui.shop_modal.n_a_rien_equipe_a"), c.name))
 		else:
-			lines.append("Équipé sur %s : %s" % [c.name, eq.get("name", "?")])
+			lines.append(L.fa(L.t("ui.shop_modal.equipe_sur"), [c.name, eq.get("name", "?")]))
 			lines.append_array(Inventory.describe(eq, gs.cfg))
 	return "\n".join(lines)
 
@@ -125,7 +125,7 @@ static func _fill(list: VBoxContainer, gs: GameState, offers: Array, st: Diction
 	var buy: bool = st.tab == "buy"
 	var groups := _groups(offers if buy else gs.inventory, str(st.cat))
 	if groups.is_empty():
-		list.add_child(AdminUtil.label("Le marchand n'a plus rien à vendre pour cette visite." if buy else "Votre besace est vide.", 14, UiTheme.DIM))
+		list.add_child(AdminUtil.label(L.t("ui.shop_modal.le_marchand_n_a_plus") if buy else L.t("ui.shop_modal.votre_besace_est_vide"), 14, UiTheme.DIM))
 		return
 	for g in groups:
 		var rep: Dictionary = g.rep
@@ -142,7 +142,7 @@ static func _fill(list: VBoxContainer, gs: GameState, offers: Array, st: Diction
 		var info := VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		info.add_child(AdminUtil.label(("✨ " if rep.get("legendary", false) else "") + str(rep.get("name", "?")), 15, UiTheme.GOLD if rep.get("legendary", false) else UiTheme.PARCH))
-		var sub := AdminUtil.label(Shop.summary(rep, gs.cfg) + (" · %d en stock" % count if count > 1 else ""), 12, UiTheme.DIM)
+		var sub := AdminUtil.label(Shop.summary(rep, gs.cfg) + (L.fa(L.t("ui.shop_modal.en_stock"), count) if count > 1 else ""), 12, UiTheme.DIM)
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(sub)
 		row.add_child(info)
@@ -163,7 +163,7 @@ static func _fill(list: VBoxContainer, gs: GameState, offers: Array, st: Diction
 				row.add_child(sb)
 		var is_key: bool = (not buy) and str(rep.get("type", "")) == "key"
 		if is_key:
-			row.add_child(AdminUtil.label("Ne peut pas être vendue", 12, UiTheme.DIM))
+			row.add_child(AdminUtil.label(L.t("ui.shop_modal.ne_peut_pas_etre_vendue"), 12, UiTheme.DIM))
 		else:
 			var total := unit * qty
 			var pl := AdminUtil.label("%d or" % total, 15, UiTheme.GOLD)
@@ -171,7 +171,7 @@ static func _fill(list: VBoxContainer, gs: GameState, offers: Array, st: Diction
 			pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			row.add_child(pl)
 			var b := Button.new()
-			b.text = "Acheter" if buy else "Vendre"
+			b.text = L.t("ui.shop_modal.acheter") if buy else L.t("ui.shop_modal.vendre")
 			b.focus_mode = Control.FOCUS_NONE
 			b.disabled = buy and gs.gold < total
 			var take: Array = idxs.slice(0, qty)
@@ -188,12 +188,12 @@ static func _fill(list: VBoxContainer, gs: GameState, offers: Array, st: Diction
 					err = Shop.buy(gs, offers, int(ix), true) if buy else Shop.sell(gs, int(ix), true)
 					if err != "":
 						if buy and err.contains("plein"):
-							gs.add_log(err.trim_suffix(".") + ", impossible d'acheter davantage de ce type d'objet.")
+							gs.add_log(err.trim_suffix(".") + L.t("ui.shop_modal.impossible_acheter_davantage"))
 						break
 					bought += 1
 					paid += unit_p
 				if bought > 0:
-					gs.add_log("%s %s%s pour %d pièces d'or." % ["🛒 Le groupe achète" if buy else "💰 Le groupe vend", "%d× " % bought if bought > 1 else "", rep_name, paid])
+					gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [L.t("ui.shop_modal.le_groupe_achete") if buy else L.t("ui.shop_modal.le_groupe_vend"), "%d× " % bought if bought > 1 else "", rep_name, paid]))
 				st.qty.erase(gkey)
 				done.call(err if bought == 0 else ""))
 			row.add_child(b)

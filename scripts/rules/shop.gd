@@ -62,7 +62,7 @@ static func _armor_stats(run: int) -> Dictionary:
 
 static func _weapon_offer(run: int, min_base: int, spread: Array) -> Dictionary:
 	var wt: String = DungeonGenerator.WEAPON_TYPES[randi() % DungeonGenerator.WEAPON_TYPES.size()]
-	var fl := _flavor(DungeonGenerator.EQUIP_ICONS.get(wt, DungeonGenerator.EQUIP_ICONS.sword), "Arme du marchand")
+	var fl := _flavor(DungeonGenerator.EQUIP_ICONS.get(wt, DungeonGenerator.EQUIP_ICONS.sword), L.t("rules.shop.arme_du_marchand"))
 	var mn := min_base
 	var it := {"name": fl.name, "icon": fl.icon, "type": "weapon", "weaponType": wt, "bonusAtkMin": mn, "bonusAtkMax": mn + randi_range(spread[0], spread[1])}
 	it.merge(_weapon_bonus(wt, run), true)
@@ -73,7 +73,7 @@ static func _gear_offer(run: int) -> Dictionary:
 	var slot: String = slots[randi() % slots.size()]
 	var jewelry := slot == "accessory"
 	var key: String = "jewelry" if jewelry else slot
-	var fl := _flavor(DungeonGenerator.EQUIP_ICONS.get(key, DungeonGenerator.EQUIP_ICONS.body), "Bijou du marchand" if jewelry else "Équipement du marchand")
+	var fl := _flavor(DungeonGenerator.EQUIP_ICONS.get(key, DungeonGenerator.EQUIP_ICONS.body), L.t("rules.shop.bijou_du_marchand") if jewelry else L.t("rules.shop.equipement_du_marchand"))
 	var it := {"name": fl.name, "icon": fl.icon, "type": "jewelry" if jewelry else "armor"}
 	if not jewelry:
 		it["slot"] = slot
@@ -96,11 +96,11 @@ static func random_offers(cfg: Dictionary, run: int) -> Array:
 	for k in 2:
 		offers.append(_gear_offer(run))
 	for k in 2:
-		offers.append({"name": "Potion de soin", "icon": "@icon:potion_heal", "type": "potion", "heal": 8 + run * 2})
+		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 8 + run * 2})
 	var spells: Array = cfg.get("spells", [])
 	if not spells.is_empty():
 		var sp: Dictionary = spells[randi() % spells.size()]
-		offers.append({"name": "Parchemin de " + str(sp.name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": sp.id})
+		offers.append({"name": L.t("common.parchemin_de") + str(sp.name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": sp.id})
 	return _finish(offers, "shop_offer", false)
 
 ## Offres du marchand ambulant d'un niveau : objets choisis dans l'admin d'abord, puis complétés au hasard.
@@ -138,14 +138,14 @@ static func village_offers(cfg: Dictionary, run: int) -> Array:
 	var heal := randi_range(8, 15)
 	var sta := randi_range(8, 15)
 	for k in randi_range(1, 10):
-		offers.append({"name": "Potion de soin", "icon": "@icon:potion_heal", "type": "potion", "heal": heal})
+		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": heal})
 	for k in randi_range(1, 10):
-		offers.append({"name": "Potion d'endurance", "icon": "@icon:potion_endurance", "type": "potion", "staminaRestore": sta})
+		offers.append({"name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "type": "potion", "staminaRestore": sta})
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
 	spells.shuffle()
 	var n := mini(randi_range(1, 5), spells.size())
 	for i in n:
-		offers.append({"name": "Parchemin de " + str(spells[i].name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": spells[i].id})
+		offers.append({"name": L.t("common.parchemin_de") + str(spells[i].name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": spells[i].id})
 	return _finish(offers, "village_merchant_offer", true)
 
 # ------------------------------------------------------------------ transactions
@@ -156,31 +156,31 @@ static func buy(gs: GameState, offers: Array, idx: int, quiet: bool = false) -> 
 		return "Offre introuvable."
 	var o: Dictionary = offers[idx]
 	if gs.gold < int(o.price):
-		return "Pas assez d'or."
+		return L.t("common.pas_assez_or")
 	var inst: Dictionary = o.duplicate(true)
 	inst.erase("price")
 	inst["id"] = "bought_%d_%d" % [Time.get_ticks_msec(), randi() % 10000]
 	if not Inventory.add(gs, inst):
-		return "L'onglet %s de la besace est plein." % str(Inventory.TAB_LABELS.get(Inventory.tab_of(inst), ""))
+		return L.fa(L.t("rules.shop.l_onglet_de_la_besace"), str(Inventory.TAB_LABELS.get(Inventory.tab_of(inst), "")))
 	gs.gold -= int(o.price)
 	gs.stats["itemsBought"] = int(gs.stats.get("itemsBought", 0)) + 1
 	if not quiet:
-		gs.add_log("🛒 Le groupe achète %s pour %d pièces d'or." % [o.name, int(o.price)])
+		gs.add_log(L.fa(L.t("rules.shop.le_groupe_achete_pour_pieces"), [o.name, int(o.price)]))
 	offers.remove_at(idx)
 	return ""
 
 static func sell(gs: GameState, idx: int, quiet: bool = false) -> String:
 	if idx < 0 or idx >= gs.inventory.size():
-		return "Objet introuvable."
+		return L.t("rules.shop.objet_introuvable")
 	var it: Dictionary = gs.inventory[idx]
 	if str(it.get("type", "")) == "key":
-		return "Une clé ne peut jamais être vendue : elle pourrait encore servir."
+		return L.t("rules.shop.une_cle_ne_peut_jamais")
 	var p := sell_price(it)
 	gs.gold += p
 	gs.inventory.remove_at(idx)
 	gs.stats["itemsSold"] = int(gs.stats.get("itemsSold", 0)) + 1
 	if not quiet:
-		gs.add_log("💰 Le groupe vend %s pour %d pièces d'or." % [it.name, p])
+		gs.add_log(L.fa(L.t("rules.shop.le_groupe_vend_pour_pieces"), [it.name, p]))
 	return ""
 
 ## Résumé court des bonus (« Atq +2-4, PV +3 »).
@@ -188,15 +188,15 @@ static func summary(it: Dictionary, cfg: Dictionary) -> String:
 	var parts: Array = []
 	if int(it.get("bonusAtkMin", 0)) != 0 or int(it.get("bonusAtkMax", 0)) != 0:
 		parts.append("Atq +%d-%d" % [int(it.get("bonusAtkMin", 0)), int(it.get("bonusAtkMax", 0))])
-	for pair in [["bonusHp", "PV"], ["bonusSpellDmg", "Sort"], ["bonusForce", "For"], ["bonusDex", "Dex"], ["bonusCon", "Con"], ["bonusInt", "Int"], ["bonusSpeed", "Vit"]]:
+	for pair in [["bonusHp", L.t("common.pv")], ["bonusSpellDmg", L.t("common.sort")], ["bonusForce", L.t("common.for")], ["bonusDex", "Dex"], ["bonusCon", "Con"], ["bonusInt", "Int"], ["bonusSpeed", "Vit"]]:
 		if int(it.get(pair[0], 0)) != 0:
 			parts.append("%s +%d" % [pair[1], int(it[pair[0]])])
 	if int(it.get("heal", 0)) > 0:
 		parts.append("Soigne %d PV" % int(it.heal))
 	if int(it.get("staminaRestore", 0)) > 0:
-		parts.append("Rend %d endurance" % int(it.staminaRestore))
+		parts.append(L.fa(L.t("common.rend_endurance"), int(it.staminaRestore)))
 	if str(it.get("type", "")) == "scroll":
 		for sp in cfg.get("spells", []):
 			if sp.get("id") == it.get("spellId"):
 				parts.append("Invoque %s (x1)" % sp.name)
-	return ", ".join(parts) if not parts.is_empty() else "aucun bonus"
+	return ", ".join(parts) if not parts.is_empty() else L.t("rules.shop.aucun_bonus")

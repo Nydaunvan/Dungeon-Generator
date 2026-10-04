@@ -5,12 +5,12 @@ extends RefCounted
 
 ## [clé d'effet, libellé FR, libellé EN] (TALENT_EFFECT_DEFS de l'original).
 const EFFECT_DEFS := [
-	["bonusForce", "Force", "Strength"], ["bonusDex", "Dextérité", "Dexterity"], ["bonusCon", "Constitution", "Constitution"],
-	["bonusInt", "Intelligence", "Intelligence"], ["bonusHp", "PV max", "Max HP"], ["bonusStamina", "Endurance max", "Max stamina"],
-	["bonusAtkMin", "Dégâts min (arme)", "Min damage (weapon)"], ["bonusAtkMax", "Dégâts max (arme)", "Max damage (weapon)"],
-	["bonusSpellDmg", "Dégâts/soin de sort", "Spell power"], ["critChance", "% Chances de critique", "% Crit chance"],
-	["lifestealPct", "% Vol de vie", "% Lifesteal"], ["resistPhys", "% Résistance physique", "% Physical resistance"],
-	["resistMagic", "% Résistance magique", "% Magic resistance"],
+	["bonusForce", "common.force", "Strength"], ["bonusDex", "common.dexterite", "Dexterity"], ["bonusCon", "common.constitution", "common.constitution"],
+	["bonusInt", "common.intelligence", "common.intelligence"], ["bonusHp", "PV max", "Max HP"], ["bonusStamina", "common.endurance_max", "Max stamina"],
+	["bonusAtkMin", "admin.class_talents.degats_min_arme", "Min damage (weapon)"], ["bonusAtkMax", "admin.class_talents.degats_max_arme", "Max damage (weapon)"],
+	["bonusSpellDmg", "common.degats_soin_de_sort", "Spell power"], ["critChance", "admin.class_talents.chances_de_critique", "% Crit chance"],
+	["lifestealPct", "admin.class_talents.vol_de_vie", "% Lifesteal"], ["resistPhys", "admin.class_talents.resistance_physique", "% Physical resistance"],
+	["resistMagic", "admin.class_talents.resistance_magique", "% Magic resistance"],
 ]
 
 static func levels() -> Array:
@@ -72,7 +72,7 @@ static func section(parent: Control, admin: Node, cfg: Dictionary, cls: Dictiona
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", int(AdminChars.cpx(6.0)))
 	parent.add_child(box)
-	box.add_child(AdminChars.csection_label("🌟 Talents (choix à un palier de niveau, un par personnage de cette classe)"))
+	box.add_child(AdminChars.csection_label(L.t("admin.class_talents.talents_choix_a_un_palier")))
 	var tracks := ensure_track(cfg, str(cls.id))
 	var evolve_at := int(cls.get("evolveLevel", 0))
 	var evo_to: Array = cls.get("evolvesTo", [])
@@ -101,10 +101,10 @@ static func section(parent: Control, admin: Node, cfg: Dictionary, cls: Dictiona
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", int(AdminChars.cpx(3.0)))
 		frame.add_child(v)
-		var title := AdminChars.T("Niveau %d") % int(lvl)
+		var title := L.fa(AdminChars.T(L.t("common.niveau")), int(lvl))
 		var bb := "[color=#a9793a]%s[/color]" % title
 		if unreachable:
-			var warn := AdminChars.T("— ⚠️ inaccessible : %s évolue au niveau %d, seuls les talents de la classe évoluée compteront à partir de là") % [str(cls.get("name", "")), evolve_at]
+			var warn := L.fa(AdminChars.T(L.t("admin.class_talents.inaccessible_evolue_au_niveau")), [str(cls.get("name", "")), evolve_at])
 			bb += " [color=#ffd88a]%s[/color]" % warn.replace("[", "[lb]")
 		v.add_child(_rich(bb, 0.68))
 		var opts_box := VBoxContainer.new()
@@ -129,7 +129,7 @@ static func _option_row(parent: Control, admin: Node, o: Dictionary) -> void:
 	parent.add_child(row)
 	var f := AdminChars.flow(row, 4.0, 4.0)
 	f.add_child(AdminChars.icon_btn(admin, o, "icon", admin.refresh_tab))
-	for spec in [["Nom FR", "labelFr", 80.0, 0.66], ["Name EN", "labelEn", 80.0, 0.66], ["Desc. FR", "descFr", 100.0, 0.62], ["Desc. EN", "descEn", 100.0, 0.62]]:
+	for spec in [[L.t("admin.class_talents.nom_fr"), "labelFr", 80.0, 0.66], [L.t("admin.class_talents.name_en"), "labelEn", 80.0, 0.66], ["Desc. FR", "descFr", 100.0, 0.62], [L.t("admin.class_talents.desc_en"), "descEn", 100.0, 0.62]]:
 		var key: String = spec[1]
 		var e := AdminChars.line_edit(str(o.get(key, "")), float(spec[2]), float(spec[3]), 4.0, 2.0, str(spec[0]))
 		e.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -160,15 +160,15 @@ static func _option_row(parent: Control, admin: Node, o: Dictionary) -> void:
 		var on_val := func(val):
 			fx[key2] = val
 			return val
-		h.add_child(AdminChars.num_edit(fx[key2], 42.0, 0.65, on_val, 2.0, 2.0, false, "Valeur libre, positive ou négative"))
-		var del := AdminChars.small_btn("🗑", 0.65, 4.0, 1.0, "Retirer cet effet")
+		h.add_child(AdminChars.num_edit(fx[key2], 42.0, 0.65, on_val, 2.0, 2.0, false, L.t("admin.class_talents.valeur_libre_positive_ou_negative")))
+		var del := AdminChars.small_btn("🗑", 0.65, 4.0, 1.0, L.t("admin.class_talents.retirer_cet_effet"))
 		del.pressed.connect(func():
 			fx.erase(key2)
 			admin.refresh_tab())
 		h.add_child(del)
 		f.add_child(h)
 	if used.size() < EFFECT_DEFS.size():
-		var plus := AdminChars.small_btn("+", 0.65, 6.0, 2.0, "Ajouter un effet")
+		var plus := AdminChars.small_btn("+", 0.65, 6.0, 2.0, L.t("admin.class_talents.ajouter_un_effet"))
 		plus.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		plus.pressed.connect(func():
 			for d in EFFECT_DEFS:

@@ -8,36 +8,36 @@ var _label: RichTextLabel
 
 static func lines(spell: Dictionary) -> Array[String]:
 	var mode := str(spell.get("mode", "damage"))
-	var mode_label := "Dégâts"
+	var mode_label := L.t("common.degats")
 	match mode:
-		"healSingle": mode_label = "Soin sur un allié"
-		"healParty": mode_label = "Soin de groupe"
-		"staminaRestoreSingle": mode_label = "Restauration d'endurance sur un allié"
-		"damageGroup": mode_label = "Dégâts de zone (tout le groupe ennemi)"
-		"shieldSingle": mode_label = "Bouclier sur un allié"
-		"dispelSingle": mode_label = "Purification d'un allié"
+		"healSingle": mode_label = L.t("common.soin_sur_un_allie")
+		"healParty": mode_label = L.t("common.soin_de_groupe")
+		"staminaRestoreSingle": mode_label = L.t("common.restauration_endurance_sur_un")
+		"damageGroup": mode_label = L.t("common.degats_de_zone_tout_le")
+		"shieldSingle": mode_label = L.t("common.bouclier_sur_un_allie")
+		"dispelSingle": mode_label = L.t("common.purification_un_allie")
 	var value := ""
 	if mode == "healSingle" or mode == "healParty":
-		value = "Soin : %d – %d PV" % [int(spell.get("healMin", 0)), int(spell.get("healMax", 0))]
+		value = L.fa(L.t("ui.spell_tip.soin_pv"), [int(spell.get("healMin", 0)), int(spell.get("healMax", 0))])
 	elif mode == "staminaRestoreSingle":
-		value = "Endurance restaurée : %d – %d" % [int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0))]
+		value = L.fa(L.t("ui.spell_tip.endurance_restauree"), [int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0))])
 	elif mode == "damage" or mode == "damageGroup":
-		value = "Dégâts : %d – %d" % [int(spell.get("dmgMin", 0)), int(spell.get("dmgMax", 0))]
+		value = L.fa(L.t("ui.spell_tip.degats"), [int(spell.get("dmgMin", 0)), int(spell.get("dmgMax", 0))])
 		if mode == "damageGroup":
-			value += " (par cible touchée)"
+			value += L.t("ui.spell_tip.par_cible_touchee")
 		if bool(spell.get("ignoreAllResist", false)):
-			value += " — ignore toute résistance"
+			value += L.t("ui.spell_tip.ignore_toute_resistance")
 	var out: Array[String] = ["Type : " + mode_label]
 	if value != "":
 		out.append(value)
 	if int(spell.get("spellLifestealPct", 0)) > 0:
-		out.append("🩸 Vol de vie : %d%% des dégâts infligés restaurés en PV, immédiatement" % int(spell.spellLifestealPct))
+		out.append(L.fa(L.t("ui.spell_tip.vol_de_vie_des_degats"), int(spell.spellLifestealPct)))
 	var se := str(spell.get("statusEffect", ""))
 	if se != "" and not Statuses.def(se).is_empty():
 		var sd := Statuses.def(se)
 		var extra := " · %d/tour" % int(spell.statusPower) if int(spell.get("statusPower", 0)) > 0 else ""
-		out.append("Effet de statut : %s %s (%d%% · %d tour(s)%s)" % [sd.get("icon", ""), sd.get("label", se), int(spell.get("statusChance", 0)), int(spell.get("statusDuration", 0)), extra])
-	out.append("Endurance : %d — Recharge : %ds" % [int(spell.get("staminaCost", 15)), int(spell.get("cooldownSec", 6))])
+		out.append(L.fa(L.t("ui.spell_tip.effet_de_statut_tour"), [sd.get("icon", ""), sd.get("label", se), int(spell.get("statusChance", 0)), int(spell.get("statusDuration", 0)), extra]))
+	out.append(L.fa(L.t("ui.spell_tip.endurance_recharge_ds"), [int(spell.get("staminaCost", 15)), int(spell.get("cooldownSec", 6))]))
 	return out
 
 static func _inst_for(host: Control) -> SpellTip:
@@ -64,7 +64,7 @@ static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0) -
 	var t := _inst_for(host)
 	var txt := "[b][color=#e8b45c]%s[/color][/b]\n%s" % [str(spell.get("name", "")), "\n".join(lines(spell))]
 	if remaining_sec > 0:
-		txt += "\n⏳ Prêt dans %ds" % remaining_sec
+		txt += L.fa(L.t("ui.spell_tip.pret_dans_ds"), remaining_sec)
 	t._label.text = txt
 	t.size = Vector2.ZERO
 	t.visible = true

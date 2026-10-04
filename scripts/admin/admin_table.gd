@@ -20,7 +20,7 @@ static func create(parent: Control, headers: Array, min_widths: Array = []) -> G
 	sc.add_child(g)
 	for i in headers.size():
 		var l := Label.new()
-		l.text = str(headers[i]).to_upper()
+		l.text = L.u(str(headers[i]))
 		l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.62)))
 		l.add_theme_color_override("font_color", Color("b8893f"))
 		l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))

@@ -13,7 +13,7 @@ func setup(controller: CombatController) -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	tooltip_text = "Voir la fiche du monstre"
+	tooltip_text = L.t("ui.combat_banner.voir_la_fiche_du_monstre")
 	_normal = _style(Color("2a0e0a"))
 	_hover = _style(Color("3d140e"))
 	add_theme_stylebox_override("panel", _normal)

@@ -129,7 +129,7 @@ func _build() -> void:
 	# titre à lettrine
 	_title_box = Control.new()
 	_title_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var full_title := tr("Éditeur de Donjon")
+	var full_title := L.t("common.editeur_de_donjon")
 	var cap := _label(full_title.substr(0, 1), 108, Color("f1dfb8"), UiTheme.F_DISPLAY_BOLD)
 	cap.name = "cap"
 	var rest := _label(full_title.substr(1), 40, Color("f1dfb8"), UiTheme.F_DISPLAY)
@@ -140,19 +140,19 @@ func _build() -> void:
 		l.add_theme_constant_override("shadow_offset_y", 0)
 		l.add_theme_constant_override("shadow_outline_size", 10)
 		_title_box.add_child(l)
-	_tagline = _label("Créez, Explorez, Survivez", 17, Color("cbb083"), UiTheme.F_BODY_ITALIC)
+	_tagline = _label(L.t("ui.home_screen.creez_explorez_survivez"), 17, Color("cbb083"), UiTheme.F_BODY_ITALIC)
 
 	_seal = _make_seal()
 	_banners = [
-		_make_banner("banner_create.png", "Créer votre propre donjon", "Concevoir votre expédition de A à Z", "create", 89.0),
-		_make_banner("banner_origin.png", "Le Donjon d'Origine", "La démonstration officielle", "origin", 67.0),
-		_make_banner("banner_saves.png", "Sauvegardes", "Reprendre vos 10 parties", "saves", 67.0),
+		_make_banner("banner_create.png", L.t("ui.home_screen.creer_votre_propre_donjon"), L.t("ui.home_screen.concevoir_votre_expedition_de"), "create", 89.0),
+		_make_banner("banner_origin.png", L.t("common.le_donjon_origine"), L.t("ui.home_screen.la_demonstration_officielle"), "origin", 67.0),
+		_make_banner("banner_saves.png", L.t("ui.home_screen.sauvegardes"), L.t("ui.home_screen.reprendre_vos_10_parties"), "saves", 67.0),
 	]
-	_tuto = _link("Nouveau ici ? Suivre le tutoriel de création", "tutorial", 13)
+	_tuto = _link(L.t("ui.home_screen.nouveau_ici_suivre_le_tutoriel"), "tutorial", 13)
 	_links = VBoxContainer.new()
 	_links.add_theme_constant_override("separation", 5)
-	_links.add_child(_link("Charger un donjon depuis un code", "load-code", 13))
-	_links.add_child(_link("Importer un fichier JSON", "import-json", 13))
+	_links.add_child(_link(L.t("common.charger_un_donjon_depuis_un"), "load-code", 13))
+	_links.add_child(_link(L.t("common.importer_un_fichier_json"), "import-json", 13))
 
 	_foot = PanelContainer.new()
 	var fs := StyleBoxFlat.new()
@@ -165,7 +165,7 @@ func _build() -> void:
 	fv.alignment = BoxContainer.ALIGNMENT_CENTER
 	fv.add_theme_constant_override("separation", 6)
 	_foot.add_child(fv)
-	var ver := _link(tr("Éditeur de Donjon") + " v1.29 · " + tr("portage Godot"), "changelog", 14)
+	var ver := _link(L.t("common.editeur_de_donjon") + " v1.29 · " + L.t("common.portage_godot"), "changelog", 14)
 	ver.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	fv.add_child(ver)
 	var made := _label("Made by Claude & Nydaunvan", 13, Color("9c8659"), UiTheme.F_BODY_ITALIC)
@@ -204,7 +204,7 @@ func _make_seal() -> Control:
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(pic)
-	var t := _label("Donjon\naléatoire", 24, Color("f2ddc4"), UiTheme.F_DISPLAY_BOLD)
+	var t := _label(L.t("ui.home_screen.donjon_aleatoire"), 24, Color("f2ddc4"), UiTheme.F_DISPLAY_BOLD)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	t.anchor_left = 0.08
@@ -212,7 +212,7 @@ func _make_seal() -> Control:
 	t.anchor_top = 127.0 / 280.0
 	t.anchor_bottom = 187.0 / 280.0
 	root.add_child(t)
-	var s := _label("jamais deux fois pareil", 13, Color("e6d6b2"), UiTheme.F_DISPLAY)
+	var s := _label(L.t("ui.home_screen.jamais_deux_fois_pareil"), 13, Color("e6d6b2"), UiTheme.F_DISPLAY)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	s.anchor_left = 0.08
 	s.anchor_right = 0.92

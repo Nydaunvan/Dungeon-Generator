@@ -7,7 +7,7 @@ signal item_pressed(index: int)
 const CAPACITY := Inventory.MAX_PER_TAB
 const TAB_IDS := ["items", "potions", "keys"]
 const TAB_EMOJI := ["⚒️", "🧪", "🗝️"]
-const EMPTY := ["Aucun objet équipable.", "Aucune potion.", "Aucune clé ni parchemin."]
+const EMPTY := ["ui.bag_panel.aucun_objet_equipable", "ui.bag_panel.aucune_potion", "ui.bag_panel.aucune_cle_ni_parchemin"]
 var gs: GameState
 var _gold: Label
 var _count: Label
@@ -94,7 +94,7 @@ func select_tab_of(it: Dictionary) -> void:
 	refresh()
 
 func refresh() -> void:
-	_gold.text = "💰 %d pièces d'or" % gs.gold
+	_gold.text = L.fa(L.t("common.pieces_or"), gs.gold)
 	_count.text = "🎒 %d/%d" % [Inventory.tab_count(gs, TAB_IDS[_tab]), CAPACITY]
 	for i in _tab_buttons.size():
 		_tab_buttons[i].set_pressed_no_signal(i == _tab)

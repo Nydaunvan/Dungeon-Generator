@@ -35,10 +35,17 @@ func set_lang(l: String) -> void:
 signal lang_changed(l: String)
 
 func _apply_locale() -> void:
-	if TranslationServer.get_translation_object("en") == null or not (TranslationServer.get_translation_object("en") is EnTranslation):
-		var tr_en := EnTranslation.new()
-		tr_en.load_dictionary("res://data/i18n_en.json")
-		TranslationServer.add_translation(tr_en)
+	if TranslationServer.get_translation_object("fr") == null or not (TranslationServer.get_translation_object("fr") is LangTranslation):
+		var fr_content: Dictionary = {}
+		var ff := FileAccess.open("res://data/lang/fr.json", FileAccess.READ)
+		if ff != null:
+			var fd = JSON.parse_string(ff.get_as_text())
+			if fd is Dictionary:
+				fr_content = fd.get("content", {})
+		for code in ["fr", "en"]:
+			var t := LangTranslation.new()
+			t.load_language(code, fr_content)
+			TranslationServer.add_translation(t)
 	TranslationServer.set_locale("en" if lang == "en" else "fr")
 
 func _ready() -> void:
@@ -163,7 +170,7 @@ func launch_import(data: Dictionary) -> bool:
 	var d: Dictionary = data.duplicate(true)
 	if has_cfg:
 		ensure_defaults(d.config)
-	d["log"] = "📂 Sauvegarde importée depuis un fichier."
+	d["log"] = L.t("core.data.sauvegarde_importee_depuis_un")
 	if (d.get("save") is Dictionary) and not (d.save as Dictionary).is_empty():
 		launch_save(d, ADMIN_UNLOCK if has_cfg else ADMIN_AUTO)
 		return true
@@ -181,6 +188,11 @@ func launch_original() -> void:
 ## des personnages et l'état des niveaux sur la partie, puis rouvre la scène de jeu — sans écrire « Partie chargée ».
 func resume_from_admin() -> void:
 	_resume(true)
+
+## Changement de langue en pleine partie : la partie est suspendue puis rouverte telle quelle, textes dans la nouvelle langue.
+func reload_game(snap: Dictionary) -> void:
+	resume_game = snap
+	_resume(false)
 
 func _resume(persist: bool) -> void:
 	var g := resume_game
@@ -202,8 +214,8 @@ func _resume(persist: bool) -> void:
 
 # ------------------------------------------------------------------ API pour l'onglet Niveaux (partie suspendue)
 
-const MSG_NO_RUN := "Aucune partie en cours — lancez ou reprenez une partie avant de téléporter le groupe."
-const MSG_LEVEL_NOT_IN_RUN := "Ce niveau ne fait pas partie de la partie en cours."
+const MSG_NO_RUN := "common.aucune_partie_en_cours_lancez"
+const MSG_LEVEL_NOT_IN_RUN := "core.data.ce_niveau_ne_fait_pas"
 
 ## Une partie suspendue existe (admin ouvert depuis le jeu).
 func admin_has_run() -> bool:

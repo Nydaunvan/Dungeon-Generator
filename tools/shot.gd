@@ -20,4 +20,5 @@ func _init() -> void:
 	await process_frame
 	var img := root.get_texture().get_image()
 	img.save_png(str(args.get("out", "/tmp/shot.png")))
+	ScanUtil.dump(root, str(args.get("out", "/tmp/shot.png")).replace(".png", ".txt"))
 	quit()

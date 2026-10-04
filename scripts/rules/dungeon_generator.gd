@@ -66,7 +66,7 @@ static func rand_f1(a: float, b: float) -> float:
 	return roundf((randf() * (b - a) + a) * 10.0) / 10.0
 
 static func title() -> String:
-	return "Les %s %s %s" % [choice(TITLE_NOUNS), choice(TITLE_ADJ), choice(TITLE_PLACES)]
+	return L.t("rules.dungeon_generator.les").format({"noun": L.c(choice(TITLE_NOUNS)), "adj": L.c(choice(TITLE_ADJ)), "place": L.c(choice(TITLE_PLACES))})
 
 static func run_modifiers() -> Array:
 	return Data.constants.get("RUN_MODIFIERS", [])
@@ -356,16 +356,16 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			var room: Dictionary = choice(behind)
 			used[_key(room.x, room.y)] = true
 			if not mod.noFountains and randf() < 0.4:
-				items.append({"id": "reward_fountain_%d" % i, "name": "Fontaine cachée", "icon": "@icon:misc_fountain", "x": room.x, "y": room.y, "type": "fountain"})
+				items.append({"id": "reward_fountain_%d" % i, "name": L.t("rules.dungeon_generator.fontaine_cachee"), "icon": "@icon:misc_fountain", "x": room.x, "y": room.y, "type": "fountain"})
 				fountain_here = true
 				since_fountain = 0
 			else:
 				var rtype: String = choice(["weapon", "armor", "jewelry"])
 				var reward: Dictionary
 				match rtype:
-					"weapon": reward = make_weapon("reward_item_%d" % i, "Arme de la salle secrète", room.x, room.y, 4 + i * 2 + run_bonus, 6 + i * 2 + run_bonus * 2, 1.35)
-					"armor": reward = make_armor("reward_item_%d" % i, "Équipement de la salle secrète", room.x, room.y, 1.35)
-					_: reward = make_jewelry("reward_item_%d" % i, "Bijou de la salle secrète", room.x, room.y, 1.35)
+					"weapon": reward = make_weapon("reward_item_%d" % i, L.t("rules.dungeon_generator.arme_de_la_salle_secrete"), room.x, room.y, 4 + i * 2 + run_bonus, 6 + i * 2 + run_bonus * 2, 1.35)
+					"armor": reward = make_armor("reward_item_%d" % i, L.t("rules.dungeon_generator.equipement_de_la_salle_secrete"), room.x, room.y, 1.35)
+					_: reward = make_jewelry("reward_item_%d" % i, L.t("rules.dungeon_generator.bijou_de_la_salle_secrete"), room.x, room.y, 1.35)
 				var base_pct: float = 55.0 if difficulty == "hardcore" else (35.0 if difficulty == "hard" else float(cfg.get("legendaryChancePct", 25)) * 0.9)
 				if randf() < minf(1.0, base_pct * run_escalation / 100.0):
 					apply_legendary(reward)
@@ -483,25 +483,25 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			for pi in randi_range(1, 2):
 				var r: Dictionary = take.call()
 				if not r.is_empty():
-					items.append({"id": "pot_gen_%d_%d_%d" % [i, lr, pi], "name": "Potion de soin", "icon": "@icon:potion_heal", "x": r.x, "y": r.y, "type": "potion", "heal": 6 + heal_tier * 4 + run_bonus})
+					items.append({"id": "pot_gen_%d_%d_%d" % [i, lr, pi], "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": r.x, "y": r.y, "type": "potion", "heal": 6 + heal_tier * 4 + run_bonus})
 		if randf() < minf(1.0, 0.5 * item_mult):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
-				items.append({"id": "pot_sta_gen_%d_%d" % [i, lr], "name": "Potion d'endurance", "icon": "@icon:potion_endurance", "x": r.x, "y": r.y, "type": "potion", "staminaRestore": 12 + sta_tier * 6 + run_bonus * 2})
+				items.append({"id": "pot_sta_gen_%d_%d" % [i, lr], "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": r.x, "y": r.y, "type": "potion", "staminaRestore": 12 + sta_tier * 6 + run_bonus * 2})
 		if randf() < minf(1.0, 0.85 * item_mult):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
-				items.append(make_weapon("wp_gen_%d_%d" % [i, lr], "Arme trouvée", r.x, r.y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2))
+				items.append(make_weapon("wp_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.arme_trouvee"), r.x, r.y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2))
 				equip_here = true
 		if randf() < minf(1.0, 0.75 * item_mult):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
-				items.append(make_armor("ar_gen_%d_%d" % [i, lr], "Équipement trouvé", r.x, r.y))
+				items.append(make_armor("ar_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.equipement_trouve"), r.x, r.y))
 				equip_here = true
 		if randf() < 0.65:
 			var r: Dictionary = take.call()
 			if not r.is_empty():
-				items.append(make_jewelry("jw_gen_%d_%d" % [i, lr], "Bijou trouvé", r.x, r.y))
+				items.append(make_jewelry("jw_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
 				equip_here = true
 	for ti in randi_range(2, 3):
 		var r: Dictionary = take.call()
@@ -513,21 +513,21 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		var r: Dictionary = take.call()
 		if not r.is_empty():
 			match choice(["weapon", "armor", "jewelry"]):
-				"weapon": items.append(make_weapon("wp_gen_%d_force" % i, "Arme trouvée", r.x, r.y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2))
-				"armor": items.append(make_armor("ar_gen_%d_force" % i, "Équipement trouvé", r.x, r.y))
-				_: items.append(make_jewelry("jw_gen_%d_force" % i, "Bijou trouvé", r.x, r.y))
+				"weapon": items.append(make_weapon("wp_gen_%d_force" % i, L.t("rules.dungeon_generator.arme_trouvee"), r.x, r.y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2))
+				"armor": items.append(make_armor("ar_gen_%d_force" % i, L.t("rules.dungeon_generator.equipement_trouve"), r.x, r.y))
+				_: items.append(make_jewelry("jw_gen_%d_force" % i, L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
 	if not key_placed.is_empty():
-		items.append({"id": "key_gen_%d" % i, "name": "Clé trouvée", "icon": "@icon:misc_key", "x": key_placed.x, "y": key_placed.y, "type": "key", "opensDoorId": key_placed.doorId})
+		items.append({"id": "key_gen_%d" % i, "name": L.t("rules.dungeon_generator.cle_trouvee"), "icon": "@icon:misc_key", "x": key_placed.x, "y": key_placed.y, "type": "key", "opensDoorId": key_placed.doorId})
 	var spells: Array = cfg.get("spells", [])
 	if not spells.is_empty() and randf() < 0.4:
 		var r: Dictionary = take.call()
 		if not r.is_empty():
 			var sp: Dictionary = choice(spells)
-			items.append({"id": "scroll_gen_%d" % i, "name": "Parchemin de " + str(sp.name), "icon": "@icon:misc_scroll", "x": r.x, "y": r.y, "type": "scroll", "spellId": sp.id})
+			items.append({"id": "scroll_gen_%d" % i, "name": L.t("common.parchemin_de") + str(sp.name), "icon": "@icon:misc_scroll", "x": r.x, "y": r.y, "type": "scroll", "spellId": sp.id})
 	if not fountain_here and not mod.noFountains and (i == 0 or since_fountain >= 2 or randf() < 0.45):
 		var r: Dictionary = take.call()
 		if not r.is_empty():
-			items.append({"id": "fountain_gen_%d" % i, "name": "Fontaine de vie", "icon": "@icon:misc_fountain", "x": r.x, "y": r.y, "type": "fountain"})
+			items.append({"id": "fountain_gen_%d" % i, "name": L.t("rules.dungeon_generator.fontaine_de_vie"), "icon": "@icon:misc_fountain", "x": r.x, "y": r.y, "type": "fountain"})
 			fountain_here = true
 	since_fountain = 0 if fountain_here else since_fountain + 1
 
@@ -541,11 +541,11 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		var lid := "loot_%d_%d" % [i, li]
 		var loot: Dictionary
 		match choice(["potion", "potion_sta", "weapon", "armor", "jewelry"]):
-			"potion": loot = {"id": lid, "name": "Potion de soin", "icon": "@icon:potion_heal", "x": sx, "y": sy, "type": "potion", "heal": 5 + i * 2 + run_bonus}
-			"potion_sta": loot = {"id": lid, "name": "Potion d'endurance", "icon": "@icon:potion_endurance", "x": sx, "y": sy, "type": "potion", "staminaRestore": 10 + i * 3 + run_bonus * 2}
-			"weapon": loot = make_weapon(lid, "Arme du butin", sx, sy, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2)
-			"armor": loot = make_armor(lid, "Équipement du butin", sx, sy)
-			_: loot = make_jewelry(lid, "Bijou du butin", sx, sy)
+			"potion": loot = {"id": lid, "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": sx, "y": sy, "type": "potion", "heal": 5 + i * 2 + run_bonus}
+			"potion_sta": loot = {"id": lid, "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": sx, "y": sy, "type": "potion", "staminaRestore": 10 + i * 3 + run_bonus * 2}
+			"weapon": loot = make_weapon(lid, L.t("rules.dungeon_generator.arme_du_butin"), sx, sy, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2)
+			"armor": loot = make_armor(lid, L.t("rules.dungeon_generator.equipement_du_butin"), sx, sy)
+			_: loot = make_jewelry(lid, L.t("rules.dungeon_generator.bijou_du_butin"), sx, sy)
 		loot["startHidden"] = true
 		items.append(loot)
 		mon["lootItemId"] = lid
@@ -556,9 +556,9 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var legend_pct: float = 100.0 if mod.forceLegendary else minf(100.0, roundf(legend_base * run_escalation))
 	var boss_loot: Dictionary
 	match choice(["weapon", "armor", "jewelry"]):
-		"weapon": boss_loot = make_weapon("loot_boss_%d" % i, "Butin du gardien", sx, sy, 3 + i * 2 + run_bonus, 5 + i * 2 + run_bonus * 2)
-		"armor": boss_loot = make_armor("loot_boss_%d" % i, "Butin du gardien", sx, sy, 1.3)
-		_: boss_loot = make_jewelry("loot_boss_%d" % i, "Butin du gardien", sx, sy, 1.3)
+		"weapon": boss_loot = make_weapon("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 3 + i * 2 + run_bonus, 5 + i * 2 + run_bonus * 2)
+		"armor": boss_loot = make_armor("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 1.3)
+		_: boss_loot = make_jewelry("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 1.3)
 	boss_loot["startHidden"] = true
 	if randf() < legend_pct / 100.0:
 		apply_legendary(boss_loot)
@@ -570,7 +570,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var exit_stairs: Dictionary = stairs[0]
 	if exit_stairs.action.type == "level":
 		exit_stairs["locked"] = true
-		var key_item := {"id": "key_exit_%d" % i, "name": "Clé de l'arche", "icon": "@icon:misc_key", "x": sx, "y": sy, "type": "key", "opensDoorId": exit_stairs.id, "startHidden": true}
+		var key_item := {"id": "key_exit_%d" % i, "name": L.t("rules.dungeon_generator.cle_de_l_arche"), "icon": "@icon:misc_key", "x": sx, "y": sy, "type": "key", "opensDoorId": exit_stairs.id, "startHidden": true}
 		items.append(key_item)
 		boss["lootItemId2"] = key_item.id
 		boss["lootChance2"] = 100
@@ -587,7 +587,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var rows: Array = []
 	for row in grid:
 		rows.append("".join(row))
-	return {"id": ids[i], "name": "Niveau %d" % (i + 1), "theme": theme, "mapRows": rows, "startX": sx, "startY": sy, "startDir": start_dir,
+	return {"id": ids[i], "name": L.fa(L.t("common.niveau"), (i + 1)), "theme": theme, "mapRows": rows, "startX": sx, "startY": sy, "startDir": start_dir,
 		"stairs": stairs, "doors": doors, "monsters": monsters, "items": items,
 		"_fwdX": far.x, "_fwdY": far.y, "_since_fountain": since_fountain}
 

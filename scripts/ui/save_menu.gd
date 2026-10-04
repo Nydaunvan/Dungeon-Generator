@@ -9,7 +9,7 @@ signal new_pressed
 signal export_pressed
 signal import_pressed
 
-const HELP := "3 emplacements disponibles pour garder plusieurs parties en parallèle. « Exporter » télécharge un fichier JSON complet à conserver ou réimporter plus tard."
+const HELP := "ui.save_menu.3_emplacements_disponibles_pour"
 
 var _layer: CanvasLayer
 var _catcher: Control
@@ -22,7 +22,7 @@ var locked: bool = false:
 			_close()
 
 func _init() -> void:
-	text = "💾 Sauvegarde"
+	text = L.t("ui.save_menu.sauvegarde")
 	focus_mode = Control.FOCUS_NONE
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
 	custom_minimum_size = Vector2(0, UiMetrics.css(44.0))
@@ -67,8 +67,8 @@ func _build() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", int(UiMetrics.css(6.0)))
 	_dd.add_child(v)
-	v.add_child(_item("💾 Emplacements de sauvegarde", slots_pressed))
-	v.add_child(_item("🔄 Nouveau", new_pressed))
+	v.add_child(_item(L.t("common.emplacements_de_sauvegarde"), slots_pressed))
+	v.add_child(_item(L.t("ui.save_menu.nouveau"), new_pressed))
 	var hr := ColorRect.new()
 	hr.color = Color("070504")
 	hr.custom_minimum_size = Vector2(0, 2)
@@ -77,8 +77,8 @@ func _build() -> void:
 	hr_box.add_theme_constant_override("margin_bottom", int(UiMetrics.css(2.0)))
 	hr_box.add_child(hr)
 	v.add_child(hr_box)
-	v.add_child(_item("⬇ Exporter", export_pressed))
-	v.add_child(_item("⬆ Importer", import_pressed))
+	v.add_child(_item(L.t("ui.save_menu.exporter"), export_pressed))
+	v.add_child(_item(L.t("ui.save_menu.importer"), import_pressed))
 	_status = Label.new()
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.custom_minimum_size = Vector2(0, UiMetrics.rem(0.7) * 1.5)

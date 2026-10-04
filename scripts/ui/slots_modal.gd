@@ -6,7 +6,7 @@ extends RefCounted
 ## `opts` (facultatif) : "log" (Callable(texte) : ajoute une ligne au journal de la partie), "status" (Callable(texte) : état du menu 💾),
 ## "current_origin" (provenance de la partie en cours, pour « · différent du contexte actuel »).
 static func open(host: Node, snapshot: Callable, on_load: Callable, on_saved: Callable = Callable(), opts: Dictionary = {}) -> Modal:
-	var m := Modal.open_framed(host, "💾 Emplacements de sauvegarde", 560.0)
+	var m := Modal.open_framed(host, L.t("common.emplacements_de_sauvegarde"), 560.0)
 	var can_save := snapshot.is_valid()
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", int(UiMetrics.css(10.0)))
@@ -53,52 +53,52 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(info)
 	if sm.is_empty():
-		info.add_child(_title("Emplacement %d" % (i + 1)))
-		info.add_child(_hint("Vide"))
+		info.add_child(_title(L.fa(L.t("common.emplacement"), (i + 1))))
+		info.add_child(_hint(L.t("ui.slots_modal.vide")))
 	else:
-		info.add_child(_title("Emplacement %d — %s" % [i + 1, sm.title]))
+		info.add_child(_title(L.fa(L.t("ui.slots_modal.emplacement"), [i + 1, sm.title])))
 		var origin_text := Saves.origin_label(sm.origin)
 		var cur := str(opts.get("current_origin", ""))
 		if cur != "" and cur != str(sm.origin):
-			origin_text += " · différent du contexte actuel"
+			origin_text += L.t("ui.slots_modal.different_du_contexte_actuel")
 		for t in [origin_text, sm.party, Saves.local_date(float(sm.savedAt))]:
 			info.add_child(_hint(str(t)))
 	var save_here := func():
 		var snap: Dictionary = snapshot.call()
 		var t := Time.get_time_dict_from_system()
 		if Saves.write_slot(i, snap.config, snap.save, snap.origin):
-			_say(opts, "log", "💾 Partie sauvegardée dans l'emplacement %d." % (i + 1))
-			_say(opts, "status", "Sauvegardé à %02d:%02d:%02d" % [t.hour, t.minute, t.second])
+			_say(opts, "log", L.fa(L.t("ui.slots_modal.partie_sauvegardee_dans_l_emplacement"), (i + 1)))
+			_say(opts, "status", L.fa(L.t("ui.slots_modal.sauvegarde_a_02d_02d_02d"), [t.hour, t.minute, t.second]))
 			if on_saved.is_valid():
 				m.close()
 				on_saved.call(i)
 				return
 		else:
-			_say(opts, "log", "La sauvegarde a échoué.")
-			_say(opts, "status", "Échec de la sauvegarde.")
+			_say(opts, "log", L.t("ui.slots_modal.la_sauvegarde_a_echoue"))
+			_say(opts, "status", L.t("ui.slots_modal.echec_de_la_sauvegarde"))
 		fill.call()
 	if not sm.is_empty():
 		var lb := Button.new()
-		lb.text = "📂 Charger"
+		lb.text = L.t("ui.slots_modal.charger")
 		lb.focus_mode = Control.FOCUS_NONE
 		_style(lb, true)
 		lb.pressed.connect(func():
 			var d := Saves.read_slot(i)
 			if d.is_empty() or not (d.get("save") is Dictionary):
 				if (opts.get("log", Callable()) as Callable).is_valid():
-					_say(opts, "log", "Erreur lors du chargement de cet emplacement.")
+					_say(opts, "log", L.t("ui.slots_modal.erreur_lors_du_chargement_de"))
 				else:
-					Form.alert(m.get_parent(), "Erreur lors du chargement de cet emplacement.")
+					Form.alert(m.get_parent(), L.t("ui.slots_modal.erreur_lors_du_chargement_de"))
 				return
 			m.close()
 			on_load.call({"config": d.get("config", {}), "save": d.save, "origin": str(d.get("dungeonOrigin", "random")),
-				"log": "📂 Partie chargée depuis l'emplacement %d." % (i + 1)}))
+				"log": L.fa(L.t("ui.slots_modal.partie_chargee_depuis_l_emplacement"), (i + 1))}))
 		row.add_child(lb)
 	if sm.is_empty() and not can_save:
 		row.add_child(_hint("—"))
 	if can_save:
 		var sb := Button.new()
-		sb.text = "💾 Écraser" if not sm.is_empty() else "💾 Sauver ici"
+		sb.text = L.t("ui.slots_modal.ecraser") if not sm.is_empty() else L.t("ui.slots_modal.sauver_ici")
 		sb.focus_mode = Control.FOCUS_NONE
 		_style(sb, sm.is_empty())
 		sb.pressed.connect(save_here)
@@ -109,7 +109,7 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 		db.focus_mode = Control.FOCUS_NONE
 		_style(db, false, true)
 		db.pressed.connect(func():
-			Dialogs.confirm(m.get_parent(), "", "Supprimer définitivement la sauvegarde de l'emplacement %d ?" % (i + 1), func():
+			Dialogs.confirm(m.get_parent(), "", L.fa(L.t("ui.slots_modal.supprimer_definitivement_la_sauvegarde"), (i + 1)), func():
 				Saves.delete_slot(i)
 				fill.call()))
 		row.add_child(db)

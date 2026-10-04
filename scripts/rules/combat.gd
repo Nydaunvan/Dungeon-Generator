@@ -190,7 +190,7 @@ func advance() -> Dictionary:
 					if bool(Statuses.def(str(e.type)).get("disables", false)):
 						sd = Statuses.def(str(e.type))
 						break
-				gs.add_log("%s %s est incapable d'agir ce tour-ci et doit laisser passer son tour." % [sd.get("icon", "😵"), c.name], true)
+				gs.add_log(L.fa(L.t("rules.combat.est_incapable_agir_ce_tour"), [sd.get("icon", "😵"), c.name]), true)
 				tick_char(c)
 				gauges[key] = 0.0
 				turn_seq += 1
@@ -226,10 +226,10 @@ func player_attack(attacker: Dictionary) -> bool:
 		return false
 	var target := front_monster()
 	if target.is_empty():
-		gs.add_log("Il n'y a rien à attaquer devant vous.")
+		gs.add_log(L.t("rules.combat.il_n_y_a_rien"))
 		return false
 	if not can_act(attacker):
-		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % attacker.name, true)
+		gs.add_log(L.fa(L.t("rules.combat.doit_laisser_un_allie_agir"), attacker.name), true)
 		return false
 	if _blocked_by_status(attacker):
 		return false
@@ -257,14 +257,14 @@ func _blocked_by_status(c: Dictionary) -> bool:
 	if not Statuses.is_disabled(c):
 		return false
 	var icon := "😵"
-	var label := "un statut"
+	var label := L.t("rules.combat.un_statut")
 	for e in Statuses.active(c):
 		var d := Statuses.def(str(e.type))
 		if bool(d.get("disables", false)):
 			icon = str(d.icon)
 			label = str(d.label)
 			break
-	gs.add_log("%s %s est affecté par %s et ne peut pas agir !" % [icon, c.name, label], true)
+	gs.add_log(L.fa(L.t("rules.combat.est_affecte_par_et_ne"), [icon, c.name, label]), true)
 	return true
 
 func spell_def(spell_id: String) -> Dictionary:
@@ -287,44 +287,44 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		return false
 	var spell := spell_def(spell_id)
 	if spell.is_empty() or (not free and not (caster.get("spellsKnown", []) as Array).has(spell_id)):
-		gs.add_log("%s ne connaît pas ce sort." % caster.name)
+		gs.add_log(L.fa(L.t("rules.combat.ne_connait_pas_ce_sort"), caster.name))
 		return false
 	var mode := str(spell.get("mode", "damage"))
 	if not SUPPORTED_MODES.has(mode):
-		gs.add_log("✨ %s : effet pas encore disponible dans cette version." % spell.name)
+		gs.add_log(L.fa(L.t("rules.combat.effet_pas_encore_disponible_dans"), spell.name))
 		return false
 	if int(caster.hp) <= 0:
 		return false
 	if not may_act(caster):
-		gs.add_log("🔄 %s doit laisser un allié agir avant de pouvoir agir à nouveau." % caster.name, true)
+		gs.add_log(L.fa(L.t("rules.combat.doit_laisser_un_allie_agir"), caster.name), true)
 		return false
 	if _blocked_by_status(caster):
 		return false
 	var left := 0.0 if free else cooldown_left(caster, spell_id)
 	if left > 0.0:
-		gs.add_log("⏳ %s n'est pas encore prêt (%d s restantes)." % [spell.name, int(ceil(left))])
+		gs.add_log(L.fa(L.t("rules.combat.n_est_pas_encore_pret"), [spell.name, int(ceil(left))]))
 		return false
 	var target := {}
 	if mode == "damage" or mode == "damageGroup" or mode == "sleepGroup":
 		target = front_monster()
 		if target.is_empty():
-			gs.add_log("Il n'y a rien à attaquer devant vous.")
+			gs.add_log(L.t("rules.combat.il_n_y_a_rien"))
 			return false
 	var ally: Dictionary = {}
 	if spell_needs_ally(spell):
 		ally = gs.char_by_id(ally_id)
 		if ally.is_empty():
-			gs.add_log("Choisissez un allié pour %s." % spell.name)
+			gs.add_log(L.fa(L.t("rules.combat.choisissez_un_allie_pour"), spell.name))
 			return false
 		if int(ally.hp) <= 0:
-			gs.add_log("💀 %s est mort et ne peut pas être ciblé." % ally.name)
+			gs.add_log(L.fa(L.t("rules.combat.est_mort_et_ne_peut"), ally.name))
 			return false
 		if Statuses.has(ally, "freeze"):
-			gs.add_log("❄️ %s est gelé — impossible de lui lancer quoi que ce soit tant que l'effet n'est pas passé." % ally.name)
+			gs.add_log(L.fa(L.t("rules.combat.est_gele_impossible_de_lui"), ally.name))
 			return false
 	var cost := 0 if free else int(spell.get("staminaCost", 15))
 	if int(caster.get("stamina", 0)) < cost:
-		gs.add_log("😮‍💨 %s n'a plus assez d'endurance pour lancer %s." % [caster.name, spell.name])
+		gs.add_log(L.fa(L.t("rules.combat.n_a_plus_assez_endurance"), [caster.name, spell.name]))
 		return false
 	caster["stamina"] = int(caster.stamina) - cost
 	if not free:
@@ -343,7 +343,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	else:
 		Sound.sfx("spell", str(spell.get("style", "arcane")))
 	var bonus := int(caster.get("bonusSpellDmg", 0)) + int(floor((int(caster.level) - 1) * 0.75))
-	var verb := "lance %s %s sur" % [spell.get("icon", ""), spell.name]
+	var verb := L.fa(L.t("rules.combat.lance_sur"), [spell.get("icon", ""), spell.name])
 	match mode:
 		"damage", "damageGroup":
 			var int_bonus := int(floor(int(caster.get("effInt", 10)) / 5.0)) + bonus
@@ -355,8 +355,8 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var before := int(ally.hp)
 			ally["hp"] = mini(int(ally.maxHp), before + maxi(0, amt))
 			var healed := int(ally.hp) - before
-			gs.add_log("%s lance %s %s sur %s%s." % [caster.name, spell.get("icon", ""), spell.name, ally.name,
-				(" et soigne %d PV" % healed) if healed > 0 else ""], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance_sur_2"), [caster.name, spell.get("icon", ""), spell.name, ally.name,
+				L.fa(L.t("rules.combat.et_soigne_pv"), healed) if healed > 0 else ""]), true)
 			_credit_heal(caster, healed)
 			events.append({"type": "popup", "text": "+%d" % healed, "color": Color("7fd17f")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
@@ -372,44 +372,44 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				total += healed
 				if healed > 0:
 					details.append("%s +%d" % [c.name, healed])
-			gs.add_log("%s lance %s %s et soigne tout le groupe : %s." % [caster.name, spell.get("icon", ""), spell.name,
-				", ".join(details) if not details.is_empty() else "personne n'avait besoin de soin"], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance_et_soigne_tout_le"), [caster.name, spell.get("icon", ""), spell.name,
+				", ".join(details) if not details.is_empty() else L.t("rules.combat.personne_n_avait_besoin_de")]), true)
 			_credit_heal(caster, total)
-			events.append({"type": "popup", "text": "✨ Groupe soigné ✨", "color": Color("7fd17f")})
+			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "color": Color("7fd17f")})
 		"staminaRestoreSingle":
 			var amt := randi_range(int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0)))
 			var before := int(ally.get("stamina", 0))
 			ally["stamina"] = mini(int(ally.get("maxStamina", 100)), before + maxi(0, amt))
 			var got := int(ally.stamina) - before
-			gs.add_log("%s lance %s %s sur %s%s." % [caster.name, spell.get("icon", ""), spell.name, ally.name,
-				(" et restaure %d endurance" % got) if got > 0 else ""], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance_sur_2"), [caster.name, spell.get("icon", ""), spell.name, ally.name,
+				L.fa(L.t("rules.combat.et_restaure_endurance"), got) if got > 0 else ""]), true)
 			events.append({"type": "popup", "text": "+%d ⚡" % got, "color": Color("7fd1c9")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 		"shieldSingle":
 			var amt := randi_range(int(spell.get("shieldMin", 0)), int(spell.get("shieldMax", 0)))
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
-			gs.add_log("%s lance %s %s sur %s et l'entoure d'un bouclier de %d." % [caster.name, spell.get("icon", ""), spell.name, ally.name, amt], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_l_entoure"), [caster.name, spell.get("icon", ""), spell.name, ally.name, amt]), true)
 			events.append({"type": "popup", "text": "🛡️ %d" % amt, "color": Color("8fc8e8")})
 		"dispelSingle":
 			var removed := Statuses.dispel(ally)
 			Characters.recompute(ally, gs.cfg)
 			if removed.is_empty():
-				gs.add_log("%s lance %s %s sur %s, qui n'était affecté par rien de négatif." % [caster.name, spell.get("icon", ""), spell.name, ally.name], true)
+				gs.add_log(L.fa(L.t("rules.combat.lance_sur_qui_n_etait"), [caster.name, spell.get("icon", ""), spell.name, ally.name]), true)
 			else:
-				gs.add_log("%s lance %s %s sur %s et dissipe %s." % [caster.name, spell.get("icon", ""), spell.name, ally.name, ", ".join(removed)], true)
-			events.append({"type": "popup", "text": "✨ Purifié", "color": Color("8fc8e8")})
+				gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_dissipe"), [caster.name, spell.get("icon", ""), spell.name, ally.name, ", ".join(removed)]), true)
+			events.append({"type": "popup", "text": L.t("rules.combat.purifie"), "color": Color("8fc8e8")})
 		"sleepGroup":
 			var tst: Dictionary = lstate().monsters[str(target.id)]
 			var boss := bool(target.get("isBoss", false))
 			var eff_spell: Dictionary = spell.duplicate()
 			eff_spell["statusEffect"] = "slow" if boss else "stun"
 			eff_spell["statusDuration"] = int(spell.get("statusDuration", 3)) if boss else maxi(1, int(round(int(spell.get("statusDuration", 3)) / 2.0)))
-			gs.add_log("%s lance %s %s sur %s." % [caster.name, spell.get("icon", ""), spell.name, _mname(target)], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance_sur_3"), [caster.name, spell.get("icon", ""), spell.name, _mname(target)]), true)
 			if not Statuses.apply_from_spell(gs, eff_spell, tst, _mname(target), str(caster.id), false):
-				gs.add_log("💤 %s résiste à la berceuse." % _mname(target))
+				gs.add_log(L.fa(L.t("rules.combat.resiste_a_la_berceuse"), _mname(target)))
 			events.append({"type": "popup", "text": "💤", "color": Color("b9a0ff")})
 		"selfBuff":
-			gs.add_log("%s lance %s %s." % [caster.name, spell.get("icon", ""), spell.name], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance"), [caster.name, spell.get("icon", ""), spell.name]), true)
 			Statuses.apply_from_spell(gs, spell, caster, str(caster.name), str(caster.id), true)
 			Characters.recompute(caster, gs.cfg)
 		"partyUtility":
@@ -421,7 +421,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 					cds[sid] = maxi(now, int(cds[sid]) - cut_ms)
 				Statuses.give(c, "vigor", int(spell.get("statusDuration", 4)), str(caster.id))
 				Characters.recompute(c, gs.cfg)
-			gs.add_log("%s lance %s %s sur tout le groupe, qui se sent revigoré !" % [caster.name, spell.get("icon", ""), spell.name], true)
+			gs.add_log(L.fa(L.t("rules.combat.lance_sur_tout_le_groupe"), [caster.name, spell.get("icon", ""), spell.name]), true)
 			events.append({"type": "popup", "text": "🎶 Vigueur", "color": Color("ffd88a")})
 	_mark_acted(caster, mode != "damage")
 	return true
@@ -479,15 +479,15 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	if not aoe and bool(target.get("isBoss", false)) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
 			and st.hp > 0 and st.hp <= st.maxHp * (int(target.enrageThreshold) / 100.0):
 		st["enraged"] = true
-		gs.add_log("😡 %s entre en rage, ses attaques deviennent bien plus violentes !" % _mname(target))
-	var note := (" (%d%% de résistance %s : %d→%d)" % [resist, "magique" if magic else "physique", raw_dmg, dmg]) if resist > 0 else ""
-	var who := "tout le groupe" if (all_members and is_group) else _mname(target)
+		gs.add_log(L.fa(L.t("rules.combat.entre_en_rage_ses_attaques"), _mname(target)))
+	var note := (L.fa(L.t("rules.combat.de_resistance"), [resist, L.t("rules.combat.magique") if magic else L.t("rules.combat.physique"), raw_dmg, dmg])) if resist > 0 else ""
+	var who := L.t("rules.combat.tout_le_groupe") if (all_members and is_group) else _mname(target)
 	if aoe and is_group and all_members:
-		gs.add_log("%s %s et frappe tout le groupe : %d dégâts chacun (%d %s)%s%s." % [attacker.name, verb.trim_suffix(" sur"), dmg, holders.size(), "cibles" if holders.size() > 1 else "cible", note, " 💥 Coup critique !" if crit else ""], true)
+		gs.add_log(L.fa(L.t("rules.combat.et_frappe_tout_le_groupe"), [attacker.name, verb.trim_suffix(" sur"), dmg, holders.size(), "cibles" if holders.size() > 1 else "cible", note, " 💥 Coup critique !" if crit else ""]), true)
 	elif verb == "frappe":
-		gs.add_log("%s frappe %s pour %d dégâts%s%s." % [attacker.name, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
+		gs.add_log(L.fa(L.t("rules.combat.frappe_pour_degats"), [attacker.name, who, dmg, note, " 💥 Coup critique !" if crit else ""]), true)
 	else:
-		gs.add_log("%s %s %s pour %d dégâts%s%s." % [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""], true)
+		gs.add_log(L.fa(L.t("rules.combat.pour_degats"), [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""]), true)
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
@@ -496,7 +496,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		var before := int(attacker.hp)
 		attacker["hp"] = mini(int(attacker.maxHp), before + heal)
 		if int(attacker.hp) > before:
-			gs.add_log("🩸 %s draine %d PV." % [attacker.name, int(attacker.hp) - before], true)
+			gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [attacker.name, int(attacker.hp) - before]), true)
 
 	for h in holders:
 		if float(h.hp) <= 0.0:
@@ -515,7 +515,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	elif is_group:
 		for h in holders:
 			if not h.alive:
-				gs.add_log("💀 %s voit ses rangs décimés !" % _mname(target))
+				gs.add_log(L.fa(L.t("rules.combat.voit_ses_rangs_decimes"), _mname(target)))
 	if (aoe or not all_dead) and not spell.is_empty():
 		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
 
@@ -589,19 +589,19 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 		var absorbed := mini(int(victim.shieldAmount), dmg)
 		victim["shieldAmount"] = int(victim.shieldAmount) - absorbed
 		dmg -= absorbed
-		gs.add_log("🛡️ Le bouclier de %s absorbe %d dégâts%s." % [victim.name, absorbed, " (épuisé)" if int(victim.shieldAmount) <= 0 else ""], true)
+		gs.add_log(L.fa(L.t("rules.combat.le_bouclier_de_absorbe_degats"), [victim.name, absorbed, L.t("rules.combat.epuise") if int(victim.shieldAmount) <= 0 else ""]), true)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
 	var thorns := _perk_value(victim, "thorns")
 	if thorns > 0 and dmg > 0:
 		var reflect := maxi(1, int(round(dmg * thorns / 100.0)))
 		st["hp"] = float(st.hp) - reflect
-		gs.add_log("🌵 L'équipement de %s renvoie %d dégâts à %s." % [victim.name, reflect, _mname(def)])
+		gs.add_log(L.fa(L.t("rules.combat.l_equipement_de_renvoie_degats"), [victim.name, reflect, _mname(def)]))
 		if float(st.hp) <= 0.0 and st.alive:
 			st["alive"] = false
 			_handle_death(def, st)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
-	gs.add_log("%s attaque et blesse %s (%d dégâts)%s." % [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""], true)
+	gs.add_log(L.fa(L.t("rules.combat.attaque_et_blesse_degats"), [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""]), true)
 	Sound.sfx("monster_attack")
 	events.append({"type": "fx", "fx": "hit"})
 	gs.bump(victim.id, "damageTaken", dmg)
@@ -611,11 +611,11 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) <= 0:
 		Sound.sfx_later(0.15, "down")
-		gs.add_log("%s s'effondre, à terre !" % victim.name)
+		gs.add_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
 		_switch_active_if_down()
 		if gs.alive_party().is_empty():
 			gs.game_over = true
-			gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
+			gs.add_log(L.t("common.le_groupe_est_aneanti_les"))
 			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
 
@@ -628,7 +628,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
-	gs.add_log("%s utilise %s %s sur %s (%d dégâts)%s." % [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""], true)
+	gs.add_log(L.fa(L.t("rules.combat.utilise_sur_degats"), [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""]), true)
 	Sound.sfx("monster_attack")
 	events.append({"type": "fx", "fx": "hit"})
 	gs.bump(victim.id, "damageTaken", dmg)
@@ -640,11 +640,11 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 		Statuses.apply_from_spell(gs, spell, victim, str(victim.name), "", true)
 	else:
 		gs.bump(victim.id, "knockdowns")
-		gs.add_log("%s s'effondre, à terre !" % victim.name)
+		gs.add_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
 		_switch_active_if_down()
 		if gs.alive_party().is_empty():
 			gs.game_over = true
-			gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
+			gs.add_log(L.t("common.le_groupe_est_aneanti_les"))
 			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
 
@@ -669,24 +669,24 @@ func tick_char(c: Dictionary) -> void:
 		if bool(sdef.get("dot", false)) and int(c.hp) > 0:
 			var dmg := maxi(1, int(eff.get("power", 3)))
 			c["hp"] = maxi(0, int(c.hp) - dmg)
-			gs.add_log("%s %s subit %d dégâts de %s." % [sdef.icon, c.name, dmg, sdef.label], true)
+			gs.add_log(L.fa(L.t("rules.combat.subit_degats_de"), [sdef.icon, c.name, dmg, sdef.label]), true)
 			events.append({"type": "popup", "text": "%s -%d" % [c.name, dmg], "color": Color("c98bff")})
 			events.append({"type": "hit", "char": c.id})
 			if int(c.hp) <= 0:
 				gs.bump(c.id, "knockdowns")
-				gs.add_log("%s s'effondre, à terre !" % c.name)
+				gs.add_log(L.fa(L.t("common.effondre_a_terre"), c.name))
 				Sound.sfx("down")
 				_switch_active_if_down()
 				if gs.alive_party().is_empty() and not gs.game_over:
 					gs.game_over = true
-					gs.add_log("Le groupe est anéanti... les ténèbres l'emportent.")
+					gs.add_log(L.t("common.le_groupe_est_aneanti_les"))
 					Sound.sfx("game_over")
 					events.append({"type": "game_over"})
 		eff["remaining"] = int(eff.remaining) - 1
 		if int(eff.remaining) > 0:
 			remaining.append(eff)
 		else:
-			gs.add_log("%s %s n'est plus affecté par %s." % [sdef.icon, c.name, sdef.label], true)
+			gs.add_log(L.fa(L.t("rules.combat.n_est_plus_affecte_par"), [sdef.icon, c.name, sdef.label]), true)
 	c["statusEffects"] = remaining
 	Characters.recompute(c, gs.cfg)
 
@@ -703,7 +703,7 @@ func tick_monster(def: Dictionary, st: Dictionary) -> bool:
 		if bool(sdef.get("dot", false)) and float(st.hp) > 0.0:
 			var dmg := maxi(1, int(eff.get("power", 3)))
 			st["hp"] = maxf(0.0, float(st.hp) - dmg)
-			gs.add_log("%s %s subit %d dégâts de %s." % [sdef.icon, _mname(def), dmg, sdef.label])
+			gs.add_log(L.fa(L.t("rules.combat.subit_degats_de"), [sdef.icon, _mname(def), dmg, sdef.label]))
 			events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("c98bff")})
 			if bool(sdef.get("heals", false)) and str(eff.get("casterId", "")) != "":
 				var caster := gs.char_by_id(str(eff.casterId))
@@ -711,18 +711,18 @@ func tick_monster(def: Dictionary, st: Dictionary) -> bool:
 					var before := int(caster.hp)
 					caster["hp"] = mini(int(caster.maxHp), before + dmg)
 					if int(caster.hp) > before:
-						gs.add_log("🩸 %s draine %d PV." % [caster.name, int(caster.hp) - before], true)
+						gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [caster.name, int(caster.hp) - before]), true)
 			if float(st.hp) <= 0.0 and st.alive:
 				st["alive"] = false
 				_handle_death(def, st)
 		elif bool(sdef.get("disables", false)):
 			stunned = true
-			gs.add_log("%s %s est %s et ne peut agir !" % [sdef.icon, _mname(def), "gelé" if str(eff.type) == "freeze" else "étourdi"])
+			gs.add_log(L.fa(L.t("rules.combat.est_et_ne_peut_agir"), [sdef.icon, _mname(def), L.t("rules.combat.gele") if str(eff.type) == "freeze" else L.t("rules.combat.etourdi")]))
 		eff["remaining"] = int(eff.remaining) - 1
 		if int(eff.remaining) > 0:
 			remaining.append(eff)
 		else:
-			gs.add_log("%s %s n'est plus affecté par %s." % [sdef.icon, _mname(def), sdef.label])
+			gs.add_log(L.fa(L.t("rules.combat.n_est_plus_affecte_par"), [sdef.icon, _mname(def), sdef.label]))
 	st["statusEffects"] = remaining
 	return stunned
 
@@ -747,9 +747,9 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 	if gold > 0:
 		gs.gold += gold
 		gs.stats["goldEarnedTotal"] += gold
-		gs.add_log("💰 Le groupe récupère %d pièces d'or.%s" % [gold, " (butin de groupe)" if group_mult > 1.0 else ""])
+		gs.add_log(L.fa(L.t("rules.combat.le_groupe_recupere_pieces_or"), [gold, L.t("rules.combat.butin_de_groupe") if group_mult > 1.0 else ""]))
 	if str(def.get("opensDoorId", "")) != "":
-		gs.add_log("La mort de %s déverrouille une porte au loin..." % _mname(def))
+		gs.add_log(L.fa(L.t("rules.combat.la_mort_de_deverrouille_une"), _mname(def)))
 		events.append({"type": "door_open", "id": str(def.opensDoorId)})
 	for k in [["lootItemId", "lootChance"], ["lootItemId2", "lootChance2"]]:
 		var item_id := str(def.get(k[0], ""))
@@ -766,7 +766,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 						if not summary.is_empty():
 							summary.loot.append(str(it.name))
 					else:
-						gs.add_log("🎁 %s laissait tomber %s, mais la besace est pleine ! Le butin est perdu." % [_mname(def), it.name])
+						gs.add_log(L.fa(L.t("rules.combat.laissait_tomber_mais_la_besace"), [_mname(def), it.name]))
 	# endurance récupérée après la victoire (difficulté « normal »)
 	var pct_map: Dictionary = (gs.cfg.get("staminaSettings", {}) as Dictionary).get("victoryGainPct", {"easy": 4, "normal": 6, "hard": 9, "hardcore": 13})
 	var diff := str(gs.cfg.get("genDifficulty", "normal")) if Data.play_origin == "random" else "normal"
@@ -820,9 +820,9 @@ func _split_xp(st: Dictionary, total: int) -> void:
 		Characters.award_xp(gs, c, share)
 		shares.append("%s +%d" % [c.name, share])
 	if shares.size() > 1:
-		gs.add_log("✨ XP répartie selon la contribution au combat : %s." % ", ".join(shares))
+		gs.add_log(L.fa(L.t("rules.combat.xp_repartie_selon_la_contribution"), ", ".join(shares)))
 	if not skipped.is_empty():
-		gs.add_log("💀 %s %s tombé(s) au combat et n'a pas reçu d'XP." % [", ".join(skipped), "étaient" if skipped.size() > 1 else "était"])
+		gs.add_log(L.fa(L.t("rules.combat.tombe_au_combat_et_n"), [", ".join(skipped), L.t("rules.combat.etaient") if skipped.size() > 1 else L.t("rules.combat.etait")]))
 
 # ------------------------------------------------------------------ fuite
 
@@ -832,7 +832,7 @@ func flee() -> Vector2i:
 	var dest := _safe_destination()
 	for c in gs.alive_party():
 		c["stamina"] = int(floor(int(c.get("stamina", 0)) * 0.5))
-	gs.add_log("🏃 Le groupe prend la fuite ! Chacun perd la moitié de son endurance dans la précipitation.")
+	gs.add_log(L.t("rules.combat.le_groupe_prend_la_fuite"))
 	gauges.clear()
 	return dest
 

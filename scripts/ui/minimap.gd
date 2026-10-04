@@ -78,12 +78,12 @@ func _cell_tip(p: Vector2) -> void:
 		"D":
 			var d := grid.door_at(cx, cy)
 			var locked: bool = not d.is_empty() and bool(d.get("locked", true)) and not ls.get("door_unlocked", {}).has(str(d.id)) and not grid.opened.has(str(d.id))
-			text = "🚪 Porte %s" % ("(verrouillée)" if locked else "(déverrouillée)")
+			text = L.fa(L.t("ui.minimap.porte"), (L.t("ui.minimap.verrouillee") if locked else L.t("ui.minimap.deverrouillee")))
 		"S":
-			text = "✨ Escalier"
+			text = L.t("common.escalier")
 		_:
 			if cx == rig.gx and cy == rig.gy:
-				text = "🚩 Vous êtes ici"
+				text = L.t("ui.minimap.vous_etes_ici")
 	if text == "":
 		return
 	tooltip_text = text

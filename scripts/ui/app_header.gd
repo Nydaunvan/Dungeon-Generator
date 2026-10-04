@@ -22,7 +22,7 @@ func _init() -> void:
 	hrow.add_theme_constant_override("separation", 10)
 	add_child(hrow)
 	title_label = Label.new()
-	title_label.text = "Éditeur de Donjon"
+	title_label.text = L.t("common.editeur_de_donjon")
 	title_label.clip_text = true
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -41,7 +41,7 @@ func _init() -> void:
 	nav_row.add_theme_constant_override("separation", 0)
 	box.add_child(nav_row)
 	hrow.add_child(box)
-	btn_home = _button("🏠 Accueil")
+	btn_home = _button(L.t("ui.app_header.accueil"))
 	btn_home.pressed.connect(func(): nav.emit("Accueil"))
 	nav_row.add_child(btn_home)
 	var guide := _button("📖 Guide")

@@ -109,7 +109,7 @@ func _build_view_controls() -> void:
 	view_controls.offset_top = UiMetrics.css(8.0)
 	view_controls.offset_right = -UiMetrics.css(10.0)
 	stage.add_child(view_controls)
-	for n in [["Stats", "📊", "Statistiques de l'aventure"], ["Clavier", "⌨️", "Commandes du jeu"], ["Son", "🔊", "Réglages du son"]]:
+	for n in [["Stats", "📊", L.t("ui.game_layout.statistiques_de_l_aventure")], ["Clavier", "⌨️", L.t("ui.game_layout.commandes_du_jeu")], ["Son", "🔊", L.t("ui.game_layout.reglages_du_son")]]:
 		var b := Button.new()
 		b.text = n[1]
 		b.tooltip_text = n[2]
@@ -130,7 +130,7 @@ func _build_view_controls() -> void:
 	kv.add_theme_constant_override("separation", int(UiMetrics.css(3.0)))
 	keys_panel.add_child(kv)
 	var kt := Label.new()
-	kt.text = "⌨️ Commandes"
+	kt.text = L.t("ui.game_layout.commandes")
 	kt.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 	kt.add_theme_font_size_override("font_size", int(UiMetrics.css(12.5)))
 	kt.add_theme_color_override("font_color", Color("ffd98a"))
@@ -161,12 +161,12 @@ func _build_view_controls() -> void:
 	sv.add_theme_constant_override("separation", int(UiMetrics.css(2.0)))
 	sound_panel.add_child(sv)
 	var mute := CheckBox.new()
-	mute.text = "🔇 Couper tout le son"
+	mute.text = L.t("ui.game_layout.couper_tout_le_son")
 	mute.button_pressed = not Sound.enabled
 	mute.add_theme_font_size_override("font_size", int(UiMetrics.css(11.0)))
 	mute.toggled.connect(func(v: bool): Sound.set_enabled(not v))
 	sv.add_child(mute)
-	for cfg in [["🔊 Effets sonores", Sound.sfx_volume, "sfx"], ["🎵 Musique d'ambiance", Sound.music_volume, "music"]]:
+	for cfg in [[L.t("ui.game_layout.effets_sonores"), Sound.sfx_volume, "sfx"], [L.t("ui.game_layout.musique_ambiance"), Sound.music_volume, "music"]]:
 		var lab := Label.new()
 		lab.text = cfg[0]
 		lab.add_theme_font_size_override("font_size", int(UiMetrics.css(10.9)))
@@ -186,16 +186,16 @@ func _build_view_controls() -> void:
 		sv.add_child(sl)
 
 const KEY_COMMANDS := [
-	["↑ ↓ ← →  /  Z Q S D", "Avancer, reculer, tourner"],
-	["Espace", "Attaquer (héros actif)"],
-	["1", "Attaque du héros actif"],
-	["2 – 7", "Sorts du héros actif"],
-	["I", "Inventaire du héros sélectionné (hors combat)"],
-	["M", "Carte en plein écran"],
-	["Échap", "Fermer la fenêtre ouverte"],
-	["Clic sur un portrait", "Choisir le héros actif"],
-	["Icône coffre d'un portrait", "Ouvrir l'inventaire de ce héros"],
-	["Molette sur la carte", "Zoomer la mini-carte"],
+	["↑ ↓ ← →  /  Z Q S D", "ui.game_layout.avancer_reculer_tourner"],
+	["Espace", "ui.game_layout.attaquer_heros_actif"],
+	["1", "ui.game_layout.attaque_du_heros_actif"],
+	["2 – 7", "ui.game_layout.sorts_du_heros_actif"],
+	["I", "ui.game_layout.inventaire_du_heros_selectionne"],
+	["M", "ui.game_layout.carte_en_plein_ecran"],
+	["ui.game_layout.echap", "ui.game_layout.fermer_la_fenetre_ouverte"],
+	["ui.game_layout.clic_sur_un_portrait", "ui.game_layout.choisir_le_heros_actif"],
+	["ui.game_layout.icone_coffre_un_portrait", "ui.game_layout.ouvrir_l_inventaire_de_ce"],
+	["ui.game_layout.molette_sur_la_carte", "ui.game_layout.zoomer_la_mini_carte"],
 ]
 
 func _drop_panel(w: float) -> PanelContainer:
@@ -455,14 +455,14 @@ func _build_parts() -> void:
 	hud.chest_pressed.connect(func(id): chest_pressed.emit(id))
 
 	# panneaux latéraux
-	panel_map = OrnatePanel.new("Carte")
+	panel_map = OrnatePanel.new(L.t("common.carte"))
 	panel_map.name = "Carte"
 	if panel_map.header_row != null:
 		var fb := Button.new()
 		fb.text = "🗺️"
 		_small_iron(fb)
 		fb.focus_mode = Control.FOCUS_NONE
-		fb.tooltip_text = "Carte en plein écran (touche M)"
+		fb.tooltip_text = L.t("ui.game_layout.carte_en_plein_ecran_touche")
 		fb.pressed.connect(func(): menu_pressed.emit("Carte"))
 		panel_map.header_row.add_child(fb)
 	var map_inset := MinimapWrap.new()
@@ -473,20 +473,20 @@ func _build_parts() -> void:
 	map_inset.add_child(minimap)
 	panel_map.body.add_child(map_inset)
 	map_inset.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	panel_bag = OrnatePanel.new("Besace commune du groupe")
+	panel_bag = OrnatePanel.new(L.t("ui.game_layout.besace_commune_du_groupe"))
 	panel_bag.name = "Besace"
 	bag = BagPanel.new()
 	bag.setup(gs)
 	bag.item_pressed.connect(func(i): item_pressed.emit(i))
 	panel_bag.body.add_child(bag)
-	panel_log = OrnatePanel.new("Grimoire des événements")
+	panel_log = OrnatePanel.new(L.t("ui.game_layout.grimoire_des_evenements"))
 	panel_log.name = "Journal"
 	if panel_log.header_row != null:
 		var lb := Button.new()
 		lb.text = "📖"
 		_small_iron(lb)
 		lb.focus_mode = Control.FOCUS_NONE
-		lb.tooltip_text = "Historique complet du journal"
+		lb.tooltip_text = L.t("ui.game_layout.historique_complet_du_journal")
 		lb.pressed.connect(func(): menu_pressed.emit("Journal"))
 		panel_log.header_row.add_child(lb)
 	log_panel = LogPanel.new()
@@ -537,7 +537,7 @@ func _rebuild() -> void:
 	_scroll.add_child(v)
 	if footer == null:
 		footer = Label.new()
-		footer.text = tr("Éditeur de Donjon") + " v1.29 · " + tr("portage Godot") + "\nMade by Claude & Nydaunvan"
+		footer.text = L.t("common.editeur_de_donjon") + " v1.29 · " + L.t("common.portage_godot") + "\nMade by Claude & Nydaunvan"
 		footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
 		footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
@@ -627,7 +627,7 @@ func _size_overlays() -> void:
 func set_level_name(text: String) -> void:
 	level_label.text = text
 	if type_badge != null:
-		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": "🛠️ Donjon personnalisé"}.get(Data.play_origin, "🎲 Donjon aléatoire")
+		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, L.t("common.donjon_aleatoire"))
 
 func _refresh_pouch(on: bool) -> void:
 	var potions: Array = []
@@ -657,11 +657,11 @@ func _refresh_pouch(on: bool) -> void:
 	pouch.visible = on and (not potions.is_empty() or scrolls > 0)
 	for g in potions:
 		var it2: Dictionary = g.it
-		var detail := "+%d PV" % int(it2.heal) if int(it2.get("heal", 0)) > 0 else ("+%d End." % int(it2.get("staminaRestore", 0)) if int(it2.get("staminaRestore", 0)) > 0 else "")
+		var detail := L.fa(L.t("ui.game_layout.pv"), int(it2.heal)) if int(it2.get("heal", 0)) > 0 else (L.fa(L.t("ui.game_layout.end"), int(it2.get("staminaRestore", 0))) if int(it2.get("staminaRestore", 0)) > 0 else "")
 		var idx: int = g.idx
 		pouch.add_child(_pouch_button(IconResolver.texture(str(it2.get("icon", ""))), "🧪", detail, int(g.count), str(it2.get("name", "")), func(): potion_quick.emit(idx)))
 	if scrolls > 0:
-		pouch.add_child(_pouch_button(null, "📜", "Parchemins", scrolls, "Parchemins", func(): scrolls_quick.emit()))
+		pouch.add_child(_pouch_button(null, "📜", L.t("common.parchemins"), scrolls, L.t("common.parchemins"), func(): scrolls_quick.emit()))
 
 func _pouch_button(tex: Texture2D, glyph: String, detail: String, count: int, tip: String, cb: Callable) -> Button:
 	var b := Button.new()

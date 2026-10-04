@@ -103,7 +103,7 @@ func _build() -> void:
 	v.add_theme_constant_override("separation", 2)
 	_panel.add_child(v)
 	# titre + filet
-	var title := _lbl("⚠️ Piège : " + str(_item.get("name", "")), 20, GOLD_BRIGHT, UiTheme.F_TITLE_BOLD)
+	var title := _lbl(L.t("ui.trap_modal.piege") + L.c(str(_item.get("name", ""))), 20, GOLD_BRIGHT, UiTheme.F_TITLE_BOLD)
 	title.add_theme_color_override("font_shadow_color", Color.BLACK)
 	title.add_theme_constant_override("shadow_offset_y", 2)
 	v.add_child(title)
@@ -111,10 +111,10 @@ func _build() -> void:
 	rule.color = Color("070504")
 	rule.custom_minimum_size = Vector2(0, 2)
 	v.add_child(rule)
-	var chance := _lbl("Chance : %d %%" % int(_bd.chance), 19, GOLD_BRIGHT, UiTheme.F_BODY_BOLD)
+	var chance := _lbl(L.fa(L.t("ui.trap_modal.chance"), int(_bd.chance)), 19, GOLD_BRIGHT, UiTheme.F_BODY_BOLD)
 	v.add_child(chance)
 	v.add_child(_calc_box())
-	_hint = _lbl("Toute l'équipe participe. Une seule tentative.", 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
+	_hint = _lbl(L.t("ui.trap_modal.toute_l_equipe_participe_une"), 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
 	v.add_child(_hint)
 	_die = TrapDie.new()
 	v.add_child(_die)
@@ -131,15 +131,15 @@ func _build() -> void:
 	acts.add_theme_constant_override("separation", 8)
 	acts.custom_minimum_size = Vector2(0, 92)
 	v.add_child(acts)
-	_pick = _button("🔓 Crocheter", true)
+	_pick = _button(L.t("ui.trap_modal.crocheter"), true)
 	_pick.pressed.connect(_do_pick)
 	acts.add_child(_pick)
-	_skip = _button("🚶 Passer", false)
+	_skip = _button(L.t("ui.trap_modal.passer"), false)
 	_skip.pressed.connect(func():
 		queue_free()
 		skipped.emit())
 	acts.add_child(_skip)
-	_cont = _button("Continuer", true)
+	_cont = _button(L.t("common.continuer"), true)
 	_cont.visible = false
 	_cont.pressed.connect(func():
 		queue_free()
@@ -228,15 +228,15 @@ func _calc_box() -> Control:
 	var capped := false
 	for p in _bd.dexParts:
 		capped = capped or bool(p.capped)
-	row.call("🏃 Dextérité au-dessus de 10" + (" (plafonnée)" if capped else ""), "+" + fmt.call(float(_bd.dexTotal)) + " %")
+	row.call(L.t("ui.trap_modal.dexterite_10") + (L.t("ui.trap_modal.plafonnee") if capped else ""), "+" + fmt.call(float(_bd.dexTotal)) + " %")
 	if int(_bd.raw) != int(_bd.chance):
-		row.call("⚖️ Plafond appliqué (%s – %s %%)" % [fmt.call(float(s.min)), fmt.call(float(s.max))], "%d %% → %d %%" % [int(_bd.raw), int(_bd.chance)])
-	row.call("Chance finale", "%d %%" % int(_bd.chance), true)
-	var note := "🎲 d20 : il faut %d ou plus (%d faces sur 20). 20 naturel = réussite automatique · 1 naturel = échec critique (+%s %% dégâts).%s" % [
-		_thr, 21 - _thr, fmt.call(float(s.critExtraDmg)), " Les personnages à terre ne comptent pas." if int(_bd.down) > 0 else ""]
+		row.call(L.fa(L.t("ui.trap_modal.plafond_applique"), [fmt.call(float(s.min)), fmt.call(float(s.max))]), "%d %% → %d %%" % [int(_bd.raw), int(_bd.chance)])
+	row.call(L.t("ui.trap_modal.chance_finale"), "%d %%" % int(_bd.chance), true)
+	var note := L.fa(L.t("ui.trap_modal.d20_il_faut_ou_plus"), [
+		_thr, 21 - _thr, fmt.call(float(s.critExtraDmg)), L.t("ui.trap_modal.a_terre_ne_comptent_pas") if int(_bd.down) > 0 else ""])
 	var n1 := _lbl(note, 12, Color("cdb98a"), "", false)
 	v.add_child(n1)
-	var n2 := _lbl("💥 Si le piège se déclenche : %s à %s %% des PV max d'un personnage tiré au sort." % [fmt.call(float(s.dmgPctMin)), fmt.call(float(s.dmgPctMax))], 12, Color("cdb98a"), "", false)
+	var n2 := _lbl(L.fa(L.t("ui.trap_modal.si_le_piege_se_declenche"), [fmt.call(float(s.dmgPctMin)), fmt.call(float(s.dmgPctMax))]), 12, Color("cdb98a"), "", false)
 	v.add_child(n2)
 	return box
 
@@ -291,15 +291,15 @@ func _shake(seq: Array, dur: float) -> void:
 	_fx.tween_property(_shaker, "position", Vector2.ZERO, step)
 
 func _show_outcome(roll: int) -> void:
-	var info := "Jet : %d / 20 — il fallait %d ou plus" % [roll, _thr]
+	var info := L.fa(L.t("ui.trap_modal.jet_20_il_fallait_ou"), [roll, _thr])
 	if roll == 20:
-		info = "Jet : 20 — réussite automatique"
+		info = L.t("ui.trap_modal.jet_20_reussite_automatique")
 	elif roll == 1:
-		info = "Jet : 1 — échec critique automatique"
+		info = L.t("ui.trap_modal.jet_1_echec_critique_automatique")
 	_roll_info.text = info
 	match _outcome:
 		"perfect":
-			_result.text = "✨ Crochetage parfait !"
+			_result.text = L.t("ui.trap_modal.crochetage_parfait")
 			_result.add_theme_color_override("font_color", Color("ffe08a"))
 			_die.glow = Color("ffd76a")
 			_set_glow(Color("ffd76a"), 18, 0.55, 44, 0.95, true)
@@ -308,7 +308,7 @@ func _show_outcome(roll: int) -> void:
 			Sound.sfx_later(0.38, "pickup")
 			Sound.sfx_later(0.62, "level_up")
 		"success":
-			_result.text = "🔓 Piège désamorcé"
+			_result.text = L.t("ui.trap_modal.piege_desamorce")
 			_result.add_theme_color_override("font_color", Color("c7dd85"))
 			_die.glow = Color("b9d066")
 			_die.glow.a = 0.6
@@ -316,14 +316,14 @@ func _show_outcome(roll: int) -> void:
 			Sound.sfx("door_locked")
 			Sound.sfx_later(0.11, "pickup")
 		"fail":
-			_result.text = "❌ Le crochetage échoue"
+			_result.text = L.t("ui.trap_modal.le_crochetage_echoue")
 			_result.add_theme_color_override("font_color", Color("b5b5b5"))
 			_die.dim = Color(0.45, 0.45, 0.45)
 			_set_glow(Color("969696"), 20, 0.4, 20, 0.4, false)
 			_shake([Vector2(-4, 0), Vector2(4, 0), Vector2(-3, 0), Vector2(2, 0)], 0.5)
 			Sound.sfx("hit")
 		_:
-			_result.text = "💥 Échec critique !"
+			_result.text = L.t("ui.trap_modal.echec_critique")
 			_result.add_theme_color_override("font_color", Color("ff5a5a"))
 			_die.dim = Color(0.6, 0.55, 0.55)
 			_die.glow = Color("b3111a")
@@ -339,7 +339,7 @@ func _show_outcome(roll: int) -> void:
 	if _outcome == "fail" or _outcome == "crit":
 		var mult := 1.0 + float(_bd.s.critExtraDmg) / 100.0 if _outcome == "crit" else 1.0
 		_hit = _pick_victim.call(mult)
-		_victim.text = "🎯 %s subira %d dégâts" % [_hit.victim.name, int(_hit.dmg)]
+		_victim.text = L.fa(L.t("ui.trap_modal.subira_degats"), [_hit.victim.name, int(_hit.dmg)])
 	_pick.visible = false
 	_skip.visible = false
 	_cont.visible = true

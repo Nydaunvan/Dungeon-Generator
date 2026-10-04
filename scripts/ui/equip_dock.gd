@@ -9,8 +9,8 @@ signal bag_changed
 signal closed
 
 const SLOT_DEFS := [
-	{"id": "weapon", "label": "Arme"}, {"id": "head", "label": "Casque"}, {"id": "body", "label": "Armure"},
-	{"id": "hands", "label": "Gants"}, {"id": "feet", "label": "Bottes"}, {"id": "accessory", "label": "Bijou"},
+	{"id": "weapon", "label": "common.arme"}, {"id": "head", "label": "ui.equip_dock.casque"}, {"id": "body", "label": "common.armure"},
+	{"id": "hands", "label": "ui.equip_dock.gants"}, {"id": "feet", "label": "ui.equip_dock.bottes"}, {"id": "accessory", "label": "common.bijou"},
 ]
 const TABS := [["items", "@icon:sword_broad"], ["potions", "@icon:potion_heal"], ["keys", "@icon:misc_key"]]
 
@@ -175,34 +175,34 @@ func _resolve_sel(c: Dictionary) -> Dictionary:
 static func stat_rows(it: Dictionary, force_atk: bool) -> Array:
 	var rows: Array = []
 	if force_atk:
-		rows.append({"key": "atkMin", "label": "Attaque min", "value": int(it.get("bonusAtkMin", 0))})
-		rows.append({"key": "atkMax", "label": "Attaque max", "value": int(it.get("bonusAtkMax", 0))})
+		rows.append({"key": "atkMin", "label": L.t("common.attaque_min"), "value": int(it.get("bonusAtkMin", 0))})
+		rows.append({"key": "atkMax", "label": L.t("ui.equip_dock.attaque_max"), "value": int(it.get("bonusAtkMax", 0))})
 	if int(it.get("bonusHp", 0)) != 0:
-		rows.append({"key": "hp", "label": "PV", "value": int(it.bonusHp)})
+		rows.append({"key": "hp", "label": L.t("common.pv"), "value": int(it.bonusHp)})
 	if not force_atk and (int(it.get("bonusAtkMin", 0)) != 0 or int(it.get("bonusAtkMax", 0)) != 0):
-		rows.append({"key": "atkMin", "label": "Attaque min", "value": int(it.get("bonusAtkMin", 0))})
-		rows.append({"key": "atkMax", "label": "Attaque max", "value": int(it.get("bonusAtkMax", 0))})
-	for pair in [["bonusSpellDmg", "spellDmg", "Dégâts de sort"], ["bonusForce", "force", "Force"], ["bonusDex", "dex", "Dextérité"],
-			["bonusCon", "con", "Constitution"], ["bonusInt", "int", "Intelligence"], ["bonusSpeed", "speed", "Vitesse"]]:
+		rows.append({"key": "atkMin", "label": L.t("common.attaque_min"), "value": int(it.get("bonusAtkMin", 0))})
+		rows.append({"key": "atkMax", "label": L.t("ui.equip_dock.attaque_max"), "value": int(it.get("bonusAtkMax", 0))})
+	for pair in [["bonusSpellDmg", "spellDmg", L.t("common.degats_de_sort")], ["bonusForce", "force", L.t("common.force")], ["bonusDex", "dex", L.t("common.dexterite")],
+			["bonusCon", "con", L.t("common.constitution")], ["bonusInt", "int", L.t("common.intelligence")], ["bonusSpeed", "speed", L.t("common.vitesse")]]:
 		if int(it.get(pair[0], 0)) != 0:
 			rows.append({"key": pair[1], "label": pair[2], "value": int(it[pair[0]])})
 	return rows
 
 static func type_label(it: Dictionary) -> String:
 	if bool(it.get("legendary", false)):
-		return "✨ Légendaire"
+		return L.t("common.legendaire")
 	match str(it.get("type", "")):
-		"weapon": return "Arme"
-		"jewelry": return "Bijou"
+		"weapon": return L.t("common.arme")
+		"jewelry": return L.t("common.bijou")
 		"armor":
 			for s in SLOT_DEFS:
 				if s.id == it.get("slot"):
 					return str(s.label)
-			return "Armure"
-		"potion": return "Potion"
-		"key": return "Clé"
-		"scroll": return "Parchemin"
-	return "Objet"
+			return L.t("common.armure")
+		"potion": return L.t("common.potion")
+		"key": return L.t("common.cle")
+		"scroll": return L.t("common.parchemin")
+	return L.t("common.objet")
 
 # ------------------------------------------------------------------ rendu
 
@@ -328,10 +328,10 @@ func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 0)
-	var title := _label(tr("Équipement").to_upper() + " — " + str(c.name).to_upper(), 17, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
+	var title := _label(L.u("common.equipement") + " — " + L.u(str(c.name)), 17, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	title.clip_text = true
 	v.add_child(title)
-	v.add_child(_label("%s — Nv.%d" % [cls.get("name", ""), int(c.level)], 13, UiTheme.DIM))
+	v.add_child(_label(L.fa(L.t("ui.equip_dock.nv"), [cls.get("name", ""), int(c.level)]), 13, UiTheme.DIM))
 	row.add_child(v)
 	for m in gs.party:
 		var on: bool = str(m.id) == char_id
@@ -400,7 +400,7 @@ func _slot_button(c: Dictionary, def: Dictionary, resolved: Dictionary) -> Contr
 	b.add_theme_stylebox_override("hover", UiTheme.box(fill, UiTheme.BRONZE_LIGHT if not (is_sel or target) else UiTheme.GOLD, 2, 8))
 	if item != null:
 		b.add_child(_icon_node(str(item.get("icon", "")), 6.0, 30))
-	var lbl := _label(str(def.label).to_upper(), 8, UiTheme.DIM, UiTheme.F_TITLE)
+	var lbl := _label(L.u(str(def.label)), 8, UiTheme.DIM, UiTheme.F_TITLE)
 	lbl.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	lbl.offset_top = -14
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -473,23 +473,23 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 	bv.add_theme_constant_override("separation", 2)
 	box.add_child(bv)
 	var hh := HBoxContainer.new()
-	hh.add_child(_label("CARACTÉRISTIQUES", 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
+	hh.add_child(_label(L.t("ui.equip_dock.caracteristiques"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hh.add_child(sp)
 	var more := Button.new()
-	more.text = tr("Détails et sorts") + " " + ("▴" if details_open else "▾")
+	more.text = L.t("ui.equip_dock.details_et_sorts") + " " + ("▴" if details_open else "▾")
 	more.focus_mode = Control.FOCUS_NONE
 	more.add_theme_font_size_override("font_size", 11)
 	more.pressed.connect(_toggle_details)
 	hh.add_child(more)
 	bv.add_child(hh)
 	var rows := [
-		["PV", "%d/%d" % [int(c.hp), int(c.maxHp)]],
-		["Endurance", "%d/%d" % [int(c.get("stamina", 0)), int(c.get("maxStamina", 100))]],
-		["Attaque", "%d – %d" % [int(c.atkMin), int(c.atkMax)]],
-		["For / Dex / Con / Int", "%d / %d / %d / %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]],
-		["Vitesse", str(int(c.get("effSpeed", 10)))],
+		[L.t("common.pv"), "%d/%d" % [int(c.hp), int(c.maxHp)]],
+		[L.t("common.endurance"), "%d/%d" % [int(c.get("stamina", 0)), int(c.get("maxStamina", 100))]],
+		[L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)]],
+		[L.t("ui.equip_dock.for_dex_con_int"), "%d / %d / %d / %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]],
+		[L.t("common.vitesse"), str(int(c.get("effSpeed", 10)))],
 	]
 	for r in rows:
 		var h := HBoxContainer.new()
@@ -506,7 +506,7 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 6)
 	var th := HBoxContainer.new()
-	var t := _label("BESACE DU GROUPE", 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
+	var t := _label(L.t("ui.equip_dock.besace_du_groupe"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	th.add_child(t)
 	th.add_child(_label("%d/%d · %d or" % [Inventory.tab_count(gs, tab), Inventory.MAX_PER_TAB, gs.gold], 12, UiTheme.DIM))
@@ -584,7 +584,7 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	v.add_theme_constant_override("separation", 4)
 	box.add_child(v)
 	if resolved.is_empty():
-		var hint := "Touchez un objet : les emplacements où il peut être équipé s'illuminent. Touchez un emplacement équipé pour le consulter ou le retirer." if tab == "items" else "Touchez un objet pour voir son détail."
+		var hint := L.t("ui.equip_dock.touchez_un_objet_les_emplacements") if tab == "items" else L.t("ui.equip_dock.touchez_un_objet_pour_voir")
 		var l := _label(hint, 13, UiTheme.DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(200, 0)
@@ -604,7 +604,7 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	head.add_child(ic)
 	var hv := VBoxContainer.new()
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var nm := _label(str(it.get("name", "")).to_upper() + (" ×%d" % resolved.count if resolved.get("count", 1) > 1 else ""), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
+	var nm := _label(L.u(str(it.get("name", ""))) + (" ×%d" % resolved.count if resolved.get("count", 1) > 1 else ""), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.custom_minimum_size = Vector2(120, 0)
 	hv.add_child(nm)
@@ -616,25 +616,25 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	actions.add_theme_constant_override("separation", 6)
 	if resolved.src == "slot":
 		_add_stat_lines(v, it, c, "", false)
-		actions.add_child(_action_button("Retirer", "neutral", func(): _unequip(str(resolved.slot))))
+		actions.add_child(_action_button(L.t("ui.equip_dock.retirer"), "neutral", func(): _unequip(str(resolved.slot))))
 	elif Inventory.can_equip(it):
 		var slot := Inventory.slot_of(it)
 		_add_stat_lines(v, it, c, slot, true)
-		actions.add_child(_action_button("Équiper", "go", func(): _equip(int(resolved.idx))))
-		actions.add_child(_action_button("Jeter", "del", func(): _discard(int(resolved.idx))))
+		actions.add_child(_action_button(L.t("ui.equip_dock.equiper"), "go", func(): _equip(int(resolved.idx))))
+		actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	elif type == "potion":
 		for line in Inventory.describe(it, gs.cfg):
 			var fl := _label(line, 13, UiTheme.PARCH)
 			v.add_child(fl)
-		actions.add_child(_action_button("Utiliser", "go", func(): _use_potion(int(resolved.idx))))
-		actions.add_child(_action_button("Jeter", "del", func(): _discard(int(resolved.idx))))
+		actions.add_child(_action_button(L.t("ui.equip_dock.utiliser"), "go", func(): _use_potion(int(resolved.idx))))
+		actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	else:
 		for line in Inventory.describe(it, gs.cfg):
 			v.add_child(_label(line, 13, UiTheme.PARCH))
 		if type == "scroll":
-			v.add_child(_label("S'utilise en combat.", 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
+			v.add_child(_label(L.t("ui.equip_dock.utilise_en_combat"), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 		if type != "key":
-			actions.add_child(_action_button("Jeter", "del", func(): _discard(int(resolved.idx))))
+			actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	if actions.get_child_count() > 0:
 		v.add_child(actions)
 	return box
@@ -671,7 +671,7 @@ func _add_stat_lines(v: VBoxContainer, it: Dictionary, c: Dictionary, slot: Stri
 
 func _action_button(text: String, kind: String, cb: Callable) -> Button:
 	var b := Button.new()
-	b.text = text.to_upper()
+	b.text = L.u(text)
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.add_theme_font_size_override("font_size", 12)
@@ -715,19 +715,19 @@ func _build_drawer(c: Dictionary) -> Control:
 	_drawer_inner.add_child(sep)
 	_drawer_inner.add_child(_label("STATISTIQUES", 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	for line in [
-		"Force %d · Dextérité %d · Constitution %d · Intelligence %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))],
-		"Dégâts de sort +%d · XP %d / %d" % [int(c.get("bonusSpellDmg", 0)), int(c.get("xp", 0)), int(c.get("xpToNext", 1))],
+		L.fa(L.t("ui.equip_dock.force_dexterite_constitution"), [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]),
+		L.fa(L.t("ui.equip_dock.degats_de_sort_xp"), [int(c.get("bonusSpellDmg", 0)), int(c.get("xp", 0)), int(c.get("xpToNext", 1))]),
 	]:
 		_drawer_inner.add_child(_label(line, 13))
-	_drawer_inner.add_child(_label("SORTS ET CAPACITÉS", 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
+	_drawer_inner.add_child(_label(L.t("ui.equip_dock.sorts_et_capacites"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	var known: Array = c.get("spellsKnown", [])
 	if known.is_empty():
-		_drawer_inner.add_child(_label("Aucune compétence apprise.", 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
+		_drawer_inner.add_child(_label(L.t("ui.equip_dock.aucune_competence_apprise"), 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	for sid in known:
 		for sp in gs.cfg.get("spells", []):
 			if sp.get("id") == sid:
 				var ic := str(sp.get("icon", ""))
-				var l := _label("%s %s — %s · endurance %d · recharge %d s" % [("" if ic.begins_with("@icon:") else ic), sp.name, Interactions.spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))], 13)
+				var l := _label(L.fa(L.t("ui.equip_dock.endurance_recharge"), [("" if ic.begins_with("@icon:") else ic), sp.name, Interactions.spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))]), 13)
 				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				l.custom_minimum_size = Vector2(200, 0)
 				_drawer_inner.add_child(l)
@@ -798,10 +798,10 @@ func _discard(idx: int) -> void:
 		_after()
 		return
 	var scene := get_tree().current_scene
-	Dialogs.confirm(scene._modals() if scene.has_method("_modals") else scene, "Jeter", "Jeter définitivement %s ? Cette action est irréversible, l'objet sera perdu." % it.get("name", ""), func():
+	Dialogs.confirm(scene._modals() if scene.has_method("_modals") else scene, L.t("ui.equip_dock.jeter"), L.fa(L.t("ui.equip_dock.jeter_definitivement"), it.get("name", "")), func():
 		if Inventory.discard(gs, idx):
 			sel = {}
-			_after(), "Confirmer", "Annuler")
+			_after(), L.t("common.confirmer"), L.t("common.annuler"))
 
 func _use_potion(idx: int) -> void:
 	var healed := Inventory.use_potion(gs, gs.char_by_id(char_id), idx)

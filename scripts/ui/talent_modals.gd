@@ -27,9 +27,9 @@ static func process_queue(host: Node, gs: GameState, on_change: Callable) -> voi
 		_talent(host, gs, c, track, done)
 
 static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary, done: Callable) -> void:
-	var m := Modal.open(host, "🌟 Nouveau talent", 440.0)
+	var m := Modal.open(host, L.t("ui.talent_modals.nouveau_talent"), 440.0)
 	m.esc_closes = false
-	m.add_text("%s atteint le niveau %d ! Choisissez un talent :" % [c.name, int(track.level)])
+	m.add_text(L.fa(L.t("ui.talent_modals.atteint_le_niveau_choisissez"), [c.name, int(track.level)]))
 	for o in track.options:
 		var oid := str(o.id)
 		var b := m.add_button("%s %s\n%s" % [o.get("icon", ""), o.get("labelFr", ""), o.get("descFr", Talents.effect_label(o.get("effects", {})))], func():
@@ -44,9 +44,9 @@ static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary,
 
 static func _evolution(host: Node, gs: GameState, c: Dictionary, done: Callable) -> void:
 	var cls := Characters.class_def(gs.cfg, str(c.classId))
-	var m := Modal.open(host, "⭐ Évolution de classe", 440.0)
+	var m := Modal.open(host, L.t("ui.talent_modals.evolution_de_classe"), 440.0)
 	m.esc_closes = false
-	m.add_text("%s a atteint le niveau requis pour évoluer. Choisissez une voie :" % c.name)
+	m.add_text(L.fa(L.t("ui.talent_modals.a_atteint_le_niveau_requis"), c.name))
 	for cid in cls.get("evolvesTo", []):
 		var oc := Characters.class_def(gs.cfg, str(cid))
 		if oc.is_empty():
@@ -63,7 +63,7 @@ static func _evolution(host: Node, gs: GameState, c: Dictionary, done: Callable)
 # ------------------------------------------------------------------ Maître des Talents (village)
 
 static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
-	var m := Modal.open(host, "Le Maître des Talents", 640.0)
+	var m := Modal.open(host, L.t("ui.talent_modals.le_maitre_des_talents"), 640.0)
 	var st := {"who": str(gs.party[0].id) if not gs.party.is_empty() else ""}
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 6)
@@ -89,12 +89,12 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 		var c := gs.char_by_id(str(st.who))
 		if c.is_empty():
 			return
-		body.add_child(_hint("Le Maître des Talents affiche tous les paliers de talent de ce personnage : à débloquer plus tard (grisé), à choisir pour la première fois (gratuit), ou déjà choisi (peut être changé pour l'autre option, contre une somme conséquente)."))
+		body.add_child(_hint(L.t("ui.talent_modals.le_maitre_des_talents_affiche")))
 		body.add_child(AdminUtil.label("💰 Or disponible : %d" % gs.gold, 15, UiTheme.GOLD))
 		body.add_child(AdminUtil.label("%s %s — Nv.%d" % [c.get("icon", ""), c.name, int(c.level)], 17, UiTheme.GOLD))
 		var trs := Talents.tracks(gs.cfg, str(c.classId))
 		if trs.is_empty():
-			body.add_child(_hint("Cette classe ne dispose d'aucun talent configuré."))
+			body.add_child(_hint(L.t("ui.talent_modals.cette_classe_ne_dispose_aucun")))
 			return
 		var chosen := {}
 		for t in c.get("talents", []):
@@ -104,7 +104,7 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 			var row := VBoxContainer.new()
 			row.add_theme_constant_override("separation", 4)
 			if int(c.level) < lv:
-				row.add_child(AdminUtil.label("Nv.%d — 🔒 Verrouillé (débloqué à ce niveau de personnage)" % lv, 14, UiTheme.DIM))
+				row.add_child(AdminUtil.label(L.fa(L.t("ui.talent_modals.nv_verrouille_debloque_a_ce"), lv), 14, UiTheme.DIM))
 			elif not chosen.has(lv):
 				row.add_child(AdminUtil.label("Nv.%d — Choix disponible" % lv, 15, UiTheme.PARCH))
 				var fl := AdminUtil.flow(row)
@@ -145,7 +145,7 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 			body.add_child(row)
 			body.add_child(HSeparator.new())
 	render.call()
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m
 
 static func _hint(text: String) -> Label:

@@ -4,9 +4,9 @@ extends RefCounted
 ## liste défilante (280 px max) avec la ligne « — Aucun — » puis TOUS les objets du niveau (décors inclus) filtrés par nom, bouton « Fermer ».
 
 static func open(host: Node, items: Array, on_pick: Callable) -> Modal:
-	var m := Modal.open(host, "🎁 Choisir un butin", 340.0)
+	var m := Modal.open(host, L.t("admin.loot_picker.choisir_un_butin"), 340.0)
 	var search := LineEdit.new()
-	search.placeholder_text = "Rechercher un objet..."
+	search.placeholder_text = L.t("admin.loot_picker.rechercher_un_objet")
 	m.content.add_child(search)
 	var frame := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
@@ -33,7 +33,7 @@ static func open(host: Node, items: Array, on_pick: Callable) -> Modal:
 			list.remove_child(ch)
 			ch.queue_free()
 		var f := filter.strip_edges().to_lower()
-		list.add_child(_row(null, "— Aucun —", func(): pick.call("")))
+		list.add_child(_row(null, L.t("common.aucun"), func(): pick.call("")))
 		var n := 0
 		for it in items:
 			if f != "" and not str(it.get("name", "")).to_lower().contains(f):
@@ -42,11 +42,11 @@ static func open(host: Node, items: Array, on_pick: Callable) -> Modal:
 			var iid: String = str(it.id)
 			list.add_child(_row(it, str(it.get("name", "")), func(): pick.call(iid)))
 		if n == 0 and f != "":
-			var h := Form.hint(list, "Aucun objet ne correspond.")
+			var h := Form.hint(list, L.t("admin.loot_picker.aucun_objet_ne_correspond"))
 			h.add_theme_constant_override("line_spacing", 0)
 	search.text_changed.connect(func(t: String): fill.call(t))
 	fill.call("")
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	search.call_deferred("grab_focus")
 	return m
 

@@ -49,7 +49,7 @@ var last_bump: String = ""
 func bump_wall(x: int, y: int) -> void:
 	var k := "%d,%d" % [x, y]
 	if last_bump != k:
-		_log("Un mur de pierre froide bloque le passage.")
+		_log(L.t("game.interactions.un_mur_de_pierre_froide"))
 	last_bump = k
 
 ## Après chaque pas : gain d'endurance puis objet éventuel sur la case.
@@ -115,7 +115,7 @@ func bump_village(x: int, y: int) -> bool:
 		ctrl.changed.emit()
 	if (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]):
 		if last_bump != "%d,%d" % [x, y]:
-			_log("Un arbre bloque le passage.")
+			_log(L.t("game.interactions.un_arbre_bloque_le_passage"))
 		last_bump = "%d,%d" % [x, y]
 		message.emit("Un arbre bloque le passage")
 		return true
@@ -123,17 +123,17 @@ func bump_village(x: int, y: int) -> bool:
 		"merchant":
 			var mm: Dictionary = wand.merchant()
 			mm["discovered"] = true
-			_log("🧙 Le marchand vous accueille et vous montre son étal.")
+			_log(L.t("game.interactions.le_marchand_vous_accueille_et"))
 			if mm.get("offers") == null:
 				mm["offers"] = Shop.village_offers(gs.cfg, gs.run_number)
 			ShopModal.open(host, gs, mm.offers, true, on_change)
 			return true
 		"blacksmith":
-			_log("🔨 Le forgeron vous accueille dans son atelier.")
+			_log(L.t("game.interactions.le_forgeron_vous_accueille_dans"))
 			ForgeModal.open(host, gs, on_change)
 			return true
 		"talent":
-			_log("📖 Le maître des talents vous invite à reconsidérer votre voie.")
+			_log(L.t("game.interactions.le_maitre_des_talents_vous"))
 			TalentModals.master(host, gs, on_change)
 			return true
 	return false
@@ -144,14 +144,14 @@ func _meet_merchant(mm: Dictionary) -> void:
 	mm["discovered"] = true
 	if wand != null:
 		wand.merchant_moved.emit()
-	_log("🧙 Un marchand ambulant vous salue et déballe son étal.")
-	var m := Modal.open(host, "🧙 Marchand ambulant", 380)
-	m.add_text("Vous croisez le marchand ambulant. Souhaitez-vous consulter son étal ?", UiTheme.DIM, 15, true)
+	_log(L.t("game.interactions.un_marchand_ambulant_vous_salue"))
+	var m := Modal.open(host, L.t("common.marchand_ambulant"), 380)
+	m.add_text(L.t("game.interactions.vous_croisez_le_marchand_ambulant"), UiTheme.DIM, 15, true)
 	m.set_buttons([
-		{"text": "🛒 Voir son étal", "primary": true, "cb": func():
+		{"text": L.t("game.interactions.voir_son_etal"), "primary": true, "cb": func():
 			m.close()
 			open_merchant(mm)},
-		{"text": "Continuer sans s'arrêter", "cb": func(): m.close()},
+		{"text": L.t("game.interactions.continuer_sans_arreter"), "cb": func(): m.close()},
 	])
 
 func open_merchant(mm: Dictionary) -> void:
@@ -165,8 +165,8 @@ func open_merchant(mm: Dictionary) -> void:
 func _pickup(it: Dictionary) -> void:
 	var inst := Inventory.make_instance(it)
 	if not Inventory.has_space(gs, inst):
-		_log("🎒 L'onglet %s est plein (%d/%d) ! Équipez ou jetez des objets pour faire de la place — %s reste au sol." % [
-			Inventory.TAB_LABELS[Inventory.tab_of(inst)], Inventory.MAX_PER_TAB, Inventory.MAX_PER_TAB, it.get("name", "l'objet")])
+		_log(L.fa(L.t("game.interactions.l_onglet_est_plein_equipez"), [
+			Inventory.TAB_LABELS[Inventory.tab_of(inst)], Inventory.MAX_PER_TAB, Inventory.MAX_PER_TAB, it.get("name", "l'objet")]))
 		return
 	Inventory.add(gs, inst)
 	Sound.sfx("pickup")
@@ -174,8 +174,8 @@ func _pickup(it: Dictionary) -> void:
 	_lstate().taken_items[str(it.id)] = true
 	view.entities.remove_item(str(it.id))
 	gs.stats["itemsFound"] = int(gs.stats.get("itemsFound", 0)) + 1
-	_log("Le groupe ramasse %s." % it.get("name", "un objet"))
-	message.emit("Ramassé : %s" % it.get("name", "objet"))
+	_log(L.fa(L.t("game.interactions.le_groupe_ramasse"), it.get("name", L.t("game.interactions.un_objet"))))
+	message.emit(L.fa(L.t("game.interactions.ramasse"), it.get("name", L.t("game.interactions.objet"))))
 	bag_changed.emit()
 
 # ------------------------------------------------------------------ portes et escaliers
@@ -192,11 +192,11 @@ func try_door(x: int, y: int) -> bool:
 		var k := Inventory.find_key(gs, str(d.id))
 		if k < 0:
 			Sound.sfx("door_locked")
-			_log("🔒 Cette porte est verrouillée.")
-			message.emit("🔒 Porte verrouillée")
+			_log(L.t("game.interactions.cette_porte_est_verrouillee"))
+			message.emit(L.t("game.interactions.porte_verrouillee"))
 			return false
 		var key: Dictionary = gs.inventory[k]
-		_log("🔑 Le groupe utilise %s pour déverrouiller la porte. La clé est consommée et disparaît de la besace." % key.get("name", "la clé"))
+		_log(L.fa(L.t("game.interactions.le_groupe_utilise_pour_deverrouiller"), key.get("name", L.t("game.interactions.la_cle"))))
 		gs.inventory.remove_at(k)
 		unlocked[str(d.id)] = true
 		bag_changed.emit()
@@ -220,10 +220,10 @@ func stairs_open(st: Dictionary) -> bool:
 	var k := Inventory.find_key(gs, str(st.id))
 	if k < 0:
 		Sound.sfx("door_locked")
-		_log("🔒 Une grille de fer ferme cette arche — il faut trouver la clé.")
-		message.emit("🔒 Arche verrouillée")
+		_log(L.t("game.interactions.une_grille_de_fer_ferme"))
+		message.emit(L.t("game.interactions.arche_verrouillee"))
 		return false
-	_log("🔑 Le groupe utilise %s pour ouvrir la grille de l'arche. La clé est consommée." % gs.inventory[k].get("name", "la clé"))
+	_log(L.fa(L.t("game.interactions.le_groupe_utilise_pour_ouvrir"), gs.inventory[k].get("name", L.t("game.interactions.la_cle"))))
 	gs.inventory.remove_at(k)
 	unlocked[str(st.id)] = true
 	bag_changed.emit()
@@ -273,18 +273,18 @@ func _trigger_switch(it: Dictionary) -> void:
 		return
 	st["triggered"] = true
 	ctrl.fx.emit("switch")
-	_log("🔧 %s actionné !" % it.get("name", "Levier"))
+	_log(L.fa(L.t("game.interactions.actionne"), it.get("name", "Levier")))
 	var did := str(it.get("switchOpensDoorId", ""))
 	if did != "":
 		_lstate().get_or_add("door_unlocked", {})[did] = true
-		_log("🔓 Une porte se déverrouille au loin...")
+		_log(L.t("game.interactions.une_porte_se_deverrouille_au"))
 	var mid := str(it.get("switchRevealMonsterId", ""))
 	if mid != "":
 		var mst: Dictionary = _lstate().monsters.get(mid, {})
 		if not mst.is_empty() and mst.get("hidden", false):
 			mst["hidden"] = false
 			view.entities.set_monster_visible(mid, true)
-			_log("👹 Une présence hostile se révèle non loin...")
+			_log(L.t("game.interactions.une_presence_hostile_se_revele"))
 	var iid := str(it.get("switchRevealItemId", ""))
 	if iid != "":
 		var ist := gs.item_state(_lid(), iid)
@@ -295,7 +295,7 @@ func _trigger_switch(it: Dictionary) -> void:
 		if ist.get("hidden", def_hidden):
 			ist["hidden"] = false
 			view.entities.set_item_visible(iid, true)
-			_log("✨ Un objet apparaît, jusque-là invisible...")
+			_log(L.t("game.interactions.un_objet_apparait_jusque_la"))
 	if str(it.get("message", "")) != "":
 		_log(str(it.message))
 
@@ -309,15 +309,15 @@ func _prompt_fountain(it: Dictionary) -> void:
 	var now := Time.get_unix_time_from_system() * 1000.0
 	var ready_at := float(st.get("usedAt", 0.0)) + _fountain_cooldown_ms()
 	if st.has("usedAt") and now < ready_at:
-		_log("💧 %s est tarie pour l'instant. Elle se rechargera dans environ %d minute(s)." % [it.get("name", "La fontaine"), int(ceil((ready_at - now) / 60000.0))])
+		_log(L.fa(L.t("game.interactions.est_tarie_pour_l_instant"), [it.get("name", L.t("game.interactions.la_fontaine")), int(ceil((ready_at - now) / 60000.0))]))
 		return
-	var m := Modal.open(host, "⛲ Fontaine", 400)
-	m.add_text("Voulez-vous utiliser cette fontaine ? Elle restaure PV et endurance de tout le groupe (et ressuscite les personnages tombés), puis se recharge pendant un certain temps.", UiTheme.PARCH, 14, true)
+	var m := Modal.open(host, L.t("game.interactions.fontaine"), 400)
+	m.add_text(L.t("game.interactions.voulez_vous_utiliser_cette_fontaine"), UiTheme.PARCH, 14, true)
 	m.set_buttons([
-		{"text": "✨ Utiliser la fontaine", "primary": true, "cb": func():
+		{"text": L.t("game.interactions.utiliser_la_fontaine"), "primary": true, "cb": func():
 			m.close()
 			_use_fountain(it)},
-		{"text": "Passer sans l'utiliser", "primary": false, "cb": func(): m.close()},
+		{"text": L.t("game.interactions.passer_sans_l_utiliser"), "primary": false, "cb": func(): m.close()},
 	])
 
 func _use_fountain(it: Dictionary) -> void:
@@ -332,10 +332,10 @@ func _use_fountain(it: Dictionary) -> void:
 		c["stamina"] = c.get("maxStamina", 100)
 	Sound.sfx("fountain")
 	ctrl.fx.emit("fountain")
-	_log("⛲ %s redonne toutes ses forces au groupe ! PV et endurance entièrement restaurés." % it.get("name", "La fontaine"))
+	_log(L.fa(L.t("game.interactions.redonne_toutes_ses_forces_au"), it.get("name", L.t("game.interactions.la_fontaine"))))
 	if not revived.is_empty():
-		_log("✝️ %s %s ramené(s) à la vie par la fontaine !" % [", ".join(revived), "est" if revived.size() == 1 else "sont"])
-	ctrl.popup.emit("✨ PV & Endurance restaurés ✨", Color("3aa8c8"))
+		_log(L.fa(L.t("game.interactions.ramene_a_la_vie_par"), [", ".join(revived), "est" if revived.size() == 1 else "sont"]))
+	ctrl.popup.emit(L.t("game.interactions.pv_endurance_restaures"), Color("3aa8c8"))
 	ctrl.changed.emit()
 
 # ------------------------------------------------------------------ pièges
@@ -395,11 +395,11 @@ func _prompt_trap(it: Dictionary) -> void:
 		if outcome == "perfect" or outcome == "success":
 			gs.item_state(_lid(), str(it.id))["disarmed"] = true
 			view.entities.remove_item(str(it.id))
-			_log("🔓 %s désamorcé par le groupe." % it.get("name", "Le piège"))
+			_log(L.fa(L.t("game.interactions.desamorce_par_le_groupe"), it.get("name", L.t("game.interactions.le_piege"))))
 			ctrl.changed.emit()
 		else:
 			if outcome == "crit":
-				_log("💥 Échec critique ! Le piège frappe plus fort (+%d %%)." % int(_trap_cfg().critExtraDmg), true)
+				_log(L.fa(L.t("game.interactions.echec_critique_le_piege_frappe"), int(_trap_cfg().critExtraDmg)), true)
 			_apply_trap(it, 1.0, hit))
 
 func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
@@ -425,13 +425,13 @@ func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
 	gs.bump(victim.id, "damageTaken", int(hit.dmg))
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
-	_log("⚠️ Piège déclenché : %s ! %s subit %d dégâts." % [it.get("name", ""), victim.name, int(hit.dmg)], true)
+	_log(L.fa(L.t("game.interactions.piege_declenche_subit_degats"), [it.get("name", ""), victim.name, int(hit.dmg)]), true)
 	ctrl.popup.emit("-%d" % int(hit.dmg), Color("ff6a6a"))
 	if int(victim.hp) <= 0:
-		_log("%s s'effondre, à terre !" % victim.name)
+		_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
 		if gs.alive_party().is_empty():
 			gs.game_over = true
-			_log("Le groupe est anéanti... les ténèbres l'emportent.")
+			_log(L.t("common.le_groupe_est_aneanti_les"))
 			ctrl.game_over.emit()
 		elif gs.active_char_id == str(victim.id):
 			gs.active_char_id = str(gs.alive_party()[0].id)
@@ -465,15 +465,15 @@ func open_scroll_picker(char_id: String) -> void:
 			groups.append({"it": it, "idx": i, "count": 1})
 	if groups.is_empty():
 		return
-	var m := Modal.open(host, "📜 Choisir un parchemin", 420)
+	var m := Modal.open(host, L.t("game.interactions.choisir_un_parchemin"), 420)
 	for g in groups:
 		var it2: Dictionary = g.it
 		var idx2: int = g.idx
 		var sp := ctrl.combat.spell_def(str(it2.get("spellId", "")))
-		var label := str(sp.get("name", it2.get("name", "Parchemin")))
+		var label := str(sp.get("name", it2.get("name", L.t("common.parchemin"))))
 		if int(g.count) > 1:
 			label += "  ×%d" % int(g.count)
-		m.add_row(IconResolver.texture(str(it2.get("icon", ""))), "\n".join(SpellTip.lines(sp)) if not sp.is_empty() else "Parchemin illisible")
+		m.add_row(IconResolver.texture(str(it2.get("icon", ""))), "\n".join(SpellTip.lines(sp)) if not sp.is_empty() else L.t("game.interactions.parchemin_illisible"))
 		m.add_button(label, func():
 			m.close()
 			ctrl.read_scroll(char_id, idx2)
@@ -483,13 +483,13 @@ func open_item_menu(idx: int) -> void:
 	if idx < 0 or idx >= gs.inventory.size():
 		return
 	var it: Dictionary = gs.inventory[idx]
-	var m := Modal.open(host, str(it.get("name", "Objet")), 400)
+	var m := Modal.open(host, str(it.get("name", L.t("common.objet"))), 400)
 	m.add_row(IconResolver.texture(str(it.get("icon", ""))), "\n".join(Inventory.describe(it, gs.cfg)))
 	var type := str(it.get("type", ""))
 	var alive := gs.alive_party()
 	var fighting := ctrl.in_combat()
 	if type == "potion":
-		m.add_text("Faire boire à :", UiTheme.DIM, 14, true)
+		m.add_text(L.t("game.interactions.faire_boire_a"), UiTheme.DIM, 14, true)
 		for c in alive:
 			if fighting and str(c.id) != gs.active_char_id:
 				continue
@@ -502,7 +502,7 @@ func open_item_menu(idx: int) -> void:
 						ctrl.potion_drunk(cid, healed)
 						bag_changed.emit())
 	elif type == "scroll":
-		m.add_text("Faire lire à :", UiTheme.DIM, 14, true)
+		m.add_text(L.t("game.interactions.faire_lire_a"), UiTheme.DIM, 14, true)
 		for c in alive:
 			var cid2: String = str(c.id)
 			m.add_button(str(c.name), func():
@@ -510,7 +510,7 @@ func open_item_menu(idx: int) -> void:
 				ctrl.read_scroll(cid2, idx)
 				bag_changed.emit())
 	elif Inventory.can_equip(it) and not fighting:
-		m.add_text("Équiper sur :", UiTheme.DIM, 14, true)
+		m.add_text(L.t("game.interactions.equiper_sur"), UiTheme.DIM, 14, true)
 		for c in gs.party:
 			var cid3: String = str(c.id)
 			var cur = c.get("equipment", {}).get(Inventory.slot_of(it))
@@ -524,11 +524,11 @@ func open_item_menu(idx: int) -> void:
 				bag_changed.emit())
 	var buttons: Array = []
 	if type != "key" and not fighting:
-		buttons.append({"text": "Jeter", "cb": func():
+		buttons.append({"text": L.t("common.jeter"), "cb": func():
 			m.close()
 			Inventory.discard(gs, idx)
 			bag_changed.emit()})
-	buttons.append({"text": "Fermer", "cb": func(): m.close()})
+	buttons.append({"text": L.t("common.fermer"), "cb": func(): m.close()})
 	m.set_buttons(buttons)
 
 # ------------------------------------------------------------------ fiche de personnage
@@ -540,14 +540,14 @@ func open_sheet(char_id: String) -> void:
 
 static func spell_effect(sp: Dictionary) -> String:
 	match str(sp.get("mode", "")):
-		"damage": return "dégâts %d–%d" % [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))]
-		"damageGroup": return "dégâts de groupe %d–%d" % [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))]
-		"healSingle": return "soin %d–%d" % [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))]
-		"healParty": return "soin de groupe %d–%d" % [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))]
-		"staminaRestoreSingle": return "endurance +%d–%d" % [int(sp.get("staminaMin", 0)), int(sp.get("staminaMax", 0))]
-		"shieldSingle": return "bouclier %d–%d" % [int(sp.get("shieldMin", 0)), int(sp.get("shieldMax", 0))]
-		"dispelSingle": return "retire les statuts négatifs d'un allié"
-		"sleepGroup": return "endort l'ennemi engagé (%d%% de chance)" % int(sp.get("statusChance", 0))
-		"selfBuff": return "améliore le lanceur (%d tours)" % int(sp.get("statusDuration", 0))
-		"partyUtility": return "recharges −%d s et vigueur pour tout le groupe" % int(sp.get("cooldownReductionSec", 0))
-	return str(sp.get("mode", "effet spécial"))
+		"damage": return L.fa(L.t("game.interactions.degats"), [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))])
+		"damageGroup": return L.fa(L.t("game.interactions.degats_de_groupe"), [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))])
+		"healSingle": return L.fa(L.t("game.interactions.soin"), [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))])
+		"healParty": return L.fa(L.t("game.interactions.soin_de_groupe"), [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))])
+		"staminaRestoreSingle": return L.fa(L.t("game.interactions.endurance"), [int(sp.get("staminaMin", 0)), int(sp.get("staminaMax", 0))])
+		"shieldSingle": return L.fa(L.t("game.interactions.bouclier"), [int(sp.get("shieldMin", 0)), int(sp.get("shieldMax", 0))])
+		"dispelSingle": return L.t("game.interactions.retire_les_statuts_negatifs_un")
+		"sleepGroup": return L.fa(L.t("game.interactions.endort_l_ennemi_engage_de"), int(sp.get("statusChance", 0)))
+		"selfBuff": return L.fa(L.t("game.interactions.ameliore_le_lanceur_tours"), int(sp.get("statusDuration", 0)))
+		"partyUtility": return L.fa(L.t("game.interactions.recharges_et_vigueur_pour_tout"), int(sp.get("cooldownReductionSec", 0)))
+	return str(sp.get("mode", L.t("game.interactions.effet_special")))

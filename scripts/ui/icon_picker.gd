@@ -238,7 +238,7 @@ static func _category_header(text: String) -> Control:
 	v.add_theme_constant_override("separation", int(UiMetrics.css(3.0)))
 	m.add_child(v)
 	var l := Label.new()
-	l.text = text.to_upper()
+	l.text = L.u(text)
 	var fv := FontVariation.new()
 	fv.base_font = UiTheme.font(UiTheme.F_BODY)
 	fv.spacing_glyph = 1
@@ -279,13 +279,13 @@ static func open(host: Node, current: String, on_pick: Callable) -> Modal:
 	var m := Modal.open(host, "", 540.0)
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", int(UiMetrics.css(6.0)))
-	var b_emoji := _tab_button("Emoji", _tab == "emoji")
-	var b_custom := _tab_button("Icônes illustrées", _tab == "custom")
+	var b_emoji := _tab_button(L.t("ui.icon_picker.emoji"), _tab == "emoji")
+	var b_custom := _tab_button(L.t("ui.icon_picker.icones_illustrees"), _tab == "custom")
 	tabs.add_child(b_emoji)
 	tabs.add_child(b_custom)
 	m.content.add_child(tabs)
 	var search := LineEdit.new()
-	search.placeholder_text = "Rechercher (ex : épée, boss, potion...)"
+	search.placeholder_text = L.t("ui.icon_picker.rechercher_ex_epee_boss_potion")
 	search.visible = _tab == "custom"
 	search.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
 	var sbox := AdminCells.field_box()
@@ -344,7 +344,7 @@ static func open(host: Node, current: String, on_pick: Callable) -> Modal:
 					grid.add_child(_swatch("@icon:" + str(e[0]), str(e[1]), false, pick))
 			if not any:
 				var none := Label.new()
-				none.text = "Aucun résultat."
+				none.text = L.t("ui.icon_picker.aucun_resultat")
 				none.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.74)))
 				none.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
 				none.add_theme_color_override("font_color", UiTheme.DIM)
@@ -367,7 +367,7 @@ static func open(host: Node, current: String, on_pick: Callable) -> Modal:
 	b_custom.pressed.connect(func(): switch_tab.call("custom"))
 	search.text_changed.connect(func(_t: String): render.call())
 	render.call()
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close(), "primary": false}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close(), "primary": false}])
 	return m
 
 # ------------------------------------------------------------------ portraits
@@ -375,7 +375,7 @@ static func open(host: Node, current: String, on_pick: Callable) -> Modal:
 ## Sélecteur de portraits (images assets/portraits) ; `on_pick` reçoit le chemin, ou "" pour « Aucun portrait (icône de classe) ».
 ## Cliquer sur le fond ferme la fenêtre ; le portrait courant est cerclé d'or vif avec un halo.
 static func open_portrait(host: Node, current: String, on_pick: Callable) -> Modal:
-	var m := Modal.open(host, "Choisir un portrait", 520.0)
+	var m := Modal.open(host, L.t("ui.icon_picker.choisir_un_portrait"), 520.0)
 	if m.panel.title_label != null:
 		m.panel.title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var pick := func(v: String):
@@ -444,8 +444,8 @@ static func open_portrait(host: Node, current: String, on_pick: Callable) -> Mod
 		if g is AutoGrid:
 			(g as AutoGrid).laid_out.connect(func(_h: float): fit_scroll.call_deferred())
 	m.set_buttons([
-		{"text": "Aucun portrait (icône de classe)", "cb": func(): pick.call(""), "primary": false},
-		{"text": "Fermer", "cb": func(): m.close(), "primary": false}])
+		{"text": L.t("ui.icon_picker.aucun_portrait_icone_de_classe"), "cb": func(): pick.call(""), "primary": false},
+		{"text": L.t("common.fermer"), "cb": func(): m.close(), "primary": false}])
 	m.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			m.close())

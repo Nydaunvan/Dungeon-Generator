@@ -4,9 +4,9 @@ extends Control
 ## État de session : `Data.admin_unlocked` (adminUnlocked), `Data.play_origin == "random"` (cameFromRandomGen),
 ## `Data.own_dungeon_launched` (ownDungeonLaunched), `Data.resume_game` (la partie suspendue : STATE de l'original).
 
-const TABS := [["general", "Général"], ["chars", "Personnages"], ["classes", "Classes"], ["spells", "Sorts / Capacités"], ["items", "Objets de base"], ["levels", "Niveaux"]]
+const TABS := [["general", "admin.main.general"], ["chars", "common.personnages"], ["classes", "Classes"], ["spells", "admin.main.sorts_capacites"], ["items", "common.objets_de_base"], ["levels", "admin.main.niveaux"]]
 const SHARED_TABS := ["classes", "spells", "items"]
-const SHARED_TIP := "Enregistrer comme configuration par défaut affecte aussi le donjon aléatoire, qui pioche dans ce même catalogue"
+const SHARED_TIP := "admin.main.enregistrer_comme_configuration"
 
 var _root: VBoxContainer
 var _header: AppHeader
@@ -65,7 +65,7 @@ func _ready() -> void:
 	_build_gate()
 	_build_main()
 	_footer = Label.new()
-	_footer.text = tr("Éditeur de Donjon") + " v1.29 · " + tr("portage Godot") + "\nMade by Claude & Nydaunvan"
+	_footer.text = L.t("common.editeur_de_donjon") + " v1.29 · " + L.t("common.portage_godot") + "\nMade by Claude & Nydaunvan"
 	_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
 	_footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
@@ -123,7 +123,7 @@ func _build_gate() -> void:
 	var top := Control.new()
 	top.custom_minimum_size = Vector2(0, UiMetrics.css(28.0))
 	wrap.add_child(top)
-	var p := OrnatePanel.new("Accès administrateur")
+	var p := OrnatePanel.new(L.t("admin.main.acces_administrateur"))
 	wrap.add_child(p)
 	var crest := Label.new()
 	crest.text = "🔐"
@@ -134,7 +134,7 @@ func _build_gate() -> void:
 	v.move_child(crest, 0)
 	_pw_input = LineEdit.new()
 	_pw_input.secret = true
-	_pw_input.placeholder_text = "Mot de passe"
+	_pw_input.placeholder_text = L.t("admin.main.mot_de_passe")
 	_pw_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pw_input.text_submitted.connect(func(_t): _try_login())
 	_pw_input.add_theme_font_size_override("font_size", int(round(UiMetrics.rem(0.85))))
@@ -144,7 +144,7 @@ func _build_gate() -> void:
 	row.add_child(_pw_input)
 	Form._place(p.body, row, 0.0, 10.0)
 	var c1 := CenterContainer.new()
-	c1.add_child(Form._button(["Se connecter", _try_login, true]))
+	c1.add_child(Form._button([L.t("admin.main.se_connecter"), _try_login, true]))
 	Form._place(p.body, c1, 0.0, 0.0)
 	_pw_error = Label.new()
 	_pw_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -153,7 +153,7 @@ func _build_gate() -> void:
 	_pw_error.add_theme_color_override("font_color", Color("e06a5a"))
 	Form._place(p.body, _pw_error, 6.0, 0.0)
 	var c2 := CenterContainer.new()
-	c2.add_child(Form._button(["◀ Retour au jeu", _back_to_game]))
+	c2.add_child(Form._button([L.t("admin.main.retour_au_jeu"), _back_to_game]))
 	Form._place(p.body, c2, 10.0, 0.0)
 	_page.add_child(_gate)
 
@@ -176,7 +176,7 @@ func _try_login() -> void:
 		_pw_error.text = ""
 		_show_state()
 	else:
-		_pw_error.text = "Mot de passe incorrect."
+		_pw_error.text = L.t("admin.main.mot_de_passe_incorrect")
 
 ## `adminLogout` : retour à l'accueil (qui reverrouille).
 func logout() -> void:
@@ -218,9 +218,9 @@ func _build_main() -> void:
 	brow.add_theme_constant_override("h_separation", int(UiMetrics.css(4.0)))
 	brow.add_theme_constant_override("v_separation", int(UiMetrics.css(4.0)))
 	_banner.body.add_child(brow)
-	_btn_play = Form._button(["▶ Jouer ce donjon", _banner_primary, true])
-	_btn_resume = Form._button(["◀ Reprendre là où vous étiez", Data.resume_from_admin])
-	var tut := Form._button(["🧭 Tutoriel", func(): DocModal.tutorial(_modal_layer)])
+	_btn_play = Form._button([L.t("admin.main.jouer_ce_donjon"), _banner_primary, true])
+	_btn_resume = Form._button([L.t("admin.main.reprendre_la_ou_vous_etiez"), Data.resume_from_admin])
+	var tut := Form._button([L.t("admin.main.tutoriel"), func(): DocModal.tutorial(_modal_layer)])
 	for b in [_btn_play, _btn_resume, tut]:
 		brow.add_child(b)
 		_pad_button(b, 24.0, 12.0)
@@ -285,7 +285,7 @@ func _add_badge(b: Button) -> void:
 	badge.offset_top = -lab.get_minimum_size().y * 0.5 - 1.0
 	badge.offset_bottom = lab.get_minimum_size().y * 0.5 + 1.0
 
-const SHARED_BADGE := "🎲 partagé"
+const SHARED_BADGE := "admin.main.partage"
 
 ## `updateAdminPlayBanner` : trois états.
 func _update_banner() -> void:
@@ -293,13 +293,13 @@ func _update_banner() -> void:
 	if _random_run() and active:
 		_banner.visible = true
 		_btn_resume.visible = false
-		_banner_text.text = "Une partie est en cours sur ce donjon aléatoire. Reprenez-la dès que vous le souhaitez."
-		_btn_play.text = "◀ Reprendre la partie en cours"
+		_banner_text.text = L.t("admin.main.une_partie_est_en_cours")
+		_btn_play.text = L.t("admin.main.reprendre_la_partie_en_cours")
 	elif not _random_run():
 		_banner.visible = true
-		_banner_text.text = "Vous pouvez reprendre votre partie en cours pour continuer à tester, ou relancer une partie neuve avec vos dernières modifications." \
-			if (active and Data.own_dungeon_launched) else "Vous configurez votre propre donjon. Lancez-le dès que vous êtes prêt, ou modifiez librement les onglets ci-dessous avant de jouer."
-		_btn_play.text = "▶ Jouer ce donjon"
+		_banner_text.text = L.t("admin.main.vous_pouvez_reprendre_votre_partie") \
+			if (active and Data.own_dungeon_launched) else L.t("admin.main.vous_configurez_votre_propre")
+		_btn_play.text = L.t("admin.main.jouer_ce_donjon")
 		_btn_resume.visible = active and Data.own_dungeon_launched
 	else:
 		_banner.visible = false
@@ -315,13 +315,13 @@ func _banner_primary() -> void:
 ## `playCurrentDungeon` : confirmation, enregistrement, écran de chargement, nouvelle partie avec la configuration éditée.
 func _play_current() -> void:
 	var go := func():
-		_show_loader("Descente dans le donjon", "Chargement de la carte")
+		_show_loader(L.t("admin.main.descente_dans_le_donjon"), L.t("admin.main.chargement_de_la_carte"))
 		await get_tree().create_timer(0.32).timeout
 		Data.save_config()
 		var cfg := Data.admin_config().duplicate(true)
 		Data.launch(cfg, "custom", Data.ADMIN_KEEP)
 		Data.own_dungeon_launched = true
-	Dialogs.confirm(_modal_layer, "", "Commencer une partie avec le donjon actuellement configuré ?", go)
+	Dialogs.confirm(_modal_layer, "", L.t("admin.main.commencer_une_partie_avec_le"), go)
 
 func _show_loader(title: String, text: String) -> void:
 	var m := Modal.open(_modal_layer, title, 340.0)
@@ -363,11 +363,11 @@ func say(text: String) -> void:
 
 static func _now_message() -> String:
 	var t := Time.get_time_dict_from_system()
-	return "Configuration enregistrée à %02d:%02d:%02d (stockage local de l'appareil)" % [t.hour, t.minute, t.second]
+	return L.fa(L.t("admin.main.configuration_enregistree_a_02d"), [t.hour, t.minute, t.second])
 
 ## `saveConfigNow` : enregistre la configuration éditée ; le message va dans `status` (ou dans l'état du Général).
 func save(status: Label = null) -> void:
-	var msg := _now_message() if Data.save_config() else "Échec de l'enregistrement."
+	var msg := _now_message() if Data.save_config() else L.t("admin.main.echec_de_l_enregistrement")
 	if status != null and is_instance_valid(status):
 		status.text = msg
 	say(msg)
@@ -375,7 +375,7 @@ func save(status: Label = null) -> void:
 ## Bouton « 💾 Enregistrer la configuration par défaut » de l'original (`confirmSaveConfigDefault`).
 func confirm_save(status: Label = null) -> void:
 	var go := func(): save(status)
-	Dialogs.confirm(_modal_layer, "", "⚠️ Ceci va enregistrer la configuration comme NOUVELLE CONFIGURATION PAR DÉFAUT : classes, sorts, objets, niveaux... Tout changement ici s'appliquera à TOUTES les futures parties, y compris le donjon aléatoire, qui pioche dans ce même catalogue de classes/sorts/objets — pas seulement à la partie en cours. Confirmer l'enregistrement ?", go)
+	Dialogs.confirm(_modal_layer, "", L.t("admin.main.ceci_va_enregistrer_la_configuration"), go)
 
 # ------------------------------------------------------------------ quitter vers l'accueil (attemptSwitchView('home'))
 
@@ -393,33 +393,33 @@ func _slot_opts() -> Dictionary:
 ## `leaveGameOverlay` pendant une partie aléatoire en cours.
 func _leave_game_overlay() -> void:
 	var g: Dictionary = Data.resume_game
-	var m := Modal.open(_modal_layer, "🚪 Quitter la partie en cours", 440.0)
-	m.add_text("Voulez-vous sauvegarder votre progression avant de continuer ?", UiTheme.PARCH, 14, true)
+	var m := Modal.open(_modal_layer, L.t("common.quitter_la_partie_en_cours"), 440.0)
+	m.add_text(L.t("common.voulez_vous_sauvegarder_votre"), UiTheme.PARCH, 14, true)
 	var btns: Array = [
-		{"text": "💾 Sauvegarder et quitter", "primary": true, "cb": func():
+		{"text": L.t("common.sauvegarder_et_quitter"), "primary": true, "cb": func():
 			m.close()
 			SlotsModal.open(_modal_layer, func(): return g, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
-		{"text": "📤 Exporter le donjon (fichier JSON) et quitter", "primary": false, "cb": func():
+		{"text": L.t("common.exporter_le_donjon_fichier_json"), "primary": false, "cb": func():
 			m.close()
 			Files.save_text(_modal_layer, Data.export_name(str(g.config.get("title", "")), "_sauvegarde"), Saves.export_text(g.config, g.save, str(g.get("origin", Data.play_origin))), func(_t): Data.go_home())},
-		{"text": "Quitter sans sauvegarder", "primary": false, "cb": func():
+		{"text": L.t("common.quitter_sans_sauvegarder"), "primary": false, "cb": func():
 			m.close()
 			Data.go_home()},
-		{"text": "Annuler, rester dans la partie", "primary": false, "cb": func(): m.close()},
+		{"text": L.t("common.annuler_rester_dans_la_partie"), "primary": false, "cb": func(): m.close()},
 	]
 	m.set_buttons(btns)
 
 ## `creationLeaveOverlay` : quitter la création d'un donjon (revenir repart d'une base neuve).
 func _creation_leave_overlay() -> void:
-	var m := Modal.open(_modal_layer, "🏠 Quitter la création du donjon", 440.0)
-	m.add_text("Revenir ici repartira toujours d'une toute nouvelle base aléatoire : exportez votre création si vous voulez la conserver.", UiTheme.PARCH, 14, true)
+	var m := Modal.open(_modal_layer, L.t("admin.main.quitter_la_creation_du_donjon"), 440.0)
+	m.add_text(L.t("admin.main.revenir_ici_repartira_toujours"), UiTheme.PARCH, 14, true)
 	m.set_buttons([
-		{"text": "⬇ Exporter en JSON (fichier)", "primary": false, "cb": func(): AdminGeneral.export_config(self)},
-		{"text": "📋 Générer un code à partager", "primary": false, "cb": func(): Form.generate_code(Data.admin_config(), out_ref[0], status_ref[0])},
-		{"text": "🚪 Quitter et abandonner cette création", "primary": true, "cb": func():
+		{"text": L.t("admin.main.exporter_en_json_fichier"), "primary": false, "cb": func(): AdminGeneral.export_config(self)},
+		{"text": L.t("common.generer_un_code_a_partager"), "primary": false, "cb": func(): Form.generate_code(Data.admin_config(), out_ref[0], status_ref[0])},
+		{"text": L.t("admin.main.quitter_et_abandonner_cette_creation"), "primary": true, "cb": func():
 			m.close()
 			Data.go_home()},
-		{"text": "Rester dans l'interface de création", "primary": false, "cb": func(): m.close()},
+		{"text": L.t("admin.main.rester_dans_l_interface_de"), "primary": false, "cb": func(): m.close()},
 	])
 	# zone du code, sous « Générer un code »
 	var row: Node = m._buttons_row

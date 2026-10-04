@@ -82,8 +82,8 @@ static func create(config: Dictionary) -> GameState:
 		s.party.append(Characters.create(t, config))
 	if s.party.size() > 0:
 		s.active_char_id = str(s.party[0].id)
-	s.add_divider("Expédition n°1 — %s" % str(config.get("title", "")))
-	s.add_log(Saves.OPENING_LOG)
+	s.add_divider(L.fa(L.t("rules.game_state.expedition_n_1"), str(config.get("title", ""))))
+	s.add_log(L.t("core.saves.opening_log"))
 	return s
 
 func add_log(msg: String, player_hit: bool = false) -> void:

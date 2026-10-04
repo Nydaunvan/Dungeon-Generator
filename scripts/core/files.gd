@@ -6,7 +6,7 @@ static func save_text(host: Node, file_name: String, text: String, on_done: Call
 	if OS.has_feature("web"):
 		JavaScriptBridge.download_buffer(text.to_utf8_buffer(), file_name, "application/json")
 		if on_done.is_valid():
-			on_done.call("Téléchargement lancé : %s" % file_name)
+			on_done.call(L.fa(L.t("core.files.telechargement_lance"), file_name))
 		return
 	var dlg := FileDialog.new()
 	dlg.file_mode = FileDialog.FILE_MODE_SAVE_FILE
@@ -19,7 +19,7 @@ static func save_text(host: Node, file_name: String, text: String, on_done: Call
 		if f != null:
 			f.store_string(text)
 		if on_done.is_valid():
-			on_done.call("Fichier enregistré : %s" % path if f != null else "Échec de l'enregistrement.")
+			on_done.call((L.fa(L.t("core.files.fichier_enregistre"), path)) if f != null else L.t("core.files.echec_enregistrement"))
 		dlg.queue_free())
 	dlg.canceled.connect(func(): dlg.queue_free())
 	host.add_child(dlg)
@@ -28,7 +28,7 @@ static func save_text(host: Node, file_name: String, text: String, on_done: Call
 ## Choisit un fichier texte ; `on_text(text)` reçoit son contenu. Sur le Web, ouvre plutôt la fenêtre « coller le contenu ».
 static func pick_text(host: Node, on_text: Callable) -> void:
 	if OS.has_feature("web"):
-		paste_dialog(host, "Importer un fichier JSON", "Ouvrez le fichier JSON dans un éditeur de texte, copiez tout son contenu et collez-le ci-dessous.", on_text)
+		paste_dialog(host, L.t("common.importer_un_fichier_json"), L.t("core.files.ouvrez_le_fichier_json_dans"), on_text)
 		return
 	var dlg := FileDialog.new()
 	dlg.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -55,7 +55,7 @@ static func paste_dialog(host: Node, title: String, explain: String, on_text: Ca
 		var txt := t.text
 		m.close()
 		on_text.call(txt)
-	m.set_buttons([{"text": "Valider", "cb": ok}, {"text": "Annuler", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.valider"), "cb": ok}, {"text": L.t("common.annuler"), "cb": func(): m.close()}])
 	return m
 
 static func copy(text: String) -> void:

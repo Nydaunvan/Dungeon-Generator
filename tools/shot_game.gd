@@ -164,3 +164,4 @@ func _snap(path: String) -> void:
 	await process_frame
 	await process_frame
 	root.get_texture().get_image().save_png(path)
+	ScanUtil.dump(root, path.replace(".png", ".txt"))

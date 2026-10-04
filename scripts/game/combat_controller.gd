@@ -100,7 +100,7 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 		return
 	if combat.spell_needs_ally(spell) and ally_id == "":
 		pending_spell = spell_id
-		gs.add_log("👆 Choisissez l'allié à cibler pour %s." % spell.name)
+		gs.add_log(L.fa(L.t("game.combat_controller.choisissez_l_allie_a_cibler"), spell.name))
 		changed.emit()
 		return
 	pending_spell = ""
@@ -120,21 +120,21 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 	if c.is_empty() or int(c.hp) <= 0 or str(it.get("type", "")) != "scroll":
 		return
 	if Statuses.has(c, "freeze"):
-		gs.add_log("❄️ %s est gelé — impossible de lui faire lire quoi que ce soit tant que l'effet n'est pas passé." % c.name)
+		gs.add_log(L.fa(L.t("game.combat_controller.est_gele_impossible_de_lui"), c.name))
 		changed.emit()
 		return
 	sync_position()
 	var spell := combat.spell_def(str(it.get("spellId", "")))
 	if spell.is_empty():
-		gs.add_log("📜 %s est illisible, son contenu s'est effacé..." % it.get("name", "le parchemin"))
+		gs.add_log(L.fa(L.t("game.combat_controller.est_illisible_son_contenu_est"), it.get("name", L.t("game.combat_controller.le_parchemin"))))
 		changed.emit()
 		return
 	if int(c.get("stamina", 0)) < int(spell.get("staminaCost", 15)):
-		gs.add_log("😮‍💨 %s n'a plus assez d'endurance pour lire ce parchemin." % c.name)
+		gs.add_log(L.fa(L.t("game.combat_controller.n_a_plus_assez_endurance"), c.name))
 		changed.emit()
 		return
 	gs.active_char_id = char_id
-	gs.add_log("📜 %s lit le parchemin et invoque %s %s !" % [c.name, spell.get("icon", ""), spell.name], true)
+	gs.add_log(L.fa(L.t("game.combat_controller.lit_le_parchemin_et_invoque"), [c.name, spell.get("icon", ""), spell.name]), true)
 	if combat.cast_spell(c, str(spell.id), char_id, true):
 		gs.inventory.remove_at(inv_idx)
 		_after_action()
@@ -252,4 +252,4 @@ func _process(delta: float) -> void:
 		return
 	_turn_elapsed += delta
 	if _turn_elapsed >= _timer_seconds():
-		skip_active_turn("⏳ %s n'a pas agi à temps et laisse passer son tour.")
+		skip_active_turn(L.t("game.combat_controller.n_a_pas_agi_a"))

@@ -16,10 +16,10 @@ static func open(host: Node, state: GameState, id: String) -> PartyModal:
 	var p := PartyModal.new()
 	p.gs = state
 	p.char_id = id if not state.char_by_id(id).is_empty() else str(state.party[0].id)
-	p.modal = Modal.open(host, "🎒 Groupe", 620)
+	p.modal = Modal.open(host, L.t("ui.party_modal.groupe"), 620)
 	p.modal.panel.body.add_child(p._tabs_holder())
 	p.modal.panel.body.move_child(p.modal.panel.body.get_child(p.modal.panel.body.get_child_count() - 1), 0)
-	p.modal.set_buttons([{"text": "Fermer", "cb": func(): p.modal.close()}])
+	p.modal.set_buttons([{"text": L.t("common.fermer"), "cb": func(): p.modal.close()}])
 	p._render()
 	return p
 
@@ -93,10 +93,10 @@ func _render() -> void:
 		_char_row.add_child(_pill(str(c.name), id == char_id, func():
 			char_id = id
 			_render(), IconResolver.texture(str(c.get("icon", "")))))
-	_cat_row.add_child(_tab("📊 Statistiques", cat == "stats", func():
+	_cat_row.add_child(_tab(L.t("common.statistiques"), cat == "stats", func():
 		cat = "stats"
 		_render()))
-	_cat_row.add_child(_tab("✨ Sorts / Capacités", cat == "spells", func():
+	_cat_row.add_child(_tab(L.t("ui.party_modal.sorts_capacites"), cat == "spells", func():
 		cat = "spells"
 		_render()))
 	var content := modal.content
@@ -115,7 +115,7 @@ func _render() -> void:
 
 func _section(parent: Control, text: String, first: bool = false) -> void:
 	var l := Label.new()
-	l.text = text.to_upper()
+	l.text = L.u(text)
 	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 	l.add_theme_font_size_override("font_size", 13)
 	l.add_theme_color_override("font_color", UiTheme.GOLD)
@@ -190,7 +190,7 @@ func _stats(p: Control, c: Dictionary) -> void:
 	nm.add_theme_color_override("font_color", UiTheme.GOLD)
 	t.add_child(nm)
 	var cl := Label.new()
-	cl.text = "%s — niveau %d" % [cls.get("name", ""), int(c.level)]
+	cl.text = L.fa(L.t("ui.party_modal.niveau"), [cls.get("name", ""), int(c.level)])
 	cl.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
 	cl.add_theme_color_override("font_color", Color("b8843e"))
 	t.add_child(cl)
@@ -198,19 +198,19 @@ func _stats(p: Control, c: Dictionary) -> void:
 	p.add_child(head)
 	_section(p, "Statistiques principales")
 	var g := _grid(p)
-	for row in [["💪", "Force", "force", "effForce"], ["🎯", "Dextérité", "dex", "effDex"], ["🛡️", "Constitution", "con", "effCon"], ["✨", "Intelligence", "int", "effInt"]]:
+	for row in [["💪", L.t("common.force"), "force", "effForce"], ["🎯", L.t("common.dexterite"), "dex", "effDex"], ["🛡️", L.t("common.constitution"), "con", "effCon"], ["✨", L.t("common.intelligence"), "int", "effInt"]]:
 		var base := int(c.get(row[2], 0))
 		var eff := int(c.get(row[3], base))
 		g.add_child(_stat_cell(row[0], row[1], str(base), str(eff) if eff != base else ""))
 	_section(p, "Combat")
-	_bar_row(p, "❤️ Points de vie", float(c.hp), float(c.maxHp), "%d/%d" % [int(c.hp), int(c.maxHp)], HP_GREEN)
-	_bar_row(p, "⚡ Endurance", float(c.get("stamina", 0)), float(c.get("maxStamina", 100)), "%d/%d" % [roundi(float(c.get("stamina", 0))), int(c.get("maxStamina", 100))], Color("5fbfa8"))
+	_bar_row(p, L.t("ui.party_modal.points_de_vie"), float(c.hp), float(c.maxHp), "%d/%d" % [int(c.hp), int(c.maxHp)], HP_GREEN)
+	_bar_row(p, L.t("ui.party_modal.endurance"), float(c.get("stamina", 0)), float(c.get("maxStamina", 100)), "%d/%d" % [roundi(float(c.get("stamina", 0))), int(c.get("maxStamina", 100))], Color("5fbfa8"))
 	var g2 := _grid(p)
-	g2.add_child(_stat_cell("⚔️", "Attaque", "%d – %d" % [int(c.atkMin), int(c.atkMax)]))
+	g2.add_child(_stat_cell("⚔️", L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)]))
 	if int(c.get("bonusSpellDmg", 0)) > 0:
-		g2.add_child(_stat_cell("🔮", "Bonus sort", "+%d" % int(c.bonusSpellDmg)))
+		g2.add_child(_stat_cell("🔮", L.t("ui.party_modal.bonus_sort"), "+%d" % int(c.bonusSpellDmg)))
 	_section(p, "Progression")
-	_bar_row(p, "⭐ Expérience", float(c.get("xp", 0)), float(c.get("xpToNext", 1)), "%d/%d" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))], Color("4a8fc0"))
+	_bar_row(p, L.t("ui.party_modal.experience"), float(c.get("xp", 0)), float(c.get("xpToNext", 1)), "%d/%d" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))], Color("4a8fc0"))
 
 # ------------------------------------------------------------------ sorts
 
@@ -226,7 +226,7 @@ func _source_label(p: Control, icon: String, text: String) -> void:
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		h.add_child(tr)
 	var l := Label.new()
-	l.text = text.to_upper()
+	l.text = L.u(text)
 	l.add_theme_font_size_override("font_size", 12)
 	l.add_theme_color_override("font_color", GOLD_DIM)
 	h.add_child(l)
@@ -284,7 +284,7 @@ func _spell_card(p: Control, sid: String, known: bool) -> void:
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(name_l)
 	var badge := Label.new()
-	badge.text = "Acquis" if known else "Non acquis"
+	badge.text = L.t("ui.party_modal.acquis") if known else L.t("ui.party_modal.non_acquis")
 	badge.add_theme_font_size_override("font_size", 11)
 	badge.add_theme_color_override("font_color", HP_GREEN if known else UiTheme.DIM)
 	var bb := StyleBoxFlat.new()
@@ -311,30 +311,30 @@ func _spell_card(p: Control, sid: String, known: bool) -> void:
 
 func _meta(sp: Dictionary) -> String:
 	var mode := str(sp.get("mode", "damage"))
-	var type_l := "Dégâts"
+	var type_l := L.t("common.degats")
 	match mode:
-		"healSingle": type_l = "Soin sur un allié"
-		"healParty": type_l = "Soin de groupe"
-		"staminaRestoreSingle": type_l = "Restauration d'endurance sur un allié"
-		"damageGroup": type_l = "Dégâts de zone"
-		"shieldSingle": type_l = "Bouclier sur un allié"
-		"dispelSingle": type_l = "Purification d'un allié"
-		"sleepGroup": type_l = "Sommeil de l'ennemi engagé"
-		"selfBuff": type_l = "Amélioration du lanceur"
-		"partyUtility": type_l = "Soutien de groupe"
+		"healSingle": type_l = L.t("common.soin_sur_un_allie")
+		"healParty": type_l = L.t("common.soin_de_groupe")
+		"staminaRestoreSingle": type_l = L.t("common.restauration_endurance_sur_un")
+		"damageGroup": type_l = L.t("ui.party_modal.degats_de_zone")
+		"shieldSingle": type_l = L.t("common.bouclier_sur_un_allie")
+		"dispelSingle": type_l = L.t("common.purification_un_allie")
+		"sleepGroup": type_l = L.t("ui.party_modal.sommeil_de_l_ennemi_engage")
+		"selfBuff": type_l = L.t("ui.party_modal.amelioration_du_lanceur")
+		"partyUtility": type_l = L.t("ui.party_modal.soutien_de_groupe")
 	var value := ""
 	if mode == "healSingle" or mode == "healParty":
-		value = "[b]Soin[/b] : %d – %d PV" % [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))]
+		value = L.fa(L.t("ui.party_modal.b_soin_b_pv"), [int(sp.get("healMin", 0)), int(sp.get("healMax", 0))])
 	elif mode == "staminaRestoreSingle":
-		value = "[b]Endurance restaurée[/b] : %d – %d" % [int(sp.get("staminaMin", 0)), int(sp.get("staminaMax", 0))]
+		value = L.fa(L.t("ui.party_modal.b_endurance_restauree_b"), [int(sp.get("staminaMin", 0)), int(sp.get("staminaMax", 0))])
 	elif mode == "shieldSingle":
-		value = "[b]Bouclier[/b] : %d – %d" % [int(sp.get("shieldMin", 0)), int(sp.get("shieldMax", 0))]
+		value = L.fa(L.t("ui.party_modal.bouclier_pv"), [int(sp.get("shieldMin", 0)), int(sp.get("shieldMax", 0))])
 	elif mode == "damage" or mode == "damageGroup":
-		value = "[b]Dégâts[/b] : %d – %d" % [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))]
+		value = L.fa(L.t("ui.party_modal.b_degats_b"), [int(sp.get("dmgMin", 0)), int(sp.get("dmgMax", 0))])
 		if mode == "damageGroup":
-			value += " (par cible, groupe entier touché)"
+			value += L.t("ui.party_modal.par_cible_groupe_entier_touche")
 		if bool(sp.get("ignoreAllResist", false)):
-			value += " (ignore toute résistance)"
+			value += L.t("ui.party_modal.ignore_toute_resistance")
 	var out := "[b]Type[/b] : %s" % type_l
 	if value != "":
 		out += "\n" + value
@@ -343,7 +343,7 @@ func _meta(sp: Dictionary) -> String:
 		var sd := Statuses.def(se)
 		var pw := " · %d/tour" % int(sp.statusPower) if int(sp.get("statusPower", 0)) > 0 else ""
 		out += "\n[b]Effet[/b] : %s %s (%d%% · %d tour(s)%s)" % [sd.get("icon", ""), sd.get("label", se), int(sp.get("statusChance", 0)), int(sp.get("statusDuration", 0)), pw]
-	out += "\n[b]Endurance[/b] : %d — [b]Recharge[/b] : %ds" % [int(sp.get("staminaCost", 15)), int(sp.get("cooldownSec", 6))]
+	out += L.fa(L.t("ui.party_modal.b_endurance_b_b_recharge"), [int(sp.get("staminaCost", 15)), int(sp.get("cooldownSec", 6))])
 	return out
 
 func _base_class(cls: Dictionary) -> Dictionary:
@@ -362,7 +362,7 @@ func _spells(p: Control, c: Dictionary) -> void:
 	var groups: Array = []
 	if not base.is_empty():
 		groups.append([base, str(base.get("name", ""))])
-		groups.append([cls, "%s (évolution)" % cls.get("name", "")])
+		groups.append([cls, L.fa(L.t("ui.party_modal.evolution"), cls.get("name", ""))])
 	else:
 		groups.append([cls, ""])
 	for g in groups:
@@ -372,7 +372,7 @@ func _spells(p: Control, c: Dictionary) -> void:
 		var ids: Array = k.get("allowedSpellIds", [])
 		if ids.is_empty():
 			var none := Label.new()
-			none.text = "Aucun sort défini."
+			none.text = L.t("common.aucun_sort_defini")
 			none.add_theme_color_override("font_color", UiTheme.DIM)
 			p.add_child(none)
 		for sid in ids:

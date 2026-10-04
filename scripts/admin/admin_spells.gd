@@ -4,43 +4,43 @@ extends RefCounted
 ## Reproduit `renderSpellTable` / `spellStatsHtml` / `statusEffectHtml` / `editSpell` / `addSpell` / `removeSpell` de l'original.
 
 const MODES := [
-	["damage", "Dégâts (sur ennemi)"],
-	["damageGroup", "Dégâts de zone (tout le groupe ennemi)"],
-	["healSingle", "Soin individuel"],
-	["healParty", "Soin de groupe"],
-	["staminaRestoreSingle", "Restauration d'endurance (sur allié)"],
-	["shieldSingle", "Bouclier (sur allié)"],
-	["dispelSingle", "Dissipation (retire les statuts négatifs d'un allié)"],
-	["sleepGroup", "Sommeil/ralentissement (sur le monstre engagé)"],
-	["partyUtility", "Soutien de groupe (instantané, tout le groupe)"],
-	["selfBuff", "Buff sur soi (instantané)"],
+	["damage", "admin.spells.degats_sur_ennemi"],
+	["damageGroup", "common.degats_de_zone_tout_le"],
+	["healSingle", "admin.spells.soin_individuel"],
+	["healParty", "common.soin_de_groupe"],
+	["staminaRestoreSingle", "admin.spells.restauration_endurance_sur_allie"],
+	["shieldSingle", "admin.spells.bouclier_sur_allie"],
+	["dispelSingle", "admin.spells.dissipation_retire_les_statuts"],
+	["sleepGroup", "admin.spells.sommeil_ralentissement_sur_le"],
+	["partyUtility", "admin.spells.soutien_de_groupe_instantane"],
+	["selfBuff", "admin.spells.buff_sur_soi_instantane"],
 ]
 
-const HEADERS := ["Icône", "Nom", "Style (animation)", "Mode", "Valeurs", "Effet de statut", "🩸 Vol de vie %", "Endurance", "Recharge (s)", ""]
+const HEADERS := ["common.icone", "common.nom", "admin.spells.style_animation", "admin.spells.mode", "admin.spells.valeurs", "admin.spells.effet_de_statut", "admin.spells.vol_de_vie", "common.endurance", "admin.spells.recharge", ""]
 const MIN_W := [40, 76, 88, 88, 112, 90, 62, 80, 80, 34]
 ## Part de l'espace libre reçue par les colonnes Nom / Style / Mode (proportions du tableau HTML : 155 / 156 / 238).
 const STRETCH := {1: 1.55, 2: 1.56, 3: 2.38}
 
 static func build(host: VBoxContainer, admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
-	var p := Form.panel(host, "Sorts & capacités spéciales")
-	Form.hint(p, "Utilisable par n'importe quelle classe (magique ou non) : un coup spécial de guerrier fonctionne exactement comme un sort de mage, seule l'animation change.")
-	Form.hint(p, "⚠️ Un personnage ne peut jamais connaître plus de 6 sorts/capacités à la fois, quelle que soit la configuration (progression de classe, évolution, ou parchemins trouvés en jeu) — cette limite est fixe et ne peut pas être dépassée.")
+	var p := Form.panel(host, L.t("admin.spells.sorts_capacites_speciales"))
+	Form.hint(p, L.t("admin.spells.utilisable_par_n_importe_quelle"))
+	Form.hint(p, L.t("admin.spells.un_personnage_ne_peut_jamais"))
 	var grid := AdminTable.create(p, HEADERS, MIN_W)
 	AdminCells.wrap_headers(grid, HEADERS.size())
 	for col in STRETCH:
 		var hd := grid.get_child(col) as Control
 		hd.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hd.size_flags_stretch_ratio = STRETCH[col]
-	(grid.get_child(6) as Control).tooltip_text = "Vol de vie immédiat"
+	(grid.get_child(6) as Control).tooltip_text = L.t("admin.spells.vol_de_vie_immediat")
 	(grid.get_child(6) as Control).mouse_filter = Control.MOUSE_FILTER_PASS
 	for s in cfg.get("spells", []):
 		_row(grid, admin, s)
-	Form.hint(p, "Le temps de recharge limite la fréquence d'utilisation d'un sort/capacité : le bouton reste toujours utilisable, mais affiche un décompte tant que le sort n'est pas prêt.")
+	Form.hint(p, L.t("admin.spells.le_temps_de_recharge_limite"))
 	var status_ref := [null]
 	AdminCells.actions(p, [
-		{"text": "+ Ajouter un sort", "cb": func(): _add(admin)},
-		{"text": "💾 Enregistrer la configuration par défaut", "primary": true, "cb": func(): admin.confirm_save(status_ref[0])},
+		{"text": L.t("admin.spells.ajouter_un_sort"), "cb": func(): _add(admin)},
+		{"text": L.t("common.enregistrer_la_configuration"), "primary": true, "cb": func(): admin.confirm_save(status_ref[0])},
 	])
 	status_ref[0] = AdminCells.status_label(p)
 
@@ -68,14 +68,14 @@ static func _row(grid: GridContainer, admin: Node, s: Dictionary) -> void:
 	if mode == "damage":
 		AdminTable.cell(grid, _status(s, refresh))
 		AdminTable.cell(grid, AdminCells.num(s, "spellLifestealPct", 0, {"or": true, "lo": 0, "hi": 100,
-				"tip": "Vol de vie immédiat (% des dégâts infligés restaurés en PV au lanceur, dès le lancer)"}))
+				"tip": L.t("admin.spells.vol_de_vie_immediat_des")}))
 	else:
 		AdminTable.cell(grid, Control.new())
 		AdminTable.cell(grid, Control.new())
 	# endurance / recharge : seuls champs bornés (0..50 et 0..60)
-	AdminTable.cell(grid, AdminCells.num(s, "staminaCost", 15, {"lo": 0, "hi": 50, "tip": "Coût en endurance",
+	AdminTable.cell(grid, AdminCells.num(s, "staminaCost", 15, {"lo": 0, "hi": 50, "tip": L.t("admin.spells.cout_en_endurance"),
 			"fix": func(v: float) -> float: return maxf(0.0, minf(50.0, v))}))
-	AdminTable.cell(grid, AdminCells.num(s, "cooldownSec", 6, {"lo": 0, "hi": 60, "tip": "Temps de recharge (secondes)",
+	AdminTable.cell(grid, AdminCells.num(s, "cooldownSec", 6, {"lo": 0, "hi": 60, "tip": L.t("admin.spells.temps_de_recharge_secondes"),
 			"fix": func(v: float) -> float: return maxf(0.0, minf(60.0, v))}))
 	AdminTable.cell(grid, AdminCells.trash(func(): _remove(admin, s)))
 
@@ -93,23 +93,23 @@ static func _stats(s: Dictionary, mode: String) -> Control:
 	v.add_child(h)
 	match mode:
 		"damage", "damageGroup":
-			_pair(h, s, "dmgMin", "dmgMax", "Dégâts min", "Dégâts max")
-			v.add_child(AdminCells.check("Ignore résist.", bool(s.get("ignoreAllResist", false)),
+			_pair(h, s, "dmgMin", "dmgMax", L.t("common.degats_min"), L.t("common.degats_max"))
+			v.add_child(AdminCells.check(L.t("admin.spells.ignore_resist"), bool(s.get("ignoreAllResist", false)),
 					func(on: bool): s["ignoreAllResist"] = on, 0.65,
-					"Dégâts vrais : ignore toute résistance (physique et magique) de la cible"))
+					L.t("admin.spells.degats_vrais_ignore_toute_resistance")))
 		"staminaRestoreSingle":
-			_pair(h, s, "staminaMin", "staminaMax", "Endurance restaurée min", "Endurance restaurée max")
+			_pair(h, s, "staminaMin", "staminaMax", L.t("admin.spells.endurance_restauree_min"), L.t("admin.spells.endurance_restauree_max"))
 		"shieldSingle":
-			_pair(h, s, "shieldMin", "shieldMax", "Bouclier min", "Bouclier max")
+			_pair(h, s, "shieldMin", "shieldMax", L.t("admin.spells.bouclier_min"), L.t("admin.spells.bouclier_max"))
 		"partyUtility":
 			h.add_child(AdminCells.num(s, "cooldownReductionSec", 0, {"w": 48, "or": true,
-					"tip": "Réduction du temps de recharge restant de tous les sorts du groupe (secondes)"}))
+					"tip": L.t("admin.spells.reduction_du_temps_de_recharge")}))
 			h.add_child(AdminCells.inline("sec."))
-			h.add_child(AdminCells.inline("+ Vigueur", true, 0.74, true))
+			h.add_child(AdminCells.inline(L.t("admin.spells.vigueur"), true, 0.74, true))
 		"dispelSingle", "sleepGroup", "selfBuff":
 			h.add_child(AdminCells.inline("—", true, 0.74, true))
 		_:
-			_pair(h, s, "healMin", "healMax", "Soin min", "Soin max")
+			_pair(h, s, "healMin", "healMax", L.t("admin.spells.soin_min"), L.t("admin.spells.soin_max"))
 	return v
 
 static func _pair(h: Control, s: Dictionary, k1: String, k2: String, t1: String, t2: String) -> void:
@@ -120,7 +120,7 @@ static func _pair(h: Control, s: Dictionary, k1: String, k2: String, t1: String,
 ## Colonne « Effet de statut » (`statusEffectHtml`) : liste + chance / durée / dégâts par tour.
 static func _status(s: Dictionary, refresh: Callable) -> Control:
 	var defs: Dictionary = Data.constants.get("STATUS_DEFS", {})
-	var opts: Array = [["", "— Aucun —"]]
+	var opts: Array = [["", L.t("common.aucun")]]
 	for id in defs:
 		opts.append([id, "%s %s" % [defs[id].get("icon", ""), defs[id].get("label", id)]])
 	var box := VBoxContainer.new()
@@ -133,10 +133,10 @@ static func _status(s: Dictionary, refresh: Callable) -> Control:
 	if cur != "" and defs.has(cur):
 		var r := HBoxContainer.new()
 		r.add_theme_constant_override("separation", 3)
-		r.add_child(AdminCells.num(s, "statusChance", 30, {"w": 38, "lo": 0, "hi": 100, "tip": "Chance (%)"}))
-		r.add_child(AdminCells.num(s, "statusDuration", 3, {"w": 34, "lo": 1, "hi": 10, "tip": "Durée (tours)"}))
+		r.add_child(AdminCells.num(s, "statusChance", 30, {"w": 38, "lo": 0, "hi": 100, "tip": L.t("admin.spells.chance")}))
+		r.add_child(AdminCells.num(s, "statusDuration", 3, {"w": 34, "lo": 1, "hi": 10, "tip": L.t("admin.spells.duree_tours")}))
 		if bool(defs[cur].get("dot", false)):
-			r.add_child(AdminCells.num(s, "statusPower", 3, {"w": 34, "lo": 1, "hi": 20, "tip": "Dégâts par tour"}))
+			r.add_child(AdminCells.num(s, "statusPower", 3, {"w": 34, "lo": 1, "hi": 20, "tip": L.t("admin.spells.degats_par_tour")}))
 		box.add_child(r)
 	return box
 
@@ -144,7 +144,7 @@ static func _add(admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	if not (cfg.get("spells") is Array):
 		cfg["spells"] = []
-	(cfg.spells as Array).append({"id": AdminUtil.new_id("spell"), "name": "Nouveau sort", "icon": "✨", "style": "arcane", "mode": "damage", "dmgMin": 3, "dmgMax": 7, "healMin": 5, "healMax": 10, "staminaCost": 15, "cooldownSec": 6})
+	(cfg.spells as Array).append({"id": AdminUtil.new_id("spell"), "name": L.t("admin.spells.nouveau_sort"), "icon": "✨", "style": "arcane", "mode": "damage", "dmgMin": 3, "dmgMax": 7, "healMin": 5, "healMax": 10, "staminaCost": 15, "cooldownSec": 6})
 	admin.refresh_tab()
 
 ## `removeSpell` : confirmation sans titre, puis retrait du sort des classes (sorts autorisés) et des personnages (sorts connus).
@@ -162,4 +162,4 @@ static func _remove(admin: Node, s: Dictionary) -> void:
 		for p in cfg.get("party", []):
 			p["spellsKnown"] = (p.get("spellsKnown", []) as Array).filter(func(x): return x != sid)
 		admin.refresh_tab()
-	Dialogs.confirm(admin.modals(), "", "Supprimer le sort/capacité %s ?" % s.get("name", ""), go)
+	Dialogs.confirm(admin.modals(), "", L.fa(L.t("admin.spells.supprimer_le_sort_capacite"), s.get("name", "")), go)

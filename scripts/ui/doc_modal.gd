@@ -54,17 +54,17 @@ static func topics(host: Node, title: String, data_name: String, start_id: Strin
 		if (start_id == "" and i == 0) or str(items[i].id) == start_id:
 			b.button_pressed = true
 			show.call(i)
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m
 
 static func guide(host: Node, start_id: String = "") -> Modal:
-	return topics(host, "📖 Guide de l'aventurier", "help", start_id)
+	return topics(host, L.t("ui.doc_modal.guide_de_l_aventurier"), "help", start_id)
 
 static func tutorial(host: Node) -> Modal:
-	return topics(host, "🧭 Tutoriel de création", "tutorial")
+	return topics(host, L.t("common.tutoriel_de_creation"), "tutorial")
 
 static func changelog(host: Node) -> Modal:
-	var m := Modal.open(host, "📜 Journal des versions", 720.0)
+	var m := Modal.open(host, L.t("ui.doc_modal.journal_des_versions"), 720.0)
 	var out := ""
 	for e in _load("changelog"):
 		out += "[font_size=18][color=#e8b45c]Version %s[/color][/font_size]\n" % str(e.version)
@@ -76,5 +76,5 @@ static func changelog(host: Node) -> Modal:
 				out += "  • %s\n" % s
 		out += "\n"
 	m.content.add_child(_rich(out))
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m

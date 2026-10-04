@@ -23,5 +23,6 @@ func _init() -> void:
 			adm._scroll.scroll_vertical = int(args.scroll)
 			await create_timer(0.4).timeout
 		root.get_texture().get_image().save_png("%s_%s.png" % [args.get("out", "/tmp/adm"), tab])
+		ScanUtil.dump(root, "%s_%s.txt" % [args.get("out", "/tmp/adm"), tab])
 	data.set_lang("fr")
 	quit()

@@ -32,7 +32,7 @@ static func start_weapon(t: Dictionary, cfg: Dictionary) -> Dictionary:
 	if types.is_empty():
 		return {}
 	var icon: String = {"sword": "⚔️", "axe": "🪓", "dagger": "🗡️", "staff": "🔱", "bow": "🏹", "mace": "🔨"}.get(str(types[0]), "⚔️")
-	return {"id": "start_" + str(t.id), "name": "Arme de départ", "icon": icon, "type": "weapon",
+	return {"id": "start_" + str(t.id), "name": L.t("rules.characters.arme_de_depart"), "icon": icon, "type": "weapon",
 		"weaponType": types[0], "bonusAtkMin": 1, "bonusAtkMax": 2}
 
 static func create(t: Dictionary, cfg: Dictionary) -> Dictionary:
@@ -139,7 +139,7 @@ static func award_xp(gs: GameState, c: Dictionary, amount: int) -> void:
 		c["stamina"] = mini(int(c.maxStamina), int(c.get("stamina", 0)) + maxi(0, int(c.maxStamina) - old_max_sta))
 		c["xpToNext"] = int(round(int(c.xpToNext) * 1.6))
 		Sound.sfx("level_up")
-		gs.add_log("🎉 %s monte au niveau %d !" % [c.name, c.level])
+		gs.add_log(L.fa(L.t("rules.characters.monte_au_niveau"), [c.name, c.level]))
 		learn_spells(gs, c)
 		Talents.check_unlock(gs, c)
 	if int(c.level) >= MAX_LEVEL:
@@ -160,8 +160,8 @@ static func learn_spells(gs: GameState, c: Dictionary) -> void:
 					name = str(sp.name)
 					icon = str(sp.get("icon", "")) if not str(sp.get("icon", "")).begins_with("@icon:") else ""
 			if known.size() >= MAX_SPELLS:
-				gs.add_log("❌ %s connaît déjà le maximum de compétences possible (%d), %s %s reste hors de portée." % [c.name, MAX_SPELLS, icon, name])
+				gs.add_log(L.fa(L.t("rules.characters.connait_deja_le_maximum_de"), [c.name, MAX_SPELLS, icon, name]))
 				continue
 			known.append(step.spellId)
-			gs.add_log("🎓 %s apprend automatiquement %s %s (niveau %d) !" % [c.name, icon, name, int(c.level)])
+			gs.add_log(L.fa(L.t("rules.characters.apprend_automatiquement_niveau"), [c.name, icon, name, int(c.level)]))
 	c["spellsKnown"] = known

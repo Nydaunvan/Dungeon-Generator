@@ -5,18 +5,18 @@ extends RefCounted
 static func open(host: Node) -> Modal:
 	var m := Modal.open(host, "🔊 Son", 380.0)
 	var on := CheckButton.new()
-	on.text = "Son activé"
+	on.text = L.t("ui.sound_modal.son_active")
 	on.button_pressed = Sound.enabled
 	on.toggled.connect(func(v: bool):
 		Sound.set_enabled(v)
 		if v:
 			Sound.sfx("pickup"))
 	m.content.add_child(on)
-	_slider(m, "Effets sonores", Sound.sfx_volume, func(v: float):
+	_slider(m, L.t("ui.sound_modal.effets_sonores"), Sound.sfx_volume, func(v: float):
 		Sound.set_sfx_volume(v), func(): Sound.sfx("hit"))
-	_slider(m, "Musique d'ambiance", Sound.music_volume, func(v: float):
+	_slider(m, L.t("ui.sound_modal.musique_ambiance"), Sound.music_volume, func(v: float):
 		Sound.set_music_volume(v), Callable())
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m
 
 static func _slider(m: Modal, title: String, value: float, on_change: Callable, on_release: Callable) -> void:

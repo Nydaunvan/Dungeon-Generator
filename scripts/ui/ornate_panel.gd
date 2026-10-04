@@ -30,7 +30,7 @@ func _init(title: String = "", modal: bool = false) -> void:
 		header_row.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_child(header_row)
 		title_label = Label.new()
-		title_label.text = title if modal else title.to_upper()
+		title_label.text = title if modal else L.u(title)
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var fv := FontVariation.new()
 		fv.base_font = UiTheme.font(UiTheme.F_TITLE_BOLD)

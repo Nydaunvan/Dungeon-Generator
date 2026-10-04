@@ -94,14 +94,14 @@ func _draw() -> void:
 func refresh() -> void:
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
-		var lv := "Nv.%d" % int(c.level)
+		var lv := L.fa(L.t("ui.party_hud.nv"), int(c.level))
 		if cd.lvl.text != lv:
 			cd.lvl.text = lv
 			(cd.card as PartyCard)._layout()
 		cd.lvl.text = lv
-		cd.hp.set_values(int(c.hp), int(c.maxHp), "%d/%d PV" % [int(c.hp), int(c.maxHp)])
-		cd.sta.set_values(int(c.stamina), int(c.maxStamina), "%d/%d End." % [int(c.stamina), int(c.maxStamina)])
-		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), "%d/%d XP" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))])
+		cd.hp.set_values(int(c.hp), int(c.maxHp), L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]))
+		cd.sta.set_values(int(c.stamina), int(c.maxStamina), L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
+		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))
 		var dead: bool = int(c.hp) <= 0
 		_refresh_status(c, cd, dead)
 		var cant_act: bool = not dead and ctrl.in_combat() and ctrl.combat != null and not ctrl.combat.can_act(c)

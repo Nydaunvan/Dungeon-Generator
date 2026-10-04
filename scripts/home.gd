@@ -30,8 +30,8 @@ func _launch_generated(cfg: Dictionary) -> void:
 func _on_action(name: String) -> void:
 	match name:
 		"origin":
-			Dialogs.confirm(_modal_layer, "Le Donjon d'Origine",
-				"Ce donjon sert de démonstration : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, portes verrouillées, fontaine, objets, montée de niveau…).\n\nPour explorer tout ce que le jeu propose, lancez plutôt un donjon aléatoire depuis l'accueil.\n\nCommencer cette démonstration ?",
+			Dialogs.confirm(_modal_layer, L.t("common.le_donjon_origine"),
+				L.t("home.ce_donjon_sert_de_demonstration"),
 				_launch_original, "Commencer")
 		"random": GeneratorDialog.open(_modal_layer, _launch_generated)
 		"create": Data.create_own_dungeon()
@@ -42,18 +42,18 @@ func _on_action(name: String) -> void:
 		"changelog": DocModal.changelog(_modal_layer)
 
 func _soon(what: String) -> void:
-	Dialogs.notice(_modal_layer, what, "Cette partie est en cours de portage vers Godot.")
+	Dialogs.notice(_modal_layer, what, L.t("home.cette_partie_est_en_cours"))
 
 func _load_code() -> void:
-	Files.paste_dialog(_modal_layer, "Charger un donjon depuis un code",
-		"Collez le code reçu : il contient tout le donjon (personnages, classes, sorts, niveaux, objets). Une nouvelle partie démarre avec ce donjon.",
+	Files.paste_dialog(_modal_layer, L.t("common.charger_un_donjon_depuis_un"),
+		L.t("home.collez_le_code_recu_il"),
 		func(text: String):
 			if text.strip_edges() == "":
 				return
-			Dialogs.confirm(_modal_layer, "", "Démarrer une nouvelle partie avec ce donjon ? Toute progression non sauvegardée sera perdue.", func():
+			Dialogs.confirm(_modal_layer, "", L.t("home.demarrer_une_nouvelle_partie"), func():
 				var cfg := Data.decode_code(text)
 				if cfg.is_empty():
-					Form.alert(_modal_layer, "Ce code est invalide ou illisible.")
+					Form.alert(_modal_layer, L.t("common.ce_code_est_invalide_ou"))
 					return
 				Data.ensure_defaults(cfg)
 				Data.config = cfg
@@ -64,7 +64,7 @@ func _load_code() -> void:
 func _import_json() -> void:
 	Files.pick_text(self, func(text: String):
 		if not Saves.is_valid_json(text):
-			Form.alert(_modal_layer, "Ce fichier n'est pas un JSON de sauvegarde valide.")
+			Form.alert(_modal_layer, L.t("common.ce_fichier_n_est_pas"))
 			return
 		if not Data.launch_import(Saves.parse_import(text)):
-			Form.alert(_modal_layer, "Ce fichier ne contient pas de sauvegarde ou de configuration reconnue."))
+			Form.alert(_modal_layer, L.t("common.ce_fichier_ne_contient_pas")))

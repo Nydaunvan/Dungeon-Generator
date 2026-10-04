@@ -365,7 +365,7 @@ func _on_command(cmd: String) -> void:
 	match cmd:
 		"forward", "right", "back", "left", "turn_left", "turn_right":
 			if ctrl.in_combat():
-				show_message("En combat : attaquez (⚔) ou fuyez (🏃)")
+				show_message(L.t("main.en_combat_attaquez_ou_fuyez"))
 				return
 			match cmd:
 				"forward": rig.step(0)
@@ -383,10 +383,10 @@ func _on_command(cmd: String) -> void:
 		"flee":
 			if ctrl.in_combat():
 				if get_tree().get_nodes_in_group("modal").is_empty():
-					Dialogs.confirm(_modals(), "🏃 Fuir le combat", "Fuir permet d'échapper immédiatement à ce combat, mais tout le groupe perdra 50% de son endurance actuelle. Voulez-vous vraiment fuir ?",
-							ctrl.do_flee, "🏃 Fuir (perdre 50% d'endurance)", "Annuler")
+					Dialogs.confirm(_modals(), L.t("main.fuir_le_combat"), L.t("main.fuir_permet_echapper_immediatement"),
+							ctrl.do_flee, L.t("main.flee_btn"), L.t("common.annuler"))
 			else:
-				show_message("Personne ne vous menace")
+				show_message(L.t("main.personne_ne_vous_menace"))
 
 ## Case juste devant le joueur.
 func _front() -> Vector2i:
@@ -398,13 +398,13 @@ func _interact() -> void:
 	var ch := grid.cell(f.x, f.y)
 	if ch == "D":
 		if grid.opened.has(str(grid.door_at(f.x, f.y).get("id", ""))):
-			show_message("La porte est déjà ouverte")
+			show_message(L.t("main.la_porte_est_deja_ouverte"))
 		else:
 			inter.try_door(f.x, f.y)
 	elif ch == "S":
 		_use_stairs(f)
 	else:
-		show_message("Rien à faire ici")
+		show_message(L.t("main.rien_a_faire_ici"))
 
 ## Clic sur une carte : cible d'un sort, fiche (en combat) ou volet d'équipement (hors combat).
 func _on_card_pressed(id: String) -> void:
@@ -468,7 +468,7 @@ func _refresh_when_free() -> void:
 func _on_blocked(x: int, y: int) -> void:
 	var mon := ctrl.monster_at(x, y)
 	if not mon.is_empty():
-		gs.add_log("%s vous barre la route !" % str(mon.get("name", "Un monstre")))
+		gs.add_log(L.fa(L.t("main.vous_barre_la_route"), str(mon.get("name", L.t("main.un_monstre")))))
 		Sound.sfx("blocked")
 		ctrl.refresh()   # engage le combat
 		ctrl.combat.end_turn_gain()
@@ -504,32 +504,32 @@ func _use_stairs(p: Vector2i) -> void:
 				if levels[i].id == action.get("targetId"):
 					_transition_regen(levels[i])
 					load_level(i, false, _arrival(levels[i], action))
-					gs.add_log("Le groupe se déplace vers : %s." % levels[i].get("name", ""))
+					gs.add_log(L.fa(L.t("main.le_groupe_se_deplace_vers"), levels[i].get("name", "")))
 					_prompt_save_on_level(levels[i])
 					return
-			gs.add_log("L'escalier semble mener nulle part... Victoire par défaut !")
+			gs.add_log(L.t("main.l_escalier_semble_mener_nulle"))
 			_victory_by_stairs()
 		"victory":
-			gs.add_log("Le groupe découvre l'escalier de sortie... la lumière du jour ! Victoire !")
+			gs.add_log(L.t("main.le_groupe_decouvre_l_escalier"))
 			_victory_by_stairs()
 		"villageExit":
-			Dialogs.confirm(_modals(), "🏘️ Sortie du village", "Voulez-vous rester au village, ou repartir affronter un donjon plus puissant ?",
-				_continue_next, "⚔️ Aller vers un donjon plus puissant", "Rester au village")
+			Dialogs.confirm(_modals(), L.t("main.sortie_du_village"), L.t("main.voulez_vous_rester_au_village"),
+				_continue_next, L.t("main.aller_vers_un_donjon_plus"), L.t("main.rester_au_village"))
 		"villageReturn":
 			if gs.village_prev.is_empty():
-				gs.add_log("🚪 Il n'y a nulle part où revenir pour l'instant.")
-				show_message("Nulle part où revenir")
+				gs.add_log(L.t("main.il_n_y_a_nulle"))
+				show_message(L.t("main.nulle_part_ou_revenir"))
 			else:
-				Dialogs.confirm(_modals(), "⬅️ Retour au donjon", "Voulez-vous revenir au donjon que vous veniez de quitter ?",
-					_return_to_dungeon, "⬅️ Revenir au donjon précédent", "Rester au village")
+				Dialogs.confirm(_modals(), L.t("main.retour_au_donjon"), L.t("main.voulez_vous_revenir_au_donjon"),
+					_return_to_dungeon, L.t("main.revenir_au_donjon_precedent"), L.t("main.rester_au_village"))
 		_:
-			show_message("Escalier")
+			show_message(L.t("main.escalier"))
 
 func _victory_by_stairs() -> void:
 	var before := gs.inventory.size()
 	gs.inventory = gs.inventory.filter(func(it): return str(it.get("type", "")) != "key")
 	if gs.inventory.size() < before:
-		gs.add_log("🗝️ %d clé(s) devenue(s) inutile(s) ont été laissées derrière en quittant le donjon." % (before - gs.inventory.size()))
+		gs.add_log(L.fa(L.t("main.cle_devenue_inutile_ont_ete"), (before - gs.inventory.size())))
 	gs.won = true
 	gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
 	_show_victory()
@@ -550,7 +550,7 @@ func _transition_regen(target: Dictionary) -> void:
 			c["hp"] = mini(int(c.maxHp), int(c.hp) + int(round(int(c.maxHp) * hp_pct / 100.0)))
 		if st_pct > 0:
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(round(int(c.get("maxStamina", 100)) * st_pct / 100.0)))
-	gs.add_log("💤 Le groupe reprend son souffle en chemin : un peu de PV et d'endurance récupérés.")
+	gs.add_log(L.t("main.le_groupe_reprend_son_souffle"))
 
 ## Première arrivée dans un niveau : proposition de sauvegarde.
 func _prompt_save_on_level(target: Dictionary) -> void:
@@ -558,15 +558,17 @@ func _prompt_save_on_level(target: Dictionary) -> void:
 	if tls.get("stairsPromptShown", false):
 		return
 	tls["stairsPromptShown"] = true
-	Dialogs.confirm(_modals(), "🚪 Nouveau niveau du donjon", "C'est le bon moment pour sauvegarder votre progression.",
-		func(): SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts()), "💾 Sauvegarder maintenant", "Continuer sans sauvegarder")
+	Dialogs.confirm(_modals(), L.t("main.nouveau_niveau_du_donjon"), L.t("main.c_est_le_bon_moment"),
+		func(): SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts()), L.t("main.save_now"), L.t("main.continue_without_saving"))
 
 func _on_menu(name: String) -> void:
 	match name:
 		"Accueil": _leave_game()
 		"Guide": Dialogs.guide(_modals())
 		"Son": SoundModal.open(_modals())
-		"Lang": pass   # la préférence est enregistrée ; les textes suivent la langue choisie
+		"Lang":
+			Sound.stop_ambient()
+			Data.reload_game(snapshot())
 		"Carte": _toggle_map()
 		"Journal": _open_full_log()
 		"Stats": StatsModal.open(_modals(), gs)
@@ -578,14 +580,14 @@ func _on_menu(name: String) -> void:
 			if not ctrl.in_combat():
 				SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
 		"Nouveau":
-			Dialogs.confirm(_modals(), "", "Commencer une nouvelle partie ? La progression actuelle non sauvegardée sera perdue.", _restart)
+			Dialogs.confirm(_modals(), "", L.t("main.commencer_une_nouvelle_partie"), _restart)
 		"Exporter":
 			var snap := snapshot()
 			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin))
 		"Importer": Files.pick_text(_modals(), _import_text)
 		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
-		_: show_message("« %s » : à venir" % name)
+		_: show_message(L.fa(L.t("main.a_venir"), name))
 
 ## Options de la fenêtre des emplacements : journal, état du menu 💾, provenance de la partie en cours.
 func _slot_opts() -> Dictionary:
@@ -595,21 +597,21 @@ func _slot_opts() -> Dictionary:
 ## « ⬆ Importer » du menu 💾 : fichier de sauvegarde ou de configuration (`importSaveFile`).
 func _import_text(text: String) -> void:
 	if not Saves.is_valid_json(text):
-		Form.alert(_modals(), "Ce fichier n'est pas un JSON de sauvegarde valide.")
+		Form.alert(_modals(), L.t("common.ce_fichier_n_est_pas"))
 		return
 	if not Data.launch_import(Saves.parse_import(text)):
-		Form.alert(_modals(), "Ce fichier ne contient pas de sauvegarde ou de configuration reconnue.")
+		Form.alert(_modals(), L.t("common.ce_fichier_ne_contient_pas"))
 
 ## « 📖 Grimoire complet de l'aventure » (`openFullLogModal`) : tout le journal, séparateurs d'expédition compris.
 func _open_full_log() -> void:
-	var lm := Modal.open_framed(_modals(), "📖 Grimoire complet de l'aventure", 640.0)
+	var lm := Modal.open_framed(_modals(), L.t("main.grimoire_complet_de_l_aventure"), 640.0)
 	if gs.full_log.is_empty():
-		lm.add_text("Rien à afficher pour le moment.", UiTheme.DIM, 14, true)
+		lm.add_text(L.t("main.rien_a_afficher_pour_le"), UiTheme.DIM, 14, true)
 	var first := true
 	for e in gs.full_log:
 		if str(e.get("type", "entry")) == "divider":
 			var d := Label.new()
-			d.text = "⚔️ " + str(e.get("text", "")).to_upper()
+			d.text = "⚔️ " + L.u(str(e.get("text", "")))
 			d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			d.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 			d.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82)))
@@ -665,32 +667,32 @@ func _leave_game() -> void:
 	if gs.game_over or gs.won:
 		Data.go_home()
 		return
-	var m := Modal.open(_modals(), "🚪 Quitter la partie en cours", 440.0)
-	m.add_text("Voulez-vous sauvegarder votre progression avant de continuer ?", UiTheme.PARCH, 14, true)
+	var m := Modal.open(_modals(), L.t("common.quitter_la_partie_en_cours"), 440.0)
+	m.add_text(L.t("common.voulez_vous_sauvegarder_votre"), UiTheme.PARCH, 14, true)
 	var origin: String = Data.play_origin
 	if origin == "custom":
-		m.add_text("🎲 Cette création repartira d'une toute nouvelle base aléatoire la prochaine fois : exportez-la si vous voulez la conserver.", UiTheme.PARCH, 14, true)
+		m.add_text(L.t("main.cette_creation_repartira_une"), UiTheme.PARCH, 14, true)
 	var btns: Array = [
-		{"text": "💾 Sauvegarder et quitter", "primary": true, "cb": func():
+		{"text": L.t("common.sauvegarder_et_quitter"), "primary": true, "cb": func():
 			m.close()
 			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
 	]
 	if origin != "original":
-		btns.append({"text": "📤 Exporter le donjon (fichier JSON) et quitter", "primary": false, "cb": func():
+		btns.append({"text": L.t("common.exporter_le_donjon_fichier_json"), "primary": false, "cb": func():
 			m.close()
 			var snap := snapshot()
 			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin), func(_t): Data.go_home())})
-	btns.append({"text": "Quitter sans sauvegarder", "primary": false, "cb": func():
+	btns.append({"text": L.t("common.quitter_sans_sauvegarder"), "primary": false, "cb": func():
 		m.close()
 		Data.go_home()})
-	btns.append({"text": "Annuler, rester dans la partie", "primary": false, "cb": func(): m.close()})
+	btns.append({"text": L.t("common.annuler_rester_dans_la_partie"), "primary": false, "cb": func(): m.close()})
 	m.set_buttons(btns)
 	if origin == "custom":
 		# section « 📋 Générer un code à partager » (donjons personnalisés), entre l'export et « Quitter sans sauvegarder »
 		var sec := VBoxContainer.new()
 		var out: TextEdit = null
 		var status: Label = null
-		var gen := _modal_button("📋 Générer un code à partager", func():
+		var gen := _modal_button(L.t("common.generer_un_code_a_partager"), func():
 			Form.generate_code(gs.cfg, out, status))
 		sec.add_child(gen)
 		out = Form.code_area(sec, "", true, 70.0, 6.0)
@@ -748,7 +750,7 @@ func _show_combat_summary(s: Dictionary) -> void:
 	if gs.won:
 		return
 	Sound.sfx("victory")
-	var m := Modal.open(_modals(), "⚔️ Victoire !", 420.0)
+	var m := Modal.open(_modals(), L.t("main.victoire"), 420.0)
 	var names: Array = []
 	for n in s.order:
 		var c := int(s.counts[n])
@@ -764,16 +766,16 @@ func _show_combat_summary(s: Dictionary) -> void:
 	for c in gs.party:
 		recap.append("%s %d/%d" % [c.name, int(c.hp), int(c.maxHp)])
 	m.add_text("❤️ " + " · ".join(recap), UiTheme.DIM, 13)
-	m.set_buttons([{"text": "Continuer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.continuer"), "cb": func(): m.close()}])
 
 func _on_game_over() -> void:
-	show_message("☠️ Toute l'équipe a péri…", 4.0)
+	show_message(L.t("main.toute_l_equipe_a_peri"), 4.0)
 	await get_tree().create_timer(1.6).timeout
 	Dialogs.defeat(_modals(), gs, _restart, Data.go_home)
 
 func _show_victory() -> void:
 	Sound.sfx("victory")
-	show_message("Victoire !", 3.0)
+	show_message(L.t("common.victoire"), 3.0)
 	await get_tree().create_timer(0.8).timeout
 	var maxed := gs.party.all(func(c): return int(c.level) >= Characters.MAX_LEVEL)
 	var random_run := Data.play_origin == "random" and not maxed
@@ -806,7 +808,7 @@ func _continue_next() -> void:
 	var go := func(mods: Array):
 		Village.next_dungeon(gs, mods)
 		# séparateur « Expédition n°N — titre » du journal complet, juste avant la ligne d'annonce
-		gs.full_log.insert(maxi(0, gs.full_log.size() - 1), {"type": "divider", "text": "Expédition n°%d — %s" % [gs.run_number, str(gs.cfg.get("title", ""))]})
+		gs.full_log.insert(maxi(0, gs.full_log.size() - 1), {"type": "divider", "text": L.fa(L.t("common.expedition_n"), [gs.run_number, str(gs.cfg.get("title", ""))])})
 		load_level(0)
 	if gs.run_mods_chosen:
 		go.call((gs.cfg.get("runModifierIds", []) as Array).duplicate())

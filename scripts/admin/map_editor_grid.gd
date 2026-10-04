@@ -160,9 +160,9 @@ func _tip_lines(c: Vector2i) -> Array:
 	var lines: Array = []
 	var rows := _rows()
 	if int(lvl.get("startX", -999)) == c.x and int(lvl.get("startY", -999)) == c.y:
-		lines.append(tr("🚩 Point de départ"))
+		lines.append(L.t("admin.map_editor_grid.point_de_depart"))
 	if _party == c:
-		lines.append(tr("🧑‍🤝‍🧑 Groupe actuellement ici"))
+		lines.append(L.t("admin.map_editor_grid.groupe_actuellement_ici"))
 	var ch := str(rows[c.y])[c.x]
 	if ch == "D":
 		var def_locked := false
@@ -172,25 +172,25 @@ func _tip_lines(c: Vector2i) -> Array:
 				found = true
 				def_locked = d.get("locked", true) != false
 				break
-		lines.append(tr("🚪 Porte (verrouillée par défaut)") if (found and def_locked) else tr("🚪 Porte (déverrouillée par défaut)"))
+		lines.append(L.t("admin.map_editor_grid.porte_verrouillee_par_defaut") if (found and def_locked) else L.t("admin.map_editor_grid.porte_deverrouillee_par_defaut"))
 	if ch == "S":
 		for s in lvl.get("stairs", []):
 			if int(s.x) == c.x and int(s.y) == c.y:
 				var a: Dictionary = s.get("action", {})
 				if a.get("type") == "victory":
-					lines.append(tr("✨ Escalier → Fin de partie (victoire)"))
+					lines.append(L.t("admin.map_editor_grid.escalier_fin_de_partie_victoire"))
 				else:
-					var nm := tr("niveau inconnu")
+					var nm := L.t("admin.map_editor_grid.niveau_inconnu")
 					for l in Data.admin_config().get("levels", []):
 						if l.id == a.get("targetId"):
 							nm = str(l.name)
-					lines.append(tr("✨ Escalier → %s") % nm)
+					lines.append(L.fa(L.t("admin.map_editor_grid.escalier"), nm))
 				break
 	for m in _mons.get(c, []):
-		lines.append(tr("👹 Monstre : %s") % str(m.get("name", "")) + (tr(" (caché)") if m.get("startHidden", false) else ""))
+		lines.append(L.fa(L.t("admin.map_editor_grid.monstre"), str(m.get("name", ""))) + (L.t("admin.map_editor_grid.cache") if m.get("startHidden", false) else ""))
 	for it in _items.get(c, []):
-		var pre := tr("🔧 Objet : %s") if str(it.get("type", "")) == "switch" else tr("💎 Objet : %s")
-		lines.append(pre % str(it.get("name", "")) + (tr(" (caché)") if it.get("startHidden", false) else ""))
+		var pre := L.t("admin.map_editor_grid.objet") if str(it.get("type", "")) == "switch" else L.t("admin.map_editor_grid.objet_2")
+		lines.append(pre % str(it.get("name", "")) + (L.t("admin.map_editor_grid.cache") if it.get("startHidden", false) else ""))
 	return lines
 
 func _update_tip() -> void:

@@ -244,17 +244,17 @@ static func actions(parent: Control, specs: Array, mt: float = 14.0) -> HFlowCon
 
 ## `generateShareCode` : génère le code DGZ1 de `cfg`, l'affiche dans `out`, le copie dans le presse-papiers et écrit l'état dans `status`.
 static func generate_code(cfg: Dictionary, out: TextEdit, status: Label) -> void:
-	status.text = "Génération du code…"
+	status.text = L.t("admin.form.generation_du_code")
 	await status.get_tree().process_frame
 	var code := Data.encode_code(cfg)
 	if code == "":
-		status.text = "❌ Échec de la génération du code."
+		status.text = L.t("admin.form.echec_de_la_generation_du")
 		return
 	out.visible = true
 	out.text = code
 	out.select_all()
 	DisplayServer.clipboard_set(code)
-	status.text = "✅ Code copié dans le presse-papiers (%d caractères)." % code.length()
+	status.text = L.fa(L.t("admin.form.code_copie_dans_le_presse"), code.length())
 
 ## Alerte de l'original (`showAlert`) : message + bouton « OK ».
 static func alert(host: Node, message: String) -> Modal:

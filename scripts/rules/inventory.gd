@@ -3,8 +3,8 @@ extends RefCounted
 ## Besace commune du groupe : onglets, piles, équiper / déséquiper, potions. Portage de bagTabOf / equipItem / usePotionAt.
 
 const MAX_PER_TAB := 12
-const SLOT_LABELS := {"weapon": "Arme", "head": "Tête", "body": "Torse", "hands": "Mains", "feet": "Pieds", "accessory": "Bijou"}
-const TAB_LABELS := {"items": "🗡️ Objets", "potions": "🧪 Potions", "keys": "🗝️ Clés & parchemins"}
+const SLOT_LABELS := {"weapon": "common.arme", "head": "rules.inventory.tete", "body": "Torse", "hands": "Mains", "feet": "Pieds", "accessory": "common.bijou"}
+const TAB_LABELS := {"items": "rules.inventory.objets", "potions": "rules.inventory.potions", "keys": "rules.inventory.cles_parchemins"}
 
 static func tab_of(it: Dictionary) -> String:
 	var t := str(it.get("type", ""))
@@ -87,7 +87,7 @@ static func equip(gs: GameState, c: Dictionary, idx: int) -> bool:
 	if old != null:
 		gs.inventory.append(old)
 	Characters.recompute(c, gs.cfg)
-	gs.add_log("%s équipe %s %s." % [c.name, _icon_txt(it), it.get("name", "")])
+	gs.add_log(L.fa(L.t("rules.inventory.equipe"), [c.name, _icon_txt(it), it.get("name", "")]))
 	return true
 
 static func unequip(gs: GameState, c: Dictionary, slot: String) -> bool:
@@ -96,7 +96,7 @@ static func unequip(gs: GameState, c: Dictionary, slot: String) -> bool:
 	if it == null:
 		return false
 	if not has_space(gs, it):
-		gs.add_log("🎒 Impossible de déséquiper : l'onglet %s est plein (%d/%d). Jetez ou attribuez d'abord un objet." % [TAB_LABELS[tab_of(it)], MAX_PER_TAB, MAX_PER_TAB])
+		gs.add_log(L.fa(L.t("rules.inventory.impossible_de_desequiper_l_onglet"), [TAB_LABELS[tab_of(it)], MAX_PER_TAB, MAX_PER_TAB]))
 		return false
 	eq[slot] = null
 	gs.inventory.append(it)
@@ -111,7 +111,7 @@ static func use_potion(gs: GameState, c: Dictionary, idx: int) -> int:
 	if str(it.get("type", "")) != "potion" or int(c.hp) <= 0:
 		return -1
 	if Statuses.has(c, "freeze"):
-		gs.add_log("❄️ %s est gelé — impossible de lui administrer quoi que ce soit tant que l'effet n'est pas passé." % c.name)
+		gs.add_log(L.fa(L.t("rules.inventory.est_gele_impossible_de_lui"), c.name))
 		return -1
 	var healed := 0
 	var restored := 0
@@ -128,8 +128,8 @@ static func use_potion(gs: GameState, c: Dictionary, idx: int) -> int:
 	if healed > 0:
 		parts.append("%d PV" % healed)
 	if restored > 0:
-		parts.append("%d endurance" % restored)
-	gs.add_log("%s boit %s %s et récupère %s." % [c.name, _icon_txt(it), it.get("name", ""), " et ".join(parts) if not parts.is_empty() else "0"], true)
+		parts.append(L.fa(L.t("rules.inventory.endurance"), restored))
+	gs.add_log(L.fa(L.t("rules.inventory.boit_et_recupere"), [c.name, _icon_txt(it), it.get("name", ""), " et ".join(parts) if not parts.is_empty() else "0"]), true)
 	gs.inventory.remove_at(idx)
 	return healed
 
@@ -138,10 +138,10 @@ static func discard(gs: GameState, idx: int) -> bool:
 		return false
 	var it: Dictionary = gs.inventory[idx]
 	if str(it.get("type", "")) == "key":
-		gs.add_log("🔑 Une clé ne peut jamais être jetée — elle pourrait encore servir.")
+		gs.add_log(L.t("rules.inventory.une_cle_ne_peut_jamais"))
 		return false
 	gs.inventory.remove_at(idx)
-	gs.add_log("🗑️ Le groupe se débarrasse définitivement de %s." % it.get("name", ""))
+	gs.add_log(L.fa(L.t("rules.inventory.le_groupe_se_debarrasse_definitivement"), it.get("name", "")))
 	return true
 
 static func find_key(gs: GameState, door_id: String) -> int:
@@ -162,21 +162,21 @@ static func describe(it: Dictionary, cfg: Dictionary = {}) -> Array[String]:
 	var atk_max := int(it.get("bonusAtkMax", 0))
 	if atk_min != 0 or atk_max != 0:
 		out.append("Attaque +%d / +%d" % [atk_min, atk_max])
-	for pair in [["bonusHp", "PV"], ["bonusSpellDmg", "Dégâts de sort"], ["bonusForce", "Force"], ["bonusDex", "Dextérité"],
-			["bonusCon", "Constitution"], ["bonusInt", "Intelligence"], ["bonusSpeed", "Vitesse"]]:
+	for pair in [["bonusHp", L.t("common.pv")], ["bonusSpellDmg", L.t("common.degats_de_sort")], ["bonusForce", L.t("common.force")], ["bonusDex", L.t("common.dexterite")],
+			["bonusCon", L.t("common.constitution")], ["bonusInt", L.t("common.intelligence")], ["bonusSpeed", L.t("common.vitesse")]]:
 		var v := int(it.get(pair[0], 0))
 		if v != 0:
 			out.append("%s %+d" % [pair[1], v])
 	if int(it.get("heal", 0)) > 0:
 		out.append("Rend %d PV" % int(it.heal))
 	if int(it.get("staminaRestore", 0)) > 0:
-		out.append("Rend %d endurance" % int(it.staminaRestore))
+		out.append(L.fa(L.t("common.rend_endurance"), int(it.staminaRestore)))
 	match str(it.get("type", "")):
-		"key": out.append("Ouvre une porte verrouillée")
+		"key": out.append(L.t("rules.inventory.ouvre_une_porte_verrouillee"))
 		"scroll":
 			for sp in cfg.get("spells", []):
 				if sp.get("id") == it.get("spellId"):
-					out.append("Lance %s (usage unique, sans coût)" % sp.name)
+					out.append(L.fa(L.t("rules.inventory.lance_usage_unique_sans_cout"), sp.name))
 		"weapon":
 			if it.has("weaponType"):
 				out.insert(0, "Arme : %s" % str(it.weaponType))
@@ -185,5 +185,5 @@ static func describe(it: Dictionary, cfg: Dictionary = {}) -> Array[String]:
 			if s != "":
 				out.insert(0, "Emplacement : %s" % SLOT_LABELS.get(s, s))
 	if out.is_empty():
-		out.append("Aucun bonus")
+		out.append(L.t("rules.inventory.aucun_bonus"))
 	return out

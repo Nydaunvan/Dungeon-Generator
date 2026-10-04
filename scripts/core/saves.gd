@@ -147,7 +147,7 @@ static func summary(i: int) -> Dictionary:
 		party.append("%s (Nv.%d)" % [c.get("name", "?"), int(c.get("level", 1))])
 	var title := str(d.get("config", {}).get("title", "")) if (d.get("config") is Dictionary) else ""
 	return {"title": title if title != "" else "(Sans titre)", "savedAt": float(d.get("savedAt", 0)),
-		"party": ", ".join(party) if not party.is_empty() else "Groupe inconnu", "origin": str(d.get("dungeonOrigin", "random"))}
+		"party": ", ".join(party) if not party.is_empty() else L.t("core.saves.groupe_inconnu"), "origin": str(d.get("dungeonOrigin", "random"))}
 
 ## Date locale « JJ/MM/AAAA HH:MM:SS » (comme `toLocaleString()` en français) d'un horodatage en millisecondes.
 static func local_date(ms: float) -> String:
@@ -158,7 +158,7 @@ static func local_date(ms: float) -> String:
 	return "%02d/%02d/%04d %02d:%02d:%02d" % [dt.day, dt.month, dt.year, dt.hour, dt.minute, dt.second]
 
 static func origin_label(o: String) -> String:
-	return "🏰 Donjon d'Origine" if o == "original" else ("🛠️ Donjon personnalisé" if o == "custom" else "🎲 Donjon aléatoire")
+	return "🏰 Donjon d'Origine" if o == "original" else (L.t("common.donjon_personnalise") if o == "custom" else L.t("common.donjon_aleatoire"))
 
 # ------------------------------------------------------------------ fichier complet
 
@@ -238,7 +238,7 @@ static func from_js_state(js: Dictionary, cfg: Dictionary) -> Dictionary:
 					ent["playerHit"] = bool(e.get("playerHit", false))
 				full.append(ent)
 	else:
-		full.append({"type": "divider", "text": "Expédition n°%d — %s" % [int(out.run_number), str(cfg.get("title", ""))]})
+		full.append({"type": "divider", "text": L.fa(L.t("common.expedition_n"), [int(out.run_number), str(cfg.get("title", ""))])})
 		for l in log_lines:
 			full.append({"type": "entry", "text": l, "playerHit": false})
 	out["full_log"] = full
@@ -300,7 +300,7 @@ static func migrate_save(save: Dictionary, cfg: Dictionary) -> void:
 		save.stats["perChar"] = {}
 	if not (save.get("full_log") is Array):
 		var run := maxi(1, int(save.get("run_number", 1)))
-		var fl: Array = [{"type": "divider", "text": "Expédition n°%d — %s" % [run, str(cfg.get("title", ""))]}]
+		var fl: Array = [{"type": "divider", "text": L.fa(L.t("common.expedition_n"), [run, str(cfg.get("title", ""))])}]
 		for l in save.get("log_lines", []):
 			fl.append({"type": "entry", "text": str(l), "playerHit": false})
 		save["full_log"] = fl

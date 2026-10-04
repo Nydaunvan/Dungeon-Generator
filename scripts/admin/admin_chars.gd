@@ -245,7 +245,7 @@ static func csection_label(text: String) -> Control:
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_bottom", int(cpx(5.0)))
 	var l := Label.new()
-	l.text = text.to_upper()
+	l.text = L.u(text)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.custom_minimum_size.x = 120.0
@@ -332,16 +332,16 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 			if allowed.has(sid) and AdminUtil.locked_level(cls, str(sid)) == 0:
 				keep.append(sid)
 		p["spellsKnown"] = keep
-	var panel := Form.panel(host, "Groupe d'aventuriers")
-	Form.hint(panel, "Les PV et l'attaque de base sont calculés à partir des caractéristiques. Les sorts proposés dépendent de la classe choisie (voir l'onglet Classes).")
-	Form.hint(panel, "Ce tableau définit la configuration de départ de chaque personnage, au tout début de la partie — pas son état en cours de jeu. Ce que le joueur gagnera ensuite (niveaux, équipement trouvé, sorts appris via un parchemin...) évolue indépendamment une fois la partie lancée.")
+	var panel := Form.panel(host, L.t("admin.chars.groupe_aventuriers"))
+	Form.hint(panel, L.t("admin.chars.les_pv_et_l_attaque"))
+	Form.hint(panel, L.t("admin.chars.ce_tableau_definit_la_configuration"))
 	var status := status_label()
-	var grid := AdminTable.create(panel, ["Portrait", "Icône", "Nom", "Classe", "For", "Dex", "Con", "Int", "End. max", "Équipement départ", "Sorts connus", "Aperçu"],
+	var grid := AdminTable.create(panel, ["Portrait", L.t("common.icone"), L.t("common.nom"), L.t("admin.chars.classe"), L.t("common.for"), "Dex", "Con", "Int", L.t("admin.chars.end_max"), L.t("admin.chars.equipement_depart"), L.t("admin.chars.sorts_connus"), L.t("common.apercu")],
 		[46, 38, 100, 100, 42, 42, 42, 42, 44, 128, 290, 70])
 	var party: Array = cfg.get("party", [])
 	for idx in party.size():
 		_row(grid, admin, cfg, party[idx], status)
-	actions_row(panel, [action_btn("💾 Enregistrer la configuration par défaut", func(): admin.confirm_save(status), true)])
+	actions_row(panel, [action_btn(L.t("common.enregistrer_la_configuration"), func(): admin.confirm_save(status), true)])
 	panel.add_child(status)
 
 static func _row(grid: GridContainer, admin: Node, cfg: Dictionary, c: Dictionary, status: Label) -> void:
@@ -370,7 +370,7 @@ static func _row(grid: GridContainer, admin: Node, cfg: Dictionary, c: Dictionar
 	# classe : classes de base (la classe évoluée actuelle reste listée en tête)
 	var opts: Array = []
 	if cur.get("id", "") != "" and not AdminUtil.is_base(cur):
-		opts.append([cur.id, "%s %s (évoluée en jeu)" % [AdminUtil.icon_text_fallback(str(cur.get("icon", ""))), cur.name]])
+		opts.append([cur.id, L.fa(L.t("admin.chars.evoluee_en_jeu"), [AdminUtil.icon_text_fallback(str(cur.get("icon", ""))), cur.name])])
 	for cl in cfg.get("classes", []):
 		if AdminUtil.is_base(cl):
 			opts.append([cl.id, "%s %s" % [AdminUtil.icon_text_fallback(str(cl.get("icon", ""))), cl.name]])
@@ -405,7 +405,7 @@ static func _row(grid: GridContainer, admin: Node, cfg: Dictionary, c: Dictionar
 		var n = clampf(float(v), 1.0, 205.0)
 		c["maxStamina"] = int(n) if is_equal_approx(n, roundf(n)) else n
 		return c["maxStamina"]
-	AdminTable.cell(grid, num_edit(c.get("maxStamina", 100), 44.0, 0.74, on_sta, 5.0, 5.0, false, "Endurance maximale"))
+	AdminTable.cell(grid, num_edit(c.get("maxStamina", 100), 44.0, 0.74, on_sta, 5.0, 5.0, false, L.t("admin.chars.endurance_maximale")))
 	upd.call()
 	# équipement de départ : un select par emplacement, sans libellé
 	var eqbox := VBoxContainer.new()
@@ -415,7 +415,7 @@ static func _row(grid: GridContainer, admin: Node, cfg: Dictionary, c: Dictionar
 	var weapons := eff_weapons(cfg, cur)
 	for slot in Data.constants.get("SLOT_TYPES", []):
 		var sid: String = slot.id
-		var options: Array = [["", "%s — aucun" % slot.get("icon", "")]]
+		var options: Array = [["", L.fa(L.t("admin.chars.aucun"), slot.get("icon", ""))]]
 		for it in cfg.get("itemLibrary", []):
 			var ok := false
 			if sid == "weapon":
@@ -472,7 +472,7 @@ static func _spells_cell(cfg: Dictionary, c: Dictionary, cur: Dictionary, status
 		cell.custom_minimum_size.x = cpx(col_w)
 		cell.size_flags_horizontal = Control.SIZE_FILL
 		if lock > 0:
-			var tip := T("🔒 S'apprend automatiquement au niveau %d (progression de la classe) — ne peut pas être attribué au départ.") % lock
+			var tip := L.fa(T(L.t("admin.chars.apprend_automatiquement_au_niveau")), lock)
 			cell.modulate.a = 0.5
 			var lk := Label.new()
 			lk.text = "🔒"
@@ -480,7 +480,7 @@ static func _spells_cell(cfg: Dictionary, c: Dictionary, cur: Dictionary, status
 			lk.tooltip_text = tip
 			lk.mouse_filter = Control.MOUSE_FILTER_STOP
 			cell.add_child(lk)
-			var cb := chk("%s (niv.%d)" % [label, lock], 0.66, false, Callable(), col_w - 24.0, true)
+			var cb := chk(L.fa(L.t("admin.chars.label_niv"), [L.c(label), lock]), 0.66, false, Callable(), col_w - 24.0, true)
 			cb.tooltip_text = tip
 			cb.mouse_filter = Control.MOUSE_FILTER_STOP
 			cell.add_child(cb)
@@ -492,7 +492,7 @@ static func _spells_cell(cfg: Dictionary, c: Dictionary, cur: Dictionary, status
 				if on:
 					if known.size() >= max_sp:
 						cb.set_pressed_no_signal(false)
-						status.text = T("❌ %s : %d compétences maximum par personnage (plafond fixe, jamais dépassable).") % [c.get("name", ""), max_sp]
+						status.text = L.fa(T(L.t("admin.chars.competences_maximum_par_personnage")), [c.get("name", ""), max_sp])
 						return
 					if not known.has(spell_id):
 						known.append(spell_id)

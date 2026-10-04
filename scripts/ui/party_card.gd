@@ -65,7 +65,7 @@ func _init() -> void:
 	chest.focus_mode = Control.FOCUS_NONE
 	chest.icon = UiTheme.tex("chest")
 	chest.expand_icon = true
-	chest.tooltip_text = "Inventaire de ce héros"
+	chest.tooltip_text = L.t("ui.party_card.inventaire_de_ce_heros")
 	chest.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
 		chest.add_theme_stylebox_override(st, StyleBoxEmpty.new())

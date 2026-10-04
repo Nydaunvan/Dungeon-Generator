@@ -4,23 +4,23 @@ extends RefCounted
 ## Reproduit `renderLibItemTable` / `libItemDetailsHtml` / `statBoostFieldsHtml` / `legendaryFieldsHtml` / `clampItemStat` /
 ## `editLibItem` / `addLibItem` / `removeLibItem` de l'original.
 
-const TYPES := [["potion", "Potion"], ["weapon", "Arme"], ["armor", "Armure"], ["jewelry", "Bijou"], ["key", "Clé"], ["scroll", "Parchemin"], ["trap", "Piège"]]
-const LEVEL_TYPES := [["potion", "Potion"], ["weapon", "Arme"], ["armor", "Armure"], ["jewelry", "Bijou"], ["key", "Clé"], ["scroll", "Parchemin"], ["trap", "Piège"], ["switch", "Interrupteur"], ["fountain", "Fontaine"]]
-const PERKS := [["lifesteal", "Vol de vie"], ["crit", "Critique"], ["thorns", "Renvoi"]]
+const TYPES := [["potion", "common.potion"], ["weapon", "common.arme"], ["armor", "common.armure"], ["jewelry", "common.bijou"], ["key", "common.cle"], ["scroll", "common.parchemin"], ["trap", "common.piege"]]
+const LEVEL_TYPES := [["potion", "common.potion"], ["weapon", "common.arme"], ["armor", "common.armure"], ["jewelry", "common.bijou"], ["key", "common.cle"], ["scroll", "common.parchemin"], ["trap", "common.piege"], ["switch", "Interrupteur"], ["fountain", "common.fontaine"]]
+const PERKS := [["lifesteal", "admin.items.vol_de_vie"], ["crit", "admin.items.critique"], ["thorns", "admin.items.renvoi"]]
 ## `LEGENDARY_PERKS` de l'original (icône + libellé FR), dans l'ordre de l'original.
-const LEGENDARY_PERKS := [["lifesteal", "🩸 Vol de vie"], ["crit", "💥 Critique"], ["thorns", "🌵 Renvoi"]]
+const LEGENDARY_PERKS := [["lifesteal", "common.vol_de_vie"], ["crit", "common.critique"], ["thorns", "common.renvoi"]]
 const STAT_FIELDS := ["bonusAtkMin", "bonusAtkMax", "bonusHp", "bonusSpellDmg", "heal", "trapDmgMin", "trapDmgMax", "bonusForce", "bonusDex", "bonusCon", "bonusInt", "bonusSpeed"]
 const BOOST_FIELDS := ["bonusForce", "bonusDex", "bonusCon", "bonusInt", "bonusSpeed"]
 
-const HEADERS := ["Icône", "Nom", "Type", "Détails", ""]
+const HEADERS := ["common.icone", "common.nom", "common.type", "common.details", ""]
 const MIN_W := [44, 90, 100, 345, 34]
 ## Colonnes qui se partagent l'espace libre : Nom, Type, Détails (proportions du tableau HTML : 311 / 160 / 535).
 const STRETCH := {1: 3.11, 2: 1.6, 3: 5.35}
 
 static func build(host: VBoxContainer, admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
-	var p := Form.panel(host, "Objets de base")
-	Form.hint(p, "Cette bibliothèque sert à définir l'équipement de départ des personnages (onglet Personnages). Ces objets ne sont pas liés à un niveau précis.")
+	var p := Form.panel(host, L.t("common.objets_de_base"))
+	Form.hint(p, L.t("admin.items.cette_bibliotheque_sert_a_definir"))
 	var grid := AdminTable.create(p, HEADERS, MIN_W)
 	AdminCells.wrap_headers(grid, HEADERS.size())
 	for col in STRETCH:
@@ -31,8 +31,8 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		_row(grid, admin, it)
 	var status_ref := [null]
 	AdminCells.actions(p, [
-		{"text": "+ Ajouter un objet", "cb": func(): _add(admin)},
-		{"text": "💾 Enregistrer la configuration par défaut", "primary": true, "cb": func(): admin.confirm_save(status_ref[0])},
+		{"text": L.t("common.ajouter_un_objet"), "cb": func(): _add(admin)},
+		{"text": L.t("common.enregistrer_la_configuration"), "primary": true, "cb": func(): admin.confirm_save(status_ref[0])},
 	])
 	status_ref[0] = AdminCells.status_label(p)
 
@@ -89,11 +89,11 @@ static func _details(it: Dictionary, admin: Node) -> Control:
 	match str(it.get("type", "")):
 		"potion":
 			var f := _line()
-			f.add_child(_stat(it, "heal", 48, "Soin"))
-			f.add_child(AdminCells.inline("PV soin"))
-			var e := AdminCells.num(it, "staminaRestore", 0, {"w": 48, "or": true, "tip": "Endurance"})
+			f.add_child(_stat(it, "heal", 48, L.t("common.soin")))
+			f.add_child(AdminCells.inline(L.t("admin.items.pv_soin")))
+			var e := AdminCells.num(it, "staminaRestore", 0, {"w": 48, "or": true, "tip": L.t("common.endurance")})
 			f.add_child(e)
-			f.add_child(AdminCells.inline("End."))
+			f.add_child(AdminCells.inline(L.t("common.end")))
 			v.add_child(f)
 		"weapon":
 			var wt: Array = []
@@ -117,11 +117,11 @@ static func _details(it: Dictionary, admin: Node) -> Control:
 			var sel := AdminCells.option(slots, it.get("slot", ""), func(x): it["slot"] = x)
 			sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			v.add_child(sel)
-			_gear_line(v, it, "Bonus PV (tank)", "Bonus attaque min (guerrier/archer)", "Bonus attaque max", "Bonus dégâts de sort (mage)")
+			_gear_line(v, it, L.t("common.bonus_pv_tank"), L.t("common.bonus_attaque_min_guerrier_archer"), L.t("common.bonus_attaque_max"), L.t("common.bonus_degats_de_sort_mage"))
 			_boosts(v, it)
 			_legendary(v, it, refresh)
 		"jewelry":
-			_gear_line(v, it, "Bonus PV", "Bonus attaque min", "Bonus attaque max", "Bonus dégâts de sort")
+			_gear_line(v, it, L.t("common.bonus_pv"), L.t("common.bonus_attaque_min"), L.t("common.bonus_attaque_max"), L.t("common.bonus_degats_de_sort"))
 			_boosts(v, it)
 			_legendary(v, it, refresh)
 		"trap":
@@ -129,19 +129,19 @@ static func _details(it: Dictionary, admin: Node) -> Control:
 			f.add_child(_stat(it, "trapDmgMin", 36, "", 1.0))
 			f.add_child(AdminCells.inline("-"))
 			f.add_child(_stat(it, "trapDmgMax", 36, "", 4.0))
-			f.add_child(AdminCells.inline("dégâts"))
-			var cb := AdminCells.check("Permanent (pointes)", bool(it.get("permanent", false)), func(on: bool): it["permanent"] = on)
+			f.add_child(AdminCells.inline(L.t("admin.items.degats")))
+			var cb := AdminCells.check(L.t("admin.items.permanent_pointes"), bool(it.get("permanent", false)), func(on: bool): it["permanent"] = on)
 			f.add_child(cb)
 			v.add_child(f)
 		"key":
-			v.add_child(AdminCells.inline("Se lie à une porte une fois placé dans un niveau", true, 0.74, true))
+			v.add_child(AdminCells.inline(L.t("admin.items.se_lie_a_une_porte"), true, 0.74, true))
 		"scroll":
 			var cfg: Dictionary = Data.admin_config()
 			var so: Array = []
 			for s in cfg.get("spells", []):
 				so.append([s.id, AdminUtil.spell_label(s)])
 			if so.is_empty():
-				so.append(["", "— Aucun sort défini —"])
+				so.append(["", L.t("common.aucun_sort_defini_2")])
 			var sel := AdminCells.option(so, it.get("spellId", ""), func(x):
 				it["spellId"] = x
 				refresh.call())
@@ -155,7 +155,7 @@ static func _details(it: Dictionary, admin: Node) -> Control:
 					if (c.get("allowedSpellIds", []) as Array).has(sid):
 						names.append(str(c.get("name", "")))
 				txt = ", ".join(names) if not names.is_empty() else "aucune"
-			v.add_child(AdminCells.inline("Classes compatibles : " + txt, true, 0.74, true))
+			v.add_child(AdminCells.inline(L.t("admin.items.classes_compatibles") + txt, true, 0.74, true))
 		_:
 			v.add_child(AdminCells.inline("—", true, 0.7))
 	return v
@@ -164,20 +164,20 @@ static func _details(it: Dictionary, admin: Node) -> Control:
 static func _gear_line(v: Control, it: Dictionary, t_hp: String, t_min: String, t_max: String, t_sp: String) -> void:
 	var f := _line()
 	f.add_child(_stat(it, "bonusHp", 34, t_hp))
-	f.add_child(AdminCells.inline("PV"))
+	f.add_child(AdminCells.inline(L.t("common.pv")))
 	f.add_child(_stat(it, "bonusAtkMin", 30, t_min))
 	f.add_child(AdminCells.inline("-"))
 	f.add_child(_stat(it, "bonusAtkMax", 30, t_max))
-	f.add_child(AdminCells.inline("Atq"))
+	f.add_child(AdminCells.inline(L.t("common.atq")))
 	f.add_child(_stat(it, "bonusSpellDmg", 30, t_sp))
-	f.add_child(AdminCells.inline("Sort"))
+	f.add_child(AdminCells.inline(L.t("common.sort")))
 	v.add_child(f)
 
 ## `statBoostFieldsHtml` : For / Dex / Con / Int / Vit sur une ligne (libellés 0,62 rem, grisés).
 static func _boosts(v: Control, it: Dictionary) -> void:
 	var f := _line()
-	for x in [["For", "bonusForce", "Bonus Force"], ["Dex", "bonusDex", "Bonus Dextérité"], ["Con", "bonusCon", "Bonus Constitution"],
-			["Int", "bonusInt", "Bonus Intelligence"], ["Vit", "bonusSpeed", "Bonus Vitesse (initiative)"]]:
+	for x in [[L.t("common.for"), "bonusForce", L.t("common.bonus_force")], ["Dex", "bonusDex", L.t("common.bonus_dexterite")], ["Con", "bonusCon", L.t("common.bonus_constitution")],
+			["Int", "bonusInt", L.t("common.bonus_intelligence")], ["Vit", "bonusSpeed", L.t("common.bonus_vitesse_initiative")]]:
 		var pair := HBoxContainer.new()
 		pair.add_theme_constant_override("separation", 2)
 		pair.add_child(AdminCells.inline(x[0], true, 0.62))
@@ -195,13 +195,13 @@ static func _legendary(v: Control, it: Dictionary, refresh: Callable) -> void:
 	var sp2 := Control.new()
 	sp2.custom_minimum_size = Vector2(0, UiMetrics.css(3.0))
 	v.add_child(sp2)
-	v.add_child(AdminCells.check("✨ Légendaire", bool(it.get("legendary", false)), func(on: bool):
+	v.add_child(AdminCells.check(L.t("common.legendaire"), bool(it.get("legendary", false)), func(on: bool):
 		it["legendary"] = on
 		refresh.call()))
 	if bool(it.get("legendary", false)):
 		var f := _line()
 		f.add_child(AdminCells.option(LEGENDARY_PERKS, it.get("legendaryPerk", ""), func(x): it["legendaryPerk"] = x, 150.0))
-		f.add_child(AdminCells.num(it, "legendaryValue", 15, {"w": 44, "or": true, "lo": 1, "hi": 50, "tip": "Valeur du bonus (%)"}))
+		f.add_child(AdminCells.num(it, "legendaryValue", 15, {"w": 44, "or": true, "lo": 1, "hi": 50, "tip": L.t("common.valeur_du_bonus")}))
 		f.add_child(AdminCells.inline("%"))
 		v.add_child(f)
 
@@ -235,15 +235,15 @@ static func fields(parent: Control, it: Dictionary, admin: Node, lvl: Dictionary
 	var f := AdminUtil.flow(parent)
 	match str(it.get("type", "potion")):
 		"potion":
-			_num(f, "Soin (PV)", it, "heal")
-			_num(f, "Endurance", it, "staminaRestore")
+			_num(f, L.t("admin.items.soin_pv"), it, "heal")
+			_num(f, L.t("common.endurance"), it, "staminaRestore")
 		"weapon":
 			var wt: Array = []
 			for w in AdminUtil.weapon_types():
 				wt.append([w.id, w.label])
 			var on_w := func(v): it["weaponType"] = v
 			AdminUtil.chip(f, "Type d'arme", AdminUtil.dropdown(wt, it.get("weaponType", "sword"), on_w, 170.0))
-			_num(f, "Attaque min", it, "bonusAtkMin")
+			_num(f, L.t("common.attaque_min"), it, "bonusAtkMin")
 			_num(f, "max", it, "bonusAtkMax")
 			_legacy_boosts(parent, it)
 			_legacy_legendary(parent, it, admin)
@@ -253,57 +253,57 @@ static func fields(parent: Control, it: Dictionary, admin: Node, lvl: Dictionary
 				if sl.id != "weapon" and sl.id != "accessory":
 					slots.append([sl.id, sl.label])
 			var on_slot := func(v): it["slot"] = v
-			AdminUtil.chip(f, "Emplacement", AdminUtil.dropdown(slots, it.get("slot", "body"), on_slot, 150.0))
-			_num(f, "PV", it, "bonusHp")
-			_num(f, "Attaque min", it, "bonusAtkMin")
+			AdminUtil.chip(f, L.t("admin.items.emplacement"), AdminUtil.dropdown(slots, it.get("slot", "body"), on_slot, 150.0))
+			_num(f, L.t("common.pv"), it, "bonusHp")
+			_num(f, L.t("common.attaque_min"), it, "bonusAtkMin")
 			_num(f, "max", it, "bonusAtkMax")
-			_num(f, "Sort", it, "bonusSpellDmg")
+			_num(f, L.t("common.sort"), it, "bonusSpellDmg")
 			_legacy_boosts(parent, it)
 			_legacy_legendary(parent, it, admin)
 		"jewelry":
-			_num(f, "PV", it, "bonusHp")
-			_num(f, "Attaque min", it, "bonusAtkMin")
+			_num(f, L.t("common.pv"), it, "bonusHp")
+			_num(f, L.t("common.attaque_min"), it, "bonusAtkMin")
 			_num(f, "max", it, "bonusAtkMax")
-			_num(f, "Sort", it, "bonusSpellDmg")
+			_num(f, L.t("common.sort"), it, "bonusSpellDmg")
 			_legacy_boosts(parent, it)
 			_legacy_legendary(parent, it, admin)
 		"trap":
-			_num(f, "Dégâts min", it, "trapDmgMin")
+			_num(f, L.t("common.degats_min"), it, "trapDmgMin")
 			_num(f, "max", it, "trapDmgMax")
 			var cb := CheckBox.new()
-			cb.text = "Permanent (pointes)"
+			cb.text = L.t("admin.items.permanent_pointes")
 			cb.focus_mode = Control.FOCUS_NONE
 			cb.button_pressed = bool(it.get("permanent", false))
 			cb.toggled.connect(func(on: bool): it["permanent"] = on)
 			f.add_child(cb)
 		"key":
 			if lvl.is_empty():
-				f.add_child(AdminUtil.label("Se lie à une porte une fois placée dans un niveau.", 13, UiTheme.DIM))
+				f.add_child(AdminUtil.label(L.t("admin.items.se_lie_a_une_porte_2"), 13, UiTheme.DIM))
 			else:
 				var on_door := func(v): it["opensDoorId"] = v
 				AdminUtil.chip(f, "Ouvre", AdminUtil.dropdown(door_options(lvl), it.get("opensDoorId", ""), on_door, 200.0))
 		"switch":
 			var on_d := func(v): it["switchOpensDoorId"] = v
-			AdminUtil.chip(f, "Ouvre la porte", AdminUtil.dropdown(door_options(lvl), it.get("switchOpensDoorId", ""), on_d, 190.0))
-			var mons: Array = [["", "— aucun —"]]
+			AdminUtil.chip(f, L.t("admin.items.ouvre_la_porte"), AdminUtil.dropdown(door_options(lvl), it.get("switchOpensDoorId", ""), on_d, 190.0))
+			var mons: Array = [["", L.t("admin.items.aucun")]]
 			for m in lvl.get("monsters", []):
 				mons.append([m.id, str(m.get("name", "?"))])
 			var on_m := func(v): it["switchRevealMonsterId"] = v
-			AdminUtil.chip(f, "Révèle le monstre", AdminUtil.dropdown(mons, it.get("switchRevealMonsterId", ""), on_m, 200.0))
-			var its: Array = [["", "— aucun —"]]
+			AdminUtil.chip(f, L.t("admin.items.revele_le_monstre"), AdminUtil.dropdown(mons, it.get("switchRevealMonsterId", ""), on_m, 200.0))
+			var its: Array = [["", L.t("admin.items.aucun")]]
 			for o in lvl.get("items", []):
 				if o.id != it.id and str(o.get("type", "")) != "decor":
 					its.append([o.id, str(o.get("name", "?"))])
 			var on_i := func(v): it["switchRevealItemId"] = v
-			AdminUtil.chip(f, "Révèle l'objet", AdminUtil.dropdown(its, it.get("switchRevealItemId", ""), on_i, 200.0))
+			AdminUtil.chip(f, L.t("admin.items.revele_l_objet"), AdminUtil.dropdown(its, it.get("switchRevealItemId", ""), on_i, 200.0))
 			var msg := LineEdit.new()
-			msg.placeholder_text = "Message affiché"
+			msg.placeholder_text = L.t("common.message_affiche")
 			msg.text = str(it.get("message", ""))
 			msg.custom_minimum_size = Vector2(260, 0)
 			msg.text_changed.connect(func(t: String): it["message"] = t)
 			AdminUtil.chip(f, "Message", msg)
 		"fountain":
-			f.add_child(AdminUtil.label("Restaure PV et endurance du groupe. Délai réglable dans « Général ».", 13, UiTheme.DIM))
+			f.add_child(AdminUtil.label(L.t("admin.items.restaure_pv_et_endurance_du"), 13, UiTheme.DIM))
 		"scroll":
 			var so: Array = []
 			for s in Data.admin_config().get("spells", []):
@@ -312,27 +312,27 @@ static func fields(parent: Control, it: Dictionary, admin: Node, lvl: Dictionary
 				it["spellId"] = v
 				if admin != null:
 					admin.refresh_tab()
-			AdminUtil.chip(f, "Sort enseigné", AdminUtil.dropdown(so, it.get("spellId", ""), on_sp, 260.0))
+			AdminUtil.chip(f, L.t("admin.items.sort_enseigne"), AdminUtil.dropdown(so, it.get("spellId", ""), on_sp, 260.0))
 			var names: Array = []
 			for c in AdminUtil.classes_allowing(str(it.get("spellId", ""))):
 				names.append(c.name)
-			Form.hint(parent, "Classes compatibles : " + (", ".join(names) if not names.is_empty() else "aucune"))
+			Form.hint(parent, L.t("admin.items.classes_compatibles") + (", ".join(names) if not names.is_empty() else "aucune"))
 
 static func door_options(lvl: Dictionary) -> Array:
-	var out: Array = [["", "— aucune —"]]
+	var out: Array = [["", L.t("common.aucune")]]
 	for d in lvl.get("doors", []):
-		out.append([d.id, "Porte (%d,%d)" % [int(d.x), int(d.y)]])
+		out.append([d.id, L.fa(L.t("common.porte"), [int(d.x), int(d.y)])])
 	return out
 
 static func _legacy_boosts(parent: Control, it: Dictionary) -> void:
 	var f := AdminUtil.flow(parent)
-	for x in [["Force", "bonusForce"], ["Dex", "bonusDex"], ["Con", "bonusCon"], ["Int", "bonusInt"], ["Vitesse", "bonusSpeed"]]:
+	for x in [[L.t("common.force"), "bonusForce"], ["Dex", "bonusDex"], ["Con", "bonusCon"], ["Int", "bonusInt"], [L.t("common.vitesse"), "bonusSpeed"]]:
 		_num(f, x[0], it, x[1], 100.0)
 
 static func _legacy_legendary(parent: Control, it: Dictionary, admin: Node) -> void:
 	var f := AdminUtil.flow(parent)
 	var cb := CheckBox.new()
-	cb.text = "Légendaire"
+	cb.text = L.t("admin.items.legendaire")
 	cb.focus_mode = Control.FOCUS_NONE
 	cb.button_pressed = bool(it.get("legendary", false))
 	cb.toggled.connect(func(on: bool):
@@ -344,7 +344,7 @@ static func _legacy_legendary(parent: Control, it: Dictionary, admin: Node) -> v
 	f.add_child(cb)
 	if bool(it.get("legendary", false)):
 		var on_perk := func(v): it["legendaryPerk"] = v
-		AdminUtil.chip(f, "Bonus", AdminUtil.dropdown(PERKS, it.get("legendaryPerk", "lifesteal"), on_perk, 150.0))
+		AdminUtil.chip(f, L.t("admin.items.bonus"), AdminUtil.dropdown(PERKS, it.get("legendaryPerk", "lifesteal"), on_perk, 150.0))
 		var s := SpinBox.new()
 		s.min_value = 1
 		s.max_value = 50
@@ -357,7 +357,7 @@ static func _add(admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	if not (cfg.get("itemLibrary") is Array):
 		cfg["itemLibrary"] = []
-	(cfg.itemLibrary as Array).append({"id": AdminUtil.new_id("lib"), "name": "Nouvel objet", "icon": "💎", "type": "potion", "heal": 5})
+	(cfg.itemLibrary as Array).append({"id": AdminUtil.new_id("lib"), "name": L.t("common.nouvel_objet"), "icon": "💎", "type": "potion", "heal": 5})
 	admin.refresh_tab()
 
 ## `removeLibItem` : confirmation sans titre, puis l'objet disparaît de la bibliothèque et de l'équipement de départ des personnages.
@@ -372,4 +372,4 @@ static func _remove(admin: Node, it: Dictionary) -> void:
 					if se[slot] == it.id:
 						se[slot] = ""
 		admin.refresh_tab()
-	Dialogs.confirm(admin.modals(), "", "Supprimer %s de la bibliothèque ?" % it.get("name", ""), go)
+	Dialogs.confirm(admin.modals(), "", L.fa(L.t("admin.items.supprimer_de_la_bibliotheque"), it.get("name", "")), go)

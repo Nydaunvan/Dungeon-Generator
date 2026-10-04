@@ -34,10 +34,10 @@ static func bonus(c: Dictionary, cfg: Dictionary) -> Dictionary:
 
 static func effect_label(e: Dictionary) -> String:
 	var p: Array = []
-	for pair in [["bonusForce", "Force"], ["bonusDex", "Dextérité"], ["bonusCon", "Constitution"], ["bonusInt", "Intelligence"],
-			["critChance", "% chances de coup critique"], ["lifestealPct", "% des dégâts infligés restaurés en PV"],
-			["resistPhys", "résistance physique"], ["resistMagic", "résistance magique"], ["bonusSpellDmg", "dégâts/soin de sort"],
-			["bonusHp", "PV max"], ["bonusStamina", "Endurance max"], ["bonusAtkMin", "dégâts min"], ["bonusAtkMax", "dégâts max"]]:
+	for pair in [["bonusForce", L.t("common.force")], ["bonusDex", L.t("common.dexterite")], ["bonusCon", L.t("common.constitution")], ["bonusInt", L.t("common.intelligence")],
+			["critChance", L.t("rules.talents.chances_de_coup_critique")], ["lifestealPct", L.t("rules.talents.des_degats_infliges_restaures")],
+			["resistPhys", L.t("rules.talents.resistance_physique")], ["resistMagic", L.t("rules.talents.resistance_magique")], ["bonusSpellDmg", L.t("rules.talents.degats_soin_de_sort")],
+			["bonusHp", "PV max"], ["bonusStamina", L.t("common.endurance_max")], ["bonusAtkMin", L.t("rules.talents.degats_min")], ["bonusAtkMax", L.t("rules.talents.degats_max")]]:
 		if int(e.get(pair[0], 0)) != 0:
 			p.append("+%d %s" % [int(e[pair[0]]), pair[1]])
 	return ", ".join(p)
@@ -83,7 +83,7 @@ static func choose(gs: GameState, c: Dictionary, level: int, talent_id: String) 
 	c.talents.append({"level": level, "id": talent_id})
 	Characters.recompute(c, gs.cfg)
 	var opt := find_option(gs.cfg, talent_id)
-	gs.add_log("📖 %s choisit le talent %s %s !" % [c.name, opt.get("icon", ""), opt.get("labelFr", "")])
+	gs.add_log(L.fa(L.t("rules.talents.choisit_le_talent"), [c.name, opt.get("icon", ""), opt.get("labelFr", "")]))
 
 ## Change un talent déjà choisi contre de l'or. Renvoie "" si réussi, sinon le motif.
 static func respec(gs: GameState, c: Dictionary, level: int, new_id: String) -> String:
@@ -92,17 +92,17 @@ static func respec(gs: GameState, c: Dictionary, level: int, new_id: String) -> 
 		if int(c.talents[i].level) == level:
 			idx = i
 	if idx < 0:
-		return "Aucun talent à changer."
+		return L.t("rules.talents.aucun_talent_a_changer")
 	var cost := respec_cost(gs.cfg, level)
 	if gs.gold < cost:
-		gs.add_log("💰 Pas assez d'or pour changer ce talent.")
-		return "Pas assez d'or pour changer ce talent."
+		gs.add_log(L.t("rules.talents.pas_assez_or_pour_changer"))
+		return L.t("rules.talents.pas_assez_or_pour_changer_2")
 	gs.gold -= cost
 	gs.stats["goldSpentTotal"] = int(gs.stats.get("goldSpentTotal", 0)) + cost
 	c.talents[idx]["id"] = new_id
 	Characters.recompute(c, gs.cfg)
 	var opt := find_option(gs.cfg, new_id)
-	gs.add_log("📖 %s choisit le talent %s %s (coût %d or) !" % [c.name, opt.get("icon", ""), opt.get("labelFr", ""), cost])
+	gs.add_log(L.fa(L.t("rules.talents.choisit_le_talent_cout_or"), [c.name, opt.get("icon", ""), opt.get("labelFr", ""), cost]))
 	return ""
 
 static func evolve(gs: GameState, c: Dictionary, class_id: String) -> void:
@@ -112,5 +112,5 @@ static func evolve(gs: GameState, c: Dictionary, class_id: String) -> void:
 	c["_evolutionPending"] = false
 	Characters.recompute(c, gs.cfg)
 	Sound.sfx("evolve")
-	gs.add_log("⭐ %s évolue en %s %s !" % [c.name, cls.get("icon", ""), cls.get("name", "")])
+	gs.add_log(L.fa(L.t("rules.talents.evolue_en"), [c.name, cls.get("icon", ""), cls.get("name", "")]))
 	check_unlock(gs, c)

@@ -84,4 +84,4 @@ static func next_dungeon(gs: GameState, mods: Array) -> void:
 	gs.village_prev = {}
 	for c in gs.party:
 		Characters.recompute(c, cfg)
-	gs.add_log("⚔️ Le groupe s'enfonce dans un nouveau donjon plus périlleux : %s (expédition n°%d)." % [cfg.title, gs.run_number])
+	gs.add_log(L.fa(L.t("rules.village.le_groupe_enfonce_dans_un"), [cfg.title, gs.run_number]))

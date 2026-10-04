@@ -12,9 +12,9 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 	var g := GridContainer.new()
 	g.columns = 2
 	g.add_theme_constant_override("h_separation", 24)
-	for c in [["💪 Force", int(def.get("force", 8))], ["🏃 Dextérité", int(def.get("dex", 8))], ["🛡️ Constitution", int(def.get("con", 8))],
-			["⚔️ Dégâts", "%d–%d" % [int(st.atkMin), int(st.atkMax)]], ["🛡️ Résist. physique", "%d%%" % int(def.get("resistPhys", 0))],
-			["✨ Résist. magique", "%d%%" % int(def.get("resistMagic", 0))]]:
+	for c in [[L.t("ui.monster_info_modal.force"), int(def.get("force", 8))], [L.t("ui.monster_info_modal.dexterite"), int(def.get("dex", 8))], ["🛡️ Constitution", int(def.get("con", 8))],
+			[L.t("ui.monster_info_modal.degats"), "%d–%d" % [int(st.atkMin), int(st.atkMax)]], [L.t("ui.monster_info_modal.resist_physique"), "%d%%" % int(def.get("resistPhys", 0))],
+			[L.t("ui.monster_info_modal.resist_magique"), "%d%%" % int(def.get("resistMagic", 0))]]:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var l := AdminUtil.label(str(c[0]), 14, UiTheme.DIM)
@@ -29,7 +29,7 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		if members.size() > 1:
-			var nm := AdminUtil.label("%s Membre %d" % ["👹" if mem.alive else "💀", i + 1], 13, UiTheme.PARCH)
+			var nm := AdminUtil.label(L.fa(L.t("ui.monster_info_modal.membre"), ["👹" if mem.alive else "💀", i + 1]), 13, UiTheme.PARCH)
 			nm.custom_minimum_size = Vector2(96, 0)
 			row.add_child(nm)
 		var bar := ProgressBar.new()
@@ -46,16 +46,16 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		bg.bg_color = Color(0, 0, 0, 0.45)
 		bar.add_theme_stylebox_override("background", bg)
 		row.add_child(bar)
-		var txt := "%d / %d PV" % [ceili(float(mem.hp)), ceili(float(mem.maxHp))] if mem.alive else "Vaincu"
+		var txt := L.fa(L.t("ui.monster_info_modal.pv"), [ceili(float(mem.hp)), ceili(float(mem.maxHp))]) if mem.alive else L.t("ui.monster_info_modal.vaincu")
 		var hp := AdminUtil.label(txt, 13, UiTheme.PARCH)
 		hp.custom_minimum_size = Vector2(84, 0)
 		hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(hp)
 		m.content.add_child(row)
 	if bool(def.get("isBoss", false)):
-		var t := "Entre en rage sous %d%% PV (+%d%% dégâts)" % [int(def.get("enrageThreshold", 50)), int(def.get("enrageBonusPct", 0))]
+		var t := L.fa(L.t("ui.monster_info_modal.entre_en_rage_sous_pv"), [int(def.get("enrageThreshold", 50)), int(def.get("enrageBonusPct", 0))])
 		if st.get("enraged", false):
-			t += " — 😡 actuellement enragé !"
+			t += L.t("ui.monster_info_modal.actuellement_enrage")
 		m.add_text(t, UiTheme.DIM, 13)
 	var badges: Array = []
 	for e in Statuses.active(st):
@@ -63,5 +63,5 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		badges.append("%s %s (%d)" % [sd.get("icon", "✨"), sd.get("label", e.type), int(e.remaining)])
 	if not badges.is_empty():
 		m.add_text("  ".join(badges), Color("ffd88a"), 14)
-	m.set_buttons([{"text": "Fermer", "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m
