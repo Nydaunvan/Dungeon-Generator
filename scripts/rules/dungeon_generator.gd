@@ -689,15 +689,64 @@ func _place_merchant(lvls: Array) -> void:
 	for s in ml.stairs:
 		occupied[_key(int(s.x), int(s.y))] = true
 	occupied[_key(int(ml.startX), int(ml.startY))] = true
+	var rows: Array = ml.mapRows
 	var free: Array = []
-	for y in ml.mapRows.size():
-		var row: String = ml.mapRows[y]
+	var back: Array = []   # cases contre un mur dont le retrait ne coupe pas la carte
+	for y in rows.size():
+		var row: String = rows[y]
 		for x in row.length():
 			if row[x] == "." and not occupied.has(_key(x, y)):
 				free.append(Vector2i(x, y))
-	if not free.is_empty():
-		var spot: Vector2i = choice(free)
-		ml["travelingMerchant"] = {"x": spot.x, "y": spot.y, "patrolRadius": randi_range(4, 8)}
+				if _wall_sides(rows, x, y) > 0 and not _near_special(ml, x, y) and _keeps_connected(rows, Vector2i(x, y)):
+					back.append(Vector2i(x, y))
+	var pool: Array = back
+	if pool.is_empty():   # à défaut : une case libre dont l'occupation ne coupe jamais la carte (sinon pas de marchand)
+		pool = free.filter(func(c): return _keeps_connected(rows, c))
+	if not pool.is_empty():
+		var spot: Vector2i = choice(pool)
+		ml["travelingMerchant"] = {"x": spot.x, "y": spot.y, "patrolRadius": 0}
+
+static func _wall_at(rows: Array, x: int, y: int) -> bool:
+	return y < 0 or y >= rows.size() or x < 0 or x >= (rows[y] as String).length() or (rows[y] as String)[x] == "#"
+
+static func _wall_sides(rows: Array, x: int, y: int) -> int:
+	var n := 0
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		if _wall_at(rows, x + d.x, y + d.y):
+			n += 1
+	return n
+
+## Pas collé à une porte, un escalier ou au départ (on ne doit jamais gêner un passage).
+static func _near_special(ml: Dictionary, x: int, y: int) -> bool:
+	for l in [ml.doors, ml.stairs]:
+		for o in l:
+			if absi(int(o.x) - x) + absi(int(o.y) - y) <= 1:
+				return true
+	return absi(int(ml.startX) - x) + absi(int(ml.startY) - y) <= 2
+
+## Vrai si, une fois la case `cell` occupée, toutes les autres cases praticables restent reliées.
+static func _keeps_connected(rows: Array, cell: Vector2i) -> bool:
+	var total := 0
+	var start := Vector2i(-1, -1)
+	for y in rows.size():
+		var row: String = rows[y]
+		for x in row.length():
+			if row[x] != "#" and Vector2i(x, y) != cell:
+				total += 1
+				if start.x < 0:
+					start = Vector2i(x, y)
+	if total == 0:
+		return false
+	var seen := {start: true}
+	var q: Array = [start]
+	while not q.is_empty():
+		var c: Vector2i = q.pop_back()
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = c + d
+			if n != cell and not seen.has(n) and not _wall_at(rows, n.x, n.y):
+				seen[n] = true
+				q.append(n)
+	return seen.size() == total
 
 # ------------------------------------------------------------------ groupe aléatoire
 

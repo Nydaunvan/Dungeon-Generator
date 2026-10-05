@@ -97,24 +97,21 @@ func step_items() -> void:
 				if PICKUP_TYPES.has(str(it.get("type", ""))):
 					_pickup(it)
 		break
-	var mm: Dictionary = wand.merchant() if wand != null else {}
-	if not mm.is_empty() and int(mm.x) == rig.gx and int(mm.y) == rig.gy and not bool(level.get("outdoor", false)):
-		_meet_merchant(mm)
 
 # ------------------------------------------------------------------ village
 
 ## Case bloquée par le décor du village (arbre ou PNJ) : on ne peut pas y entrer, on lui parle.
 func blocks_cell(x: int, y: int) -> bool:
 	if not bool(level.get("outdoor", false)):
-		return false
+		return npc_at(x, y) == "merchant"   # marchand ambulant : fixe contre un mur, on le heurte au lieu de marcher dessus
 	return (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]) or npc_at(x, y) != ""
 
 func npc_at(x: int, y: int) -> String:
-	if not bool(level.get("outdoor", false)):
-		return ""
 	var mm: Dictionary = wand.merchant() if wand != null else {}
 	if not mm.is_empty() and int(mm.x) == x and int(mm.y) == y:
 		return "merchant"
+	if not bool(level.get("outdoor", false)):
+		return ""
 	var bs = level.get("blacksmith")
 	if bs is Dictionary and int(bs.x) == x and int(bs.y) == y:
 		return "blacksmith"
@@ -126,6 +123,10 @@ func npc_at(x: int, y: int) -> String:
 ## Le groupe se heurte à un arbre ou à un PNJ du village. Renvoie true si quelque chose a réagi.
 func bump_village(x: int, y: int) -> bool:
 	if not bool(level.get("outdoor", false)):
+		var tm: Dictionary = wand.merchant() if wand != null else {}
+		if npc_at(x, y) == "merchant" and not tm.is_empty():
+			_meet_merchant(tm)
+			return true
 		return false
 	var on_change := func():
 		bag_changed.emit()
@@ -162,14 +163,7 @@ func _meet_merchant(mm: Dictionary) -> void:
 	if wand != null:
 		wand.merchant_moved.emit()
 	_log(L.t("game.interactions.un_marchand_ambulant_vous_salue"))
-	var m := Modal.open(host, L.t("common.marchand_ambulant"), 380)
-	m.add_text(L.t("game.interactions.vous_croisez_le_marchand_ambulant"), UiTheme.DIM, 15, true)
-	m.set_buttons([
-		{"text": L.t("game.interactions.voir_son_etal"), "primary": true, "cb": func():
-			m.close()
-			open_merchant(mm)},
-		{"text": L.t("game.interactions.continuer_sans_arreter"), "cb": func(): m.close()},
-	])
+	open_merchant(mm)
 
 func open_merchant(mm: Dictionary) -> void:
 	if mm.get("offers") == null:

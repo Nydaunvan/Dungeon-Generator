@@ -184,7 +184,7 @@ func _tick_merchant() -> void:
 	if mm.is_empty():
 		return
 	var tm: Dictionary = level.travelingMerchant
-	if int(tm.get("patrolRadius", 0)) <= 0 or randf() >= WANDER_CHANCE:
+	if true:   # le marchand ambulant ne bouge plus : place fixe contre un mur de fond
 		return
 	var zone := _zone("__merchant", int(tm.x), int(tm.y), int(tm.patrolRadius))
 	var t := _wander_target(Vector2i(int(mm.x), int(mm.y)), zone, "")

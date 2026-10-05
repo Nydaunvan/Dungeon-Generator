@@ -10,6 +10,7 @@ signal resolved(res: Dictionary)
 
 const GOLD_BRIGHT := Color("ffd88a")
 const W := 470.0
+const RIGHT_W := 84.0   # colonne de droite des cartes (chance, mention) : largeur fixe, texte réduit pour y tenir
 const BODY_H := 330.0
 
 var _item: Dictionary
@@ -72,6 +73,41 @@ static func fit_button(b: Button, base: int = 15, min_size: int = 10) -> void:
 		fit_font(b, b.text, b.get_theme_font("font"), base, min_size, maxf(10.0, b.size.x - 30.0))
 	b.resized.connect(refit)
 	refit.call()
+
+## Garde-fou : tout texte d'un bouton ou d'une étiquette sans retour à la ligne doit tenir dans sa boîte.
+## Passe régulière sur toute la fenêtre (les textes changent à chaque étape) : police réduite jusqu'à 8 puis coupe « … ».
+var _guard_t := 0.0
+
+func _process(d: float) -> void:
+	_guard_t -= d
+	if _guard_t <= 0.0:
+		_guard_t = 0.15
+		_guard(self)
+
+static func _guard(n: Node) -> void:
+	for c in n.get_children():
+		if c is Button:
+			_guard_one(c, c.text, 24.0 + (c.icon.get_width() if c.icon != null else 0.0))
+		elif c is Label and c.autowrap_mode == TextServer.AUTOWRAP_OFF and c.clip_text:
+			_guard_one(c, c.text, 2.0)
+		if c is Control and (c as Control).size.x > 0.0:
+			_guard(c)
+
+static func _guard_one(c: Control, text: String, pad: float) -> void:
+	if text == "" or c.size.x < 12.0:
+		return
+	if not c.has_meta("g_done"):
+		c.set_meta("g_done", true)
+		c.set("clip_text", true)
+		c.set("text_overrun_behavior", TextServer.OVERRUN_TRIM_ELLIPSIS)
+	var base: int = c.get_theme_font_size("font_size")
+	var font: Font = c.get_theme_font("font")
+	var sz := base
+	var avail := c.size.x - pad
+	while sz > 8 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x > avail:
+		sz -= 1
+	if sz != base:
+		c.add_theme_font_size_override("font_size", sz)
 
 func _lbl(text: String, size: int, color: Color, font: String = "", center: bool = true) -> Label:
 	var l := Label.new()
@@ -321,6 +357,9 @@ func _card(icon: String, name: String, sub: String, right_top: String, right_bot
 	rb.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	rb.autowrap_mode = TextServer.AUTOWRAP_OFF
 	rv.add_child(rb)
+	rv.custom_minimum_size = Vector2(RIGHT_W, 0)
+	fit_font(rt, right_top, rt.get_theme_font("font"), 20, 12, RIGHT_W)
+	fit_font(rb, right_bot, rb.get_theme_font("font"), 11, 8, RIGHT_W)
 	h.add_child(rv)
 	b.modulate.a = 0.0
 	var t := b.create_tween()

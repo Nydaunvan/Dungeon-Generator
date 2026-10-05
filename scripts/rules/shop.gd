@@ -97,10 +97,10 @@ static func random_offers(cfg: Dictionary, run: int) -> Array:
 		offers.append(_gear_offer(run))
 	for k in 2:
 		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 8 + run * 2})
-	var spells: Array = cfg.get("spells", [])
-	if not spells.is_empty():
-		var sp: Dictionary = spells[randi() % spells.size()]
-		offers.append({"name": L.t("common.parchemin_de") + str(sp.name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": sp.id})
+	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
+	spells.shuffle()
+	for i in mini(randi_range(2, 3), spells.size()):
+		offers.append({"name": L.t("common.parchemin_de") + str(spells[i].name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": spells[i].id})
 	return _finish(offers, "shop_offer", false)
 
 ## Offres du marchand ambulant d'un niveau : objets choisis dans l'admin d'abord, puis complétés au hasard.
@@ -118,13 +118,18 @@ static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
 				inst["id"] = "merchant_offer_%d" % offers.size()
 				inst["price"] = price(inst)
 				offers.append(inst)
+	# Le complément aléatoire garantit quelques parchemins : on réserve leurs places avant d'achever avec le reste.
 	var rnd := random_offers(cfg, run)
-	var ri := 0
-	while offers.size() < slot_count and ri < rnd.size():
-		var o: Dictionary = rnd[ri].duplicate(true)
-		o["id"] = "merchant_offer_%d" % offers.size()
-		offers.append(o)
-		ri += 1
+	var scrolls: Array = rnd.filter(func(o): return str(o.type) == "scroll")
+	var others: Array = rnd.filter(func(o): return str(o.type) != "scroll")
+	var free := slot_count - offers.size()
+	var n_scroll := mini(scrolls.size(), mini(maxi(2, free / 3), maxi(0, free)))
+	var pick: Array = others.slice(0, maxi(0, free - n_scroll))
+	pick.append_array(scrolls.slice(0, n_scroll))
+	for o in pick:
+		var c: Dictionary = (o as Dictionary).duplicate(true)
+		c["id"] = "merchant_offer_%d" % offers.size()
+		offers.append(c)
 	return offers
 
 ## Offres du marchand du village (plus riches : run + 2, quantités de potions, plusieurs parchemins).

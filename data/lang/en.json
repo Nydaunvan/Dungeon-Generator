@@ -842,7 +842,7 @@
   "ui.save_menu.nouveau": "🔄 New game",
   "ui.save_menu.exporter": "⬇ Export",
   "ui.save_menu.importer": "⬆ Import",
-  "ui.shop_modal.cles_et_parchemins": "Keys and scrolls",
+  "ui.shop_modal.cles_et_parchemins": "Scroll",
   "ui.shop_modal.le_marchand": "The Merchant",
   "ui.shop_modal.le_marchand_itinerant": "The Wandering Merchant",
   "ui.shop_modal.pieces_or": "%d gold coins",
