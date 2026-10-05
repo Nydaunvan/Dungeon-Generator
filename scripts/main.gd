@@ -590,6 +590,7 @@ func _on_menu(name: String) -> void:
 	match name:
 		"Accueil": _leave_game()
 		"Guide": Dialogs.guide(_modals())
+		"Quitter": Dialogs.confirm(_modals(), "", L.t("ui.app_header.quitter_confirm"), func(): get_tree().quit(), L.t("ui.app_header.quitter"))
 		"Son": SoundModal.open(_modals())
 		"Lang":
 			Sound.stop_ambient()

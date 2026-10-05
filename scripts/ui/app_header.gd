@@ -66,6 +66,11 @@ func _init() -> void:
 		_lang.text = _lang_text()
 		nav.emit("Lang"))
 	nav_row.add_child(_lang)
+	if not OS.has_feature("web"):   # sur le Web, on ferme simplement l'onglet
+		var quit := _button("⏻ " + L.t("ui.app_header.quitter"))
+		quit.tooltip_text = L.t("ui.app_header.quitter_tip")
+		quit.pressed.connect(func(): nav.emit("Quitter"))
+		nav_row.add_child(quit)
 	hang = HangChain.new()
 	add_child(hang)
 	UiMetrics.register(self)

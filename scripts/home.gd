@@ -18,6 +18,7 @@ func _ready() -> void:
 func _on_nav(name: String) -> void:
 	match name:
 		"Guide": Dialogs.guide(_modal_layer)
+		"Quitter": Dialogs.confirm(_modal_layer, "", L.t("ui.app_header.quitter_confirm"), func(): get_tree().quit(), L.t("ui.app_header.quitter"))
 		"Admin": Data.open_admin()
 		"Lang": get_tree().reload_current_scene()
 

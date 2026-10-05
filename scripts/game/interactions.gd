@@ -101,9 +101,11 @@ func step_items() -> void:
 # ------------------------------------------------------------------ village
 
 ## Case bloquée par le décor du village (arbre ou PNJ) : on ne peut pas y entrer, on lui parle.
+var _pass_merchant := false
+
 func blocks_cell(x: int, y: int) -> bool:
 	if not bool(level.get("outdoor", false)):
-		return npc_at(x, y) == "merchant"   # marchand ambulant : fixe contre un mur, on le heurte au lieu de marcher dessus
+		return npc_at(x, y) == "merchant" and not _pass_merchant   # marchand ambulant : fixe contre un mur, on le heurte au lieu de marcher dessus
 	return (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]) or npc_at(x, y) != ""
 
 func npc_at(x: int, y: int) -> String:
@@ -163,7 +165,38 @@ func _meet_merchant(mm: Dictionary) -> void:
 	if wand != null:
 		wand.merchant_moved.emit()
 	_log(L.t("game.interactions.un_marchand_ambulant_vous_salue"))
-	open_merchant(mm)
+	var m := Modal.open(host, L.t("common.marchand_ambulant"), 380)
+	m.add_text(L.t("game.interactions.vous_croisez_le_marchand_ambulant"), UiTheme.DIM, 15, true)
+	m.set_buttons([
+		{"text": L.t("game.interactions.voir_son_etal"), "primary": true, "cb": func():
+			m.close()
+			open_merchant(mm)},
+		{"text": L.t("game.interactions.continuer_sans_arreter"), "cb": func():
+			m.close()
+			_walk_through(mm)},
+	])
+
+## « Continuer sans s'arrêter » : le groupe passe sur la case du marchand, puis poursuit d'une case si elle est libre.
+func _walk_through(mm: Dictionary) -> void:
+	var rel := -1
+	for r in 4:
+		var v: Vector2i = DungeonGrid.DIRS[posmod(rig.dir + r, 4)]
+		if rig.gx + v.x == int(mm.x) and rig.gy + v.y == int(mm.y):
+			rel = r
+	if rel < 0:
+		return
+	_pass_merchant = true
+	rig.step(rel)
+	if rig.gx != int(mm.x) or rig.gy != int(mm.y):
+		_pass_merchant = false
+		return
+	await rig.moved
+	_pass_merchant = false
+	var v2: Vector2i = DungeonGrid.DIRS[posmod(rig.dir + rel, 4)]
+	var nx := rig.gx + v2.x
+	var ny := rig.gy + v2.y
+	if rig.grid.is_walkable(nx, ny) and not (rig.extra_block.is_valid() and rig.extra_block.call(nx, ny)):
+		rig.step(rel)
 
 func open_merchant(mm: Dictionary) -> void:
 	if mm.get("offers") == null:

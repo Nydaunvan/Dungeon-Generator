@@ -1235,7 +1235,10 @@
   "admin.general.piege_passer_degats": "Walking past without trying: damage (% of normal damage)",
   "admin.general.piege_enigmes_nombre": "Riddle: number of riddles in a row (1 to 4)",
   "admin.general.piege_variantes": "Puzzle twists enabled (backwards or shuffled runes, mirrored slabs)",
-  "ui.app_header.perf_tip": "Show / hide frames per second, RAM and video memory (F3 key)"
+  "ui.app_header.perf_tip": "Show / hide frames per second, RAM and video memory (F3 key)",
+  "ui.app_header.quitter": "Quit",
+  "ui.app_header.quitter_tip": "Close the game",
+  "ui.app_header.quitter_confirm": "Quit the game? Unsaved progress will be lost."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

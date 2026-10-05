@@ -249,6 +249,28 @@ func _init() -> void:
 					if pn < cards.size():
 						cards[pn].pressed.emit()
 					await create_timer(0.5).timeout
+			"merchbump":
+				var g4: DungeonGrid = main.grid
+				for dd in 4:
+					var v4: Vector2i = DungeonGrid.DIRS[dd]
+					if g4.is_walkable(main.rig.gx + 2 * v4.x, main.rig.gy + 2 * v4.y) and g4.is_walkable(main.rig.gx + v4.x, main.rig.gy + v4.y):
+						main.rig.face(dd)
+						var ls: Dictionary = main.gs.level_state(main.level)
+						main.level["travelingMerchant"] = {"x": main.rig.gx + v4.x, "y": main.rig.gy + v4.y, "patrolRadius": 0}
+						ls["merchant"] = {"x": main.rig.gx + v4.x, "y": main.rig.gy + v4.y, "discovered": false, "offers": null}
+						break
+				await create_timer(0.6).timeout
+				var p0 := Vector2i(main.rig.gx, main.rig.gy)
+				main.rig.step(0)
+				await create_timer(0.5).timeout
+				print("bump pos ", p0, " -> ", Vector2i(main.rig.gx, main.rig.gy))
+				root.get_texture().get_image().save_png(out + "_merchbump_popup.png")
+				for bt in _all_buttons(root):
+					if bt.text == "Continuer sans s'arrêter":
+						bt.pressed.emit()
+						break
+				await create_timer(1.2).timeout
+				print("after pass ", Vector2i(main.rig.gx, main.rig.gy))
 			"merch":
 				var g3: DungeonGrid = main.grid
 				for dd in 4:
