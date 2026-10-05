@@ -5,6 +5,44 @@ extends RefCounted
 ## valeurs corrigées. Le panneau Combat n'a pas de bouton : il enregistre à chaque modification.
 
 ## Indication `.hint` (marge haute -4 px par défaut, 12 px dessous).
+## Réglages des méthodes / puzzles / butin : [clé, libellé, pas, min, max] ; "#" = intertitre ; clé finissant par « On » = interrupteur.
+const TRAP_FIELDS := [
+	["#", "admin.general.pieges_sec_methodes"],
+	["methodCount", "admin.general.piege_nb_methodes", 1, 2, 4],
+	["statBonus", "admin.general.piege_bonus_stat", 0.5, 0, 10],
+	["forceBase", "admin.general.piege_force_base", 1, 0, 100],
+	["forceFailPct", "admin.general.piege_force_echec", 5, 50, 300],
+	["dispelBase", "admin.general.piege_dissiper_base", 1, 0, 100],
+	["dispelStaCost", "admin.general.piege_dissiper_cout", 1, 0, 100],
+	["probeBase", "admin.general.piege_sonder_base", 1, 0, 100],
+	["probeBonus", "admin.general.piege_sonder_bonus", 1, 0, 50],
+	["volunteerBase", "admin.general.piege_volontaire_base", 1, 0, 100],
+	["volunteerDmgPct", "admin.general.piege_volontaire_degats", 5, 0, 100],
+	["bypassBase", "admin.general.piege_contourner_base", 1, 0, 100],
+	["bypassDmgPct", "admin.general.piege_contourner_degats", 5, 0, 100],
+	["#", "admin.general.pieges_sec_puzzles"],
+	["puzzleChancePct", "admin.general.piege_puzzle_chance", 5, 0, 100],
+	["puzzleRuneOn", "admin.general.piege_puzzle_runes"],
+	["puzzleRuneLen", "admin.general.piege_runes_longueur", 1, 3, 8],
+	["puzzleRuneErrors", "admin.general.piege_erreurs_permises_runes", 1, 0, 3],
+	["puzzleWireOn", "admin.general.piege_puzzle_fils"],
+	["puzzleWireCount", "admin.general.piege_fils_nombre", 1, 3, 6],
+	["puzzleWireErrors", "admin.general.piege_erreurs_permises_fils", 1, 0, 3],
+	["puzzleRiddleOn", "admin.general.piege_puzzle_enigme"],
+	["puzzleRiddleErrors", "admin.general.piege_erreurs_permises_enigme", 1, 0, 3],
+	["puzzleTilesOn", "admin.general.piege_puzzle_dalles"],
+	["puzzleTilesRows", "admin.general.piege_dalles_rangees", 1, 3, 6],
+	["puzzleTilesErrors", "admin.general.piege_erreurs_permises_dalles", 1, 0, 3],
+	["#", "admin.general.pieges_sec_butin"],
+	["rewardChancePct", "admin.general.piege_butin_jet", 5, 0, 100],
+	["rewardPerfectPct", "admin.general.piege_butin_parfait", 5, 0, 100],
+	["puzzleRewardPct", "admin.general.piege_butin_puzzle", 5, 0, 100],
+	["rewardGoldMin", "admin.general.piege_butin_or_min", 1, 0, 9999],
+	["rewardGoldMax", "admin.general.piege_butin_or_max", 1, 0, 9999],
+	["rewardXp", "admin.general.piege_butin_xp", 1, 0, 999],
+	["rewardHealPct", "admin.general.piege_butin_soin", 5, 0, 100],
+]
+
 static func _h(b: Control, text: String, mt: float = -4.0) -> Label:
 	return Form.note(b, text, mt, 12.0)
 
@@ -147,11 +185,42 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		var o := {"base": _clamp(_num0(t_base), 0, 100), "rogueBonus": _clamp(_num0(t_rogue), 0, 100), "assassinBonus": _clamp(_num0(t_ass), 0, 100),
 			"dexBonus": _clamp(_num0(t_dex), 0, 10), "min": mn, "max": mx, "critExtraDmg": _clamp(_num0(t_crit), 0, 300),
 			"dmgPctMin": dmn, "dmgPctMax": maxf(dmn, _clamp(_num0(t_dmax), 0, 100)), "dexCap": _clamp(_num0(t_cap), 0, 50)}
-		cfg["trapSettings"] = o
+		var tcur: Dictionary = Form.sub(cfg, "trapSettings")
+		for k in o:
+			tcur[k] = o[k]
 		_sv(t_base, o.base); _sv(t_rogue, o.rogueBonus); _sv(t_ass, o.assassinBonus); _sv(t_dex, o.dexBonus); _sv(t_min, o.min)
 		_sv(t_max, o.max); _sv(t_crit, o.critExtraDmg); _sv(t_dmin, o.dmgPctMin); _sv(t_dmax, o.dmgPctMax); _sv(t_cap, o.dexCap)
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act5, true]])
+
+	# ---- Pièges — méthodes, puzzles et butin
+	b = Form.panel(host, L.t("admin.general.pieges_methodes"))
+	var ts: Dictionary = Form.sub(cfg, "trapSettings")
+	var tr2 := _trap_cfg(cfg)
+	_h(b, L.t("admin.general.pieges_methodes_aide"))
+	var fields := {}
+	var switches := {}
+	for sp in TRAP_FIELDS:
+		if sp[0] == "#":
+			_h(b, L.t(sp[1]), 14.0)
+		elif sp[0].ends_with("On"):
+			switches[sp[0]] = Form.check(b, L.t(sp[1]), {"v": float(tr2[sp[0]]) > 0.5}, "v")
+		else:
+			fields[sp[0]] = Form.num_row(b, L.t(sp[1]), float(tr2[sp[0]]), float(sp[2]))
+	var act_trap2 := func():
+		for sp in TRAP_FIELDS:
+			if sp[0] == "#":
+				continue
+			if sp[0].ends_with("On"):
+				ts[sp[0]] = 1.0 if (switches[sp[0]] as CheckBox).button_pressed else 0.0
+			else:
+				ts[sp[0]] = _clamp(_num0(fields[sp[0]]), float(sp[3]), float(sp[4]))
+				_sv(fields[sp[0]], ts[sp[0]])
+		if float(ts.get("rewardGoldMax", 60)) < float(ts.get("rewardGoldMin", 15)):
+			ts["rewardGoldMax"] = ts["rewardGoldMin"]
+			_sv(fields["rewardGoldMax"], ts["rewardGoldMax"])
+		save.call()
+	Form.actions(b, [[L.t("admin.general.enregistrer"), act_trap2, true]])
 
 	# ---- Objets légendaires
 	b = Form.panel(host, L.t("admin.general.objets_legendaires"))
@@ -203,19 +272,7 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 
 ## `trapCfg` : réglages de crochetage avec leurs valeurs par défaut (champ absent / vide / illisible → défaut).
 static func _trap_cfg(cfg: Dictionary) -> Dictionary:
-	var d := {"base": 15.0, "rogueBonus": 12.0, "assassinBonus": 6.0, "dexBonus": 0.5, "dexCap": 10.0, "min": 10.0, "max": 95.0, "critExtraDmg": 50.0, "dmgPctMin": 15.0, "dmgPctMax": 30.0}
-	var c: Dictionary = cfg.get("trapSettings", {}) if cfg.get("trapSettings") is Dictionary else {}
-	var o := {}
-	for k in d:
-		var v = c.get(k)
-		o[k] = d[k] if (v == null or not (v is float or v is int)) else float(v)
-	if o.max < o.min:
-		o.max = o.min
-	if o.dmgPctMax < o.dmgPctMin:
-		o.dmgPctMax = o.dmgPctMin
-	if o.dexCap < 0:
-		o.dexCap = 0.0
-	return o
+	return TrapRules.cfg(cfg)
 
 ## `Number(champ.value)||0`.
 static func _num0(s: SpinBox) -> float:

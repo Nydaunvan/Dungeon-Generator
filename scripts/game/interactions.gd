@@ -16,8 +16,6 @@ var grid: DungeonGrid
 var view: LevelView
 var wand: Wanderers          # marchand itinérant (état et déplacements)
 
-const TRAP_DEFAULTS := {"base": 15, "rogueBonus": 12, "assassinBonus": 6, "dexBonus": 0.5, "dexCap": 10, "min": 10, "max": 95,
-	"critExtraDmg": 50, "dmgPctMin": 15, "dmgPctMax": 30}
 const PICKUP_TYPES := ["potion", "weapon", "armor", "jewelry", "scroll", "key"]
 
 func setup(state: GameState, controller: CombatController, r: PlayerRig, lay: GameLayout, modal_host: Node) -> void:
@@ -361,15 +359,7 @@ func _use_fountain(it: Dictionary) -> void:
 # ------------------------------------------------------------------ pièges
 
 func _trap_cfg() -> Dictionary:
-	var o: Dictionary = TRAP_DEFAULTS.duplicate()
-	var c: Dictionary = gs.cfg.get("trapSettings", {})
-	for k in o.keys():
-		if c.has(k) and c[k] != null and str(c[k]) != "":
-			o[k] = float(c[k])
-	o["max"] = maxf(o.max, o.min)
-	o["dmgPctMax"] = maxf(o.dmgPctMax, o.dmgPctMin)
-	o["dexCap"] = maxf(o.dexCap, 0.0)
-	return o
+	return TrapRules.cfg(gs.cfg)
 
 ## Détail du calcul de chance : base + bonus de classe + dextérité de l'équipe (comme computeTrapBreakdown).
 func trap_breakdown() -> Dictionary:
@@ -409,22 +399,71 @@ static func trap_threshold(chance: int) -> int:
 	return clampi(int(ceil(21.0 - chance / 5.0)), 2, 20)
 
 func _prompt_trap(it: Dictionary) -> void:
-	var m := TrapModal.open(host, it, trap_breakdown(), func(mult: float): return _pick_victim(it, mult))
+	var s := _trap_cfg()
+	var hit_random := func(mult: float): return _pick_victim(it, mult)
+	var hit_char := func(id: String, mult: float): return _hit_for(it, gs.char_by_id(id), mult)
+	var hit_all := func(mult: float):
+		var out: Array = []
+		for c in gs.alive_party():
+			out.append(_hit_for(it, c, mult))
+		return out
+	var ctx := {"gs": gs, "s": s, "bd": trap_breakdown(), "offer": TrapRules.draw_offer(gs, s, it),
+		"hit_random": hit_random, "hit_char": hit_char, "hit_all": hit_all}
+	var m := TrapModal.open(host, it, ctx)
 	m.skipped.connect(func(): _apply_trap(it, 1.0, {}))
-	m.resolved.connect(func(outcome: String, hit: Dictionary):
-		if outcome == "perfect" or outcome == "success":
-			gs.item_state(_lid(), str(it.id))["disarmed"] = true
-			view.entities.remove_item(str(it.id))
-			_log(L.fa(L.t("game.interactions.desamorce_par_le_groupe"), it.get("name", L.t("game.interactions.le_piege"))))
-			ctrl.changed.emit()
-		else:
-			if outcome == "crit":
-				_log(L.fa(L.t("game.interactions.echec_critique_le_piege_frappe"), int(_trap_cfg().critExtraDmg)), true)
-			_apply_trap(it, 1.0, hit))
+	m.resolved.connect(func(res: Dictionary): _trap_resolved(it, res))
+
+## Applique le résultat de la fenêtre : coût (endurance, objet sacrifié), désamorçage ou dégâts, puis butin.
+func _trap_resolved(it: Dictionary, res: Dictionary) -> void:
+	var sta: Dictionary = res.get("sta", {})
+	if not sta.is_empty() and int(sta.get("amt", 0)) > 0:
+		var c := gs.char_by_id(str(sta.id))
+		if not c.is_empty():
+			c["stamina"] = maxi(0, int(c.stamina) - int(sta.amt))
+	var sac := int(res.get("sac_idx", -1))
+	if sac >= 0 and sac < gs.inventory.size():
+		var gone: Dictionary = gs.inventory[sac]
+		gs.inventory.remove_at(sac)
+		_log(L.fa(L.t("game.interactions.piege_objet_sacrifie"), L.c(str(gone.get("name", "?")))))
+		bag_changed.emit()
+	if bool(res.get("disarm", false)):
+		gs.item_state(_lid(), str(it.id))["disarmed"] = true
+		view.entities.remove_item(str(it.id))
+		_log(L.fa(L.t("game.interactions.desamorce_par_le_groupe"), it.get("name", L.t("game.interactions.le_piege"))))
+	else:
+		_apply_trap_hits(it, res.get("hits", []))
+	var rw: Dictionary = res.get("reward", {})
+	if not rw.is_empty():
+		_give_trap_reward(rw)
+	ctrl.changed.emit()
+
+func _give_trap_reward(rw: Dictionary) -> void:
+	match str(rw.kind):
+		"gold":
+			gs.gold += int(rw.amount)
+			gs.stats["goldEarnedTotal"] = int(gs.stats.get("goldEarnedTotal", 0)) + int(rw.amount)
+			_log(L.fa(L.t("game.interactions.piege_butin_or"), int(rw.amount)))
+			ctrl.popup.emit("+%d 💰" % int(rw.amount), Color("ffd76a"))
+		"xp":
+			for c in gs.alive_party():
+				Characters.award_xp(gs, c, int(rw.amount))
+			gs.stats["xpEarnedTotal"] = int(gs.stats.get("xpEarnedTotal", 0)) + int(rw.amount)
+			_log(L.fa(L.t("game.interactions.piege_butin_xp"), int(rw.amount)))
+			ctrl.popup.emit("+%d XP" % int(rw.amount), Color("8fd0ff"))
+		"heal":
+			for c in gs.alive_party():
+				c["hp"] = mini(int(c.maxHp), int(c.hp) + int(ceil(float(c.maxHp) * float(rw.amount) / 100.0)))
+			_log(L.fa(L.t("game.interactions.piege_butin_soin"), int(rw.amount)))
+			ctrl.popup.emit("+%d %% PV" % int(rw.amount), Color("7fe08a"))
+			Sound.sfx("heal")
 
 func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
 	var alive := gs.alive_party()
 	var victim: Dictionary = alive[randi() % alive.size()] if not alive.is_empty() else gs.char_by_id(gs.active_char_id)
+	return _hit_for(it, victim, mult)
+
+## Dégâts du piège sur un personnage donné : le plus fort du pourcentage de PV max et du forfait de l'objet, × mult.
+func _hit_for(it: Dictionary, victim: Dictionary, mult: float) -> Dictionary:
 	var s := _trap_cfg()
 	var pct := randi_range(int(round(float(s.dmgPctMin))), int(round(float(s.dmgPctMax))))
 	var pct_dmg := int(ceil(float(victim.get("maxHp", 1)) * pct / 100.0))
@@ -434,27 +473,31 @@ func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
 	return {"victim": victim, "dmg": maxi(1, int(round(maxi(pct_dmg, flat) * mult)))}
 
 func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:
+	_apply_trap_hits(it, [pre if not pre.is_empty() else _pick_victim(it, mult)])
+
+## Le piège se déclenche : il disparaît (sauf piège permanent) et chaque coup de `hits` est appliqué.
+func _apply_trap_hits(it: Dictionary, hits: Array) -> void:
 	if not bool(it.get("permanent", false)):
 		gs.item_state(_lid(), str(it.id))["taken"] = true
 		view.entities.remove_item(str(it.id))     # piège à usage unique : il disparaît une fois déclenché
-	var hit: Dictionary = pre if not pre.is_empty() else _pick_victim(it, mult)
-	var victim: Dictionary = hit.victim
-	victim["hp"] = maxi(0, int(victim.hp) - int(hit.dmg))
 	ctrl.fx.emit("trap")
 	gs.stats["trapsTriggered"] = int(gs.stats.get("trapsTriggered", 0)) + 1
-	gs.bump(victim.id, "damageTaken", int(hit.dmg))
-	if int(victim.hp) <= 0:
-		gs.bump(victim.id, "knockdowns")
-	_log(L.fa(L.t("game.interactions.piege_declenche_subit_degats"), [it.get("name", ""), victim.name, int(hit.dmg)]), true)
-	ctrl.popup.emit("-%d" % int(hit.dmg), Color("ff6a6a"))
-	if int(victim.hp) <= 0:
-		_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
-		if gs.alive_party().is_empty():
-			gs.game_over = true
-			_log(L.t("common.le_groupe_est_aneanti_les"))
-			ctrl.game_over.emit()
-		elif gs.active_char_id == str(victim.id):
-			gs.active_char_id = str(gs.alive_party()[0].id)
+	for hit in hits:
+		var victim: Dictionary = hit.victim
+		victim["hp"] = maxi(0, int(victim.hp) - int(hit.dmg))
+		gs.bump(victim.id, "damageTaken", int(hit.dmg))
+		if int(victim.hp) <= 0:
+			gs.bump(victim.id, "knockdowns")
+		_log(L.fa(L.t("game.interactions.piege_declenche_subit_degats"), [it.get("name", ""), victim.name, int(hit.dmg)]), true)
+		ctrl.popup.emit("-%d" % int(hit.dmg), Color("ff6a6a"))
+		if int(victim.hp) <= 0:
+			_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
+	if gs.alive_party().is_empty():
+		gs.game_over = true
+		_log(L.t("common.le_groupe_est_aneanti_les"))
+		ctrl.game_over.emit()
+	elif gs.char_by_id(gs.active_char_id).is_empty() or int(gs.char_by_id(gs.active_char_id).hp) <= 0:
+		gs.active_char_id = str(gs.alive_party()[0].id)
 	ctrl.changed.emit()
 
 # ------------------------------------------------------------------ menu d'un objet de la besace

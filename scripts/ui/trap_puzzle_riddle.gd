@@ -1,0 +1,108 @@
+class_name TrapPuzzleRiddle
+extends TrapPuzzle
+## Énigme : une inscription sur une tablette de pierre qui s'écrit à la lueur d'une bougie ; trois réponses, une seule juste.
+
+const COUNT := 10
+var _q: Label
+var _btns: Array = []
+var _right := 0
+var _pulse := 0.0
+var _flame_x := 0.0
+var _locked := false
+var _right_text := ""
+
+func begin() -> void:
+	var n := 1 + randi() % COUNT
+	var base := "ui.trap_puzzle.riddle_%d_" % n
+	var answers: Array = [[L.t(base + "a"), true], [L.t(base + "b"), false], [L.t(base + "c"), false]]
+	answers.shuffle()
+	_right_text = L.t(base + "a")
+	_q = Label.new()
+	_q.position = Vector2(26, 38)
+	_q.size = Vector2(size.x - 52, 100)
+	_q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_q.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_q.add_theme_font_size_override("font_size", 17)
+	_q.add_theme_font_override("font", load(UiTheme.F_BODY_ITALIC))
+	_q.add_theme_color_override("font_color", Color("f0e2c0"))
+	_q.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	_q.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_q.text = L.t(base + "q")
+	_q.visible_ratio = 0.0
+	add_child(_q)
+	var t := create_tween()
+	t.tween_property(_q, "visible_ratio", 1.0, 0.045 * float(_q.text.length()) + 0.3)
+	for i in 3:
+		var b := Button.new()
+		b.text = str(answers[i][0])
+		b.focus_mode = Control.FOCUS_NONE
+		b.position = Vector2(30, 152 + i * 34)
+		b.size = Vector2(size.x - 60, 30)
+		var st := IronBox.button_styles()
+		for k in st:
+			b.add_theme_stylebox_override(k, st[k])
+		b.add_theme_font_size_override("font_size", 14)
+		b.modulate.a = 0.0
+		var ok: bool = answers[i][1]
+		b.pressed.connect(func(): _answer(b, ok))
+		add_child(b)
+		_btns.append(b)
+		t.parallel().tween_property(b, "modulate:a", 1.0, 0.35).set_delay(0.9 + i * 0.25)
+	_animated = true
+	set_process(true)
+	status.emit(L.t("ui.trap_puzzle.enigme_repondez") + "  " + errors_left_text())
+
+func _update(d: float) -> void:
+	_pulse += d
+
+func _answer(b: Button, ok: bool) -> void:
+	if done or _locked:
+		return
+	_locked = true
+	if ok:
+		b.add_theme_color_override("font_color", Color("b8e08a"))
+		b.add_theme_color_override("font_hover_color", Color("b8e08a"))
+		Sound.sfx("level_up")
+		burst(b.position + b.size * 0.5, Color("9be07a"), 24, 120.0)
+		status.emit(L.t("ui.trap_puzzle.enigme_juste"))
+		for o in _btns:
+			if o != b:
+				(o as Button).disabled = true
+		await wait(1.0)
+		finish(true)
+		return
+	b.disabled = true
+	b.add_theme_color_override("font_disabled_color", Color("ff7a6a"))
+	b.modulate = Color(1, 0.6, 0.55)
+	Sound.sfx("hit")
+	burst(Vector2(size.x * 0.5, 10), Color("c8b8a0"), 18, 80.0)
+	var over := misstep()
+	hurt.emit(over)
+	status.emit(L.t("ui.trap_puzzle.enigme_faux") + "  " + errors_left_text())
+	await wait(0.6)
+	if over:
+		for o in _btns:
+			(o as Button).disabled = true
+		finish(false)
+		return
+	_locked = false
+
+func _draw() -> void:
+	# tablette de pierre
+	var rc := Rect2(14, 8, size.x - 28, 132)
+	draw_rect(rc, Color("2c241b"))
+	draw_rect(rc, Color("8a6a3a"), false, 2.0)
+	draw_rect(rc.grow(-6), Color(0, 0, 0, 0.25), false, 1.0)
+	for k in 5:
+		var y := rc.position.y + 14.0 + k * 26.0
+		draw_line(Vector2(rc.position.x + 6, y), Vector2(rc.end.x - 6, y), Color(1, 1, 1, 0.025), 1.0)
+	# deux bougies qui vacillent de chaque côté
+	for side in 2:
+		var x := 6.0 if side == 0 else size.x - 6.0
+		var fl := 1.0 + sin(_pulse * 9.0 + side * 2.0) * 0.12 + sin(_pulse * 15.0) * 0.06
+		draw_circle(Vector2(x, 74.0), 38.0, Color(1.0, 0.55, 0.2, 0.06 * fl))
+		draw_circle(Vector2(x, 74.0), 22.0, Color(1.0, 0.6, 0.25, 0.09 * fl))
+		draw_rect(Rect2(x - 3, 78, 6, 26), Color("d8c8a0"))
+		draw_colored_polygon(PackedVector2Array([Vector2(x, 62.0 - 6.0 * fl), Vector2(x + 4, 74), Vector2(x, 79), Vector2(x - 4, 74)]), Color(1.0, 0.7, 0.25))
+	draw_sparks()

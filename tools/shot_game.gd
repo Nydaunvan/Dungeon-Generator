@@ -146,7 +146,7 @@ func _init() -> void:
 			"dooropen":
 				main.inter.open_door("doorA")
 				await create_timer(0.35).timeout
-			"trapui":
+			"trapold":
 				for it in main.level.items:
 					if str(it.get("type", "")) == "trap":
 						main.inter._prompt_trap(it)
@@ -267,6 +267,55 @@ func _init() -> void:
 				root.warp_mouse(cp)
 				Input.parse_input_event(cev)
 				await create_timer(0.8).timeout
+			"trapui":
+				var TR = load("res://scripts/rules/trap_rules.gd")
+				if args.has("kind") or args.has("methods") or args.has("puzzle"):
+					TR.set("debug_offer", {"kind": str(args.get("kind", "spikes")), "methods": Array(str(args.get("methods", "")).split("|", false)), "puzzle": str(args.get("puzzle", ""))})
+				if args.has("bag"):
+					for i in 3:
+						main.gs.inventory.append({"id": "pp%d" % i, "type": "potion", "name": "Potion de soin", "icon": "@icon:potion_heal", "heal": 25})
+					main.gs.inventory.append({"id": "sc1", "type": "scroll", "name": "Parchemin de Boule de feu", "icon": "@icon:misc_scroll", "spellId": "spell_fire1"})
+				for c in main.gs.party:
+					c["effDex"] = int(args.get("dex", 14))
+				if args.has("reward"):
+					var ts: Dictionary = main.gs.cfg.get("trapSettings", {})
+					for k in ["rewardChancePct", "rewardPerfectPct", "puzzleRewardPct"]:
+						ts[k] = 100
+					if args.has("rkind"):
+						pass
+					main.gs.cfg["trapSettings"] = ts
+				var tit := {"id": "trap_t1", "type": "trap", "name": "Piège à pointes", "trapDmgMin": 3, "trapDmgMax": 6}
+				main.inter._prompt_trap(tit)
+				await create_timer(1.0).timeout
+				for act in str(args.get("acts", "")).split(";", false):
+					var kv2 := act.split(":", true, 1)
+					var arg2 := kv2[1] if kv2.size() > 1 else ""
+					match kv2[0]:
+						"wait":
+							await create_timer(float(arg2)).timeout
+						"shot":
+							await _snap(out + "_trapui_" + arg2 + ".png")
+						"dump":
+							var hp := []
+							for c in main.gs.party:
+								hp.append("%s %d/%d sta %d" % [c.name, int(c.hp), int(c.maxHp), int(c.stamina)])
+							print("DUMP ", arg2, " or=", main.gs.gold, " sac=", main.gs.inventory.size(), " ", hp, " modal=", root.find_children("*", "TrapModal", true, false).size())
+						"click":
+							var hit: Button = null
+							for bt in _all_buttons(root):
+								if bt.visible and (bt.text.contains(arg2) or _has_label(bt, arg2)):
+									hit = bt
+									break
+							if hit == null:
+								print("bouton introuvable : ", arg2)
+							else:
+								hit.pressed.emit()
+						"solve":
+							var pz = _find_puzzle(root)
+							if pz == null:
+								print("pas de puzzle")
+							else:
+								await _solve(pz, arg2 != "bad")
 			"closedock":
 				main.dock.close()
 				await create_timer(0.5).timeout
@@ -286,3 +335,56 @@ func _snap(path: String) -> void:
 	await process_frame
 	root.get_texture().get_image().save_png(path)
 	ScanUtil.dump(root, path.replace(".png", ".txt"))
+
+func _has_label(n: Node, t: String) -> bool:
+	for c in n.get_children():
+		if c is Label and (c as Label).text.contains(t):
+			return true
+		if _has_label(c, t):
+			return true
+	return false
+
+func _find_puzzle(n: Node):
+	if n.get_script() != null and str(n.get_script().resource_path).contains("trap_puzzle_"):
+		return n
+	for c in n.get_children():
+		var r = _find_puzzle(c)
+		if r != null:
+			return r
+	return null
+
+func _solve(pz, good: bool) -> void:
+	var k := str(pz.get_script().resource_path)
+	if k.contains("runes"):
+		while not pz._input:
+			await create_timer(0.2).timeout
+		for i in pz._seq.size():
+			var idx: int = pz._seq[i]
+			if not good and i == 0:
+				idx = (idx + 1) % 4
+			pz._press(idx)
+			await create_timer(0.45).timeout
+			if not good:
+				return
+	elif k.contains("wires"):
+		await create_timer(1.5).timeout
+		var t: int = pz._data.target
+		pz._snip(t if good else (t + 1) % pz._data.colors.size())
+	elif k.contains("riddle"):
+		await create_timer(2.5).timeout
+		for b in pz._btns:
+			var isgood: bool = b.text == pz._right_text
+			if isgood == good:
+				b.pressed.emit()
+				break
+	elif k.contains("tiles"):
+		while not pz._input:
+			await create_timer(0.2).timeout
+		for r in pz.rows:
+			var c: int = pz._path[r]
+			if not good:
+				c = (c + 1) % 4
+			pz._step(c)
+			await create_timer(0.35).timeout
+			if not good:
+				return

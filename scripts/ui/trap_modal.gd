@@ -1,45 +1,58 @@
 class_name TrapModal
 extends Control
-## Fenêtre du piège (#trapOverlay de l'original) : détail du calcul de chance, dé à 20 faces en 3D qui roule,
-## verdict (or / réussi / échec / critique) avec halo pulsé, secousses, étincelles et flash rouge.
+## Fenêtre du piège : le jeu propose quelques façons de s'en sortir (désarmer, forcer, dissiper, sonder, sacrifier un objet,
+## se dévouer, contourner) et parfois un puzzle (runes, fils, énigme, dalles). Chaque méthode se joue au dé à 20 faces en 3D
+## ou par le puzzle ; verdict avec halo, secousses, étincelles et flash rouge ; butin éventuel à la fin.
+## Résultat : `resolved(res)` avec {disarm, hits, reward, sta, sac_idx}. `skipped` si le groupe passe son chemin (le piège frappe).
 
 signal skipped
-signal resolved(outcome: String, hit: Dictionary)
+signal resolved(res: Dictionary)
 
 const GOLD_BRIGHT := Color("ffd88a")
-const W := 400.0
+const W := 470.0
+const BODY_H := 330.0
 
 var _item: Dictionary
-var _bd: Dictionary
-var _pick_victim: Callable
-var _thr: int = 20
-var _outcome: String = ""
-var _hit: Dictionary = {}
-var _rolled: bool = false
+var _ctx: Dictionary
+var _gs: GameState
+var _s: Dictionary
+var _offer: Dictionary
+var _methods: Array = []
+var _puzzle := ""
+var _probe := 0.0
+var _res: Dictionary = {"disarm": false, "hits": [], "reward": {}, "sta": {}, "sac_idx": -1}
+var _busy := false
 
 var _shaker: Control
 var _panel: PanelContainer
 var _glow: Panel
 var _glow_sb: StyleBoxFlat
-var _die: TrapDie
-var _hint: Label
-var _roll_info: Label
-var _victim: Label
-var _result: Label
-var _pick: Button
-var _skip: Button
-var _cont: Button
+var _flavor: Label
+var _body: VBoxContainer
+var _foot: HBoxContainer
+var _status: Label
 var _sparks: Control
 var _flash: TextureRect
 var _fx: Tween
 var _t_glow: Tween
+var _die: TrapDie
+var _roll_info: Label
+var _victim: Label
+var _result: Label
+var _cont: Button
+var _skip: Button
+var _back: Button
+var _next := Callable()
 
-static func open(host: Node, item: Dictionary, breakdown: Dictionary, pick_victim: Callable) -> TrapModal:
+static func open(host: Node, item: Dictionary, ctx: Dictionary) -> TrapModal:
 	var m := TrapModal.new()
 	m._item = item
-	m._bd = breakdown
-	m._pick_victim = pick_victim
-	m._thr = Interactions.trap_threshold(int(breakdown.chance))
+	m._ctx = ctx
+	m._gs = ctx.gs
+	m._s = ctx.s
+	m._offer = ctx.offer
+	m._methods = (ctx.offer.methods as Array).duplicate()
+	m._puzzle = str(ctx.offer.puzzle)
 	m._build()
 	host.add_child(m)
 	return m
@@ -87,7 +100,6 @@ func _build() -> void:
 	_panel.custom_minimum_size = Vector2(W, 0)
 	_panel.add_theme_stylebox_override("panel", FrameBox.new(18.0, Vector4(24, 22, 24, 22)))
 	center.add_child(_panel)
-	# halo (box-shadow) derrière le cadre
 	_glow = Panel.new()
 	_glow.show_behind_parent = true
 	_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -100,9 +112,8 @@ func _build() -> void:
 	_glow.add_theme_stylebox_override("panel", _glow_sb)
 	_panel.add_child(_glow)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 2)
+	v.add_theme_constant_override("separation", 4)
 	_panel.add_child(v)
-	# titre + filet
 	var title := _lbl(L.t("ui.trap_modal.piege") + L.c(str(_item.get("name", ""))), 20, GOLD_BRIGHT, UiTheme.F_TITLE_BOLD)
 	title.add_theme_color_override("font_shadow_color", Color.BLACK)
 	title.add_theme_constant_override("shadow_offset_y", 2)
@@ -111,46 +122,44 @@ func _build() -> void:
 	rule.color = Color("070504")
 	rule.custom_minimum_size = Vector2(0, 2)
 	v.add_child(rule)
-	var chance := _lbl(L.fa(L.t("ui.trap_modal.chance"), int(_bd.chance)), 19, GOLD_BRIGHT, UiTheme.F_BODY_BOLD)
-	v.add_child(chance)
-	v.add_child(_calc_box())
-	_hint = _lbl(L.t("ui.trap_modal.toute_l_equipe_participe_une"), 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
-	v.add_child(_hint)
-	_die = TrapDie.new()
-	v.add_child(_die)
-	_roll_info = _lbl(" ", 15, Color("efe1c2"))
-	_roll_info.custom_minimum_size.y = 26
-	v.add_child(_roll_info)
-	_victim = _lbl(" ", 16, Color("ff9a8a"))
-	_victim.custom_minimum_size.y = 26
-	v.add_child(_victim)
-	_result = _lbl(" ", 20, Color("efe1c2"), UiTheme.F_BODY_BOLD)
-	_result.custom_minimum_size.y = 32
-	v.add_child(_result)
-	var acts := VBoxContainer.new()
-	acts.add_theme_constant_override("separation", 8)
-	acts.custom_minimum_size = Vector2(0, 92)
-	v.add_child(acts)
-	_pick = _button(L.t("ui.trap_modal.crocheter"), true)
-	_pick.pressed.connect(_do_pick)
-	acts.add_child(_pick)
+	_flavor = _lbl("", 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
+	_flavor.custom_minimum_size = Vector2(0, 38)
+	v.add_child(_flavor)
+	_body = VBoxContainer.new()
+	_body.custom_minimum_size = Vector2(0, BODY_H)
+	_body.add_theme_constant_override("separation", 6)
+	v.add_child(_body)
+	_status = _lbl(" ", 13, Color("cdb98a"), UiTheme.F_BODY_ITALIC)
+	_status.custom_minimum_size = Vector2(0, 22)
+	v.add_child(_status)
+	_foot = HBoxContainer.new()
+	_foot.add_theme_constant_override("separation", 8)
+	_foot.custom_minimum_size = Vector2(0, 42)
+	v.add_child(_foot)
 	_skip = _button(L.t("ui.trap_modal.passer"), false)
 	_skip.pressed.connect(func():
+		if _busy:
+			return
 		queue_free()
 		skipped.emit())
-	acts.add_child(_skip)
+	_foot.add_child(_skip)
+	_back = _button(L.t("ui.trap_modal.retour"), false)
+	_back.visible = false
+	_back.pressed.connect(func(): _stage_choose())
+	_foot.add_child(_back)
 	_cont = _button(L.t("common.continuer"), true)
 	_cont.visible = false
 	_cont.pressed.connect(func():
-		queue_free()
-		resolved.emit(_outcome, _hit))
-	acts.add_child(_cont)
+		if _next.is_valid():
+			var cb := _next
+			_next = Callable()
+			cb.call())
+	_foot.add_child(_cont)
 	_sparks = Control.new()
 	_sparks.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sparks.clip_contents = true
 	_sparks.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_panel.add_child(_sparks)
-	_sparks.top_level = false
 	_flash = TextureRect.new()
 	var ft := GradientTexture2D.new()
 	ft.fill = GradientTexture2D.FILL_RADIAL
@@ -166,6 +175,7 @@ func _build() -> void:
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash.modulate.a = 0.0
 	add_child(_flash)
+	_stage_choose()
 	call_deferred("_lock_size")
 	UiFx.pop_in(_panel, 0.18)
 
@@ -183,64 +193,6 @@ func _button(text: String, primary: bool) -> Button:
 		b.add_theme_color_override("font_hover_color", GOLD_BRIGHT)
 	return b
 
-func _calc_box() -> Control:
-	var box := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0, 0, 0, 0.28)
-	sb.border_color = Color(0.706, 0.549, 0.235, 0.28)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(6)
-	sb.content_margin_left = 10
-	sb.content_margin_right = 10
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
-	box.add_theme_stylebox_override("panel", sb)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 0)
-	box.add_child(v)
-	var fmt := func(x: float) -> String:
-		var r := snappedf(x, 0.1)
-		return str(int(r)) if is_equal_approx(r, round(r)) else str(r)
-	var row := func(label: String, val: String, total: bool = false):
-		var h := HBoxContainer.new()
-		var a := _lbl(label, 14, GOLD_BRIGHT if total else Color("efe1c2"), "", false)
-		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(a)
-		var b := _lbl(val, 14, GOLD_BRIGHT if total else Color("efe1c2"), UiTheme.F_BODY_BOLD, false)
-		b.autowrap_mode = TextServer.AUTOWRAP_OFF
-		h.add_child(b)
-		if total:
-			var line := ColorRect.new()
-			line.color = Color(0.706, 0.549, 0.235, 0.35)
-			line.custom_minimum_size = Vector2(0, 1)
-			v.add_child(line)
-		v.add_child(h)
-	var s: Dictionary = _bd.s
-	row.call("Base", fmt.call(float(s.base)) + " %")
-	var grp := {}
-	for l in _bd.lines:
-		var g: Dictionary = grp.get(l.cls, {"n": 0, "val": 0.0})
-		g.n += 1
-		g.val += float(l.val)
-		grp[l.cls] = g
-	for k in grp:
-		row.call("🗡️ " + str(k) + (" ×%d" % grp[k].n if grp[k].n > 1 else ""), "+" + fmt.call(grp[k].val) + " %")
-	var capped := false
-	for p in _bd.dexParts:
-		capped = capped or bool(p.capped)
-	row.call(L.t("ui.trap_modal.dexterite_10") + (L.t("ui.trap_modal.plafonnee") if capped else ""), "+" + fmt.call(float(_bd.dexTotal)) + " %")
-	if int(_bd.raw) != int(_bd.chance):
-		row.call(L.fa(L.t("ui.trap_modal.plafond_applique"), [fmt.call(float(s.min)), fmt.call(float(s.max))]), "%d %% → %d %%" % [int(_bd.raw), int(_bd.chance)])
-	row.call(L.t("ui.trap_modal.chance_finale"), "%d %%" % int(_bd.chance), true)
-	var note := L.fa(L.t("ui.trap_modal.d20_il_faut_ou_plus"), [
-		_thr, 21 - _thr, fmt.call(float(s.critExtraDmg)), L.t("ui.trap_modal.a_terre_ne_comptent_pas") if int(_bd.down) > 0 else ""])
-	var n1 := _lbl(note, 12, Color("cdb98a"), "", false)
-	v.add_child(n1)
-	var n2 := _lbl(L.fa(L.t("ui.trap_modal.si_le_piege_se_declenche"), [fmt.call(float(s.dmgPctMin)), fmt.call(float(s.dmgPctMax))]), 12, Color("cdb98a"), "", false)
-	v.add_child(n2)
-	return box
-
-## Taille figée à l'ouverture (mesure avec le contenu le plus long), réduite si l'écran est trop petit.
 func _lock_size() -> void:
 	await get_tree().process_frame
 	var natural := _panel.get_combined_minimum_size()
@@ -251,17 +203,458 @@ func _lock_size() -> void:
 		var z := avail / natural.y
 		_panel.scale = Vector2(z, z)
 
-func _do_pick() -> void:
-	if _rolled:
+func _clear_body() -> void:
+	for c in _body.get_children():
+		_body.remove_child(c)
+		c.queue_free()
+	_status.text = " "
+	_die = null
+	_victim = null
+	_roll_info = null
+	_result = null
+	_skip.visible = false
+	_back.visible = false
+	_cont.visible = false
+
+func _foot_show(skip: bool, back: bool, cont: bool) -> void:
+	_skip.visible = skip
+	_back.visible = back
+	_cont.visible = cont
+
+# ------------------------------------------------------------------ étape 1 : le choix
+
+func _stage_choose() -> void:
+	_busy = false
+	_clear_body()
+	_set_glow(Color(0, 0, 0), 34, 0.65, 34, 0.65, false)
+	var kind: Dictionary = _offer.kind
+	_flavor.text = "%s  %s\n%s" % [kind.icon, L.t("ui.trap_kind.%s" % str(str(kind.id))), L.t("ui.trap_kind.%s" % str(str(kind.id)) + "_txt")]
+	_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	var head := _lbl(L.t("ui.trap_modal.que_faites_vous"), 16, GOLD_BRIGHT, UiTheme.F_BODY_BOLD)
+	_body.add_child(head)
+	if _probe > 0.0:
+		_body.add_child(_lbl(L.fa(L.t("ui.trap_modal.sonde_bonus"), int(_probe)), 12, Color("b8e08a"), UiTheme.F_BODY_ITALIC))
+	var i := 0
+	for m in _methods:
+		_body.add_child(_method_card(str(m), i))
+		i += 1
+	if _puzzle != "":
+		_body.add_child(_puzzle_card(i))
+	_foot_show(true, false, false)
+
+func _chance_color(ch: int) -> Color:
+	if ch >= 65:
+		return Color("9be07a")
+	if ch >= 40:
+		return Color("ffd88a")
+	return Color("ff9a52")
+
+func _card(icon: String, name: String, sub: String, right_top: String, right_bot: String, col: Color, tip: String, idx: int) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 54)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var st := IronBox.button_styles()
+	for k in st:
+		b.add_theme_stylebox_override(k, st[k])
+	b.tooltip_text = tip
+	var h := HBoxContainer.new()
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	h.offset_left = 12
+	h.offset_right = -12
+	h.add_theme_constant_override("separation", 10)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(h)
+	var ic := _lbl(icon, 26, GOLD_BRIGHT, "", true)
+	ic.custom_minimum_size = Vector2(34, 0)
+	ic.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(ic)
+	var tv := VBoxContainer.new()
+	tv.alignment = BoxContainer.ALIGNMENT_CENTER
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tv.add_theme_constant_override("separation", -1)
+	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var nl := _lbl(name, 15, GOLD_BRIGHT, UiTheme.F_BODY_BOLD, false)
+	nl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	tv.add_child(nl)
+	var sl := _lbl(sub, 12, UiTheme.DIM, "", false)
+	sl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	sl.clip_text = true
+	tv.add_child(sl)
+	h.add_child(tv)
+	var rv := VBoxContainer.new()
+	rv.alignment = BoxContainer.ALIGNMENT_CENTER
+	rv.add_theme_constant_override("separation", -3)
+	rv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rt := _lbl(right_top, 20, col, UiTheme.F_BODY_BOLD, false)
+	rt.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	rt.autowrap_mode = TextServer.AUTOWRAP_OFF
+	rv.add_child(rt)
+	var rb := _lbl(right_bot, 11, UiTheme.DIM, "", false)
+	rb.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	rb.autowrap_mode = TextServer.AUTOWRAP_OFF
+	rv.add_child(rb)
+	h.add_child(rv)
+	b.modulate.a = 0.0
+	var t := b.create_tween()
+	t.tween_property(b, "modulate:a", 1.0, 0.25).set_delay(0.05 + idx * 0.08)
+	return b
+
+func _method_card(id: String, idx: int) -> Button:
+	var d: Dictionary = TrapRules.METHODS[id]
+	var info := TrapRules.method_chance(_gs, _s, id, int(_ctx.bd.chance), _probe)
+	var ch: int = info.chance
+	var who: Dictionary = info.who
+	var sub := L.t("ui.trap_method.stat_%s" % str(id))
+	if not who.is_empty():
+		sub += " · " + str(who.name)
+	if id == "sacrifice":
+		sub = L.fa(L.t("ui.trap_method.stat_sacrifice_n"), TrapRules.sacrifice_candidates(_gs).size())
+	var tip := L.t("ui.trap_method.risk_%s" % str(id))
+	if id == "disarm":
+		tip = _disarm_tip() + "\n" + tip
+	elif id == "dispel":
+		tip += "\n" + L.fa(L.t("ui.trap_method.cout_endurance"), int(_s.dispelStaCost))
+	var b := _card(str(d.icon), L.t("ui.trap_method.name_%s" % str(id)), sub, "%d %%" % ch, L.t("ui.trap_modal.chance_court"), _chance_color(ch), tip, idx)
+	b.pressed.connect(func(): _pick_method(id))
+	return b
+
+func _puzzle_card(idx: int) -> Button:
+	var b := _card(str(TrapRules.PUZZLE_ICONS[_puzzle]), L.t("ui.trap_puzzle.name_%s" % str(_puzzle)), L.t("ui.trap_puzzle.sub_%s" % str(_puzzle)),
+		L.t("ui.trap_modal.puzzle"), L.t("ui.trap_modal.recompense_plus"), Color("8fd0ff"), L.t("ui.trap_puzzle.tip_%s" % str(_puzzle)), idx)
+	b.pressed.connect(func(): _stage_puzzle())
+	return b
+
+func _disarm_tip() -> String:
+	var bd: Dictionary = _ctx.bd
+	var s: Dictionary = bd.s
+	var fmt := func(x: float) -> String:
+		var r := snappedf(x, 0.1)
+		return str(int(r)) if is_equal_approx(r, round(r)) else str(r)
+	var lines: Array = ["Base : %s %%" % fmt.call(float(s.base))]
+	var grp := {}
+	for l in bd.lines:
+		var g: Dictionary = grp.get(l.cls, {"n": 0, "val": 0.0})
+		g.n += 1
+		g.val += float(l.val)
+		grp[l.cls] = g
+	for k in grp:
+		lines.append("🗡️ %s%s : +%s %%" % [L.c(str(k)), (" ×%d" % grp[k].n) if grp[k].n > 1 else "", fmt.call(grp[k].val)])
+	lines.append(L.t("ui.trap_modal.dexterite_10") + " : +" + fmt.call(float(bd.dexTotal)) + " %")
+	lines.append(L.t("ui.trap_modal.chance_finale") + " : %d %%" % int(bd.chance))
+	return "\n".join(lines)
+
+func _pick_method(id: String) -> void:
+	if _busy:
 		return
-	_rolled = true
-	_pick.disabled = true
-	_skip.disabled = true
-	_hint.modulate.a = 0.0
+	if id == "sacrifice":
+		_stage_sacrifice()
+	else:
+		_stage_roll(id)
+
+# ------------------------------------------------------------------ étape : sacrifice
+
+func _stage_sacrifice() -> void:
+	_clear_body()
+	_body.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_body.add_child(_lbl(L.t("ui.trap_modal.sacrifice_choisir"), 15, GOLD_BRIGHT, UiTheme.F_BODY_BOLD))
+	var sc := ScrollContainer.new()
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var lv := VBoxContainer.new()
+	lv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lv.add_theme_constant_override("separation", 4)
+	sc.add_child(lv)
+	_body.add_child(sc)
+	for idx in TrapRules.sacrifice_candidates(_gs):
+		var it: Dictionary = _gs.inventory[idx]
+		var b := _card(_item_icon(it), L.c(str(it.get("name", "?"))), L.t("ui.trap_modal.sacrifice_consomme"), "", "", GOLD_BRIGHT, "", 0)
+		b.custom_minimum_size = Vector2(0, 44)
+		b.pressed.connect(func(): _do_sacrifice(idx, it))
+		lv.add_child(b)
+	_foot_show(false, true, false)
+
+func _item_icon(it: Dictionary) -> String:
+	return "🧪" if str(it.get("type", "")) == "potion" else "📜"
+
+func _do_sacrifice(idx: int, it: Dictionary) -> void:
+	_busy = true
+	_res.sac_idx = idx
+	_res.disarm = true
+	_clear_body()
+	_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	var big := _lbl(_item_icon(it), 64, GOLD_BRIGHT)
+	big.pivot_offset = Vector2(220, 40)
+	_body.add_child(big)
+	_body.add_child(_lbl(L.c(str(it.get("name", "?"))), 16, Color("efe1c2"), UiTheme.F_BODY_BOLD))
+	var t := create_tween()
+	t.tween_property(big, "scale", Vector2(1.35, 1.35), 0.35).set_trans(Tween.TRANS_BACK)
+	t.tween_property(big, "modulate", Color(1, 0.5, 0.2, 0.0), 0.7)
+	Sound.sfx("fountain")
+	_spark_burst()
+	_set_glow(Color("ffd76a"), 18, 0.5, 40, 0.9, true)
+	_end_with(L.t("ui.trap_modal.sacrifice_ok"), Color("ffe08a"), "", "none")
+
+# ------------------------------------------------------------------ étape : jet de dé
+
+func _stage_roll(id: String) -> void:
+	_busy = true
+	_clear_body()
+	_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	var info := TrapRules.method_chance(_gs, _s, id, int(_ctx.bd.chance), _probe)
+	var ch: int = info.chance
+	var thr := TrapRules.threshold(ch)
+	_body.add_child(_lbl("%s %s — %d %%" % [TrapRules.METHODS[id].icon, L.t("ui.trap_method.name_%s" % str(id)), ch], 17, GOLD_BRIGHT, UiTheme.F_BODY_BOLD))
+	_body.add_child(_lbl(L.fa(L.t("ui.trap_modal.d20_court"), [thr, 21 - thr]), 12, Color("cdb98a")))
+	_die = TrapDie.new()
+	_body.add_child(_die)
+	_roll_info = _lbl(" ", 15, Color("efe1c2"))
+	_roll_info.custom_minimum_size.y = 26
+	_body.add_child(_roll_info)
+	_victim = _lbl(" ", 16, Color("ff9a8a"))
+	_victim.custom_minimum_size.y = 26
+	_body.add_child(_victim)
+	_result = _lbl(" ", 20, Color("efe1c2"), UiTheme.F_BODY_BOLD)
+	_result.custom_minimum_size.y = 32
+	_body.add_child(_result)
+	_foot_show(false, false, false)
 	var roll := randi_range(1, 20)
-	_outcome = "perfect" if roll == 20 else ("crit" if roll == 1 else ("success" if roll >= _thr else "fail"))
-	_die.finished.connect(func(): _show_outcome(roll), CONNECT_ONE_SHOT)
+	var ok := roll == 20 or (roll != 1 and roll >= thr)
+	if ch >= 100:
+		ok = true
+	var crit := roll == 1 and id == "disarm"
+	var outcome := "perfect" if (roll == 20 and id == "disarm") else ("crit" if crit else ("success" if ok else "fail"))
+	await get_tree().create_timer(0.55).timeout
+	if not is_inside_tree():
+		return
+	_die.finished.connect(func(): _roll_outcome(id, roll, thr, outcome, info), CONNECT_ONE_SHOT)
 	_die.roll(roll)
+
+func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dictionary) -> void:
+	var line := L.fa(L.t("ui.trap_modal.jet_20_il_fallait_ou"), [roll, thr])
+	if roll == 20:
+		line = L.t("ui.trap_modal.jet_20_reussite_automatique")
+	elif roll == 1:
+		line = L.t("ui.trap_modal.jet_1_echec_critique_automatique") if id == "disarm" else L.t("ui.trap_modal.jet_1_echec")
+	_roll_info.text = line
+	var good := outcome == "success" or outcome == "perfect"
+	var who: Dictionary = info.who
+	var s := _s
+	var msg := ""
+	var reward_src := ""
+	match id:
+		"disarm":
+			if good:
+				_res.disarm = true
+				msg = L.t("ui.trap_modal.crochetage_parfait") if outcome == "perfect" else L.t("ui.trap_modal.piege_desamorce")
+				reward_src = "perfect" if outcome == "perfect" else "dice"
+			else:
+				msg = L.t("ui.trap_modal.echec_critique") if outcome == "crit" else L.t("ui.trap_modal.le_crochetage_echoue")
+				_hit_random(1.0 + float(s.critExtraDmg) / 100.0 if outcome == "crit" else 1.0)
+		"force":
+			if good:
+				_res.disarm = true
+				msg = L.t("ui.trap_modal.force_ok")
+				reward_src = "perfect" if roll == 20 else "dice"
+			else:
+				msg = L.t("ui.trap_modal.force_ko")
+				_hit_random(float(s.forceFailPct) / 100.0)
+		"dispel":
+			var cost := mini(int(who.get("stamina", 0)), int(s.dispelStaCost))
+			_res.sta = {"id": str(who.get("id", "")), "amt": cost}
+			if good:
+				_res.disarm = true
+				msg = L.t("ui.trap_modal.dissipe_ok")
+				reward_src = "perfect" if roll == 20 else "dice"
+			else:
+				msg = L.t("ui.trap_modal.dissipe_ko")
+				_hit_random(1.0)
+			_roll_info.text += "   ·   💧 " + L.fa(L.t("ui.trap_modal.perd_endurance"), [who.get("name", "?"), cost])
+		"probe":
+			if good:
+				_probe = float(s.probeBonus)
+				msg = L.fa(L.t("ui.trap_modal.sonde_ok"), int(_probe))
+			else:
+				msg = L.t("ui.trap_modal.sonde_ko")
+			_methods.erase("probe")
+		"volunteer":
+			if good:
+				msg = L.fa(L.t("ui.trap_modal.volontaire_ok"), who.get("name", "?"))
+				_hit_char(str(who.get("id", "")), float(s.volunteerDmgPct) / 100.0)
+			else:
+				msg = L.fa(L.t("ui.trap_modal.volontaire_ko"), who.get("name", "?"))
+				_hit_char(str(who.get("id", "")), 1.0)
+		"bypass":
+			if good:
+				_res.disarm = true
+				msg = L.t("ui.trap_modal.contourne_ok")
+				reward_src = "perfect" if roll == 20 else "dice"
+			else:
+				msg = L.t("ui.trap_modal.contourne_ko")
+				_hit_all(float(s.bypassDmgPct) / 100.0)
+	var col := Color("c7dd85") if good else (Color("ff5a5a") if outcome == "crit" else Color("b5b5b5"))
+	if id == "probe":
+		col = Color("9ad0ff")
+	_result.text = msg
+	_result.add_theme_color_override("font_color", col)
+	match outcome:
+		"perfect":
+			_die.glow = Color("ffd76a")
+			_set_glow(Color("ffd76a"), 18, 0.55, 44, 0.95, true)
+			_spark_burst()
+			Sound.sfx("level_up")
+			Sound.sfx_later(0.38, "pickup")
+			Sound.sfx_later(0.62, "level_up")
+		"success":
+			_die.glow = Color("b9d066")
+			_die.glow.a = 0.6
+			_set_glow(Color("96c85a"), 22, 0.5, 22, 0.5, false)
+			Sound.sfx("door_locked")
+			Sound.sfx_later(0.11, "pickup")
+		"fail":
+			_die.dim = Color(0.45, 0.45, 0.45)
+			_set_glow(Color("969696"), 20, 0.4, 20, 0.4, false)
+			_shake([Vector2(-4, 0), Vector2(4, 0), Vector2(-3, 0), Vector2(2, 0)], 0.5)
+			Sound.sfx("hit")
+		_:
+			_die.dim = Color(0.6, 0.55, 0.55)
+			_die.glow = Color("b3111a")
+			_die.glow.a = 0.7
+			_shake([Vector2(-11, 4), Vector2(10, -5), Vector2(-9, 3), Vector2(7, -3), Vector2(-4, 2)], 0.6)
+			_set_glow(Color(0.59, 0.04, 0.08), 16, 0.6, 42, 0.95, true)
+			_red_flash()
+			Sound.sfx("hit")
+			Sound.sfx_later(0.13, "hit")
+	_die.queue_redraw()
+	if id == "probe":
+		_busy = false
+		_foot_show(false, false, true)
+		_next = func(): _stage_choose()
+		return
+	_end_with("", col, reward_src, "dice", true)
+
+## Fin d'une méthode qui résout le piège : récompense éventuelle, puis « Continuer » → résultat renvoyé au jeu.
+func _end_with(msg: String, col: Color, reward_src: String, _kind: String, keep_text: bool = false) -> void:
+	if not keep_text:
+		_status.text = msg
+		_status.add_theme_color_override("font_color", col)
+	if reward_src != "":
+		_res.reward = TrapRules.roll_reward(_s, reward_src)
+	_foot_show(false, false, true)
+	_next = func(): _finish()
+	if not (_res.reward as Dictionary).is_empty():
+		_next = func(): _stage_reward()
+
+func _finish() -> void:
+	queue_free()
+	resolved.emit(_res)
+
+# ------------------------------------------------------------------ coups portés (affichage du blessé)
+
+func _hit_random(mult: float) -> void:
+	var h: Dictionary = _ctx.hit_random.call(mult)
+	_res.hits = [h]
+	_show_hits()
+
+func _hit_char(id: String, mult: float) -> void:
+	var h: Dictionary = _ctx.hit_char.call(id, mult)
+	_res.hits = [h]
+	_show_hits()
+
+func _hit_all(mult: float) -> void:
+	_res.hits = _ctx.hit_all.call(mult)
+	_show_hits()
+
+func _show_hits() -> void:
+	var hits: Array = _res.hits
+	if _victim == null or hits.is_empty():
+		return
+	if hits.size() == 1:
+		_victim.text = L.fa(L.t("ui.trap_modal.subira_degats"), [hits[0].victim.name, int(hits[0].dmg)])
+	else:
+		_victim.text = L.t("ui.trap_modal.tout_le_groupe_subit")
+
+# ------------------------------------------------------------------ étape : puzzle
+
+func _stage_puzzle() -> void:
+	_busy = true
+	_clear_body()
+	_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	_body.add_child(_lbl("%s %s" % [TrapRules.PUZZLE_ICONS[_puzzle], L.t("ui.trap_puzzle.name_%s" % str(_puzzle))], 17, Color("8fd0ff"), UiTheme.F_BODY_BOLD))
+	var pz := TrapPuzzle.make(_puzzle, _s)
+	var holder := CenterContainer.new()
+	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	holder.add_child(pz)
+	_body.add_child(holder)
+	pz.status.connect(func(t: String): _status.text = t)
+	pz.hurt.connect(func(strong: bool):
+		_shake([Vector2(-6, 2), Vector2(6, -2), Vector2(-4, 1), Vector2(3, 0)], 0.35)
+		if strong:
+			_red_flash())
+	pz.finished.connect(func(ok: bool): _puzzle_done(ok))
+	_foot_show(false, false, false)
+	pz.begin()
+
+func _puzzle_done(ok: bool) -> void:
+	_status.text = " "
+	if ok:
+		_res.disarm = true
+		_set_glow(Color("8fd0ff"), 20, 0.5, 40, 0.9, true)
+		_spark_burst()
+		Sound.sfx("level_up")
+		_victim_msg(L.t("ui.trap_modal.puzzle_ok"), Color("8fd0ff"))
+		_end_with("", Color("8fd0ff"), "puzzle", "puzzle", true)
+	else:
+		_hit_random(1.0)
+		_set_glow(Color(0.59, 0.04, 0.08), 16, 0.6, 42, 0.95, true)
+		_red_flash()
+		var h: Array = _res.hits
+		var extra := ""
+		if not h.is_empty():
+			extra = "\n" + L.fa(L.t("ui.trap_modal.subira_degats"), [h[0].victim.name, int(h[0].dmg)])
+		_victim_msg(L.t("ui.trap_modal.puzzle_ko") + extra, Color("ff9a8a"))
+		_end_with("", Color("ff9a8a"), "", "puzzle", true)
+
+## Message de fin de puzzle : affiché en bandeau à la place du puzzle.
+func _victim_msg(text: String, col: Color) -> void:
+	_status.text = text.replace("\n", "  ·  ")
+	_status.add_theme_color_override("font_color", col)
+
+# ------------------------------------------------------------------ étape : butin
+
+func _stage_reward() -> void:
+	_clear_body()
+	_body.alignment = BoxContainer.ALIGNMENT_CENTER
+	var r: Dictionary = _res.reward
+	_set_glow(Color("ffd76a"), 22, 0.6, 50, 1.0, true)
+	var ttl := _lbl(L.t("ui.trap_modal.butin"), 20, Color("ffe08a"), UiTheme.F_TITLE_BOLD)
+	_body.add_child(ttl)
+	var icon := "💰" if r.kind == "gold" else ("✨" if r.kind == "xp" else "💖")
+	var big := _lbl(icon, 72, Color.WHITE)
+	big.custom_minimum_size = Vector2(0, 100)
+	big.pivot_offset = Vector2((W - 90.0) * 0.5, 50.0)
+	big.scale = Vector2.ZERO
+	_body.add_child(big)
+	var amount := _lbl("", 22, Color("efe1c2"), UiTheme.F_BODY_BOLD)
+	_body.add_child(amount)
+	var sub := _lbl(L.t("ui.trap_modal.butin_%s" % str(str(r.kind))), 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
+	_body.add_child(sub)
+	ttl.modulate.a = 0.0
+	var t := create_tween()
+	t.tween_property(ttl, "modulate:a", 1.0, 0.3)
+	t.parallel().tween_property(big, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_callback(func():
+		_spark_burst()
+		Sound.sfx("pickup"))
+	var fmt: String = {"gold": "+%d 💰", "xp": "+%d XP", "heal": "+%d %% PV"}[r.kind]
+	t.tween_method(func(v: float): amount.text = fmt % int(round(v)), 0.0, float(r.amount), 0.8)
+	_foot_show(false, false, true)
+	_next = func(): _finish()
+	if r.kind == "gold":
+		Sound.sfx_later(0.5, "pickup")
+		Sound.sfx_later(0.7, "pickup")
+
+# ------------------------------------------------------------------ effets
 
 func _set_glow(col: Color, size_from: float, a_from: float, size_to: float, a_to: float, pulse: bool) -> void:
 	if _t_glow:
@@ -290,59 +683,10 @@ func _shake(seq: Array, dur: float) -> void:
 		_fx.tween_property(_shaker, "position", o, step)
 	_fx.tween_property(_shaker, "position", Vector2.ZERO, step)
 
-func _show_outcome(roll: int) -> void:
-	var info := L.fa(L.t("ui.trap_modal.jet_20_il_fallait_ou"), [roll, _thr])
-	if roll == 20:
-		info = L.t("ui.trap_modal.jet_20_reussite_automatique")
-	elif roll == 1:
-		info = L.t("ui.trap_modal.jet_1_echec_critique_automatique")
-	_roll_info.text = info
-	match _outcome:
-		"perfect":
-			_result.text = L.t("ui.trap_modal.crochetage_parfait")
-			_result.add_theme_color_override("font_color", Color("ffe08a"))
-			_die.glow = Color("ffd76a")
-			_set_glow(Color("ffd76a"), 18, 0.55, 44, 0.95, true)
-			_spark_burst()
-			Sound.sfx("level_up")
-			Sound.sfx_later(0.38, "pickup")
-			Sound.sfx_later(0.62, "level_up")
-		"success":
-			_result.text = L.t("ui.trap_modal.piege_desamorce")
-			_result.add_theme_color_override("font_color", Color("c7dd85"))
-			_die.glow = Color("b9d066")
-			_die.glow.a = 0.6
-			_set_glow(Color("96c85a"), 22, 0.5, 22, 0.5, false)
-			Sound.sfx("door_locked")
-			Sound.sfx_later(0.11, "pickup")
-		"fail":
-			_result.text = L.t("ui.trap_modal.le_crochetage_echoue")
-			_result.add_theme_color_override("font_color", Color("b5b5b5"))
-			_die.dim = Color(0.45, 0.45, 0.45)
-			_set_glow(Color("969696"), 20, 0.4, 20, 0.4, false)
-			_shake([Vector2(-4, 0), Vector2(4, 0), Vector2(-3, 0), Vector2(2, 0)], 0.5)
-			Sound.sfx("hit")
-		_:
-			_result.text = L.t("ui.trap_modal.echec_critique")
-			_result.add_theme_color_override("font_color", Color("ff5a5a"))
-			_die.dim = Color(0.6, 0.55, 0.55)
-			_die.glow = Color("b3111a")
-			_die.glow.a = 0.7
-			_shake([Vector2(-11, 4), Vector2(10, -5), Vector2(-9, 3), Vector2(7, -3), Vector2(-4, 2)], 0.6)
-			_set_glow(Color(0.59, 0.04, 0.08), 16, 0.6, 42, 0.95, true)
-			var t := create_tween()
-			t.tween_property(_flash, "modulate:a", 1.0, 0.1)
-			t.tween_property(_flash, "modulate:a", 0.0, 0.6)
-			Sound.sfx("hit")
-			Sound.sfx_later(0.13, "hit")
-	_die.queue_redraw()
-	if _outcome == "fail" or _outcome == "crit":
-		var mult := 1.0 + float(_bd.s.critExtraDmg) / 100.0 if _outcome == "crit" else 1.0
-		_hit = _pick_victim.call(mult)
-		_victim.text = L.fa(L.t("ui.trap_modal.subira_degats"), [_hit.victim.name, int(_hit.dmg)])
-	_pick.visible = false
-	_skip.visible = false
-	_cont.visible = true
+func _red_flash() -> void:
+	var t := create_tween()
+	t.tween_property(_flash, "modulate:a", 1.0, 0.1)
+	t.tween_property(_flash, "modulate:a", 0.0, 0.6)
 
 func _spark_burst() -> void:
 	for ch in _sparks.get_children():
