@@ -309,6 +309,7 @@ func _card(icon: String, name: String, sub: String, right_top: String, right_bot
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(0, 54)
+	b.clip_contents = true
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var st := IronBox.button_styles()
 	for k in st:
@@ -321,10 +322,18 @@ func _card(icon: String, name: String, sub: String, right_top: String, right_bot
 	h.add_theme_constant_override("separation", 10)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
-	var ic := _lbl(icon, 26, GOLD_BRIGHT, "", true)
-	ic.custom_minimum_size = Vector2(34, 0)
+	# l'emoji est plus haut que sa ligne : boîte fixe, découpée, pour qu'il ne dépasse jamais de la carte
+	var icb := Control.new()
+	icb.custom_minimum_size = Vector2(34, 34)
+	icb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icb.clip_contents = true
+	icb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ic := _lbl(icon, 22, GOLD_BRIGHT, "", true)
+	ic.autowrap_mode = TextServer.AUTOWRAP_OFF
 	ic.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	h.add_child(ic)
+	ic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	icb.add_child(ic)
+	h.add_child(icb)
 	var tv := VBoxContainer.new()
 	tv.alignment = BoxContainer.ALIGNMENT_CENTER
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
