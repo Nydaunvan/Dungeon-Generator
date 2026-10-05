@@ -44,7 +44,7 @@ func _add_card(c: Dictionary) -> void:
 	card.context.connect(func(): card_opened.emit(id))
 	card.mouse_entered.connect(func():
 		var ch := gs.char_by_id(id)
-		if not ch.is_empty():
+		if not ch.is_empty() and _tip_allowed():
 			PartyTip.show_for(card, gs, ch))
 	card.mouse_exited.connect(PartyTip.hide_tip)
 	add_child(card)
@@ -70,6 +70,10 @@ const SLOT_Y := [125.0, 258.0]
 var _bar_cache: Dictionary = {}
 var _flames: Array = []
 const TORCH_BASE := [[47.0, 108.0], [1909.0, 108.0]]    # centre des vasques (px de l'image d'origine)
+## La fiche de survol n'apparaît ni en combat, ni quand un sort est en cours d'application sur un personnage.
+func _tip_allowed() -> bool:
+	return ctrl == null or (not ctrl.in_combat() and ctrl.pending_spell == "")
+
 const CARD_GAP := 8.0
 const PAD := 6.0
 
@@ -159,7 +163,10 @@ func refresh() -> void:
 			(cd.card as PartyCard)._layout()
 		cd.lvl.text = lv
 		if PartyTip.current_id() == str(c.id):
-			PartyTip.show_for(cd.card, gs, c)     # la fiche reste à jour (PV, statuts…) pendant le survol
+			if _tip_allowed():
+				PartyTip.show_for(cd.card, gs, c)     # la fiche reste à jour (PV, statuts…) pendant le survol
+			else:
+				PartyTip.hide_tip()
 		cd.hp.set_values(int(c.hp), int(c.maxHp), ("%d/%d" % [int(c.hp), int(c.maxHp)]) if cd.card.framed else L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]))
 		cd.sta.set_values(int(c.stamina), int(c.maxStamina), ("%d/%d" % [int(c.stamina), int(c.maxStamina)]) if cd.card.framed else L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))
