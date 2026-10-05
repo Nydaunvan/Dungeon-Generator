@@ -25,11 +25,15 @@ Data="*res://scripts/core/data.gd"
 Sound="*res://scripts/core/sound.gd"
 Loader="*res://scripts/core/loader.gd"
 PerfOverlay="*res://scripts/core/perf_overlay.gd"
+WindowMode="*res://scripts/core/window_mode.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/mode.windows=3
+window/size/mode.linuxbsd=3
+window/size/mode.macos=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=6
