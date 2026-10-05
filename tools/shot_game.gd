@@ -258,6 +258,15 @@ func _init() -> void:
 						main.level_node.entities.add_merchant(main.rig.gx + v3.x * int(args.get("dist", 2)), main.rig.gy + v3.y * int(args.get("dist", 2)), false)
 						break
 				await create_timer(1.0).timeout
+			"cardtip":
+				var hc: Control = main.layout.hud.get_child(int(args.get("card", 0)))
+				var cp := hc.get_global_rect().get_center() + Vector2(0, 8)
+				var cev := InputEventMouseMotion.new()
+				cev.position = cp
+				cev.global_position = cp
+				root.warp_mouse(cp)
+				Input.parse_input_event(cev)
+				await create_timer(0.8).timeout
 			"closedock":
 				main.dock.close()
 				await create_timer(0.5).timeout

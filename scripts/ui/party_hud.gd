@@ -1,7 +1,8 @@
 class_name PartyHud
 extends Control
-## Cartes de l'équipe en arche : ruban de classe, portrait rond, nom, classe, niveau, PV / endurance / XP,
-## jauge de tour en combat. Cliquer une carte = choisir le personnage / la cible d'un sort.
+## Cartes de l'équipe en bandeaux compacts : portrait rond, nom, classe, niveau, PV / endurance / XP, jauge de tour en combat.
+## Au survol : stats, XP exacte, statuts et équipement. Cliquer une carte = choisir le personnage / la cible d'un sort.
+## En portrait (mobile), les cartes se rangent en grille 2 × 2.
 
 signal card_pressed(char_id: String)
 signal card_opened(char_id: String)
@@ -54,42 +55,56 @@ func _add_card(c: Dictionary) -> void:
 func _on_card_input(_ev: InputEvent, _char_id: String) -> void:
 	pass
 
-## Place les cartes en grille régulière (écart 8 px CSS) sous le rail ; le rail est dessiné ici.
+const CARD_H := 88.0
+const CARD_GAP := 8.0
+const PAD := 6.0
+
+## Hauteur réservée à la rangée de cartes (px de conception) : une rangée en bureau, deux en portrait.
+static func wanted_height() -> float:
+	var rows := 2 if UiMetrics.portrait else 1
+	return UiMetrics.css(CARD_H) * rows + UiMetrics.css(CARD_GAP) * (rows - 1) + UiMetrics.css(PAD)
+
+## Place les cartes en grille régulière.
 func _layout() -> void:
 	var n := _cards.size()
 	if n == 0:
 		return
-	var top := UiMetrics.css(26.0)
-	var gap := UiMetrics.css(8.0)
-	var pad := UiMetrics.css(6.0)
-	var w := (size.x - pad * 2.0 - gap * (n - 1)) / float(n)
-	var h := maxf(40.0, size.y - top)
+	var gap := UiMetrics.css(CARD_GAP)
+	var pad := UiMetrics.css(PAD)
+	var cols := 2 if UiMetrics.portrait else n
+	var rows := int(ceil(float(n) / float(cols)))
+	var w := (size.x - pad * 2.0 - gap * (cols - 1)) / float(cols)
+	var h := maxf(40.0, (size.y - pad - gap * (rows - 1)) / float(rows))
 	var i := 0
 	for c in gs.party:
 		var card: PartyCard = _cards[str(c.id)].card
-		card.position = Vector2(pad + i * (w + gap), top)
+		card.position = Vector2(pad + (i % cols) * (w + gap), pad + int(i / cols) * (h + gap))
 		card.size = Vector2(w, h)
 		i += 1
 	queue_redraw()
 
-func _draw() -> void:
-	# rail : barre bronze (gauche 2 px, droite 2 px, à -21 px du haut des cartes)
-	var top := UiMetrics.css(26.0)
-	var y := top - UiMetrics.css(21.0)
-	var h := UiMetrics.css(9.0)
-	var r := Rect2(UiMetrics.css(2.0), y, size.x - UiMetrics.css(4.0), h)
-	draw_rect(Rect2(r.position - Vector2(1, 1) * UiMetrics.css(1.0), r.size + Vector2(2, 2) * UiMetrics.css(1.0)), Color("070504"))
-	var steps := 8
-	for i in steps:
-		var t := float(i) / float(steps - 1)
-		var col := Color("5a4630").lerp(Color("2a2016"), minf(t * 2.0, 1.0)) if t < 0.5 else Color("2a2016").lerp(Color("0d0a07"), (t - 0.5) * 2.0)
-		draw_rect(Rect2(r.position.x, r.position.y + r.size.y * i / steps, r.size.x, r.size.y / steps + 0.5), col)
-	draw_rect(Rect2(r.position.x, r.position.y, r.size.x, maxf(1.0, UiMetrics.css(1.0))), Color(1, 0.86, 0.67, 0.2))
-	# rivet aux deux bouts
-	var rv := UiMetrics.css(2.6)
-	for x in [r.position.x + UiMetrics.css(4.0), r.end.x - UiMetrics.css(4.0)]:
-		draw_circle(Vector2(x, y + h * 0.5), rv, Color("b09068"))
-		draw_circle(Vector2(x, y + h * 0.5), rv * 0.55, Color("4a3826"))
+## Fiche de survol : identité, PV / endurance / XP exacts, caractéristiques, statuts, équipement.
+func _tip(c: Dictionary, cls_name: String) -> String:
+	var lines: Array = []
+	lines.append("%s — %s · %s" % [c.name, L.c(cls_name), L.fa(L.t("ui.party_hud.nv"), int(c.level))])
+	lines.append(L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]) + "  ·  " + L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
+	lines.append(L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))
+	lines.append(L.fa(L.t("ui.party_hud.tip_attaque"), [int(c.get("atkMin", 0)), int(c.get("atkMax", 0)), int(c.get("effSpeed", 0))]))
+	lines.append(L.fa(L.t("ui.party_hud.tip_stats"), [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]))
+	var effs: Array = Statuses.active(c) if int(c.hp) > 0 else []
+	if not effs.is_empty():
+		lines.append("")
+		for e in effs:
+			lines.append(L.fa(L.t("ui.party_hud.tip_statut"), [L.c(str(Statuses.def(str(e.type)).get("label", e.type))), int(e.remaining)]))
+	var eq_lines: Array = []
+	for slot in Characters.SLOTS:
+		var it = c.get("equipment", {}).get(slot)
+		if it is Dictionary:
+			eq_lines.append("%s : %s" % [L.c(str(Inventory.SLOT_LABELS.get(slot, slot))), L.c(str(it.get("name", "?")))])
+	if not eq_lines.is_empty():
+		lines.append("")
+		lines.append_array(eq_lines)
+	return "\n".join(lines)
 
 func refresh() -> void:
 	for c in gs.party:
@@ -99,6 +114,9 @@ func refresh() -> void:
 			cd.lvl.text = lv
 			(cd.card as PartyCard)._layout()
 		cd.lvl.text = lv
+		var tip := _tip(c, str(Characters.class_def(gs.cfg, str(c.get("classId", ""))).get("name", "")))
+		if cd.card.tooltip_text != tip:
+			cd.card.tooltip_text = tip
 		cd.hp.set_values(int(c.hp), int(c.maxHp), L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]))
 		cd.sta.set_values(int(c.stamina), int(c.maxStamina), L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))

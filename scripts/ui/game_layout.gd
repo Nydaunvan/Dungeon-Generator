@@ -608,7 +608,7 @@ func _size_widgets() -> void:
 	add_theme_constant_override("margin_top", int(UiMetrics.css(12.0 if not _portrait else 4.0)))
 	add_theme_constant_override("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
-	hud.custom_minimum_size = Vector2(0, UiMetrics.css(292.0) if not _portrait else clampf(h * 0.2, 110.0, 220.0))
+	hud.custom_minimum_size = Vector2(0, PartyHud.wanted_height())
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
 	header.rescale()
 	var right: Node = _root.get_node_or_null("Main/Right")
