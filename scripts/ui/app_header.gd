@@ -47,6 +47,10 @@ func _init() -> void:
 	var guide := _button("📖 Guide")
 	guide.pressed.connect(func(): nav.emit("Guide"))
 	nav_row.add_child(guide)
+	var perf := _button("📊 FPS")
+	perf.tooltip_text = L.t("ui.app_header.perf_tip")
+	perf.pressed.connect(func(): PerfOverlay.toggle())
+	nav_row.add_child(perf)
 	btn_admin = _button("🛠 Admin")
 	btn_admin.pressed.connect(func(): nav.emit("Admin"))
 	btn_admin.visible = false

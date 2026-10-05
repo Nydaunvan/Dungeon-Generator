@@ -1234,7 +1234,8 @@
   "ui.trap_puzzle.riddle_12_d": "Un filet",
   "admin.general.piege_passer_degats": "Passer le piège sans rien tenter : dégâts (% des dégâts normaux)",
   "admin.general.piege_enigmes_nombre": "Énigme : nombre d'énigmes enchaînées (1 à 4)",
-  "admin.general.piege_variantes": "Variantes de puzzle activées (runes à rebours ou mélangées, dalles en miroir)"
+  "admin.general.piege_variantes": "Variantes de puzzle activées (runes à rebours ou mélangées, dalles en miroir)",
+  "ui.app_header.perf_tip": "Afficher / masquer les images par seconde, la RAM et la mémoire vidéo (touche F3)"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

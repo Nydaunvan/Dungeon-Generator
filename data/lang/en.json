@@ -1234,7 +1234,8 @@
   "ui.trap_puzzle.riddle_12_d": "A net",
   "admin.general.piege_passer_degats": "Walking past without trying: damage (% of normal damage)",
   "admin.general.piege_enigmes_nombre": "Riddle: number of riddles in a row (1 to 4)",
-  "admin.general.piege_variantes": "Puzzle twists enabled (backwards or shuffled runes, mirrored slabs)"
+  "admin.general.piege_variantes": "Puzzle twists enabled (backwards or shuffled runes, mirrored slabs)",
+  "ui.app_header.perf_tip": "Show / hide frames per second, RAM and video memory (F3 key)"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
