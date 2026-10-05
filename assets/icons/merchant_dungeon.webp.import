@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://eyxphsmhdkj8"
-path="res://.godot/imported/merchant_dungeon.png-163d88e1a86511c70e73c579212d8267.ctex"
+uid="uid://c1lmtms8ce5xa"
+path="res://.godot/imported/merchant_dungeon.webp-bfe94795b277de7a8eb46bc7b38eca9a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/merchant_dungeon.png"
-dest_files=["res://.godot/imported/merchant_dungeon.png-163d88e1a86511c70e73c579212d8267.ctex"]
+source_file="res://assets/icons/merchant_dungeon.webp"
+dest_files=["res://.godot/imported/merchant_dungeon.webp-bfe94795b277de7a8eb46bc7b38eca9a.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
