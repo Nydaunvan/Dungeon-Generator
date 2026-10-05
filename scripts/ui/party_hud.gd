@@ -56,18 +56,46 @@ func _on_card_input(_ev: InputEvent, _char_id: String) -> void:
 	pass
 
 const CARD_H := 88.0
+const BAR_SRC := "res://assets/ui/party_bar.webp"
+const BAR_W := 2045.0
+const BAR_H := 340.0
+## Fentes du bandeau (px de l'image d'origine) : x début, x fin ; y 125 → 258 (hauteur 133).
+const SLOTS := [[99.0, 526.0], [596.0, 991.0], [1058.0, 1447.0], [1514.0, 1940.0]]
+const SLOT_Y := [125.0, 258.0]
+var _bar_cache: Dictionary = {}
 const CARD_GAP := 8.0
 const PAD := 6.0
 
 ## Hauteur réservée à la rangée de cartes (px de conception) : une rangée en bureau, deux en portrait.
 static func wanted_height() -> float:
+	if not UiMetrics.portrait:
+		return UiMetrics.css(110.0)   # affiné par le rapport du bandeau dès que la largeur est connue
 	var rows := 2 if UiMetrics.portrait else 1
 	return UiMetrics.css(CARD_H) * rows + UiMetrics.css(CARD_GAP) * (rows - 1) + UiMetrics.css(PAD)
 
-## Place les cartes en grille régulière.
+## Bandeau (paysage) : une seule image à 4 fentes, les cartes se posent dedans. Portrait : grille 2 × 2 de cartes encadrées.
 func _layout() -> void:
 	var n := _cards.size()
 	if n == 0:
+		return
+	var framed := not UiMetrics.portrait and n == SLOTS.size() and ResourceLoader.exists(BAR_SRC)
+	if framed:
+		var sc := size.x / BAR_W
+		var want := BAR_H * sc
+		if absf(custom_minimum_size.y - want) > 0.5:
+			custom_minimum_size = Vector2(0, want)
+		var i := 0
+		for c in gs.party:
+			var card: PartyCard = _cards[str(c.id)].card
+			card.framed = true
+			var sl: Array = SLOTS[mini(i, SLOTS.size() - 1)]
+			var inset := 3.0 * sc
+			card.position = Vector2(sl[0] * sc + inset, SLOT_Y[0] * sc + inset)
+			card.size = Vector2((sl[1] - sl[0]) * sc - inset * 2.0, (SLOT_Y[1] - SLOT_Y[0]) * sc - inset * 2.0)
+			card._layout()
+			card.queue_redraw()
+			i += 1
+		queue_redraw()
 		return
 	var gap := UiMetrics.css(CARD_GAP)
 	var pad := UiMetrics.css(PAD)
@@ -75,13 +103,31 @@ func _layout() -> void:
 	var rows := int(ceil(float(n) / float(cols)))
 	var w := (size.x - pad * 2.0 - gap * (cols - 1)) / float(cols)
 	var h := maxf(40.0, (size.y - pad - gap * (rows - 1)) / float(rows))
-	var i := 0
+	var i2 := 0
 	for c in gs.party:
 		var card: PartyCard = _cards[str(c.id)].card
-		card.position = Vector2(pad + (i % cols) * (w + gap), pad + int(i / cols) * (h + gap))
+		card.framed = false
+		card.position = Vector2(pad + (i2 % cols) * (w + gap), pad + int(i2 / cols) * (h + gap))
 		card.size = Vector2(w, h)
-		i += 1
+		card._layout()
+		card.queue_redraw()
+		i2 += 1
 	queue_redraw()
+
+func _bar_texture(real_w: int) -> Texture2D:
+	if not _bar_cache.has(real_w):
+		var src := load(BAR_SRC) as Texture2D
+		var img := src.get_image()
+		img.resize(real_w, maxi(1, roundi(real_w * BAR_H / BAR_W)), Image.INTERPOLATE_LANCZOS)
+		_bar_cache.clear()
+		_bar_cache[real_w] = ImageTexture.create_from_image(img)
+	return _bar_cache[real_w]
+
+func _draw() -> void:
+	if UiMetrics.portrait or _cards.size() != SLOTS.size() or not ResourceLoader.exists(BAR_SRC) or size.x < 50.0:
+		return
+	var real_w := maxi(64, roundi(size.x * UiMetrics.s))
+	draw_texture_rect(_bar_texture(real_w), Rect2(Vector2.ZERO, Vector2(size.x, size.x * BAR_H / BAR_W)), false)
 
 ## Fiche de survol : identité, PV / endurance / XP exacts, caractéristiques, statuts, équipement.
 func _tip(c: Dictionary, cls_name: String) -> String:

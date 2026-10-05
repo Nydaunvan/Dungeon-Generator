@@ -18,6 +18,7 @@ var targetable: bool = false
 var dead: bool = false
 var ring_override: Color = Color(0, 0, 0, 0)    # anneau teinté par un statut (sinon neutre / or)
 var f: float = 1.0
+var framed: bool = false   # true : la carte est posée dans une fente du bandeau (PartyHud) et ne dessine pas son propre cadre
 
 var pic: TextureRect
 var badge: Label
@@ -115,7 +116,61 @@ func _notification(what: int) -> void:
 func u(v: float) -> float:
 	return UiMetrics.css(v * f)
 
+## Mise en page dans une fente du bandeau : unité k = 1 % de la hauteur de la fente (rapport ~3,2 : 1).
+func _layout_framed() -> void:
+	var k := size.y / 100.0
+	f = maxf(0.2, k / UiMetrics.css(0.88))
+	var d := 76.0 * k
+	pic.size = Vector2(d, d)
+	pic.position = Vector2(8.0 * k, (size.y - d) * 0.5)
+	var x0 := 96.0 * k
+	var right := size.x - 8.0 * k
+	badge.add_theme_font_size_override("font_size", maxi(6, int(11.0 * k)))
+	badge.size = Vector2(minf(100.0 * k, size.x * 0.4), 15.0 * k)
+	badge.position = Vector2(pic.position.x + d * 0.5 - badge.size.x * 0.5, pic.position.y + d - 10.0 * k)
+	var ico := 16.0 * k
+	var ch := 20.0 * k
+	var lfs := maxi(6, int(17.0 * k))
+	lvl_lbl.add_theme_font_size_override("font_size", lfs)
+	var lw := lvl_lbl.get_theme_font("font").get_string_size(lvl_lbl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs).x + 2.0
+	var gap := 4.0 * k
+	var ry := 5.0 * k
+	chest.size = Vector2(ch, ch)
+	chest.position = Vector2(right - ch, ry + (21.0 * k - ch) * 0.5)
+	lvl_lbl.size = Vector2(lw, 21.0 * k)
+	lvl_lbl.position = Vector2(chest.position.x - gap - lw, ry)
+	cls_ico.size = Vector2(ico, ico)
+	cls_ico.position = Vector2(lvl_lbl.position.x - gap - ico, ry + (21.0 * k - ico) * 0.5)
+	var name_w := maxf(10.0, cls_ico.position.x - x0 - gap)
+	_put_px(name_lbl, x0, ry, name_w, 21.0 * k, 19.0 * k)
+	_put_px(cls_lbl, x0, 26.0 * k, name_w, 15.0 * k, 15.0 * k)
+	cls_lbl.add_theme_color_override("font_color", Color("cfa56b"))
+	for l in [name_lbl, cls_lbl]:
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var bw := right - x0
+	_bar_px(hp, x0, 42.0 * k, bw, 23.0 * k, 17.0 * k)
+	_bar_px(sta, x0, 66.0 * k, bw, 12.0 * k, 10.5 * k)
+	_bar_px(xp, x0, 80.0 * k, bw, 4.0 * k, 1.0)
+	_bar_px(gauge, x0, 85.0 * k, bw, 4.0 * k, 1.0)
+	dead_lbl.size = Vector2(size.x, 30.0 * k)
+	dead_lbl.position = Vector2(0, (size.y - 30.0 * k) * 0.5)
+	dead_lbl.add_theme_font_size_override("font_size", maxi(9, int(26.0 * k)))
+
+func _put_px(l: Label, x: float, y: float, w: float, h: float, fs: float) -> void:
+	l.position = Vector2(x, y)
+	l.size = Vector2(w, h)
+	l.add_theme_font_size_override("font_size", maxi(6, int(fs)))
+
+func _bar_px(b: TextBar, x: float, y: float, w: float, h: float, fs: float) -> void:
+	b.position = Vector2(x, y)
+	b.size = Vector2(w, h)
+	b.custom_minimum_size = Vector2(0, h)
+	b.set_font_size(maxi(1, int(fs)))
+
 func _layout() -> void:
+	if framed:
+		_layout_framed()
+		return
 	f = clampf(size.y / UiMetrics.css(BASE_H), 0.4, 2.4) if UiMetrics.css(BASE_H) > 0.0 else 1.0
 	var d := u(62.0)
 	pic.size = Vector2(d, d)
@@ -186,7 +241,33 @@ func _stroke(pts: PackedVector2Array, col: Color, w: float) -> void:
 	p.append(pts[0])
 	draw_polyline(p, col, w, true)
 
+func _draw_framed() -> void:
+	var k := size.y / 100.0
+	var r := Rect2(Vector2.ZERO, size)
+	# lueur / filet de la fente : or si actif, cuivre si ciblable
+	if active or targetable:
+		var col := Color("e8b45c") if active else Color("a9793a")
+		for g in [[7.0, 0.10], [4.0, 0.18], [2.0, 0.55]]:
+			_stroke(_rr(r, g[0] * 0.5 * k * 0.3, 6.0 * k), Color(col, g[1]), g[0] * k * 0.5)
+	# liseré de classe à gauche
+	draw_rect(Rect2(2.0 * k, 10.0 * k, maxf(2.0, 3.0 * k), size.y - 20.0 * k), accent)
+	var c := pic.position + pic.size * 0.5
+	var ar := pic.size.x * 0.5
+	var ring_col: Color = ring_override if ring_override.a > 0.0 else (Color("e8b45c") if active else Color("7a6242"))
+	draw_circle(c, ar + 4.0 * k, Color("070504"))
+	draw_circle(c, ar + 3.0 * k, ring_col)
+	draw_circle(c, ar + 1.2 * k, Color("070504"))
+	if active:
+		for g in [[8.0, 0.10], [5.0, 0.16], [3.0, 0.26]]:
+			draw_arc(c, ar + 4.0 * k + g[0] * k * 0.5, 0.0, TAU, 40, Color(0.91, 0.71, 0.36, g[1]), g[0] * k)
+	draw_circle(c, ar, Color("0c0906"))
+	if dead:
+		draw_rect(r, Color(0.55, 0.08, 0.08, 0.5))
+
 func _draw() -> void:
+	if framed:
+		_draw_framed()
+		return
 	var r := Rect2(Vector2.ZERO, size)
 	var rad := u(10.0)
 	var bw := maxf(1.0, u(1.5))
