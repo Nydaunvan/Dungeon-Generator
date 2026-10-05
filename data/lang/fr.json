@@ -1007,9 +1007,10 @@
   "ui.shop_modal.soin": "Soin",
   "ui.shop_modal.pv_rendus": "+%d PV",
   "ui.shop_modal.endurance": "Endurance",
-  "ui.party_hud.tip_attaque": "Attaque %d-%d  ·  Vitesse %d",
-  "ui.party_hud.tip_stats": "For %d  ·  Dex %d\nCon %d  ·  Int %d",
-  "ui.party_hud.tip_statut": "%s (%d tours)"
+  "ui.party_tip.end": "End.",
+  "ui.party_tip.attaque": "Attaque",
+  "ui.party_tip.tours": "%d t.",
+  "ui.party_tip.aucun_equipement": "Aucun équipement porté"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

@@ -1007,9 +1007,10 @@
   "ui.shop_modal.soin": "Healing",
   "ui.shop_modal.pv_rendus": "+%d HP",
   "ui.shop_modal.endurance": "Stamina",
-  "ui.party_hud.tip_attaque": "Attack %d-%d  ·  Speed %d",
-  "ui.party_hud.tip_stats": "Str %d  ·  Dex %d\nCon %d  ·  Int %d",
-  "ui.party_hud.tip_statut": "%s (%d turns)"
+  "ui.party_tip.end": "Stam.",
+  "ui.party_tip.attaque": "Attack",
+  "ui.party_tip.tours": "%d t.",
+  "ui.party_tip.aucun_equipement": "No equipment worn"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -52,4 +52,4 @@ func set_height(px: float) -> void:
 
 func set_font_size(px: int) -> void:
 	_label.add_theme_font_size_override("font_size", px)
-	_label.add_theme_constant_override("outline_size", maxi(3, int(round(px * 0.3))))
+	_label.add_theme_constant_override("outline_size", maxi(3, int(round(px * 0.34))))

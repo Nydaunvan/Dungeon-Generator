@@ -42,6 +42,11 @@ func _add_card(c: Dictionary) -> void:
 	card.pressed.connect(func(): card_pressed.emit(id))
 	card.chest_pressed.connect(func(): chest_pressed.emit(id))
 	card.context.connect(func(): card_opened.emit(id))
+	card.mouse_entered.connect(func():
+		var ch := gs.char_by_id(id)
+		if not ch.is_empty():
+			PartyTip.show_for(card, gs, ch))
+	card.mouse_exited.connect(PartyTip.hide_tip)
 	add_child(card)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
 	card.pic.texture = load(pp) if pp != "" else IconResolver.texture(str(c.get("icon", "")))
@@ -63,6 +68,8 @@ const BAR_H := 340.0
 const SLOTS := [[99.0, 526.0], [596.0, 991.0], [1058.0, 1447.0], [1514.0, 1940.0]]
 const SLOT_Y := [125.0, 258.0]
 var _bar_cache: Dictionary = {}
+var _flames: Array = []
+const TORCH_BASE := [[47.0, 108.0], [1998.0, 108.0]]    # centre des vasques (px de l'image d'origine)
 const CARD_GAP := 8.0
 const PAD := 6.0
 
@@ -95,8 +102,11 @@ func _layout() -> void:
 			card._layout()
 			card.queue_redraw()
 			i += 1
+		_place_flames(sc)
 		queue_redraw()
 		return
+	for fl in _flames:
+		fl.visible = false
 	var gap := UiMetrics.css(CARD_GAP)
 	var pad := UiMetrics.css(PAD)
 	var cols := 2 if UiMetrics.portrait else n
@@ -114,6 +124,17 @@ func _layout() -> void:
 		i2 += 1
 	queue_redraw()
 
+## Flammes 3D des deux torches du bandeau (créées à la première mise en page).
+func _place_flames(sc: float) -> void:
+	if _flames.is_empty():
+		for tb in TORCH_BASE:
+			var fl := HudFlame.new()
+			add_child(fl)
+			_flames.append(fl)
+	for i in _flames.size():
+		_flames[i].visible = true
+		_flames[i].place(Vector2(TORCH_BASE[i][0], TORCH_BASE[i][1]) * sc, sc)
+
 func _bar_texture(real_w: int) -> Texture2D:
 	if not _bar_cache.has(real_w):
 		var src := load(BAR_SRC) as Texture2D
@@ -129,29 +150,6 @@ func _draw() -> void:
 	var real_w := maxi(64, roundi(size.x * UiMetrics.s))
 	draw_texture_rect(_bar_texture(real_w), Rect2(Vector2.ZERO, Vector2(size.x, size.x * BAR_H / BAR_W)), false)
 
-## Fiche de survol : identité, PV / endurance / XP exacts, caractéristiques, statuts, équipement.
-func _tip(c: Dictionary, cls_name: String) -> String:
-	var lines: Array = []
-	lines.append("%s — %s · %s" % [c.name, L.c(cls_name), L.fa(L.t("ui.party_hud.nv"), int(c.level))])
-	lines.append(L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]) + "  ·  " + L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
-	lines.append(L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))
-	lines.append(L.fa(L.t("ui.party_hud.tip_attaque"), [int(c.get("atkMin", 0)), int(c.get("atkMax", 0)), int(c.get("effSpeed", 0))]))
-	lines.append(L.fa(L.t("ui.party_hud.tip_stats"), [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]))
-	var effs: Array = Statuses.active(c) if int(c.hp) > 0 else []
-	if not effs.is_empty():
-		lines.append("")
-		for e in effs:
-			lines.append(L.fa(L.t("ui.party_hud.tip_statut"), [L.c(str(Statuses.def(str(e.type)).get("label", e.type))), int(e.remaining)]))
-	var eq_lines: Array = []
-	for slot in Characters.SLOTS:
-		var it = c.get("equipment", {}).get(slot)
-		if it is Dictionary:
-			eq_lines.append("%s : %s" % [L.c(str(Inventory.SLOT_LABELS.get(slot, slot))), L.c(str(it.get("name", "?")))])
-	if not eq_lines.is_empty():
-		lines.append("")
-		lines.append_array(eq_lines)
-	return "\n".join(lines)
-
 func refresh() -> void:
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
@@ -160,9 +158,8 @@ func refresh() -> void:
 			cd.lvl.text = lv
 			(cd.card as PartyCard)._layout()
 		cd.lvl.text = lv
-		var tip := _tip(c, str(Characters.class_def(gs.cfg, str(c.get("classId", ""))).get("name", "")))
-		if cd.card.tooltip_text != tip:
-			cd.card.tooltip_text = tip
+		if PartyTip.current_id() == str(c.id):
+			PartyTip.show_for(cd.card, gs, c)     # la fiche reste à jour (PV, statuts…) pendant le survol
 		cd.hp.set_values(int(c.hp), int(c.maxHp), L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]))
 		cd.sta.set_values(int(c.stamina), int(c.maxStamina), L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))

@@ -120,10 +120,10 @@ func u(v: float) -> float:
 func _layout_framed() -> void:
 	var k := size.y / 100.0
 	f = maxf(0.2, k / UiMetrics.css(0.88))
-	var d := 76.0 * k
+	var d := 62.0 * k
 	pic.size = Vector2(d, d)
-	pic.position = Vector2(8.0 * k, (size.y - d) * 0.5)
-	var x0 := 96.0 * k
+	pic.position = Vector2(10.0 * k, (size.y - d) * 0.5)
+	var x0 := 86.0 * k
 	var right := size.x - 8.0 * k
 	badge.add_theme_font_size_override("font_size", maxi(6, int(11.0 * k)))
 	badge.size = Vector2(minf(100.0 * k, size.x * 0.4), 15.0 * k)
@@ -148,10 +148,10 @@ func _layout_framed() -> void:
 	for l in [name_lbl, cls_lbl]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var bw := right - x0
-	_bar_px(hp, x0, 42.0 * k, bw, 23.0 * k, 17.0 * k)
-	_bar_px(sta, x0, 66.0 * k, bw, 12.0 * k, 10.5 * k)
-	_bar_px(xp, x0, 80.0 * k, bw, 4.0 * k, 1.0)
-	_bar_px(gauge, x0, 85.0 * k, bw, 4.0 * k, 1.0)
+	_bar_px(hp, x0, 43.0 * k, bw, 20.0 * k, 20.0 * k)
+	_bar_px(sta, x0, 65.0 * k, bw, 13.0 * k, 14.5 * k)
+	_bar_px(xp, x0, 80.0 * k, bw, 3.5 * k, 1.0)
+	_bar_px(gauge, x0, 85.0 * k, bw, 3.5 * k, 1.0)
 	dead_lbl.size = Vector2(size.x, 30.0 * k)
 	dead_lbl.position = Vector2(0, (size.y - 30.0 * k) * 0.5)
 	dead_lbl.add_theme_font_size_override("font_size", maxi(9, int(26.0 * k)))
@@ -243,26 +243,21 @@ func _stroke(pts: PackedVector2Array, col: Color, w: float) -> void:
 
 func _draw_framed() -> void:
 	var k := size.y / 100.0
-	var r := Rect2(Vector2.ZERO, size)
-	# lueur / filet de la fente : or si actif, cuivre si ciblable
-	if active or targetable:
-		var col := Color("e8b45c") if active else Color("a9793a")
-		for g in [[7.0, 0.10], [4.0, 0.18], [2.0, 0.55]]:
-			_stroke(_rr(r, g[0] * 0.5 * k * 0.3, 6.0 * k), Color(col, g[1]), g[0] * k * 0.5)
-	# liseré de classe à gauche
-	draw_rect(Rect2(2.0 * k, 10.0 * k, maxf(2.0, 3.0 * k), size.y - 20.0 * k), accent)
+	# seul le portrait porte la sélection : halo or (actif) ou cuivre (cible possible) ; aucun cadre autour de la carte
 	var c := pic.position + pic.size * 0.5
 	var ar := pic.size.x * 0.5
-	var ring_col: Color = ring_override if ring_override.a > 0.0 else (Color("e8b45c") if active else Color("7a6242"))
+	var lit := active or targetable
+	var halo := Color("e8b45c") if active else Color("c98a4a")
+	var ring_col: Color = ring_override if ring_override.a > 0.0 else (halo if lit else Color("7a6242"))
 	draw_circle(c, ar + 4.0 * k, Color("070504"))
 	draw_circle(c, ar + 3.0 * k, ring_col)
 	draw_circle(c, ar + 1.2 * k, Color("070504"))
-	if active:
-		for g in [[8.0, 0.10], [5.0, 0.16], [3.0, 0.26]]:
-			draw_arc(c, ar + 4.0 * k + g[0] * k * 0.5, 0.0, TAU, 40, Color(0.91, 0.71, 0.36, g[1]), g[0] * k)
+	if lit:
+		for g in [[14.0, 0.07], [10.0, 0.11], [7.0, 0.17], [4.0, 0.28]]:
+			draw_arc(c, ar + 4.0 * k + g[0] * k * 0.5, 0.0, TAU, 48, Color(halo, g[1]), g[0] * k)
 	draw_circle(c, ar, Color("0c0906"))
 	if dead:
-		draw_rect(r, Color(0.55, 0.08, 0.08, 0.5))
+		draw_circle(c, ar + 3.0 * k, Color(0.55, 0.08, 0.08, 0.5))
 
 func _draw() -> void:
 	if framed:
