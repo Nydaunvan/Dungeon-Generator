@@ -62,14 +62,14 @@ func _on_card_input(_ev: InputEvent, _char_id: String) -> void:
 
 const CARD_H := 88.0
 const BAR_SRC := "res://assets/ui/party_bar.webp"
-const BAR_W := 2045.0
+const BAR_W := 1956.0
 const BAR_H := 340.0
 ## Fentes du bandeau (px de l'image d'origine) : x début, x fin ; y 125 → 258 (hauteur 133).
-const SLOTS := [[99.0, 526.0], [596.0, 991.0], [1058.0, 1447.0], [1514.0, 1940.0]]
+const SLOTS := [[99.0, 471.0], [560.0, 935.0], [1022.0, 1391.0], [1479.0, 1851.0]]
 const SLOT_Y := [125.0, 258.0]
 var _bar_cache: Dictionary = {}
 var _flames: Array = []
-const TORCH_BASE := [[47.0, 108.0], [1998.0, 108.0]]    # centre des vasques (px de l'image d'origine)
+const TORCH_BASE := [[47.0, 108.0], [1909.0, 108.0]]    # centre des vasques (px de l'image d'origine)
 const CARD_GAP := 8.0
 const PAD := 6.0
 

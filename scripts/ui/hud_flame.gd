@@ -8,7 +8,7 @@ const FLAME_COL := Color(1.0, 0.42, 0.08)
 const VIEW_H := 0.5          # hauteur visible (m) de la caméra orthogonale
 const BASE_UP := 0.05        # le pied de la flamme (y = 0) est à 5 cm du bas de la vue
 const ASPECT := 0.8          # largeur / hauteur de la vue
-const FLAME_PX := 130.0       # hauteur à l'écran de la flamme (px de l'image d'origine)
+const FLAME_PX := 96.0       # hauteur à l'écran de la flamme (px de l'image d'origine)
 
 static var _mat_outer: ShaderMaterial
 static var _mat_inner: ShaderMaterial
@@ -131,9 +131,9 @@ func place(base: Vector2, sc: float) -> void:
 	position = Vector2.ZERO
 	_vc.size = Vector2(wc, hc)
 	_vc.position = Vector2(base.x - wc * 0.5, base.y + BASE_UP / VIEW_H * hc - hc)
-	var gs := 190.0 * sc
+	var gs := 90.0 * sc   # reste dans le bandeau : un halo plus large serait coupé net par le bord
 	_glow.size = Vector2(gs, gs)
-	_glow.position = base - Vector2(gs, gs) * 0.5 + Vector2(0, -22.0 * sc)
+	_glow.position = base - Vector2(gs, gs) * 0.5 + Vector2(0, -18.0 * sc)
 	queue_redraw()
 
 func _process(d: float) -> void:
