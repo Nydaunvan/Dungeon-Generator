@@ -23,6 +23,7 @@ var _base := Vector2.ZERO
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = false
+	z_index = 50          # au-dessus du décor et des cartes : la flamme ne doit jamais être recouverte
 	_phase = randf() * 10.0
 	_glow = TextureRect.new()
 	_glow.texture = ProceduralTextures.glow()

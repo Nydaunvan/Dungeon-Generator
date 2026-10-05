@@ -50,6 +50,7 @@ func set_height(px: float) -> void:
 	custom_minimum_size = Vector2(0, px)
 	set_font_size(int(clampf(px * 0.68, 8.0, 22.0)))
 
-func set_font_size(px: int) -> void:
+## `outline` : épaisseur du contour en fraction de la taille de police (petites barres : contour fin, texte net).
+func set_font_size(px: int, outline: float = 0.3) -> void:
 	_label.add_theme_font_size_override("font_size", px)
-	_label.add_theme_constant_override("outline_size", maxi(3, int(round(px * 0.34))))
+	_label.add_theme_constant_override("outline_size", maxi(2, int(round(px * outline))) if outline < 0.25 else maxi(3, int(round(px * outline))))

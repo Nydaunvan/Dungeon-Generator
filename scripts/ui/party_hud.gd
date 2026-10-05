@@ -160,8 +160,8 @@ func refresh() -> void:
 		cd.lvl.text = lv
 		if PartyTip.current_id() == str(c.id):
 			PartyTip.show_for(cd.card, gs, c)     # la fiche reste à jour (PV, statuts…) pendant le survol
-		cd.hp.set_values(int(c.hp), int(c.maxHp), L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]))
-		cd.sta.set_values(int(c.stamina), int(c.maxStamina), L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
+		cd.hp.set_values(int(c.hp), int(c.maxHp), ("%d/%d" % [int(c.hp), int(c.maxHp)]) if cd.card.framed else L.fa(L.t("common.pv_2"), [int(c.hp), int(c.maxHp)]))
+		cd.sta.set_values(int(c.stamina), int(c.maxStamina), ("%d/%d" % [int(c.stamina), int(c.maxStamina)]) if cd.card.framed else L.fa(L.t("ui.party_hud.end"), [int(c.stamina), int(c.maxStamina)]))
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))
 		var dead: bool = int(c.hp) <= 0
 		_refresh_status(c, cd, dead)

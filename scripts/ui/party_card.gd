@@ -120,38 +120,36 @@ func u(v: float) -> float:
 func _layout_framed() -> void:
 	var k := size.y / 100.0
 	f = maxf(0.2, k / UiMetrics.css(0.88))
-	var d := 62.0 * k
+	var d := 58.0 * k
 	pic.size = Vector2(d, d)
-	pic.position = Vector2(10.0 * k, (size.y - d) * 0.5)
-	var x0 := 86.0 * k
-	var right := size.x - 8.0 * k
+	pic.position = Vector2(20.0 * k, (size.y - d) * 0.5)
+	var x0 := 94.0 * k
+	var right := size.x - 18.0 * k
 	badge.add_theme_font_size_override("font_size", maxi(6, int(11.0 * k)))
 	badge.size = Vector2(minf(100.0 * k, size.x * 0.4), 15.0 * k)
 	badge.position = Vector2(pic.position.x + d * 0.5 - badge.size.x * 0.5, pic.position.y + d - 10.0 * k)
-	var ico := 16.0 * k
+	cls_ico.visible = false
 	var ch := 20.0 * k
 	var lfs := maxi(6, int(17.0 * k))
 	lvl_lbl.add_theme_font_size_override("font_size", lfs)
 	var lw := lvl_lbl.get_theme_font("font").get_string_size(lvl_lbl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs).x + 2.0
 	var gap := 4.0 * k
-	var ry := 5.0 * k
+	var ry := 3.0 * k
 	chest.size = Vector2(ch, ch)
 	chest.position = Vector2(right - ch, ry + (21.0 * k - ch) * 0.5)
 	lvl_lbl.size = Vector2(lw, 21.0 * k)
 	lvl_lbl.position = Vector2(chest.position.x - gap - lw, ry)
-	cls_ico.size = Vector2(ico, ico)
-	cls_ico.position = Vector2(lvl_lbl.position.x - gap - ico, ry + (21.0 * k - ico) * 0.5)
-	var name_w := maxf(10.0, cls_ico.position.x - x0 - gap)
+	var name_w := maxf(10.0, lvl_lbl.position.x - x0 - gap)
 	_put_px(name_lbl, x0, ry, name_w, 21.0 * k, 19.0 * k)
-	_put_px(cls_lbl, x0, 26.0 * k, name_w, 15.0 * k, 15.0 * k)
+	_put_px(cls_lbl, x0, 21.0 * k, name_w, 15.0 * k, 15.0 * k)
 	cls_lbl.add_theme_color_override("font_color", Color("cfa56b"))
 	for l in [name_lbl, cls_lbl]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	var bw := right - x0
-	_bar_px(hp, x0, 43.0 * k, bw, 20.0 * k, 20.0 * k)
-	_bar_px(sta, x0, 65.0 * k, bw, 13.0 * k, 14.5 * k)
-	_bar_px(xp, x0, 80.0 * k, bw, 3.5 * k, 1.0)
-	_bar_px(gauge, x0, 85.0 * k, bw, 3.5 * k, 1.0)
+	_bar_px(hp, x0, 40.0 * k, bw, 21.0 * k, 17.0 * k, 0.12)
+	_bar_px(sta, x0, 62.5 * k, bw, 15.0 * k, 13.5 * k, 0.12)
+	_bar_px(xp, x0, 79.0 * k, bw, 3.5 * k, 1.0)
+	_bar_px(gauge, x0, 84.0 * k, bw, 3.5 * k, 1.0)
 	dead_lbl.size = Vector2(size.x, 30.0 * k)
 	dead_lbl.position = Vector2(0, (size.y - 30.0 * k) * 0.5)
 	dead_lbl.add_theme_font_size_override("font_size", maxi(9, int(26.0 * k)))
@@ -161,11 +159,11 @@ func _put_px(l: Label, x: float, y: float, w: float, h: float, fs: float) -> voi
 	l.size = Vector2(w, h)
 	l.add_theme_font_size_override("font_size", maxi(6, int(fs)))
 
-func _bar_px(b: TextBar, x: float, y: float, w: float, h: float, fs: float) -> void:
+func _bar_px(b: TextBar, x: float, y: float, w: float, h: float, fs: float, outline: float = 0.3) -> void:
 	b.position = Vector2(x, y)
 	b.size = Vector2(w, h)
 	b.custom_minimum_size = Vector2(0, h)
-	b.set_font_size(maxi(1, int(fs)))
+	b.set_font_size(maxi(1, int(fs)), outline)
 
 func _layout() -> void:
 	if framed:
