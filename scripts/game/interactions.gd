@@ -407,10 +407,12 @@ func _prompt_trap(it: Dictionary) -> void:
 		for c in gs.alive_party():
 			out.append(_hit_for(it, c, mult))
 		return out
-	var ctx := {"gs": gs, "s": s, "bd": trap_breakdown(), "offer": TrapRules.draw_offer(gs, s, it),
+	var ctx := {"gs": gs, "s": s, "bd": trap_breakdown(), "offer": TrapRules.draw_offer(s, it, gs.item_state(_lid(), str(it.id))),
 		"hit_random": hit_random, "hit_char": hit_char, "hit_all": hit_all}
 	var m := TrapModal.open(host, it, ctx)
-	m.skipped.connect(func(): _apply_trap(it, 1.0, {}))
+	m.skipped.connect(func():
+		_log(L.t("game.interactions.piege_passe_en_force"), true)
+		_apply_trap(it, float(s.skipDmgPct) / 100.0, {}))
 	m.resolved.connect(func(res: Dictionary): _trap_resolved(it, res))
 
 ## Applique le résultat de la fenêtre : coût (endurance, objet sacrifié), désamorçage ou dégâts, puis butin.

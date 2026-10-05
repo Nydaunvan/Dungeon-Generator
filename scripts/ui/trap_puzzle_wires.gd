@@ -19,9 +19,9 @@ func begin() -> void:
 	_data = TrapRules.make_wires(count)
 	_clue = Label.new()
 	_clue.position = Vector2(10, 0)
-	_clue.size = Vector2(size.x - 20, 84)
+	_clue.size = Vector2(size.x - 20, 126)
 	_clue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_clue.add_theme_font_size_override("font_size", 15)
+	_clue.add_theme_font_size_override("font_size", 13)
 	_clue.add_theme_font_override("font", load(UiTheme.F_BODY_ITALIC))
 	_clue.add_theme_color_override("font_color", Color("e8dcc0"))
 	_clue.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -34,12 +34,24 @@ func begin() -> void:
 	set_process(true)
 	status.emit(L.t("ui.trap_puzzle.fils_choisissez") + "  " + errors_left_text())
 
+func _cn(c: String) -> String:
+	return L.t("ui.trap_puzzle.color_%s" % c)
+
 func _clue_text() -> String:
 	var out: Array = []
 	for c in _data.clues:
-		var key := "ui.trap_puzzle.clue_%s" % str(str(c.k))
+		var k := str(c.k)
 		var a := str(c.a)
-		out.append("• " + (L.t(key) % L.t("ui.trap_puzzle.color_%s" % str(a)) if str(c.k).ends_with("color") else (L.t(key) % a if str(c.k) == "pos_nth" else L.t(key))))
+		var line := L.t("ui.trap_puzzle.clue_%s" % k)
+		match k:
+			"not_color", "not_next", "gap", "below_color", "above_color":
+				line = line % _cn(a)
+			"pos_nth":
+				line = line % a
+			"between":
+				var p := a.split("|")
+				line = line % [_cn(p[0]), _cn(p[1])]
+		out.append("• " + line)
 	return "\n".join(out)
 
 func _update(d: float) -> void:
@@ -51,8 +63,8 @@ func _update(d: float) -> void:
 
 func _y(i: int) -> float:
 	var n: int = _data.colors.size()
-	var top := 112.0
-	var bot := size.y - 20.0
+	var top := 146.0
+	var bot := size.y - 16.0
 	return top + (bot - top) * (float(i) / float(n - 1)) if n > 1 else top
 
 func _pts(i: int, cutgap := false) -> PackedVector2Array:
@@ -128,7 +140,7 @@ func _draw() -> void:
 	# bornes (boîtier de cuivre rivé)
 	for side in 2:
 		var x := 8.0 if side == 0 else w - 44.0
-		var rc := Rect2(x, 98.0, 36.0, size.y - 98.0 + 2.0)
+		var rc := Rect2(x, 130.0, 36.0, size.y - 130.0 + 2.0)
 		draw_rect(rc, Color("2a1f14"))
 		draw_rect(rc, Color("8a6a3a"), false, 2.0)
 		for k in 4:
@@ -164,5 +176,5 @@ func _draw() -> void:
 			draw_polyline(b, Color(0, 0, 0, 0.6), 8.0, true)
 			draw_polyline(b, Color(col.r, col.g, col.b, 0.7), 5.0, true)
 	if _open and _hover >= 0 and not done:
-		draw_string(_fonts_b, Vector2(w * 0.5 - 40.0, 104.0), L.t("ui.trap_puzzle.fils_couper"), HORIZONTAL_ALIGNMENT_CENTER, 80.0, 12, Color("ffd88a"))
+		draw_string(_fonts_b, Vector2(w * 0.5 - 40.0, 140.0), L.t("ui.trap_puzzle.fils_couper"), HORIZONTAL_ALIGNMENT_CENTER, 80.0, 12, Color("ffd88a"))
 	draw_sparks()

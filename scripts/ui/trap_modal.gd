@@ -57,6 +57,22 @@ static func open(host: Node, item: Dictionary, ctx: Dictionary) -> TrapModal:
 	host.add_child(m)
 	return m
 
+## Réduit la police jusqu'à ce que le texte tienne dans `avail` (px de conception) ; au pire il est coupé par « … ».
+static func fit_font(c: Control, text: String, font: Font, base: int, min_size: int, avail: float) -> void:
+	var sz := base
+	while sz > min_size and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x > avail:
+		sz -= 1
+	c.add_theme_font_size_override("font_size", sz)
+
+## Un bouton dont le texte tient toujours dedans (police réduite si besoin).
+static func fit_button(b: Button, base: int = 15, min_size: int = 10) -> void:
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var refit := func():
+		fit_font(b, b.text, b.get_theme_font("font"), base, min_size, maxf(10.0, b.size.x - 30.0))
+	b.resized.connect(refit)
+	refit.call()
+
 func _lbl(text: String, size: int, color: Color, font: String = "", center: bool = true) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -136,7 +152,10 @@ func _build() -> void:
 	_foot.add_theme_constant_override("separation", 8)
 	_foot.custom_minimum_size = Vector2(0, 42)
 	v.add_child(_foot)
-	_skip = _button(L.t("ui.trap_modal.passer"), false)
+	var pen := float(_s.skipDmgPct) / 100.0
+	var pen_txt := str(int(pen)) if is_equal_approx(pen, round(pen)) else str(snappedf(pen, 0.1))
+	_skip = _button(L.fa(L.t("ui.trap_modal.passer_penalite"), pen_txt), false)
+	_skip.tooltip_text = L.fa(L.t("ui.trap_modal.passer_tip"), pen_txt)
 	_skip.pressed.connect(func():
 		if _busy:
 			return
@@ -191,6 +210,7 @@ func _button(text: String, primary: bool) -> Button:
 	if primary:
 		b.add_theme_color_override("font_color", GOLD_BRIGHT)
 		b.add_theme_color_override("font_hover_color", GOLD_BRIGHT)
+	fit_button(b, 15, 10)
 	return b
 
 func _lock_size() -> void:
@@ -276,11 +296,18 @@ func _card(icon: String, name: String, sub: String, right_top: String, right_bot
 	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var nl := _lbl(name, 15, GOLD_BRIGHT, UiTheme.F_BODY_BOLD, false)
 	nl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	nl.clip_text = true
+	nl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	tv.add_child(nl)
 	var sl := _lbl(sub, 12, UiTheme.DIM, "", false)
 	sl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	sl.clip_text = true
+	sl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	tv.add_child(sl)
+	tv.resized.connect(func():
+		var w := maxf(10.0, tv.size.x - 2.0)
+		fit_font(nl, nl.text, nl.get_theme_font("font"), 15, 10, w)
+		fit_font(sl, sl.text, sl.get_theme_font("font"), 12, 9, w))
 	h.add_child(tv)
 	var rv := VBoxContainer.new()
 	rv.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -298,6 +325,9 @@ func _card(icon: String, name: String, sub: String, right_top: String, right_bot
 	b.modulate.a = 0.0
 	var t := b.create_tween()
 	t.tween_property(b, "modulate:a", 1.0, 0.25).set_delay(0.05 + idx * 0.08)
+	t.tween_callback(func():
+		if b.disabled:
+			b.modulate.a = 0.5)
 	return b
 
 func _method_card(id: String, idx: int) -> Button:
@@ -317,6 +347,10 @@ func _method_card(id: String, idx: int) -> Button:
 		tip += "\n" + L.fa(L.t("ui.trap_method.cout_endurance"), int(_s.dispelStaCost))
 	var b := _card(str(d.icon), L.t("ui.trap_method.name_%s" % str(id)), sub, "%d %%" % ch, L.t("ui.trap_modal.chance_court"), _chance_color(ch), tip, idx)
 	b.pressed.connect(func(): _pick_method(id))
+	if id == "sacrifice" and TrapRules.sacrifice_candidates(_gs).is_empty():
+		b.disabled = true
+		b.modulate = Color(1, 1, 1, 0.5)
+		b.tooltip_text = L.t("ui.trap_modal.sacrifice_aucun")
 	return b
 
 func _puzzle_card(idx: int) -> Button:

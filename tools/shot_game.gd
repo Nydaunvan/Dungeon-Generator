@@ -383,7 +383,7 @@ func _solve(pz, good: bool) -> void:
 		for r in pz.rows:
 			var c: int = pz._path[r]
 			if not good:
-				c = (c + 1) % 4
+				c = (c + 1) % 5
 			pz._step(c)
 			await create_timer(0.35).timeout
 			if not good:

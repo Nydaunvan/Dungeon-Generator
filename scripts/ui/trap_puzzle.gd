@@ -33,6 +33,7 @@ static func make(kind: String, s: Dictionary) -> TrapPuzzle:
 			p = TrapPuzzleRunes.new()
 			p.allowed = int(s.puzzleRuneErrors)
 			p.set("length", clampi(int(s.puzzleRuneLen), 3, 8))
+			p.set("twists", float(s.puzzleTwistsOn) > 0.5)
 		"wires":
 			p = TrapPuzzleWires.new()
 			p.allowed = int(s.puzzleWireErrors)
@@ -40,10 +41,12 @@ static func make(kind: String, s: Dictionary) -> TrapPuzzle:
 		"riddle":
 			p = TrapPuzzleRiddle.new()
 			p.allowed = int(s.puzzleRiddleErrors)
+			p.set("rounds", clampi(int(s.puzzleRiddleCount), 1, 4))
 		_:
 			p = TrapPuzzleTiles.new()
 			p.allowed = int(s.puzzleTilesErrors)
 			p.set("rows", clampi(int(s.puzzleTilesRows), 3, 6))
+			p.set("twists", float(s.puzzleTwistsOn) > 0.5)
 	return p
 
 func _init() -> void:

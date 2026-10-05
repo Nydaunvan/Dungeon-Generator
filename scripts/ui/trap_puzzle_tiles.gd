@@ -3,8 +3,10 @@ extends TrapPuzzle
 ## Dalles piégées : un chemin sûr s'illumine un instant, puis il faut le traverser de mémoire, dalle voisine après dalle voisine.
 ## Une mauvaise dalle déclenche une fléchette.
 
-const COLS := 4
-var rows := 4
+const COLS := 5
+var rows := 5
+var twists := true
+var _mirror := false
 var _path: Array = []
 var _lit: Dictionary = {}       # "r,c" -> intensité 0..1 (révélation)
 var _good: Dictionary = {}      # dalles franchies
@@ -19,24 +21,29 @@ var _tok_on := false
 
 func begin() -> void:
 	_path = TrapRules.make_tiles(rows, COLS)
+	_mirror = twists and randf() < 0.5
 	_animated = true
 	set_process(true)
-	status.emit(L.t("ui.trap_puzzle.dalles_observez"))
+	status.emit(L.t("ui.trap_puzzle.dalles_miroir") if _mirror else L.t("ui.trap_puzzle.dalles_observez"))
 	await wait(0.6)
 	for r in rows:
 		if not alive():
 			return
-		_set_lit(r, _path[r], 1.0)
+		_set_lit(r, _show_col(r), 1.0)
 		Sound.sfx("pickup")
-		await wait(0.42)
-	await wait(0.9)
+		await wait(0.34)
+	await wait(0.7)
 	for r in rows:
-		_set_lit(r, _path[r], 0.0, 0.5)
-	await wait(0.6)
+		_set_lit(r, _show_col(r), 0.0, 0.4)
+	await wait(0.5)
 	_input = true
 	_tok = Vector2(size.x * 0.5, size.y - 4.0)
 	_tok_on = true
 	status.emit(L.t("ui.trap_puzzle.dalles_avancez") + "  " + errors_left_text())
+
+## Colonne montrée pendant la révélation : dans le miroir, la vraie dalle est à l'opposé.
+func _show_col(r: int) -> int:
+	return COLS - 1 - int(_path[r]) if _mirror else int(_path[r])
 
 func _set_lit(r: int, c: int, to: float, dur: float = 0.18) -> void:
 	var key := "%d,%d" % [r, c]
@@ -49,8 +56,8 @@ func _tile_h() -> float:
 
 func _rc(r: int, c: int) -> Rect2:
 	var th := _tile_h()
-	var w := 74.0
-	var gap := 8.0
+	var w := 62.0
+	var gap := 7.0
 	var x0 := (size.x - (COLS * w + (COLS - 1) * gap)) * 0.5
 	var y_bottom := size.y - 14.0
 	return Rect2(x0 + c * (w + gap), y_bottom - (r + 1) * th - r * 6.0, w, th)
@@ -104,7 +111,7 @@ func _step(c: int) -> void:
 		return
 	_bad[key] = true
 	var rc := _rc(r, c)
-	_dart = {"y": rc.get_center().y, "to": rc.get_center().x, "dir": -1.0 if c >= 2 else 1.0, "t": 0.0}
+	_dart = {"y": rc.get_center().y, "to": rc.get_center().x, "dir": -1.0 if c >= COLS / 2 else 1.0, "t": 0.0}
 	Sound.sfx("hit")
 	burst(rc.get_center(), Color("ff5a5a"), 18, 130.0)
 	var over := misstep()

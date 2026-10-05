@@ -11,10 +11,11 @@ const DEFAULTS := {
 	"methodCount": 3.0, "statBonus": 2.5, "forceBase": 45.0, "forceFailPct": 125.0, "dispelBase": 40.0, "dispelStaCost": 12.0,
 	"probeBase": 65.0, "probeBonus": 20.0, "volunteerBase": 55.0, "volunteerDmgPct": 35.0, "bypassBase": 45.0, "bypassDmgPct": 40.0,
 	# puzzles
-	"puzzleChancePct": 50.0, "puzzleRuneOn": 1.0, "puzzleRuneLen": 4.0, "puzzleRuneErrors": 1.0,
-	"puzzleWireOn": 1.0, "puzzleWireCount": 4.0, "puzzleWireErrors": 0.0,
-	"puzzleRiddleOn": 1.0, "puzzleRiddleErrors": 1.0,
-	"puzzleTilesOn": 1.0, "puzzleTilesRows": 4.0, "puzzleTilesErrors": 1.0,
+	"puzzleChancePct": 50.0, "puzzleTwistsOn": 1.0, "skipDmgPct": 200.0,
+	"puzzleRuneOn": 1.0, "puzzleRuneLen": 5.0, "puzzleRuneErrors": 1.0,
+	"puzzleWireOn": 1.0, "puzzleWireCount": 5.0, "puzzleWireErrors": 0.0,
+	"puzzleRiddleOn": 1.0, "puzzleRiddleCount": 2.0, "puzzleRiddleErrors": 1.0,
+	"puzzleTilesOn": 1.0, "puzzleTilesRows": 5.0, "puzzleTilesErrors": 1.0,
 	# récompenses
 	"rewardChancePct": 15.0, "rewardPerfectPct": 60.0, "puzzleRewardPct": 70.0,
 	"rewardGoldMin": 15.0, "rewardGoldMax": 60.0, "rewardXp": 12.0, "rewardHealPct": 30.0,
@@ -91,30 +92,27 @@ static func puzzle_enabled(s: Dictionary, id: String) -> bool:
 		"tiles": return float(s.puzzleTilesOn) > 0.5
 	return false
 
-## Tire l'offre d'un piège : le type, 2 à 4 méthodes et, une fois sur deux environ, un puzzle.
-static func draw_offer(gs: GameState, s: Dictionary, item: Dictionary) -> Dictionary:
-	var kind := kind_of(item)
-	var methods: Array = []
-	var puzzle := ""
+## Offre d'un piège : le type, 2 à 4 méthodes et, une fois sur deux environ, un puzzle. Tirée une seule fois par piège :
+## `state` (l'état du piège dans le niveau, sauvegardé) la retient, et le piège propose ensuite toujours les mêmes choix.
+static func draw_offer(s: Dictionary, item: Dictionary, state: Dictionary) -> Dictionary:
 	if not debug_offer.is_empty():
-		kind = kind_by_id(str(debug_offer.get("kind", kind.id)))
-		methods = (debug_offer.get("methods", []) as Array).duplicate()
-		puzzle = str(debug_offer.get("puzzle", ""))
-		return {"kind": kind, "methods": methods, "puzzle": puzzle}
-	var pool: Array = []
-	for m in kind.methods:
-		if m == "sacrifice" and sacrifice_candidates(gs).is_empty():
-			continue
-		pool.append(m)
+		return {"kind": kind_by_id(str(debug_offer.get("kind", "spikes"))), "methods": (debug_offer.get("methods", []) as Array).duplicate(),
+			"puzzle": str(debug_offer.get("puzzle", ""))}
+	var saved = state.get("trapOffer")
+	if saved is Dictionary and saved.has("kind") and saved.get("methods") is Array:
+		return {"kind": kind_by_id(str(saved.kind)), "methods": (saved.methods as Array).duplicate(), "puzzle": str(saved.get("puzzle", ""))}
+	var kind := kind_of(item)
+	var pool: Array = kind.methods.duplicate()
 	pool.shuffle()
-	var n := mini(int(s.methodCount), pool.size())
-	methods = pool.slice(0, n)
+	var methods: Array = pool.slice(0, mini(int(s.methodCount), pool.size()))
+	var puzzle := ""
 	var pz: Array = []
 	for p in kind.puzzles:
 		if puzzle_enabled(s, p):
 			pz.append(p)
 	if not pz.is_empty() and randf() * 100.0 < float(s.puzzleChancePct):
 		puzzle = str(pz[randi() % pz.size()])
+	state["trapOffer"] = {"kind": kind.id, "methods": methods.duplicate(), "puzzle": puzzle}
 	return {"kind": kind, "methods": methods, "puzzle": puzzle}
 
 static func _best(gs: GameState, stat: String) -> Dictionary:
@@ -190,27 +188,45 @@ static func roll_reward(s: Dictionary, source: String) -> Dictionary:
 ## ce qu'il ne reste que lui). Retourne {"colors": [...], "target": i, "clues": [{"k": clé, "a": ...}]}.
 const WIRE_COLORS := ["red", "blue", "yellow", "green", "violet", "white"]
 
+const WARM := ["red", "yellow"]
+const COLD := ["blue", "green", "violet"]
+
 static func make_wires(n: int) -> Dictionary:
 	n = clampi(n, 3, 6)
 	var cols := WIRE_COLORS.duplicate()
 	cols.shuffle()
 	cols = cols.slice(0, n)
 	var target := randi() % n
+	var tc: String = cols[target]
 	var preds: Array = []
+	# chaque prédicat : clé du texte, argument, test sur l'indice d'un fil
 	for i in n:
-		var c: String = cols[i]
 		if i != target:
+			var c: String = cols[i]
 			preds.append({"k": "not_color", "a": c, "ok": func(j: int): return cols[j] != c})
+			if absi(i - target) > 1:
+				preds.append({"k": "not_next", "a": c, "ok": func(j: int): return not ((j > 0 and cols[j - 1] == c) or (j < n - 1 and cols[j + 1] == c))})
+			if absi(i - target) == 2:
+				preds.append({"k": "gap", "a": c, "ok": func(j: int): return (j >= 2 and cols[j - 2] == c) or (j <= n - 3 and cols[j + 2] == c)})
+	if WARM.has(tc):
+		preds.append({"k": "temp_warm", "a": "", "ok": func(j: int): return WARM.has(cols[j])})
+	elif COLD.has(tc):
+		preds.append({"k": "temp_cold", "a": "", "ok": func(j: int): return COLD.has(cols[j])})
+	else:
+		preds.append({"k": "temp_neutral", "a": "", "ok": func(j: int): return not WARM.has(cols[j]) and not COLD.has(cols[j])})
 	preds.append({"k": "pos_not_end", "a": "", "ok": func(j: int): return j != 0 and j != n - 1})
 	preds.append({"k": "pos_first_half" if target < n / 2 else "pos_last_half", "a": "",
 		"ok": (func(j: int): return j < n / 2) if target < n / 2 else (func(j: int): return j >= n / 2)})
-	preds.append({"k": "pos_nth", "a": str(target + 1), "ok": func(j: int): return j == target})
 	if target > 0:
 		var cb: String = cols[target - 1]
 		preds.append({"k": "below_color", "a": cb, "ok": func(j: int): return j > 0 and cols[j - 1] == cb})
 	if target < n - 1:
 		var ca: String = cols[target + 1]
 		preds.append({"k": "above_color", "a": ca, "ok": func(j: int): return j < n - 1 and cols[j + 1] == ca})
+	if target > 0 and target < n - 1:
+		var up: String = cols[target - 1]
+		var dn: String = cols[target + 1]
+		preds.append({"k": "between", "a": up + "|" + dn, "ok": func(j: int): return j > 0 and j < n - 1 and cols[j - 1] == up and cols[j + 1] == dn})
 	var valid: Array = []
 	for p in preds:
 		if p.ok.call(target):
@@ -218,22 +234,24 @@ static func make_wires(n: int) -> Dictionary:
 	valid.shuffle()
 	var clues: Array = []
 	var alive: Array = range(n)
+	var min_clues := 3 if n >= 5 else 2
 	for p in valid:
 		var left: Array = []
 		for j in alive:
 			if p.ok.call(j):
 				left.append(j)
-		if left.size() < alive.size():
+		# un indice est retenu s'il élimine des fils, ou s'il en faut davantage pour le niveau de difficulté
+		if left.size() < alive.size() or (alive.size() == 1 and clues.size() < min_clues):
 			alive = left
 			clues.append({"k": p.k, "a": p.a})
-		if alive.size() == 1:
+		if alive.size() == 1 and clues.size() >= min_clues:
 			break
 	if alive.size() > 1:
 		clues.append({"k": "pos_nth", "a": str(target + 1)})
 	return {"colors": cols, "target": target, "clues": clues}
 
-## Dalles : un chemin de bas en haut, une dalle par rangée, de colonne voisine à colonne voisine. 4 colonnes.
-static func make_tiles(rows: int, cols: int = 4) -> Array:
+## Dalles : un chemin de bas en haut, une dalle par rangée, de colonne voisine à colonne voisine (5 colonnes).
+static func make_tiles(rows: int, cols: int = 5) -> Array:
 	var path: Array = []
 	var c := randi() % cols
 	for r in rows:
