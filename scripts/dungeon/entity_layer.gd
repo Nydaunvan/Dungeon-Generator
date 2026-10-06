@@ -33,13 +33,15 @@ var _poll := 0.0
 const FOUNTAIN_SCALE := 0.8
 const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
 
-func populate(level: Dictionary, grid: DungeonGrid = null) -> void:
+func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false) -> void:
 	if bool(level.get("outdoor", false)):
 		if level.get("blacksmith") is Dictionary:
 			add_npc("@icon:blacksmith", int(level.blacksmith.x), int(level.blacksmith.y))
 		if level.get("talentMaster") is Dictionary:
 			add_npc("@icon:talentmaster", int(level.talentMaster.x), int(level.talentMaster.y))
 	for m in level.get("monsters", []):
+		if sliced:
+			await Loader.slice()
 		var n := _make_sprite(str(m.get("icon", "")), bool(m.get("isBoss", false)), false)
 		if n == null:
 			continue
@@ -49,6 +51,8 @@ func populate(level: Dictionary, grid: DungeonGrid = null) -> void:
 		add_child(n)
 		_register(monsters, p, n, m)
 	for it in level.get("items", []):
+		if sliced:
+			await Loader.slice()
 		var type := str(it.get("type", ""))
 		if type == "trap":
 			var dec := TrapDecals.make_mesh(str(it.get("trapKind", "spikes")))

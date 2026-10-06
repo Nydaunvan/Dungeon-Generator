@@ -9,7 +9,8 @@ const NICHE_HALF_W := 1.25    # demi-largeur du décroché de la fontaine
 const NICHE_H := 2.8          # hauteur du décroché
 const NICHE_DEPTH := 1.9      # profondeur dans le mur
 
-static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
+## `sliced` : pendant l'écran de chargement, le travail est réparti sur plusieurs images (l'épée reste fluide) ; l'appelant doit alors `await`.
+static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) -> LevelView:
 	var theme_name := str(level.get("theme", "stone"))
 	var theme: Dictionary = ThemeMaterials.for_theme(theme_name)
 	var view := LevelView.new()
@@ -36,6 +37,8 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 				if nd != Vector2i.ZERO:
 					niches[Vector2i(int(it.x), int(it.y))] = nd
 	for y in grid.height:
+		if sliced:
+			await Loader.slice()
 		for x in grid.width:
 			var ch := grid.cell(x, y)
 			if ch == "#" or ch == "S":
@@ -72,8 +75,12 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	for k in ["wall", "floor", "ceil", "path"]:
 		if counts[k] == 0:
 			continue
+		if sliced:
+			await Loader.slice()
 		if k != "path":
 			parts[k].generate_tangents()   # nécessaires aux cartes de normales (mur, sol, plafond)
+			if sliced:
+				await Loader.slice()
 		parts[k].commit(mesh)
 		var mat: Material = theme.get(k)
 		if outdoor and k == "floor":
@@ -85,16 +92,20 @@ static func build(level: Dictionary, grid: DungeonGrid) -> LevelView:
 	mi.name = "LevelMesh"
 	mi.mesh = mesh
 	view.add_child(mi)
+	if sliced:
+		await Loader.slice()
 	var ents := EntityLayer.new()
 	ents.name = "Entities"
 	view.add_child(ents)
-	ents.populate(level, grid)
+	await ents.populate(level, grid, sliced)
 	view.entities = ents
 	var stage := CombatStage.new()
 	stage.name = "CombatStage"
 	stage.view = view
 	view.add_child(stage)
 	view.stage = stage
+	if sliced:
+		await Loader.slice()
 	if outdoor:
 		Outdoor.decorate(view, level)
 	else:

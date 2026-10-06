@@ -78,22 +78,29 @@ func _ready() -> void:
 	ui.add_child(bg)
 	layout = GameLayout.new()
 	ui.add_child(layout)
-	layout.setup(gs, ctrl, rig)
+	await layout.setup(gs, ctrl, rig)
+	# la vue 3D ne dessine rien tant que le chargement n'est pas fini : tout le temps d'image va à l'écran de chargement (épée fluide)
+	layout.sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	await Loader.slice()
 	layout.command.connect(_on_command)
 	layout.monster_pressed.connect(func(d, s): MonsterInfoModal.open(_modals(), d, s))
 	layout.menu_pressed.connect(_on_menu)
 	# le monde 3D vit dans la vue encadrée
 	layout.world.add_child(rig)
 	rig.camera.current = true
+	await Loader.slice()
 	layout.world.add_child(_we)
+	await Loader.slice()
 	Settings.changed.connect(_apply_quality)
 	_apply_quality()
+	await Loader.slice()
 	var dock_layer := CanvasLayer.new()
 	dock_layer.layer = 15
 	add_child(dock_layer)
 	dock = EquipDock.new()
 	dock_layer.add_child(dock)
 	dock.setup(gs, ctrl)
+	await Loader.slice()
 	dock.bag_changed.connect(layout.bag.refresh)
 	_modal_layer = CanvasLayer.new()
 	_modal_layer.layer = 20
@@ -101,9 +108,11 @@ func _ready() -> void:
 	inter = Interactions.new()
 	add_child(inter)
 	inter.setup(gs, ctrl, rig, layout, _modal_layer)
+	await Loader.slice()
 	wand = Wanderers.new()
 	add_child(wand)
 	wand.setup(gs, ctrl, rig)
+	await Loader.slice()
 	wand.paused_if = is_game_paused
 	inter.wand = wand
 	inter.message.connect(func(t): show_message(t))
@@ -122,7 +131,7 @@ func _ready() -> void:
 	ctrl.changed.connect(_sync_stage)
 	layout.stage.gui_input.connect(_on_stage_input)
 	await Loader.step(0.55, L.t("loading.etape_donjon"))
-	load_level(level_index, resume)
+	await load_level(level_index, resume, {}, true)
 	await Loader.step(0.92, L.t("loading.etape_reprise") if resume else "")
 	if resume:
 		if not pend_transient.is_empty():
@@ -131,6 +140,7 @@ func _ready() -> void:
 			gs.add_log(pend_log)
 		if ctrl.in_combat():
 			ctrl.refresh.call_deferred()    # reprise au milieu d'un combat (retour de l'administration)
+	layout.sub_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	process_mode = Node.PROCESS_MODE_INHERIT
 	Loader.finish()
 
@@ -192,7 +202,8 @@ func _apply_quality() -> void:
 	vp.anisotropic_filtering_level = Settings.aniso_mode() as Viewport.AnisotropicFiltering
 	rig.camera.far = 100.0 * Settings.view_distance()
 
-func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) -> void:
+## `sliced` : chargement derrière l'écran de chargement, réparti sur plusieurs images (l'appelant `await`). Sans cela, tout est immédiat.
+func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sliced: bool = false) -> void:
 	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
 	if level_node:
@@ -201,7 +212,7 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) ->
 	grid = DungeonGrid.new(level)
 	# portes déjà ouvertes lors d'un précédent passage
 	var ls := gs.level_state(level)
-	level_node = LevelBuilder.build(level, grid)
+	level_node = await LevelBuilder.build(level, grid, sliced)
 	layout.world.add_child(level_node)
 	if at_saved:
 		rig.place(grid, gs.px, gs.py, gs.pdir)
@@ -295,15 +306,7 @@ func _apply_outdoor(outdoor: bool) -> void:
 	rig.torch.visible = not outdoor
 
 func _setup_environment() -> void:
-	env = Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("030201")
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("40342a")
-	env.ambient_light_energy = 1.1
-	env.fog_enabled = true
-	env.fog_light_color = Color("030201")
-	env.fog_density = 0.035
+	env = WarmUp.make_environment()
 	_we = WorldEnvironment.new()
 	_we.environment = env
 

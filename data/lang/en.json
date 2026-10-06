@@ -1339,7 +1339,9 @@
   "ui.settings.calib_none": "n/a (manual setting)",
   "ui.settings.calib_done": "{level}, resolution {res}% ({fps} fps measured)",
   "ui.settings.toast_calib": "Quality set for this machine: %s",
-  "ui.settings.event_calib": "calibration → {level}"
+  "ui.settings.event_calib": "calibration → {level}",
+  "loading.moteur": "Preparing the engine…",
+  "loading.shaders": "Preparing visual effects…"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

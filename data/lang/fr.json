@@ -1339,7 +1339,9 @@
   "ui.settings.calib_none": "non applicable (réglage manuel)",
   "ui.settings.calib_done": "{level}, résolution {res} % ({fps} i/s mesurées)",
   "ui.settings.toast_calib": "Qualité réglée pour cette machine : %s",
-  "ui.settings.event_calib": "calibration → {level}"
+  "ui.settings.event_calib": "calibration → {level}",
+  "loading.moteur": "Préparation du moteur…",
+  "loading.shaders": "Préparation des effets visuels…"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

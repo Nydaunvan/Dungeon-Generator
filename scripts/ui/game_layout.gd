@@ -72,6 +72,14 @@ var _flash: ColorRect
 var pouch: VBoxContainer
 var _pouch_sig: String = ""
 
+var _building := false        # première construction pendant le chargement : le travail est réparti sur plusieurs images
+var _in_rebuild := false
+
+## Pendant le chargement, rend la main à l'écran de chargement (épée animée) entre deux gros morceaux de construction.
+func _yield() -> void:
+	if _building and Loader.is_active():
+		await Loader.slice()
+
 func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void:
 	clip_contents = true
 	UiMetrics.update(self)
@@ -80,8 +88,12 @@ func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void
 	rig = r
 	theme = UiTheme.build()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_building = true
 	_build_parts()
+	await _yield()
 	resized.connect(_update_mode)
+	await _update_mode()
+	_building = false
 	_update_mode()
 
 # ------------------------------------------------------------------ pièces
@@ -519,6 +531,8 @@ func _build_parts() -> void:
 # ------------------------------------------------------------------ dispositions
 
 func _update_mode() -> void:
+	if _in_rebuild:
+		return
 	UiMetrics.update(self)
 	var portrait := size.x < size.y * PORTRAIT_RATIO
 	var win := get_window()
@@ -528,7 +542,9 @@ func _update_mode() -> void:
 		_built_mode = mode
 		_compact = compact
 		_portrait = portrait
-		_rebuild()
+		_in_rebuild = true
+		await _rebuild()
+		_in_rebuild = false
 	_size_widgets()
 
 func _detach(n: Node) -> void:
@@ -562,12 +578,16 @@ func _rebuild() -> void:
 		footer.add_theme_color_override("font_color", Color("6f5e44"))
 		footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(header)
+	await _yield()
 	if _portrait:
 		frame.size_flags_stretch_ratio = 4.0
 		v.add_child(frame)
+		await _yield()
 		v.add_child(queue)
 		v.add_child(strip)
+		await _yield()
 		v.add_child(hud)
+		await _yield()
 		var tabs := TabContainer.new()
 		tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		tabs.size_flags_stretch_ratio = 1.0
@@ -598,9 +618,12 @@ func _rebuild() -> void:
 		left.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
 		h.add_child(left)
 		left.add_child(frame)
+		await _yield()
 		left.add_child(queue)
 		left.add_child(strip)
+		await _yield()
 		left.add_child(hud)
+		await _yield()
 		var right := VBoxContainer.new()
 		right.name = "Right"
 		right.add_theme_constant_override("separation", int(UiMetrics.css(18.0)))
@@ -615,6 +638,7 @@ func _rebuild() -> void:
 		h.add_child(right)
 		for p in [panel_map, panel_bag, panel_log, panel_menu]:
 			right.add_child(p)
+		await _yield()
 		panel_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		for p in [panel_map, panel_bag, panel_log]:
 			p.custom_minimum_size = Vector2(0, 0)
@@ -627,16 +651,27 @@ func _rebuild() -> void:
 	footer.visible = not _portrait
 	call_deferred("_size_widgets")
 
+## Un changement de thème se propage à tous les contrôles de l'interface : on ne l'émet que si la valeur change vraiment.
+func _margin(item: String, v: int) -> void:
+	if not has_theme_constant_override(item) or get_theme_constant(item) != v:
+		add_theme_constant_override(item, v)
+
+var _sig := ""    # dernière taille appliquée : on ne refait pas le calcul (≈ 20 ms) si rien n'a changé
+
 func _size_widgets() -> void:
 	var w := size.x
 	var h := size.y
 	if _root == null:
 		return
+	var sig := "%d|%d|%d|%d|%.3f|%d" % [roundi(w), roundi(h), 1 if _portrait else 0, 1 if _compact else 0, UiMetrics.s, get_instance_id() ^ _root.get_instance_id()]
+	if sig == _sig:
+		return
+	_sig = sig
 	var m_side := UiMetrics.css(30.0 if not _portrait else 6.0)
-	add_theme_constant_override("margin_left", int(m_side))
-	add_theme_constant_override("margin_right", int(m_side))
-	add_theme_constant_override("margin_top", int(UiMetrics.css(12.0 if not _portrait else 4.0)))
-	add_theme_constant_override("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
+	_margin("margin_left", int(m_side))
+	_margin("margin_right", int(m_side))
+	_margin("margin_top", int(UiMetrics.css(12.0 if not _portrait else 4.0)))
+	_margin("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
 	hud.custom_minimum_size = Vector2(0, PartyHud.wanted_height())
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))

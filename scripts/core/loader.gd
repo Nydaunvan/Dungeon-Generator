@@ -74,6 +74,10 @@ func _slice() -> void:
 		await get_tree().process_frame
 		_last_yield_us = Time.get_ticks_usec()
 
+## Pour le code qui travaille longtemps : `await Loader.slice()` rend la main à l'affichage (donc à l'épée) toutes les ~8 ms.
+func slice() -> void:
+	await _slice()
+
 func _frames(n: int = 2) -> void:
 	for i in n:
 		await get_tree().process_frame
@@ -86,10 +90,12 @@ func boot() -> void:
 	var web := OS.has_feature("web")
 	# poids de chaque étape dans la barre : les sons (synthétisés par le code) sont de loin les plus longs
 	var phases := [
-		{"label": L.t("loading.polices"), "w": 0.06},
-		{"label": L.t("loading.images"), "w": 0.20},
+		{"label": L.t("loading.polices"), "w": 0.04},
+		{"label": L.t("loading.images"), "w": 0.17},
+		{"label": L.t("loading.moteur"), "w": 0.12},
 		{"label": L.t("loading.decor"), "w": 0.04},
-		{"label": L.t("loading.sons_effets"), "w": 0.70},
+		{"label": L.t("loading.shaders"), "w": 0.08},
+		{"label": L.t("loading.sons_effets"), "w": 0.55},
 	]
 	var base := 0.0
 	# 1. polices
@@ -100,12 +106,20 @@ func boot() -> void:
 	screen.set_progress(base, phases[1].label)
 	await _load_images(base, float(phases[1].w))
 	base += float(phases[1].w)
-	# 3. textures procédurales et matériaux des thèmes
+	# 3. code du jeu : tous les scripts et les scènes sont compilés maintenant, pas au premier clic sur « Jouer »
 	screen.set_progress(base, phases[2].label)
-	await _build_decor()
+	await _preload_code(base, float(phases[2].w))
 	base += float(phases[2].w)
-	# 4. sons et musiques
-	var sound_w := float(phases[3].w)
+	# 4. textures procédurales et matériaux des thèmes
+	screen.set_progress(base, phases[3].label)
+	await _build_decor()
+	base += float(phases[3].w)
+	# 5. shaders : une mini-scène (murs, portes, torches, fontaine, monstres, sorts) est dessinée hors écran une fois
+	screen.set_progress(base, phases[4].label)
+	await WarmUp.run(self, func(f: float): screen.set_progress(base + float(phases[4].w) * f))
+	base += float(phases[4].w)
+	# 6. sons et musiques
+	var sound_w := float(phases[5].w)
 	await Sound.preload_all(func(f: float, text: String):
 		screen.set_progress(base + sound_w * f, text))
 	screen.set_progress(1.0, L.t("loading.pret"))
@@ -173,7 +187,7 @@ func finish() -> void:
 		return
 	screen.set_progress(1.0, L.t("loading.pret"))
 	# quelques images derrière l'écran : les premières compilations de shaders se font ici, pas devant le joueur
-	await _frames(8)
+	await _frames(5)
 	_hide(0.45)
 
 # ------------------------------------------------------------------ étapes de chargement
@@ -197,6 +211,33 @@ func _load_images(base: float, weight: float) -> void:
 		screen.set_progress(base + weight * float(i + 1) / total)
 		await _slice()
 	screen.set_progress(base + weight)
+
+## Compile chaque script du jeu puis charge les scènes principales, un fichier à la fois (l'écran reste animé).
+func _preload_code(base: float, weight: float) -> void:
+	var paths: Array = []
+	_collect("res://scripts", ["gd"], paths)
+	for sc in ["main", "admin", "home"]:
+		paths.append("res://scenes/%s.tscn" % sc)
+	var total := maxi(paths.size(), 1)
+	for i in paths.size():
+		var res := load(paths[i])
+		if res != null:
+			_keep.append(res)
+		screen.set_progress(base + weight * float(i + 1) / total)
+		await _slice()
+
+func _collect(dir: String, exts: Array, out: Array) -> void:
+	for n in ResourceLoader.list_directory(dir):
+		var name := String(n)
+		if name.ends_with("/"):
+			_collect(dir + "/" + name.trim_suffix("/"), exts, out)
+			continue
+		for suf in [".import", ".remap"]:
+			if name.ends_with(suf):
+				name = name.trim_suffix(suf)
+		var path := dir + "/" + name
+		if exts.has(name.get_extension().to_lower()) and not out.has(path):
+			out.append(path)
 
 func _build_decor() -> void:
 	_keep.append(ProceduralTextures.glow())
