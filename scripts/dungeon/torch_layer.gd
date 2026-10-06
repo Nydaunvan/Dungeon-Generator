@@ -23,13 +23,15 @@ const TORCH_TINT := {"stone": Color(1, 1, 1), "dirt": Color(1.0, 0.92, 0.78), "d
 	"temple": Color(1.0, 0.9, 0.62), "village_forward": Color(1.0, 0.9, 0.62), "village_return": Color(0.82, 0.95, 0.88)}
 
 # --- réglages (à ajuster à l'œil) ---
-const POOL := 7                  # rigs (lumière + fumée + étincelles) en tout, dont ceux qui s'éteignent en fondu
-const ACTIVE := 5                # torches les plus proches qui reçoivent un rig
+const POOL := 9                  # rigs (lumière + fumée + étincelles) en tout, dont ceux qui s'éteignent en fondu (≥ torches Ultra + 2)
+# nombre de torches éclairées en même temps : réglage « Torches avec lumière » (Settings.torch_lights)
 const ACTIVATE_R := 24.0         # distance max (unités) pour recevoir un rig
 const REFRESH := 0.15            # secondes entre deux réaffectations
 const FADE_SPEED := 2.2          # allumage / extinction d'un rig (≈ 0,45 s)
 const FLAME_H := 0.34            # hauteur de la flamme (m)
 const FLAME_R := 0.085           # rayon max de la flamme
+const SMOKE_N := 9               # particules de fumée par torche (avant réglage « Particules »)
+const SPARK_N := 3               # étincelles par torche (idem)
 const LIGHT_ENERGY := 1.1
 const LIGHT_RANGE := 7.5
 const SMOKE_ALPHA := 0.45        # opacité max de la fumée (légère mais lisible)
@@ -153,6 +155,13 @@ func _ready() -> void:
 	_build_batches()
 	for i in POOL:
 		_rigs.append(_make_rig())
+	Settings.changed.connect(_on_quality)
+
+## Réglages graphiques modifiés : ajuste le nombre de particules des rigs existants (le nombre de lumières est relu à chaque réaffectation).
+func _on_quality() -> void:
+	for r in _rigs:
+		r.smoke.amount = Settings.pc(SMOKE_N)
+		r.sparks.amount = Settings.pc(SPARK_N)
 
 func add_torch(pos: Vector3, rot: float, theme: String) -> void:
 	var cfg: Dictionary = Data.constants.get("CANDELABRA_THEME", {})
@@ -248,7 +257,7 @@ func _make_rig() -> TorchFx:
 
 func _make_smoke() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = 9
+	p.amount = Settings.pc(SMOKE_N)
 	p.lifetime = 2.8
 	p.lifetime_randomness = 0.3
 	p.randomness = 0.5
@@ -284,7 +293,7 @@ func _make_smoke() -> CPUParticles3D:
 
 func _make_sparks() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = 3
+	p.amount = Settings.pc(SPARK_N)
 	p.lifetime = 1.8
 	p.lifetime_randomness = 0.6
 	p.explosiveness = 0.85
@@ -357,7 +366,7 @@ func _refresh(cam_pos: Vector3) -> void:
 			cand.append([d2, i])
 	cand.sort_custom(func(a, b): return a[0] < b[0])
 	var want := {}
-	for k in mini(ACTIVE, cand.size()):
+	for k in mini(Settings.torch_lights(), cand.size()):
 		want[int(cand[k][1])] = true
 	for r in _rigs:
 		if r.torch >= 0 and not want.has(r.torch):
@@ -384,7 +393,7 @@ func _update_rig(r: TorchFx, delta: float) -> void:
 		return
 	var t: Dictionary = _torches[r.torch]
 	var p := _time * r.speed + r.phase
-	var flick := 1.0 + sin(p) * 0.10 + sin(p * 2.7) * 0.06 + sin(p * 7.3) * 0.04
+	var flick := 1.0 + (sin(p) * 0.10 + sin(p * 2.7) * 0.06 + sin(p * 7.3) * 0.04) * Settings.motion_k()
 	r.light.light_energy = LIGHT_ENERGY * light_scale * float(t.light_k) * smoothstep(0.0, 1.0, r.level) * flick
 
 func _process(delta: float) -> void:

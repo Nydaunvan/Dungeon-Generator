@@ -1,6 +1,6 @@
 class_name StairsDust
 extends RefCounted
-## pulseStairsEffect de l'original : 10 grains de poussière additifs qui montent (ou descendent) autour de la caméra en 650 ms.
+## pulseStairsEffect de l'original : 10 grains de poussière (× réglage « Particules ») additifs qui montent (ou descendent) autour de la caméra en 650 ms.
 
 static var _tex: Texture2D
 
@@ -20,7 +20,7 @@ static func _texture() -> Texture2D:
 
 static func pulse(parent: Node, camera: Camera3D, going_up: bool) -> void:
 	var base := camera.global_position
-	for i in 10:
+	for i in Settings.pc(10):
 		var s := Sprite3D.new()
 		s.texture = _texture()
 		s.billboard = BaseMaterial3D.BILLBOARD_ENABLED

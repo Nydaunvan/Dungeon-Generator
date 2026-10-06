@@ -17,8 +17,9 @@ static func for_theme(theme: String) -> Dictionary:
 	if not ResourceLoader.exists("res://assets/themes/%s_wall.jpg" % theme) \
 			and not ResourceLoader.exists("res://assets/themes/%s_wall.png" % theme):
 		theme = "stone"
-	if _cache.has(theme):
-		return _cache[theme]
+	var key := "%s|%d" % [theme, 1 if Settings.texture_hd() else 0]   # un jeu de matériaux par réglage de textures
+	if _cache.has(key):
+		return _cache[key]
 	var pixel := PIXEL_THEMES.has(theme)
 	var mats := {}
 	for part in ["wall", "floor", "ceil"]:
@@ -33,7 +34,7 @@ static func for_theme(theme: String) -> Dictionary:
 		var floor_ := _stone_pbr("floor", STONE_FLOOR_REPEAT)
 		if floor_ != null:
 			mats["floor"] = floor_
-	_cache[theme] = mats
+	_cache[key] = mats
 	return mats
 
 static func _make(theme: String, part: String, pixel: bool) -> StandardMaterial3D:
@@ -52,9 +53,10 @@ static func _make(theme: String, part: String, pixel: bool) -> StandardMaterial3
 	m.uv1_scale = Vector3(1, 1, 1) if pixel else Vector3(3, 3, 1)
 	return m
 
-## Dossier du jeu de textures de pierre à utiliser ("" si aucun) : 1024 sur Web/mobile, 2048 ailleurs.
+## Dossier du jeu de textures de pierre à utiliser ("" si aucun) : 1024 ou 2048 selon le réglage « Textures » du niveau graphique
+## (Web et mobile n'embarquent que le jeu 1024 : le repli est automatique).
 static func _stone_dir() -> String:
-	var small := OS.has_feature("web") or OS.has_feature("mobile")
+	var small := not Settings.texture_hd()
 	var order := [STONE_LITE, STONE_HD] if small else [STONE_HD, STONE_LITE]
 	for d in order:
 		if ResourceLoader.exists(d + "wall_albedo.jpg"):

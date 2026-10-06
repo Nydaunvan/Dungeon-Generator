@@ -40,7 +40,7 @@ func _ready() -> void:
 	vp.size = Vector2i(888, 552)      # 3× la zone d'origine 296×184 ; recalé sur la taille réelle à l'écran
 	vp.transparent_bg = true
 	vp.own_world_3d = true
-	vp.msaa_3d = Viewport.MSAA_4X
+	vp.msaa_3d = Settings.dice_msaa_mode() as Viewport.MSAA
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
 	_vp = vp

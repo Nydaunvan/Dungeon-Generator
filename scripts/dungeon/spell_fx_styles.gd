@@ -151,7 +151,7 @@ func _stop_emitter(p: CPUParticles3D, life: float) -> void:
 			p.queue_free())
 
 func _lamp(at: Vector3, col: Color, energy: float, rng: float, dur: float) -> void:
-	if _lite():
+	if not Settings.spell_lamps():
 		return
 	var l := OmniLight3D.new()
 	l.light_color = col
@@ -473,7 +473,7 @@ func _ice_burst(at: Vector3, target: Dictionary) -> void:
 	_keep(0.9)
 	get_tree().create_timer(0.8).timeout.connect(func():
 		if is_instance_valid(sh): sh.queue_free())
-	_emit(at, _spark_tex(), 12 if _lite() else 26, 0.9, 0.4, 1.6, 0.05, 0.12,
+	_emit(at, _spark_tex(), 26, 0.9, 0.4, 1.6, 0.05, 0.12,
 		_ramp(Color(1, 1, 1, 1), Color(0.7, 0.94, 1.0, 0.9), Color(0.5, 0.8, 1.0, 0)), Vector3(0, -1.6, 0), 180.0, Vector3.UP, 0.25 * size)
 	_lamp(at, Color(0.6, 0.88, 1.0), 2.2, 5.0, 0.4)
 
@@ -506,9 +506,9 @@ func _shadow_burst(at: Vector3, target: Dictionary) -> void:
 		(star.node as Node3D).rotation.z = -u * 0.8
 		(star.mat as StandardMaterial3D).albedo_color.a = 0.9 * (1.0 - u) * minf(1.0, u * 6.0))
 	# volutes sombres qui s'élèvent
-	_emit(at, _smoke_tex(), 5 if _lite() else 9, 0.9, 0.3, 0.9, 0.5, 0.9,
+	_emit(at, _smoke_tex(), 9, 0.9, 0.3, 0.9, 0.5, 0.9,
 		_ramp(Color(0.5, 0.3, 0.8, 0.0), Color(0.45, 0.25, 0.75, 0.7), Color(0.1, 0.0, 0.2, 0.0)), Vector3(0, 0.5, 0), 70.0, Vector3.UP, 0.2 * size, true, false)
-	_emit(at, _spark_tex(), 10 if _lite() else 20, 0.7, 1.2, 3.0, 0.06, 0.14,
+	_emit(at, _spark_tex(), 20, 0.7, 1.2, 3.0, 0.06, 0.14,
 		_ramp(Color(0.9, 0.7, 1.0, 1), Color(0.6, 0.3, 1.0, 0.9), Color(0.3, 0.1, 0.7, 0)), Vector3(0, 0.4, 0), 180.0, Vector3.UP, 0.1 * size)
 	_lamp(at, Color(0.55, 0.25, 0.95), 1.8, 5.0, 0.45)
 
@@ -543,7 +543,7 @@ func _slash(target: Dictionary, spell_id: String) -> void:
 func _hit_sparks(at: Vector3, target: Dictionary) -> void:
 	var size := _tsize(target)
 	_flash(_spark_tex(), Color(1.0, 0.95, 0.8, 1.0), at, 0.4 * size, 1.6 * size, 0.18)
-	_emit(at, _spark_tex(), 12 if _lite() else 22, 0.45, 2.0 * size, 4.8 * size, 0.07, 0.15,
+	_emit(at, _spark_tex(), 22, 0.45, 2.0 * size, 4.8 * size, 0.07, 0.15,
 		_ramp(Color(1, 1, 0.9, 1), Color(1, 0.8, 0.4, 0.9), Color(1, 0.5, 0.1, 0)), Vector3(0, -4.5, 0), 180.0, Vector3.UP, 0.05)
 	_emit(at, _smoke_tex(), 3, 0.5, 0.2, 0.6, 0.4, 0.7,
 		_ramp(Color(0.9, 0.85, 0.7, 0), Color(0.8, 0.75, 0.6, 0.35), Color(0.6, 0.55, 0.45, 0)), Vector3.ZERO, 180.0, Vector3.UP, 0.1, true, false)
@@ -635,7 +635,7 @@ func _generic_burst(at: Vector3, target: Dictionary, col: Color) -> void:
 	var size := _tsize(target)
 	_flash(_arcane_tex(), Color(col.lerp(Color.WHITE, 0.6), 1.0), at, 0.4 * size, 2.2 * size, 0.28)
 	_ring("ring_gen_%s" % col.to_html(false), col, at, 0.4 * size, 2.0 * size, 0.38)
-	_emit(at, _spark_tex(), 12 if _lite() else 22, 0.55, 1.2 * size, 3.2 * size, 0.07, 0.15,
+	_emit(at, _spark_tex(), 22, 0.55, 1.2 * size, 3.2 * size, 0.07, 0.15,
 		_ramp(Color(1, 1, 1, 1), Color(col, 0.9), Color(col, 0)), Vector3(0, -1.5, 0), 180.0, Vector3.UP, 0.08)
 
 # ------------------------------------------------------------------------------------------ SOUTIEN
@@ -666,9 +666,9 @@ func _heal_at(at: Vector3, col: Color, kind: String) -> void:
 	_flash(_arcane_tex(), Color(col.lerp(Color.WHITE, 0.4), 0.9), at, 0.5, 2.0, 0.5, true)
 	_ring("ring_heal_" + kind, col, at, 0.3, 1.6, 0.5)
 	var fast := kind == "haste"
-	_emit(at, _spark_tex(), 12 if _lite() else 24, 0.9, 0.9 if not fast else 2.2, 2.0 if not fast else 4.0, 0.07, 0.16,
+	_emit(at, _spark_tex(), 24, 0.9, 0.9 if not fast else 2.2, 2.0 if not fast else 4.0, 0.07, 0.16,
 		_ramp(Color(col.lerp(Color.WHITE, 0.6), 0.0), Color(col, 0.95), Color(col, 0.0)), Vector3(0, 0.4, 0), 14.0, up, 0.32, true)
-	for i in (3 if _lite() else 6):
+	for i in Settings.pc(6):
 		var c := _sprite(_cross_tex() if kind != "stamina" else _arcane_tex(), Color(col.lerp(Color.WHITE, 0.5), 1.0), 0.22, at)
 		(c.mat as StandardMaterial3D).no_depth_test = true
 		var ox := randf_range(-0.45, 0.45)
@@ -711,7 +711,7 @@ func _shield(ctx: Dictionary) -> void:
 		(dome.mat as StandardMaterial3D).albedo_color = Color(1, 1, 1, a))
 	_flash(_arcane_tex(), Color(col, 0.7), at, 0.4, 2.0, 0.4, true)
 	_ring("ring_shield", col, at, 0.4, 2.0, 0.5)
-	_emit(at, _spark_tex(), 10 if _lite() else 18, 0.7, 0.6, 1.6, 0.06, 0.13,
+	_emit(at, _spark_tex(), 18, 0.7, 0.6, 1.6, 0.06, 0.13,
 		_ramp(Color(1, 1, 1, 1), Color(col, 0.9), Color(col, 0)), Vector3.ZERO, 180.0, Vector3.UP, 0.4)
 	_lamp(at, col, 1.4, 4.0, 0.5)
 
@@ -721,10 +721,10 @@ func _dispel(ctx: Dictionary) -> void:
 	_flash(_arcane_tex(), Color(1, 1, 1, 0.9), at, 0.4, 2.2, 0.35, true)
 	_ring("ring_dispel", Color(0.8, 0.92, 1.0), at, 0.3, 2.0, 0.45)
 	_later(0.1, func(): _ring("ring_dispel", Color(0.8, 0.92, 1.0), at, 0.2, 1.4, 0.4))
-	_emit(at, _spark_tex(), 12 if _lite() else 22, 0.8, 0.8, 2.2, 0.06, 0.14,
+	_emit(at, _spark_tex(), 22, 0.8, 0.8, 2.2, 0.06, 0.14,
 		_ramp(Color(1, 1, 1, 1), Color(0.8, 0.92, 1.0, 0.9), Color(0.7, 0.85, 1.0, 0)), Vector3(0, 0.3, 0), 180.0, up, 0.15)
 	# volutes sombres chassées vers le haut : les maux qui s'en vont
-	_emit(at, _smoke_tex(), 4 if _lite() else 7, 0.9, 0.8, 1.6, 0.4, 0.7,
+	_emit(at, _smoke_tex(), 7, 0.9, 0.8, 1.6, 0.4, 0.7,
 		_ramp(Color(0.5, 0.4, 0.7, 0.0), Color(0.4, 0.3, 0.6, 0.6), Color(0.1, 0.05, 0.2, 0.0)), Vector3(0, 0.8, 0), 30.0, up, 0.2, true, false)
 
 func _self_buff(ctx: Dictionary) -> void:
@@ -733,7 +733,7 @@ func _self_buff(ctx: Dictionary) -> void:
 	var col := Color(1.0, 0.6, 0.2)
 	_flash(_fire_tex(), Color(1.0, 0.8, 0.45, 0.9), at, 0.5, 2.2, 0.5, true)
 	_ring("ring_buff", col, at, 0.3, 1.8, 0.45)
-	_emit(at, _fire_tex(), 14 if _lite() else 26, 0.7, 0.8, 2.0, 0.22, 0.4,
+	_emit(at, _fire_tex(), 26, 0.7, 0.8, 2.0, 0.22, 0.4,
 		_ramp(Color(1, 0.9, 0.5, 0), Color(1, 0.5, 0.12, 0.9), Color(0.5, 0.06, 0.02, 0)), Vector3(0, 1.0, 0), 25.0, up, 0.3)
 	_emit(at, _spark_tex(), 10, 0.8, 1.0, 2.4, 0.05, 0.1,
 		_ramp(Color(1, 0.95, 0.7, 1), Color(1, 0.6, 0.2, 0.9), Color(1, 0.3, 0.05, 0)), Vector3(0, 0.8, 0), 30.0, up, 0.3)
@@ -859,7 +859,7 @@ func _wp_mace(target: Dictionary) -> void:
 	_flash(_arcane_tex(), Color(1.0, 0.92, 0.7, 1.0), at, 0.5 * size, 2.8 * size, 0.26)
 	_ring("ring_mace", Color(1.0, 0.85, 0.5), at, 0.3 * size, 2.2 * size, 0.34)
 	_later(0.06, func(): _ring("ring_mace", Color(1.0, 0.85, 0.5), at, 0.2 * size, 1.5 * size, 0.3))
-	_emit(at, _spark_tex(), 12 if _lite() else 20, 0.5, 2.0 * size, 4.4 * size, 0.07, 0.16,
+	_emit(at, _spark_tex(), 20, 0.5, 2.0 * size, 4.4 * size, 0.07, 0.16,
 		_ramp(Color(1, 1, 0.85, 1), Color(1, 0.75, 0.35, 0.9), Color(1, 0.5, 0.1, 0)), Vector3(0, -5.0, 0), 180.0, Vector3.UP, 0.06)
 	_emit(at, _smoke_tex(), 5, 0.6, 0.4, 1.0, 0.6, 1.0,
 		_ramp(Color(0.8, 0.7, 0.55, 0), Color(0.75, 0.65, 0.5, 0.5), Color(0.5, 0.45, 0.35, 0)), Vector3.ZERO, 180.0, Vector3.UP, 0.25 * size, true, false)

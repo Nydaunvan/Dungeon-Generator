@@ -22,6 +22,7 @@ boot_splash/use_filter=true
 [autoload]
 
 Data="*res://scripts/core/data.gd"
+Settings="*res://scripts/core/settings.gd"
 Sound="*res://scripts/core/sound.gd"
 Loader="*res://scripts/core/loader.gd"
 PerfOverlay="*res://scripts/core/perf_overlay.gd"

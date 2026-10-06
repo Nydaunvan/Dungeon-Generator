@@ -1,8 +1,6 @@
 extends CanvasLayer
 ## Compteur de performances en direct (images/s, RAM, mémoire vidéo) : bouton « 📊 » de l'en-tête ou touche F3.
-## Le choix est mémorisé entre deux sessions (user://perf.cfg).
-
-const CFG := "user://perf.cfg"
+## Le choix est mémorisé entre deux sessions (user://settings.cfg, via `Settings`).
 
 var _label: Label
 var _panel: PanelContainer
@@ -26,9 +24,7 @@ func _ready() -> void:
 	_label.add_theme_color_override("font_color", Color("e8dcc0"))
 	_panel.add_child(_label)
 	add_child(_panel)
-	var cf := ConfigFile.new()
-	if cf.load(CFG) == OK:
-		_on = bool(cf.get_value("perf", "on", false))
+	_on = Settings.perf_overlay
 	_apply()
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -41,9 +37,7 @@ func is_on() -> bool:
 
 func toggle() -> void:
 	_on = not _on
-	var cf := ConfigFile.new()
-	cf.set_value("perf", "on", _on)
-	cf.save(CFG)
+	Settings.set_perf_overlay(_on)
 	_apply()
 
 func _apply() -> void:

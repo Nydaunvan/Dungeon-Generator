@@ -226,12 +226,9 @@ static func _fx_mat(tex: Texture2D, particles: bool) -> StandardMaterial3D:
 	m.render_priority = 5
 	return m
 
-static func _lite() -> bool:
-	return OS.has_feature("web") or OS.has_feature("mobile")
-
 func _particles(amount: int, life: float, one_shot: bool, mesh: Mesh, ramp: Gradient) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = amount
+	p.amount = Settings.pc(amount)   # réglage « Particules » du niveau graphique
 	p.lifetime = life
 	p.one_shot = one_shot
 	p.explosiveness = 1.0 if one_shot else 0.0
@@ -384,8 +381,8 @@ func _arcane_burst(at: Vector3, target: Dictionary) -> void:
 	sparks.scale_amount_curve = _shrink_curve()
 	add_child(sparks)
 	sparks.emitting = true
-	# lueur dynamique brève (desktop uniquement)
-	if not _lite():
+	# lueur dynamique brève (niveaux Élevé et Ultra)
+	if Settings.spell_lamps():
 		var lamp := OmniLight3D.new()
 		lamp.light_color = Color(0.7, 0.5, 1.0)
 		lamp.omni_range = 5.0
@@ -402,7 +399,7 @@ func _arcane_burst(at: Vector3, target: Dictionary) -> void:
 		if is_instance_valid(sparks): sparks.queue_free())
 
 static func _spark_count() -> int:
-	return 14 if _lite() else 26
+	return 26
 
 static func _shrink_curve() -> Curve:
 	var c := Curve.new()
@@ -516,7 +513,7 @@ func _fire_burst(at: Vector3, target: Dictionary) -> void:
 		(ring.node as Node3D).scale = Vector3.ONE * (0.4 + (1.0 - pow(1.0 - v, 3.0)) * 2.4) * size
 		(ring.mat as StandardMaterial3D).albedo_color.a = 0.9 * (1.0 - v))
 	# flammèches projetées + braises qui montent
-	var chunks := _particles(12 if _lite() else 18, 0.5, true, _quad(_fire_tex()), _ramp(Color(1, 0.9, 0.5, 1), Color(1, 0.45, 0.1, 0.9), Color(0.4, 0.05, 0.02, 0)))
+	var chunks := _particles(18, 0.5, true, _quad(_fire_tex()), _ramp(Color(1, 0.9, 0.5, 1), Color(1, 0.45, 0.1, 0.9), Color(0.4, 0.05, 0.02, 0)))
 	chunks.position = at
 	chunks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	chunks.emission_sphere_radius = 0.1
@@ -530,7 +527,7 @@ func _fire_burst(at: Vector3, target: Dictionary) -> void:
 	chunks.scale_amount_curve = _shrink_curve()
 	add_child(chunks)
 	chunks.emitting = true
-	var rising := _particles(14 if _lite() else 24, 0.9, true, _quad(_spark_tex()), _ramp(Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.15, 0.85), Color(0.9, 0.2, 0.05, 0)))
+	var rising := _particles(24, 0.9, true, _quad(_spark_tex()), _ramp(Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.15, 0.85), Color(0.9, 0.2, 0.05, 0)))
 	rising.position = at
 	rising.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	rising.emission_sphere_radius = 0.2 * size
@@ -544,7 +541,7 @@ func _fire_burst(at: Vector3, target: Dictionary) -> void:
 	add_child(rising)
 	rising.emitting = true
 	# fumée sombre (alpha normal, pas additive) : donne du poids à l'explosion
-	for i in (2 if _lite() else 4):
+	for i in Settings.pc(4):
 		var sm := MeshInstance3D.new()
 		var q := QuadMesh.new()
 		q.size = Vector2.ONE
@@ -568,7 +565,7 @@ func _fire_burst(at: Vector3, target: Dictionary) -> void:
 			sm.position = base + Vector3(0, w * 0.9, 0)
 			sm.scale = Vector3.ONE * (0.6 + w * 1.4) * size
 			smat.albedo_color = Color(1, 1, 1, sin(w * PI) * 0.75))
-	if not _lite():
+	if Settings.spell_lamps():
 		var lamp := OmniLight3D.new()
 		lamp.light_color = Color(1.0, 0.55, 0.2)
 		lamp.omni_range = 6.0
@@ -682,7 +679,7 @@ func _holy(target: Dictionary) -> void:
 		(star.node as Node3D).rotation.z = u * 0.9
 		(star.mat as StandardMaterial3D).albedo_color.a = 0.95 * (1.0 - u) * minf(1.0, u * 8.0))
 	# particules d'or qui s'élèvent autour de la cible
-	var motes := _particles(14 if _lite() else 26, 0.8, true, _quad(_spark_tex()), _ramp(Color(1, 0.97, 0.8, 0), Color(1, 0.85, 0.45, 0.95), Color(1, 0.7, 0.25, 0)))
+	var motes := _particles(26, 0.8, true, _quad(_spark_tex()), _ramp(Color(1, 0.97, 0.8, 0), Color(1, 0.85, 0.45, 0.95), Color(1, 0.7, 0.25, 0)))
 	motes.position = Vector3(at.x, floor_y + 0.1, at.z)
 	motes.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	motes.emission_sphere_radius = 0.55 * size
@@ -695,7 +692,7 @@ func _holy(target: Dictionary) -> void:
 	motes.scale_amount_max = 0.15
 	add_child(motes)
 	motes.emitting = true
-	if not _lite():
+	if Settings.spell_lamps():
 		var lamp := OmniLight3D.new()
 		lamp.light_color = Color(1.0, 0.88, 0.55)
 		lamp.omni_range = 6.0

@@ -51,6 +51,10 @@ func _init() -> void:
 	perf.tooltip_text = L.t("ui.app_header.perf_tip")
 	perf.pressed.connect(func(): PerfOverlay.toggle())
 	nav_row.add_child(perf)
+	var cfg := _button("⚙ " + L.t("ui.app_header.parametres"))
+	cfg.tooltip_text = L.t("ui.app_header.parametres_tip")
+	cfg.pressed.connect(func(): nav.emit("Paramètres"))
+	nav_row.add_child(cfg)
 	btn_admin = _button("🛠 Admin")
 	btn_admin.pressed.connect(func(): nav.emit("Admin"))
 	btn_admin.visible = false

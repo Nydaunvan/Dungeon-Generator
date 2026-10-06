@@ -1,0 +1,48 @@
+{
+ "levels": {
+  "low": {
+   "res_scale": 0.6,
+   "msaa": 0,
+   "aniso": 0,
+   "torch_lights": 2,
+   "particles": 0.4,
+   "spell_lamps": false,
+   "view_distance": 0.7,
+   "texture_hd": false,
+   "flame_fps": 20
+  },
+  "medium": {
+   "res_scale": 0.8,
+   "msaa": 2,
+   "aniso": 2,
+   "torch_lights": 3,
+   "particles": 0.7,
+   "spell_lamps": false,
+   "view_distance": 0.85,
+   "texture_hd": false,
+   "flame_fps": 30
+  },
+  "high": {
+   "res_scale": 1.0,
+   "msaa": 4,
+   "aniso": 8,
+   "torch_lights": 5,
+   "particles": 1.0,
+   "spell_lamps": true,
+   "view_distance": 1.0,
+   "texture_hd": true,
+   "flame_fps": 60
+  },
+  "ultra": {
+   "res_scale": 1.25,
+   "msaa": 4,
+   "aniso": 16,
+   "torch_lights": 7,
+   "particles": 1.5,
+   "spell_lamps": true,
+   "view_distance": 1.3,
+   "texture_hd": true,
+   "flame_fps": 60
+  }
+ }
+}

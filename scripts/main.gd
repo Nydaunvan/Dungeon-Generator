@@ -86,6 +86,8 @@ func _ready() -> void:
 	layout.world.add_child(rig)
 	rig.camera.current = true
 	layout.world.add_child(_we)
+	Settings.changed.connect(_apply_quality)
+	_apply_quality()
 	var dock_layer := CanvasLayer.new()
 	dock_layer.layer = 15
 	add_child(dock_layer)
@@ -180,7 +182,18 @@ func _arrival(target: Dictionary, action: Dictionary) -> Dictionary:
 				break
 	return {"x": x, "y": y, "dir": d}
 
+## Applique les réglages graphiques à la vue 3D : résolution, anticrénelage, filtrage des textures, distance d'affichage.
+func _apply_quality() -> void:
+	if layout == null or not is_instance_valid(layout.sub_viewport) or rig == null:
+		return
+	var vp := layout.sub_viewport
+	vp.scaling_3d_scale = Settings.res_scale()
+	vp.msaa_3d = Settings.msaa_mode() as Viewport.MSAA
+	vp.anisotropic_filtering_level = Settings.aniso_mode() as Viewport.AnisotropicFiltering
+	rig.camera.far = 100.0 * Settings.view_distance()
+
 func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}) -> void:
+	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
 	if level_node:
 		level_node.queue_free()
@@ -592,6 +605,7 @@ func _on_menu(name: String) -> void:
 		"Guide": Dialogs.guide(_modals())
 		"Quitter": Dialogs.confirm(_modals(), "", L.t("ui.app_header.quitter_confirm"), func(): get_tree().quit(), L.t("ui.app_header.quitter"))
 		"Son": SoundModal.open(_modals())
+		"Paramètres": SettingsModal.open(_modals())
 		"Lang":
 			Sound.stop_ambient()
 			Data.reload_game(snapshot())

@@ -16,6 +16,8 @@ static var _mat_inner: ShaderMaterial
 var _vc: SubViewportContainer
 var _vp: SubViewport
 var _glow: TextureRect
+var _sparks: CPUParticles3D
+var _frame_t := 0.0
 var _phase := 0.0
 var _sc := 1.0
 var _base := Vector2.ZERO
@@ -64,6 +66,7 @@ func _init() -> void:
 	inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_vp.add_child(inner)
 	_vp.add_child(_make_sparks())
+	Settings.changed.connect(func(): _sparks.amount = Settings.pc(4))
 
 ## Copie du shader de flamme du donjon en mélange normal : l'additif ne laisse pas d'alpha dans un fond transparent.
 static func _mat(inner: bool) -> ShaderMaterial:
@@ -92,9 +95,9 @@ static func _disp(c: Color) -> Color:
 	return c
 
 func _make_sparks() -> CPUParticles3D:
-	var lite := OS.has_feature("web") or OS.has_feature("mobile")
 	var p := CPUParticles3D.new()
-	p.amount = 2 if lite else 4
+	p.amount = Settings.pc(4)
+	_sparks = p
 	p.lifetime = 1.6
 	p.lifetime_randomness = 0.6
 	p.explosiveness = 0.8
@@ -138,8 +141,17 @@ func place(base: Vector2, sc: float) -> void:
 
 func _process(d: float) -> void:
 	_phase += d
-	var k := 0.5 + sin(_phase * 7.1) * 0.08 + sin(_phase * 11.3 + 1.0) * 0.06
+	var k := 0.5 + (sin(_phase * 7.1) * 0.08 + sin(_phase * 11.3 + 1.0) * 0.06) * Settings.motion_k()
 	_glow.modulate = Color(1.0, 0.55, 0.22, k)
+	# cadence de la flamme (réglage « Flammes du bandeau ») : 60 = rendu à chaque image, sinon une image tous les 1/n s
+	var fps := Settings.flame_fps()
+	if fps >= 60:
+		_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	else:
+		_frame_t += d
+		if _frame_t >= 1.0 / float(maxi(fps, 1)):
+			_frame_t = 0.0
+			_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 func _draw() -> void:
 	# braises au fond de la vasque (le dessin d'origine a été vidé de sa flamme)

@@ -231,7 +231,7 @@ func _apply(force: bool) -> void:
 # ------------------------------------------------------------------ pierre
 
 static func _stone_dir() -> String:
-	var small := OS.has_feature("web") or OS.has_feature("mobile")
+	var small := not Settings.texture_hd()
 	var order := [STONE_LITE, STONE_HD] if small else [STONE_HD, STONE_LITE]
 	for d in order:
 		if ResourceLoader.exists(d + "albedo.jpg"):
@@ -569,7 +569,7 @@ func _particle_mat(tex: Texture2D, additive: bool) -> StandardMaterial3D:
 
 func _ring_particles(radius: float, amount: int, life: float, vmin: float, vmax: float, size_min: float, size_max: float) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = amount
+	p.amount = Settings.pc(amount)
 	p.lifetime = life
 	p.randomness = 0.6
 	p.local_coords = false
@@ -622,7 +622,7 @@ func _build_fx() -> void:
 	# gouttes qui giclent du fleuron
 	_drops = CPUParticles3D.new()
 	_drops.name = "Gouttes"
-	_drops.amount = 36
+	_drops.amount = Settings.pc(36)
 	_drops.lifetime = 0.9
 	_drops.randomness = 0.7
 	_drops.local_coords = false
