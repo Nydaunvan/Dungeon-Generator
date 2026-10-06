@@ -480,7 +480,6 @@ func _on_turned() -> void:
 	ctrl.refresh()
 
 func _on_moved() -> void:
-	Sound.sfx("footstep")
 	inter.step_stamina()
 	layout.minimap.mark_visited()
 	layout.minimap.reveal()

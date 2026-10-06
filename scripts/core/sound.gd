@@ -154,7 +154,6 @@ func sfx_later(delay: float, name: String, arg = null) -> void:
 func _build_sfx(name: String, arg) -> AudioStreamWAV:
 	var b := Synth.new(RATE)
 	match name:
-		"footstep": b.noise(0.07, "lowpass", 220.0, 0.7, 0.10, 0.002, 0.05)
 		"monster_approach":
 			var g := clampf(float(arg if arg != null else 1.0), 0.1, 1.0)
 			b.noise(0.09, "lowpass", 180.0, 0.6, 0.07 * g, 0.005, 0.09)
@@ -388,7 +387,7 @@ func _build_boss() -> AudioStreamWAV:   # coroutine (voir _breath)
 
 const PRELOAD_SWINGS := ["sword", "axe", "dagger", "staff", "bow", "mace", "unarmed"]
 const PRELOAD_SPELLS := ["fire", "ice", "holy", "nature", "shadow", "physical", "bard", "arcane"]
-const PRELOAD_PLAIN := ["footstep", "door_creak", "door_locked", "hit", "monster_attack", "pickup", "level_up", "evolve", "down",
+const PRELOAD_PLAIN := ["door_creak", "door_locked", "hit", "monster_attack", "pickup", "level_up", "evolve", "down",
 	"game_over", "victory", "fountain", "heal", "blocked", "combat_start"]
 
 ## Synthétise à l'avance tous les sons du jeu : effets, petits sons d'ambiance, nappes de chaque thème, musique de boss.
