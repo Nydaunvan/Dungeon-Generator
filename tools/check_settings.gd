@@ -22,6 +22,7 @@ func _ready() -> void:
 	_first_launch()
 	_flow()
 	_adaptation()
+	_calibration()
 	_texts()
 	await _menu()
 	# rétablit le fichier de réglages d'origine
@@ -99,7 +100,8 @@ func _first_launch() -> void:
 	Settings.preset = "auto"
 	Settings._load()
 	Settings._resolve()
-	expect(Settings._auto_level == str(Settings.detect_info.level), "premier lancement : niveau détecté (%s) attendu, obtenu %s" % [Settings.detect_info.level, Settings._auto_level])
+	expect(Settings._auto_level == Settings._baseline_level(), "premier lancement : niveau de départ (%s) attendu, obtenu %s" % [Settings._baseline_level(), Settings._auto_level])
+	expect(Settings.calib_state == "pending", "premier lancement : calibration en attente")
 	expect(Settings.level == Settings._auto_level and Settings.preset == "auto" and Settings.auto_adapt, "premier lancement : Auto, adaptation activée")
 
 # ------------------------------------------------------------------ préréglage / personnalisé
@@ -199,12 +201,68 @@ func _texts() -> void:
 		keys.append("ui.settings.dist_%s" % d[1])
 	for p in ["pc", "web", "mobile"]:
 		keys.append("ui.settings.platform_%s" % p)
-	for e in ["down", "up", "revert", "dyn_down", "dyn_up"]:
+	for e in ["down", "up", "revert", "dyn_down", "dyn_up", "calib"]:
 		keys.append("ui.settings.event_%s" % e)
+	for c in ["diag_calib", "calib_pending", "calib_running", "calib_none", "calib_done", "toast_calib"]:
+		keys.append("ui.settings.%s" % c)
 	for t in SettingsModal.TABS:
 		keys.append(t[1])
 	for k in keys:
 		expect(L.t(k) != k, "texte manquant : %s" % k)
+
+# ------------------------------------------------------------------ calibration au lancement
+
+## Lance une calibration et lui donne, pour chaque essai, les images/s fournies (dans l'ordre) ; renvoie le nombre d'essais.
+func _calib_run(fps_list: Array) -> int:
+	Settings.reset_graphics()
+	Settings.set_preset("auto")
+	Settings.target_fps = 60
+	Settings.fps_cap = 0
+	Settings.detect_info["level"] = "medium"
+	Settings.calib_state = "pending"
+	Settings._calib_begin()
+	var n := 0
+	while Settings.calib_state != "done" and n < 30:
+		var f: float = float(fps_list[mini(n, fps_list.size() - 1)])
+		Settings._calib_decide(f)
+		n += 1
+	return n
+
+func _calibration() -> void:
+	var web := Settings.is_web() or Settings.is_mobile()
+	var top := "high" if web else "ultra"
+	# machine très rapide : on monte tant que la marge est nette (Élevé sur navigateur, Ultra sur PC)
+	_calib_run([300.0, 250.0, 200.0])
+	expect(Settings.level == top and Settings.dyn_scale == 1.0, "calibration rapide : %s attendu, obtenu %s (dyn %s)" % [top, Settings.level, Settings.dyn_scale])
+	# marge correcte : Moyen suffit, on ne cherche pas la performance absolue
+	_calib_run([80.0])
+	expect(Settings.level == "medium" and Settings.dyn_scale == 1.0, "calibration 80 i/s : Moyen sans réduction (obtenu %s, dyn %s)" % [Settings.level, Settings.dyn_scale])
+	expect(not Settings.texture_hd(), "calibration 80 i/s : textures Standard")
+	# juste au-dessus de la cible, sans marge : on reste à Moyen
+	_calib_run([70.0])
+	expect(Settings.level == "medium" and Settings.dyn_scale == 1.0, "calibration 70 i/s : Moyen conservé")
+	# machine lente : on réduit la résolution 3D d'abord, jamais le niveau tant que la résolution suffit
+	_calib_run([40.0, 70.0])
+	expect(Settings.level == "medium" and Settings.dyn_scale < 1.0 and Settings.dyn_scale >= Settings.DYN_MIN, "calibration 40 i/s : résolution réduite (niveau %s, dyn %s)" % [Settings.level, Settings.dyn_scale])
+	expect(is_equal_approx(Settings._dyn_cap, Settings.dyn_scale), "calibration lente : plafond de résolution mémorisé")
+	# l'adaptation en jeu ne dépasse pas ce qui a été mesuré
+	Settings._step_up()
+	expect(Settings.dyn_scale <= Settings._dyn_cap + 0.001 and Settings.level == "medium", "après calibration : pas de remontée au-delà du plafond")
+	# machine très lente : on finit au plus bas, sans boucler
+	var n := _calib_run([5.0])
+	expect(Settings.level == "low" and Settings.calib_state == "done" and n < 30, "calibration 5 i/s : Faible et terminée (%s essais)" % n)
+	# essai du niveau supérieur raté : retour au niveau validé
+	_calib_run([200.0, 20.0])
+	expect(Settings.level == "medium" and Settings.dyn_scale == 1.0 and Settings.calib_state == "done", "essai supérieur raté : retour à Moyen (obtenu %s)" % Settings.level)
+	# réglage manuel : pas de calibration
+	Settings.set_preset("high")
+	expect(Settings.calib_state == "done", "préréglage manuel : pas de calibration")
+	Settings.set_preset("auto")
+	expect(Settings.calib_state == "pending", "retour en Auto : nouvelle calibration")
+	# V-Sync et limite rétablis à la fin
+	_calib_run([80.0])
+	expect(Engine.max_fps == (Settings.fps_cap if Settings.fps_cap > 0 else 0) or Settings.fps_cap == 0, "limite d'images rétablie après calibration")
+	expect(Settings.calib_text() != "" and Settings.calib_text() != "ui.settings.calib_done", "texte de calibration")
 
 # ------------------------------------------------------------------ menu
 

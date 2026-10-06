@@ -1,7 +1,7 @@
 extends Node
 ## Réglages du jeu (autoload `Settings`) : graphismes, affichage, accessibilité.
 ## Graphismes : quatre niveaux (Faible, Moyen, Élevé, Ultra) décrits dans data/quality_presets.json, un mode « Auto »
-## (niveau choisi d'après la machine, puis ajusté pendant la partie) et un mode « Personnalisé » (chaque option au choix).
+## (calibré à chaque lancement pour tenir la cible d'images/s, puis ajusté pendant la partie) et un mode « Personnalisé ».
 ## Tout est mémorisé dans user://settings.cfg (la section [sound] reste gérée par `Sound`).
 ## Les sous-systèmes lisent leurs options ici (`opt`, `pc`, `res_scale`…) et se mettent à jour sur le signal `changed`.
 
@@ -28,6 +28,13 @@ const SLOW_RATIO := 0.85    # « trop lent » = moins de 85 % de la cible
 const DYN_MIN := 0.6        # résolution 3D dynamique : plancher (multiplicateur)
 const DYN_STEP := 0.1
 
+# calibration au lancement (mode Auto)
+const CALIB_SETTLE := 0.8     # s d'attente après chaque changement de réglage, avant de mesurer
+const CALIB_MEASURE := 1.5    # s de mesure par essai
+const CALIB_MARGIN := 1.1     # un niveau est retenu s'il atteint cible × 1,1 (marge pour les creux)
+const CALIB_HEADROOM := 1.3   # on ne tente le niveau supérieur que si la marge mesurée atteint cible × 1,1 × 1,3
+const CALIB_MAX_STEPS := 12   # garde-fou
+
 const _FALLBACK := {"res_scale": 1.0, "msaa": 0, "aniso": 4, "torch_lights": 5, "particles": 1.0, "spell_lamps": true,
 	"view_distance": 1.0, "texture_hd": true, "flame_fps": 60}
 
@@ -46,6 +53,9 @@ var ceiling := ""                # niveau maximal tenu lors des essais (mode Aut
 var detect_info: Dictionary = {}
 var last_event: Dictionary = {}  # dernier ajustement automatique : {time, reason, level} (affiché dans Diagnostic)
 var fps_window := 0.0            # dernière moyenne mesurée par l'adaptation
+var calib_state := "pending"     # pending → running → done (une calibration par lancement, en mode Auto)
+var calib_fps := 0.0             # images/s mesurées sans limite au niveau retenu
+var calib_log: Array = []        # essais de la calibration : [{level, dyn, fps}]
 
 var _levels: Dictionary = {}
 var _auto_level := ""              # niveau du mode Auto ("" = machine pas encore détectée)
@@ -58,6 +68,11 @@ var _stable_t := 0.0
 var _probe_from := ""
 var _probe_left := 0.0
 var _session_cap := 99
+var _dyn_cap := 1.0              # résolution 3D dynamique maximale (fixée par la calibration)
+var _cw := 0.0                   # attente avant la prochaine mesure de calibration
+var _ct := 0.0
+var _cn := 0
+var _cphase := "down"            # down : on cherche le premier niveau qui tient ; up : on essaie plus haut
 var _last_scene: Node
 var _toast_layer: CanvasLayer
 var _toast: PanelContainer
@@ -146,12 +161,14 @@ func set_preset(p: String) -> void:
 		custom = opts.duplicate()
 	preset = p
 	dyn_scale = 1.0
+	_dyn_cap = 1.0
 	_clear_probe()
 	_session_cap = 99
 	if LEVELS.has(p):
 		level = p
 	elif p == "auto":
 		level = _auto_level
+	_restart_calibration()
 	_commit()
 
 ## Modifie une option graphique ; bascule en « Personnalisé » (à partir des valeurs en cours).
@@ -162,7 +179,9 @@ func set_option(key: String, value: Variant) -> void:
 		custom = opts.duplicate()
 		preset = "custom"
 		dyn_scale = 1.0
+		_dyn_cap = 1.0
 		_clear_probe()
+		_restart_calibration()
 	custom[key] = value
 	_commit()
 
@@ -170,6 +189,7 @@ func set_auto_adapt(v: bool) -> void:
 	auto_adapt = v
 	if not v:
 		dyn_scale = 1.0
+		_dyn_cap = 1.0
 		_clear_probe()
 	_commit()
 
@@ -202,16 +222,18 @@ func is_fullscreen() -> bool:
 	var m := DisplayServer.window_get_mode()
 	return m == DisplayServer.WINDOW_MODE_FULLSCREEN or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
 
-## Relance la détection de la machine (et oublie les limites apprises) ; le mode Auto repart du niveau détecté.
+## Relance la détection de la machine (et oublie les limites apprises) ; en mode Auto, la calibration est refaite.
 func redetect() -> void:
 	ceiling = ""
 	_session_cap = 99
 	dyn_scale = 1.0
+	_dyn_cap = 1.0
 	_clear_probe()
 	detect()
 	if preset == "auto":
 		level = _auto_level
 	last_event = {}
+	_restart_calibration()
 	_commit()
 
 ## Remet tous les réglages graphiques par défaut (Auto, adaptation activée, détection refaite).
@@ -226,6 +248,9 @@ func reset_graphics() -> void:
 ## Laisse l'adaptation attendre `sec` secondes (chargement, changement de niveau…).
 func settle(sec: float = 6.0) -> void:
 	_settle = maxf(_settle, sec)
+	_cw = maxf(_cw, minf(sec, 2.0))
+	_ct = 0.0
+	_cn = 0
 	_reset_window()
 
 func _commit() -> void:
@@ -277,8 +302,6 @@ func _load() -> void:
 		preset = str(cf.get_value("graphics", "preset", "auto"))
 		auto_adapt = bool(cf.get_value("graphics", "auto_adapt", true))
 		target_fps = int(cf.get_value("graphics", "target_fps", 60))
-		ceiling = str(cf.get_value("graphics", "ceiling", ""))
-		_auto_level = str(cf.get_value("graphics", "auto_level", ""))
 		var cu: Variant = cf.get_value("graphics", "custom", {})
 		if cu is Dictionary:
 			for k in OPTION_KEYS:
@@ -302,11 +325,10 @@ func _load() -> void:
 	if not FPS_CAPS.has(fps_cap):
 		fps_cap = 0
 	detect_info = _machine_info()
-	if not LEVELS.has(_auto_level):     # premier lancement : niveau conseillé pour cette machine
-		_auto_level = str(detect_info.level)
-	if ceiling != "" and not LEVELS.has(ceiling):
-		ceiling = ""
+	_auto_level = _baseline_level()     # le niveau du mode Auto n'est pas mémorisé : il est recalibré à chaque lancement
+	ceiling = ""
 	level = preset if LEVELS.has(preset) else _auto_level
+	calib_state = "pending" if preset == "auto" else "done"
 
 func _save() -> void:
 	var cf := ConfigFile.new()
@@ -314,8 +336,6 @@ func _save() -> void:
 	cf.set_value("graphics", "preset", preset)
 	cf.set_value("graphics", "auto_adapt", auto_adapt)
 	cf.set_value("graphics", "target_fps", target_fps)
-	cf.set_value("graphics", "ceiling", ceiling)
-	cf.set_value("graphics", "auto_level", _auto_level)
 	cf.set_value("graphics", "custom", custom)
 	cf.set_value("display", "fps_cap", fps_cap)
 	cf.set_value("display", "vsync", vsync)
@@ -372,7 +392,11 @@ static func suggest_level(web: bool, mobile: bool, tier: int, ram_gb: float, cpu
 
 func detect() -> void:
 	detect_info = _machine_info()
-	_auto_level = str(detect_info.level)
+	_auto_level = _baseline_level()
+
+## Niveau de départ du mode Auto : Moyen (textures Standard 1024), ou Faible si la machine est clairement modeste.
+func _baseline_level() -> String:
+	return LEVELS[clampi(LEVELS.find(str(detect_info.get("level", "medium"))), 0, 1)]
 
 func _machine_info() -> Dictionary:
 	var gpu := RenderingServer.get_video_adapter_name()
@@ -392,6 +416,10 @@ func _process(delta: float) -> void:
 	if cs != _last_scene:
 		_last_scene = cs
 		settle(8.0)
+	if calib_state != "done":
+		_calibrate(delta)
+		_reset_window()
+		return
 	if not _adapt_active():
 		_reset_window()
 		return
@@ -415,14 +443,16 @@ func _in_game() -> bool:
 	var cs := get_tree().current_scene
 	return cs != null and cs.scene_file_path == "res://scenes/main.tscn"
 
-func _adapt_active() -> bool:
-	if not auto_adapt or preset == "custom" or not _in_game() or get_tree().paused:
-		return false
-	if Loader.is_active():
+## Partie en cours, visible et active : les images/s mesurées sont représentatives.
+func _in_play() -> bool:
+	if not _in_game() or get_tree().paused or Loader.is_active():
 		return false
 	if not is_web() and not DisplayServer.window_is_focused():   # fenêtre en arrière-plan : mesure faussée (le navigateur suspend déjà l'animation d'un onglet masqué)
 		return false
 	return true
+
+func _adapt_active() -> bool:
+	return auto_adapt and preset != "custom" and _in_play()
 
 func _reset_window() -> void:
 	_acc_t = 0.0
@@ -467,14 +497,15 @@ func _step_down() -> void:
 	elif idx > 0:
 		level = LEVELS[idx - 1]
 		dyn_scale = 1.0
+		_dyn_cap = 1.0
 		_adapted(level, "down")
 
 func _step_up() -> void:
 	var idx := LEVELS.find(level)
-	if dyn_scale < 0.999:
-		dyn_scale = minf(1.0, snappedf(dyn_scale + DYN_STEP, 0.01))
+	if dyn_scale < _dyn_cap - 0.001:      # jamais au-delà de ce que la calibration a validé
+		dyn_scale = minf(_dyn_cap, snappedf(dyn_scale + DYN_STEP, 0.01))
 		_adapted("", "dyn_up")
-	elif idx < _max_idx():
+	elif _dyn_cap >= 0.999 and idx < _max_idx():
 		_probe_from = level
 		_probe_left = PROBE_WATCH
 		level = LEVELS[idx + 1]
@@ -512,6 +543,129 @@ func _adapted(new_level: String, reason: String) -> void:
 		var key := "ui.settings.toast_down" if reason == "down" else ("ui.settings.toast_up" if reason == "up" else "ui.settings.toast_revert")
 		_show_toast(L.t(key) % level_name(new_level))
 		level_adapted.emit(new_level, reason)
+
+# ------------------------------------------------------------------ calibration au lancement
+
+## À chaque lancement (mode Auto), les premières secondes de jeu servent à mesurer la machine SANS limite d'images/s
+## (V-Sync levé) : on part de Moyen (textures Standard), on ne réduit que le nécessaire pour tenir la cible (≥ 60 i/s)
+## et on ne monte que si la marge mesurée est nette. Rien n'est mémorisé : la mesure est refaite à chaque lancement.
+func _restart_calibration() -> void:
+	calib_state = "pending" if preset == "auto" else "done"
+	calib_log = []
+	calib_fps = 0.0
+	_cw = 1.0
+	_ct = 0.0
+	_cn = 0
+
+func _calib_max_idx() -> int:
+	return 2 if (is_web() or is_mobile()) else 3
+
+func _calibrate(delta: float) -> void:
+	if preset != "auto":
+		calib_state = "done"
+		return
+	if not _in_play():
+		return                      # on attend : pas en jeu, chargement, pause ou fenêtre inactive
+	if _cw > 0.0:
+		_cw -= delta
+		return
+	if calib_state == "pending":
+		_calib_begin()
+		return
+	if delta > 1.0:                 # blocage isolé (compilation, fenêtre déplacée) : pas représentatif
+		return
+	_ct += delta
+	_cn += 1
+	if _ct < CALIB_MEASURE or (_cn < 8 and _ct < 6.0):
+		return
+	_calib_decide(float(_cn) / _ct)
+
+func _calib_begin() -> void:
+	calib_state = "running"
+	calib_log = []
+	calib_fps = 0.0
+	_cphase = "down"
+	level = _baseline_level()
+	dyn_scale = 1.0
+	_dyn_cap = 1.0
+	Engine.max_fps = 0                # mesure de la vraie capacité : ni limite d'images, ni V-Sync (sauf navigateur)
+	if not is_web():
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	_calib_next()
+
+func _calib_next() -> void:
+	_resolve()
+	changed.emit()
+	_cw = CALIB_SETTLE
+	_ct = 0.0
+	_cn = 0
+
+## Un essai mesuré à `f` images/s : on garde ce réglage s'il tient la cible, sinon on réduit le strict nécessaire.
+func _calib_decide(f: float) -> void:
+	var need := _target() * CALIB_MARGIN
+	var idx := LEVELS.find(level)
+	calib_log.append({"level": level, "dyn": dyn_scale, "fps": f})
+	if calib_log.size() >= CALIB_MAX_STEPS:
+		_calib_finish(f)
+		return
+	if _cphase == "down":
+		if f >= need:
+			calib_fps = f
+			if calib_log.size() == 1 and f >= need * CALIB_HEADROOM and idx < _calib_max_idx():
+				_cphase = "up"           # grande marge dès le départ : on tente le niveau au-dessus
+				level = LEVELS[idx + 1]
+				_calib_next()
+				return
+			_calib_finish(f)
+			return
+		if dyn_scale > DYN_MIN + 0.001:
+			# le coût suit à peu près le nombre de pixels (∝ échelle²) : échelle visée = échelle × √(mesure / besoin)
+			var k := clampf(sqrt(f / need) * 0.97, 0.5, 1.0 - DYN_STEP * 0.5)
+			dyn_scale = maxf(DYN_MIN, snappedf(dyn_scale * k, 0.01))
+		elif idx > 0:
+			level = LEVELS[idx - 1]      # même au plus bas de la résolution : seul recours, on descend d'un niveau
+			dyn_scale = 1.0
+		else:
+			_calib_finish(f)             # tout est au plus bas : la machine n'a pas mieux à offrir
+			return
+		_calib_next()
+		return
+	# phase « up » : un niveau supérieur est essayé tant que la marge le justifie
+	if f >= need:
+		calib_fps = f
+		if f >= need * CALIB_HEADROOM and idx < _calib_max_idx():
+			level = LEVELS[idx + 1]
+			_calib_next()
+			return
+		_calib_finish(f)
+		return
+	level = LEVELS[idx - 1]              # le niveau essayé ne tient pas : on revient au précédent, déjà validé
+	dyn_scale = 1.0
+	_calib_finish(calib_fps)
+
+func _calib_finish(f: float) -> void:
+	calib_state = "done"
+	calib_fps = f
+	_session_cap = LEVELS.find(level)    # l'adaptation en jeu ne monte pas au-dessus de ce que la mesure a validé
+	_dyn_cap = dyn_scale
+	_auto_level = level
+	_clear_probe()
+	_settle = 3.0
+	_resolve()
+	_apply_display()                     # rétablit V-Sync et limite d'images choisis par le joueur
+	last_event = {"time": Time.get_time_string_from_system(), "reason": "calib", "level": level, "dyn": dyn_scale}
+	changed.emit()
+	if level != _baseline_level() or dyn_scale < 0.999:
+		_show_toast(L.t("ui.settings.toast_calib") % level_name(level))
+
+## Résumé de la calibration pour l'onglet Diagnostic.
+func calib_text() -> String:
+	if preset != "auto":
+		return L.t("ui.settings.calib_none")
+	match calib_state:
+		"running": return L.t("ui.settings.calib_running")
+		"done": return L.f("ui.settings.calib_done", {"level": level_name(level), "res": roundi(res_scale() * 100.0), "fps": roundi(calib_fps)})
+	return L.t("ui.settings.calib_pending")
 
 # ------------------------------------------------------------------ message discret
 

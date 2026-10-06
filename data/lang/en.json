@@ -1259,7 +1259,7 @@
   "ui.settings.level_ultra": "Ultra",
   "ui.settings.level_custom": "Custom",
   "ui.settings.quality_title": "Graphics quality",
-  "ui.settings.preset_hint_auto": "The level is picked for your machine, then adjusted during play if the game slows down.",
+  "ui.settings.preset_hint_auto": "At each launch, the game measures this machine and sets the quality to aim for at least 60 frames per second with standard (1024) textures. It only goes lower if needed, and only goes higher when there is real headroom.",
   "ui.settings.preset_hint_low": "For modest machines and phones: lighter rendering, few lights and effects.",
   "ui.settings.preset_hint_medium": "A good balance between smoothness and looks.",
   "ui.settings.preset_hint_high": "Full rendering: torch and spell lights, anti-aliasing, sharp textures.",
@@ -1332,7 +1332,14 @@
   "ui.settings.event_up": "quality raised → {level}",
   "ui.settings.event_revert": "trial failed, back to → {level}",
   "ui.settings.event_dyn_down": "3D resolution lowered",
-  "ui.settings.event_dyn_up": "3D resolution raised"
+  "ui.settings.event_dyn_up": "3D resolution raised",
+  "ui.settings.diag_calib": "Launch calibration",
+  "ui.settings.calib_pending": "pending",
+  "ui.settings.calib_running": "running…",
+  "ui.settings.calib_none": "n/a (manual setting)",
+  "ui.settings.calib_done": "{level}, resolution {res}% ({fps} fps measured)",
+  "ui.settings.toast_calib": "Quality set for this machine: %s",
+  "ui.settings.event_calib": "calibration → {level}"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

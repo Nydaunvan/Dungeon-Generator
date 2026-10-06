@@ -255,6 +255,7 @@ func _diag() -> void:
 	_live["fps"] = _kv(L.t("ui.settings.diag_fps"), "")
 	_live["level"] = _kv(L.t("ui.settings.diag_level"), "")
 	_live["res"] = _kv(L.t("ui.settings.diag_res"), "")
+	_live["calib"] = _kv(L.t("ui.settings.diag_calib"), "")
 	_live["last"] = _kv(L.t("ui.settings.diag_last"), "")
 	_tick()
 	_timer.start()
@@ -275,6 +276,7 @@ func _tick() -> void:
 	(_live.fps as Label).text = "%d" % roundi(Engine.get_frames_per_second())
 	(_live.level as Label).text = Settings.level_name("custom" if Settings.preset == "custom" else Settings.level)
 	(_live.res as Label).text = "%d %%" % roundi(Settings.res_scale() * 100.0)
+	(_live.calib as Label).text = Settings.calib_text()
 	(_live.last as Label).text = _event_text()
 
 func _event_text() -> String:

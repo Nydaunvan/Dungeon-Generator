@@ -1259,7 +1259,7 @@
   "ui.settings.level_ultra": "Ultra",
   "ui.settings.level_custom": "Personnalisé",
   "ui.settings.quality_title": "Qualité graphique",
-  "ui.settings.preset_hint_auto": "Le niveau est choisi d'après votre machine, puis ajusté pendant la partie si le jeu ralentit.",
+  "ui.settings.preset_hint_auto": "À chaque lancement, le jeu mesure les performances de la machine et règle la qualité pour viser au moins 60 images par seconde avec des textures standard (1024). Il ne réduit en dessous que si c'est nécessaire, et ne monte que s'il y a une vraie marge.",
   "ui.settings.preset_hint_low": "Pour les machines modestes et les téléphones : rendu allégé, peu de lumières et d'effets.",
   "ui.settings.preset_hint_medium": "Un bon équilibre entre fluidité et beauté.",
   "ui.settings.preset_hint_high": "Rendu complet : lumières des torches et des sorts, anticrénelage, textures nettes.",
@@ -1332,7 +1332,14 @@
   "ui.settings.event_up": "qualité relevée → {level}",
   "ui.settings.event_revert": "essai non tenu, retour → {level}",
   "ui.settings.event_dyn_down": "résolution 3D réduite",
-  "ui.settings.event_dyn_up": "résolution 3D relevée"
+  "ui.settings.event_dyn_up": "résolution 3D relevée",
+  "ui.settings.diag_calib": "Calibration au lancement",
+  "ui.settings.calib_pending": "en attente",
+  "ui.settings.calib_running": "en cours…",
+  "ui.settings.calib_none": "non applicable (réglage manuel)",
+  "ui.settings.calib_done": "{level}, résolution {res} % ({fps} i/s mesurées)",
+  "ui.settings.toast_calib": "Qualité réglée pour cette machine : %s",
+  "ui.settings.event_calib": "calibration → {level}"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",
