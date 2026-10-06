@@ -129,20 +129,13 @@ func _play(stream: AudioStream) -> void:
 	p.stream = stream
 	p.play()
 
-## Joue un effet. `arg` : type d'arme (swing), style du sort (spell), intensité (monster_approach), montée (stairs).
+## Joue un effet. `arg` : type d'arme (swing), style du sort (spell), montée (stairs).
 func sfx(name: String, arg = null) -> void:
 	if not enabled:
 		return
 	_play(_sfx_stream(name, arg))
 
-## Intensité de monster_approach arrondie au dixième : un petit nombre de variantes, toutes préchargées.
-func _norm_arg(name: String, arg):
-	if name == "monster_approach":
-		return snappedf(clampf(float(arg if arg != null else 1.0), 0.1, 1.0), 0.1)
-	return arg
-
 func _sfx_stream(name: String, arg) -> AudioStreamWAV:
-	arg = _norm_arg(name, arg)
 	var key := name + "|" + str(arg)
 	if not _cache.has(key):
 		_cache[key] = _build_sfx(name, arg)
@@ -154,10 +147,6 @@ func sfx_later(delay: float, name: String, arg = null) -> void:
 func _build_sfx(name: String, arg) -> AudioStreamWAV:
 	var b := Synth.new(RATE)
 	match name:
-		"monster_approach":
-			var g := clampf(float(arg if arg != null else 1.0), 0.1, 1.0)
-			b.noise(0.09, "lowpass", 180.0, 0.6, 0.07 * g, 0.005, 0.09)
-			b.tone(68.0, 0.09, "sine", 0.05 * g, 0.012, 0.12)
 		"door_creak": b.creak()
 		"door_locked":
 			b.tone(140.0, 0.05, "square", 0.16, 0.012, 0.05)
@@ -407,8 +396,6 @@ func preload_all(progress: Callable = Callable()) -> void:
 		jobs.append({"label": lbl_sfx, "w": 0.6, "fn": func(): _sfx_stream("swing", w)})
 	for st in PRELOAD_SPELLS:
 		jobs.append({"label": lbl_sfx, "w": 0.8, "fn": func(): _sfx_stream("spell", st)})
-	for i in range(1, 11):
-		jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): _sfx_stream("monster_approach", i / 10.0)})
 	for up in [true, false]:
 		jobs.append({"label": lbl_sfx, "w": 1.0, "fn": func(): _sfx_stream("stairs", up)})
 	for kind in ["shimmer", "drip", "crackle", "wind", "bell"]:
