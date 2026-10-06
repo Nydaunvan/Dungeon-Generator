@@ -1,0 +1,71 @@
+name: Export Windows (exe) et mise à jour de la préversion
+
+# À lancer à la main (onglet Actions > « Export Windows… » > Run workflow) : exporte le jeu en exécutable Windows avec
+# Godot 4.7.2, le garde en pièce jointe de l'exécution, puis remplace le zip de la préversion GitHub indiquée.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Étiquette de la préversion à mettre à jour (vide : pièce jointe de l'exécution seulement)"
+        default: "v1.29-test1"
+        required: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_BASE: https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
+
+permissions:
+  contents: write
+
+jobs:
+  export-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache de Godot et des modèles d'export Windows
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-windows
+
+      - name: Installer Godot et les modèles d'export Windows
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin ~/.local/share/godot/export_templates
+          curl -fsSL -o /tmp/godot.zip "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+          curl -fsSL -o /tmp/templates.tpz "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/templates.tpz 'templates/windows_*' templates/version.txt -d /tmp/templates
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          cp /tmp/templates/templates/windows_* /tmp/templates/templates/version.txt ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot.zip
+
+      - name: Importer les ressources puis exporter en Windows
+        run: |
+          set -euo pipefail
+          GODOT=~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          chmod +x "$GODOT"
+          mkdir -p build/windows
+          "$GODOT" --headless --path . --import
+          "$GODOT" --headless --path . --export-release "Windows" "build/windows/Dungeon Generator.exe"
+          cd build/windows && zip -q -9 ../Dungeon.Generator.zip "Dungeon Generator.exe"
+          ls -la ..
+
+      - name: Garder le zip en pièce jointe (14 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dungeon-generator-windows
+          path: build/Dungeon.Generator.zip
+          retention-days: 14
+
+      - name: Remplacer le zip de la préversion
+        if: inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" build/Dungeon.Generator.zip --clobber
