@@ -5,6 +5,7 @@ extends MarginContainer
 
 signal command(cmd: String)
 signal menu_pressed(name: String)
+signal credits_pressed
 signal monster_pressed(def: Dictionary, st: Dictionary)
 signal item_pressed(index: int)
 signal card_opened(char_id: String)
@@ -576,7 +577,12 @@ func _rebuild() -> void:
 		footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
 		footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
 		footer.add_theme_color_override("font_color", Color("6f5e44"))
-		footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		footer.mouse_filter = Control.MOUSE_FILTER_STOP   # clic : générique
+		footer.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		footer.gui_input.connect(func(ev: InputEvent):
+			var mb := ev as InputEventMouseButton
+			if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+				credits_pressed.emit())
 	v.add_child(header)
 	await _yield()
 	if _portrait:

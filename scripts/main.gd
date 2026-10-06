@@ -85,6 +85,7 @@ func _ready() -> void:
 	layout.command.connect(_on_command)
 	layout.monster_pressed.connect(func(d, s): MonsterInfoModal.open(_modals(), d, s))
 	layout.menu_pressed.connect(_on_menu)
+	layout.credits_pressed.connect(func(): CreditsRoll.open(_modals()))
 	# le monde 3D vit dans la vue encadrée
 	layout.world.add_child(rig)
 	rig.camera.current = true

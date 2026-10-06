@@ -168,8 +168,10 @@ func _build() -> void:
 	var ver := _link(L.t("common.editeur_de_donjon") + " v1.29 · " + L.t("common.portage_godot"), "changelog", 14)
 	ver.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	fv.add_child(ver)
-	var made := _label("Made by Claude & Nydaunvan", 13, Color("9c8659"), UiTheme.F_BODY_ITALIC)
-	made.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var made := _link("Made by Claude & Nydaunvan", "credits", 13)
+	made.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	made.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	made.add_theme_color_override("font_color", Color("9c8659"))
 	fv.add_child(made)
 	_built = true
 

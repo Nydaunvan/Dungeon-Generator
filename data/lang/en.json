@@ -1341,7 +1341,16 @@
   "ui.settings.toast_calib": "Quality set for this machine: %s",
   "ui.settings.event_calib": "calibration → {level}",
   "loading.moteur": "Preparing the engine…",
-  "loading.shaders": "Preparing visual effects…"
+  "loading.shaders": "Preparing visual effects…",
+  "ui.credits.titre": "Dungeon Generator",
+  "ui.credits.par": "By Claude & Nydaunvan",
+  "ui.credits.fait_avec": "Game made with Godot and Claude.",
+  "ui.credits.annee": "2026",
+  "ui.credits.merci_1": "Thanks to my family, my friends and Laurent\nfor all the ideas and the testing.",
+  "ui.credits.merci_2": "To Théo and Stéphane for their sharp eye.",
+  "ui.credits.a_propos": "This game is made by a fan of the genre who knows nothing about development. There is a full Web version, but I moved to Godot on the advice of Laurent, who is developing his own game (go check it out!):\nhttps://jyraia-sama.github.io/Brother-of-Legacy-Tears-and-Blood-Godot/",
+  "ui.credits.merci_fans": "Thanks to the fans",
+  "ui.credits.fermer_indice": "Click or Esc to close"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

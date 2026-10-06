@@ -42,6 +42,7 @@ func _on_action(name: String) -> void:
 		"import-json": _import_json()
 		"tutorial": DocModal.tutorial(_modal_layer)
 		"changelog": DocModal.changelog(_modal_layer)
+		"credits": CreditsRoll.open(_modal_layer)
 
 func _soon(what: String) -> void:
 	Dialogs.notice(_modal_layer, what, L.t("home.cette_partie_est_en_cours"))

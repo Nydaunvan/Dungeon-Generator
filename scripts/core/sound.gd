@@ -16,7 +16,12 @@ var _pool_next: int = 0
 var _music: AudioStreamPlayer
 var _menu: AudioStreamPlayer          # musique de l'accueil (fichier OGG en boucle, lecture en flux)
 var _menu_tween: Tween
+var _credits: AudioStreamPlayer       # musique du générique
+var _credits_tween: Tween
+var _credits_on: bool = false
+var _credits_resume_menu: bool = false
 var _menu_wanted: bool = false
+const CREDITS_MUSIC := "res://assets/music/credits.ogg"
 const MENU_MUSIC := "res://assets/music/menu.ogg"
 var _ambient_key: String = ""
 var _shimmer: Timer
@@ -64,6 +69,10 @@ func _ready() -> void:
 	_menu.bus = "Music"
 	_menu.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_menu)
+	_credits = AudioStreamPlayer.new()
+	_credits.bus = "Music"
+	_credits.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	add_child(_credits)
 	_shimmer = Timer.new()
 	_shimmer.timeout.connect(_on_shimmer)
 	add_child(_shimmer)
@@ -232,6 +241,36 @@ func _spell(b: Synth, style: String) -> void:
 		_: b.tone(500.0, 0.1, "sawtooth", 0.10, 0.012, 0.18, 0.0, 1400.0)   # arcane
 
 # ------------------------------------------------------------------ ambiance et musique
+
+## Musique du générique : elle prend la place de la musique d'accueil ou de l'ambiance du donjon (mises en pause), puis les rend.
+func credits_music(on: bool) -> void:
+	if on == _credits_on:
+		return
+	_credits_on = on
+	if _credits_tween != null:
+		_credits_tween.kill()
+	if on:
+		_credits_resume_menu = _menu_wanted
+		if _credits_resume_menu:
+			menu_music(false, 0.6)
+		_music.stream_paused = true
+		_shimmer.paused = true
+		var st = load(CREDITS_MUSIC)
+		if st == null:
+			return
+		_credits.stream = st
+		_credits.volume_db = -60.0
+		_credits.play()
+		_credits_tween = create_tween()
+		_credits_tween.tween_property(_credits, "volume_db", 0.0, 1.0)
+	else:
+		_credits_tween = create_tween()
+		_credits_tween.tween_property(_credits, "volume_db", -60.0, 0.8)
+		_credits_tween.tween_callback(_credits.stop)
+		_music.stream_paused = false
+		_shimmer.paused = false
+		if _credits_resume_menu:
+			menu_music(true, 1.5)
 
 ## Musique de l'accueil. `on` = true : fondu d'entrée (elle continue d'un écran du menu à l'autre) ; false : fondu de sortie.
 ## Sur le Web, rien ne sort avant le premier geste du joueur : la demande est mémorisée et jouée par unlock().
