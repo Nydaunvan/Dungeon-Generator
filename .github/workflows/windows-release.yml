@@ -3,7 +3,12 @@ name: Export Windows (exe) et mise à jour de la préversion
 # À lancer à la main (onglet Actions > « Export Windows… » > Run workflow) : exporte le jeu en exécutable Windows avec
 # Godot 4.7.2, le garde en pièce jointe de l'exécution, puis remplace le zip de la préversion GitHub indiquée.
 
+# Sans accès au bouton « Run workflow » (le fichier doit être sur la branche par défaut), il se déclenche aussi sur un push
+# de la branche de migration dont le message de commit contient « [exe] » : la préversion v1.29-test1 est alors mise à jour.
+
 on:
+  push:
+    branches: [migration/donnees]
   workflow_dispatch:
     inputs:
       tag:
@@ -20,6 +25,7 @@ permissions:
 
 jobs:
   export-windows:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exe]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +71,8 @@ jobs:
           retention-days: 14
 
       - name: Remplacer le zip de la préversion
-        if: inputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ inputs.tag }}" build/Dungeon.Generator.zip --clobber
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.29-test1' }}
+        run: |
+          if [ -n "$TAG" ]; then gh release upload "$TAG" build/Dungeon.Generator.zip --clobber; fi
