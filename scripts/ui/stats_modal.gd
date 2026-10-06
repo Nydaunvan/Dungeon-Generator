@@ -48,10 +48,13 @@ static func _grid(parent: Control, cells: Array) -> void:
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 6)
 		row.add_child(AdminUtil.label("%s %s" % [c[0], c[1]], 14, UiTheme.DIM))
-		var sp := Control.new()
-		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(sp)
-		row.add_child(AdminUtil.label(str(c[2]), 14, UiTheme.PARCH))
+		# valeur longue (titre du donjon) : tronquée plutôt que de déborder de l'écran
+		var val := AdminUtil.label(str(c[2]), 14, UiTheme.PARCH)
+		val.clip_text = true
+		val.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		val.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(val)
 		g.add_child(row)
 	parent.add_child(g)
 

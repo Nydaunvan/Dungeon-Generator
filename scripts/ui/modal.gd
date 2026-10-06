@@ -88,7 +88,7 @@ func add_text(text: String, color: Color = UiTheme.PARCH, size: int = 16, italic
 	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.custom_minimum_size = Vector2(_width - 100.0, 0)
+	l.custom_minimum_size = Vector2(minf(_width, get_viewport_rect().size.x - 24.0) - 100.0, 0)
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
 	if italic:

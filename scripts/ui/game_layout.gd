@@ -32,6 +32,7 @@ var message_label: Label
 var level_label: Label
 var compass_letters: Array[Label] = []
 var pad: TouchControls
+var map_btn: Button
 var act_box: VBoxContainer
 var btn_flee: Button
 var queue: QueueBar
@@ -53,6 +54,7 @@ var _root: Control
 var footer: Label
 var _scroll: ScrollContainer
 var _portrait: bool = false
+var _compact: bool = false     # mobile (portrait, écran tactile ou fenêtre très basse) : la carte quitte l'écran
 var _built_mode: int = -1
 var _title: Label
 var type_badge: Label
@@ -429,6 +431,19 @@ func _build_parts() -> void:
 	pad.command.connect(func(c): command.emit(c))
 	stage.add_child(pad)
 
+	# mobile : bouton 🗺 sous le pouce (en bas à droite de la vue), ouvre la carte en plein écran ; un second appui la referme
+	map_btn = Button.new()
+	map_btn.text = "🗺"
+	map_btn.focus_mode = Control.FOCUS_NONE
+	map_btn.tooltip_text = L.t("ui.game_layout.carte_en_plein_ecran_touche")
+	map_btn.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	map_btn.add_theme_color_override("font_color", Color("ffd98a"))
+	var mst := IronBox.button_styles()
+	for k in mst:
+		map_btn.add_theme_stylebox_override(k, mst[k])
+	map_btn.pressed.connect(func(): menu_pressed.emit("Carte"))
+	stage.add_child(map_btn)
+
 	act_box = VBoxContainer.new()
 	act_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn_flee = Button.new()
@@ -506,9 +521,12 @@ func _build_parts() -> void:
 func _update_mode() -> void:
 	UiMetrics.update(self)
 	var portrait := size.x < size.y * PORTRAIT_RATIO
-	var mode := 1 if portrait else 0
+	var win := get_window()
+	var compact := portrait or Settings.is_mobile() or win.size.y < 520
+	var mode := (1 if portrait else 0) + (2 if compact else 0)
 	if mode != _built_mode:
 		_built_mode = mode
+		_compact = compact
 		_portrait = portrait
 		_rebuild()
 	_size_widgets()
@@ -545,19 +563,30 @@ func _rebuild() -> void:
 		footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(header)
 	if _portrait:
-		frame.size_flags_stretch_ratio = 3.0
+		frame.size_flags_stretch_ratio = 4.0
 		v.add_child(frame)
 		v.add_child(queue)
 		v.add_child(strip)
 		v.add_child(hud)
 		var tabs := TabContainer.new()
 		tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		tabs.size_flags_stretch_ratio = 2.0
-		tabs.custom_minimum_size = Vector2(0, 120)
+		tabs.size_flags_stretch_ratio = 1.0
+		tabs.custom_minimum_size = Vector2(0, 110)
 		v.add_child(tabs)
-		for p in [panel_map, panel_bag, panel_log, panel_menu]:
-			tabs.add_child(p)
+		# la carte quitte l'écran mobile (la vue 3D gagne la place) : le bouton 🗺 de la vue l'ouvre en plein écran
+		panel_map.visible = false
+		v.add_child(panel_map)
+		for p in [panel_bag, panel_log, panel_menu]:
+			# chaque onglet défile s'il manque de place : la vue 3D garde le plus de hauteur possible
+			var sc := ScrollContainer.new()
+			sc.name = p.name
+			sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			p.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			sc.add_child(p)
+			tabs.add_child(sc)
 	else:
+		panel_map.visible = not _compact
 		frame.size_flags_stretch_ratio = 1.0
 		var h := HBoxContainer.new()
 		h.name = "Main"
@@ -595,6 +624,7 @@ func _rebuild() -> void:
 		panel_log.size_flags_stretch_ratio = 1.0
 		panel_menu.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	v.add_child(footer)
+	footer.visible = not _portrait
 	call_deferred("_size_widgets")
 
 func _size_widgets() -> void:
@@ -621,6 +651,25 @@ func _size_overlays() -> void:
 	pad.rescale()
 	pad.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_KEEP_SIZE, int(UiMetrics.css(12.0)))
 	act_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, int(UiMetrics.css(12.0)))
+	# boussole : en haut au centre en paysage ; sur mobile elle descend au bas de la vue (le haut est pris par la plaque et les boutons)
+	if _comp != null:
+		_comp.anchor_top = 1.0 if _portrait else 0.0
+		_comp.anchor_bottom = 1.0 if _portrait else 0.0
+		_comp.grow_vertical = Control.GROW_DIRECTION_BEGIN if _portrait else Control.GROW_DIRECTION_END
+		_comp.offset_top = -UiMetrics.css(10.0) if _portrait else UiMetrics.css(6.0)
+		_comp.offset_bottom = -UiMetrics.css(10.0) if _portrait else UiMetrics.css(6.0)
+	var mb := UiMetrics.css(46.0)
+	map_btn.custom_minimum_size = Vector2(mb, mb)
+	map_btn.add_theme_font_size_override("font_size", int(mb * 0.55))
+	var mm := UiMetrics.css(12.0)
+	map_btn.anchor_left = 1.0
+	map_btn.anchor_right = 1.0
+	map_btn.anchor_top = 1.0
+	map_btn.anchor_bottom = 1.0
+	map_btn.offset_right = -mm
+	map_btn.offset_left = -mm - mb
+	map_btn.offset_bottom = -mm
+	map_btn.offset_top = -mm - mb
 
 # ------------------------------------------------------------------ mises à jour
 
@@ -719,6 +768,7 @@ func _process(_d: float) -> void:
 		save_menu.locked = on
 		panel_menu.modulate = Color(0.62, 0.62, 0.62, 0.4) if on else Color.WHITE
 	pad.visible = not on
+	map_btn.visible = _compact and not on
 	_comp.visible = not on
 	view_controls.visible = not on
 	if on:

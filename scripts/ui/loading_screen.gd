@@ -23,6 +23,7 @@ var _shown := 0.0
 var _t := 0.0
 var _tip_i := 0
 var _tip_t := 0.0
+var _center: CenterContainer
 
 func _ready() -> void:
 	theme = UiTheme.shared()
@@ -93,6 +94,7 @@ func _build() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
+	_center = center
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -166,6 +168,24 @@ func _build() -> void:
 	_tip.offset_bottom = -30
 	add_child(_tip)
 	_embers.position = Vector2(640, 760)
+	resized.connect(_fit_content)
+	_fit_content.call_deferred()
+
+## Mise en page conçue pour 1280 px de large : sur un écran étroit (mobile, portrait), tout le bloc central est réduit pour tenir
+## dans la largeur au lieu de déborder à droite.
+func _fit_content() -> void:
+	if _center == null or size.x <= 0.0:
+		return
+	var sc := clampf(size.x / 980.0, 0.3, 1.0)
+	_center.scale = Vector2(sc, sc)
+	_center.size = size / sc
+	_tip.custom_minimum_size.x = minf(640.0, size.x - 24.0)
+	_tip.offset_left = -_tip.custom_minimum_size.x * 0.5
+	_tip.offset_right = _tip.custom_minimum_size.x * 0.5
+	_tip.offset_top = -78.0 if sc >= 1.0 else -96.0
+	_tip.offset_bottom = -30.0
+	_embers.position = Vector2(size.x * 0.5, size.y + 40.0)
+	_embers.emission_rect_extents = Vector2(size.x * 0.33, 4.0)
 
 func _label(text: String, font_path: String, size: int, color: Color) -> Label:
 	var l := Label.new()

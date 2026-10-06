@@ -88,6 +88,16 @@ func set_home_mode(on: bool) -> void:
 	_home_mode = on
 	btn_home.disabled = on
 
+## Sur mobile (portrait) la rangée de boutons ne garde que l'icône : le texte complet passe dans l'infobulle.
+func _short(full: String) -> String:
+	var parts := full.split(" ", false, 1)
+	if parts.size() < 2:
+		return full
+	var first := parts[0]
+	if first.unicode_at(0) > 0x2000:       # commence par un symbole / un emoji : on le garde seul
+		return first
+	return full
+
 func rescale() -> void:
 	custom_minimum_size.y = UiMetrics.css(92.0 if not UiMetrics.portrait else 60.0)
 	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(28.8 if not UiMetrics.portrait else 15.0)))
@@ -95,8 +105,15 @@ func rescale() -> void:
 	_frame.rescale()
 	if nav_row != null:
 		for b in nav_row.get_children():
-			if b is BaseButton or b is MenuButton:
-				_style(b, (b as Button).text if b is Button else (b as MenuButton).text)
+			if b is Button:
+				if not b.has_meta("full"):
+					b.set_meta("full", (b as Button).text)
+					if (b as Button).tooltip_text == "":
+						(b as Button).tooltip_text = str((b as Button).text)
+				var full := str(b.get_meta("full"))
+				_style(b, _short(full) if UiMetrics.portrait else full)
+			elif b is MenuButton:
+				_style(b, (b as MenuButton).text)
 
 func _process(_d: float) -> void:
 	btn_admin.visible = (Data.admin_unlocked or Data.play_origin == "random") and not _home_mode
@@ -110,7 +127,7 @@ func _style(b: Button, text: String) -> void:
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82 if not UiMetrics.portrait else 0.66)))
+	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.82 if not UiMetrics.portrait else 0.9)))
 	b.add_theme_color_override("font_color", Color("dccbaa"))
 	b.add_theme_color_override("font_hover_color", Color("ffd98a"))
 	b.add_theme_color_override("font_pressed_color", Color("ffd98a"))
@@ -120,8 +137,8 @@ func _style(b: Button, text: String) -> void:
 		g.bg_color = Color("3a2e21") if st == "hover" else (Color("43352a") if st == "disabled" else Color("2a2119"))
 		g.border_color = Color("070504")
 		g.border_width_left = maxi(1, roundi(UiMetrics.css(2.0)))
-		g.content_margin_left = UiMetrics.css(14.0 if not UiMetrics.portrait else 7.0)
-		g.content_margin_right = UiMetrics.css(14.0 if not UiMetrics.portrait else 7.0)
+		g.content_margin_left = UiMetrics.css(14.0 if not UiMetrics.portrait else 4.5)
+		g.content_margin_right = UiMetrics.css(14.0 if not UiMetrics.portrait else 4.5)
 		g.content_margin_top = UiMetrics.css(7.0)
 		g.content_margin_bottom = UiMetrics.css(7.0)
 		b.add_theme_stylebox_override(st, g)

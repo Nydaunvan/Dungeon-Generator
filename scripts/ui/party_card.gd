@@ -194,7 +194,13 @@ func _layout() -> void:
 	cls_ico.size = Vector2(ico, ico)
 	cls_ico.position = Vector2(lvl_lbl.position.x - gap - ico, ry + (u(19.0) - ico) * 0.5)
 	var name_w := maxf(10.0, cls_ico.position.x - x0 - gap)
+	cls_ico.visible = not UiMetrics.portrait
+	if UiMetrics.portrait:
+		# mobile : la place manque, l'icône de classe cède sa place au nom (la classe reste écrite dessous)
+		cls_ico.visible = false
+		name_w = maxf(10.0, lvl_lbl.position.x - x0 - gap)
 	_put(name_lbl, x0, ry, name_w, u(19.0), 16.5)
+	_fit_name(name_w)
 	_put(cls_lbl, x0, u(26.0), name_w, u(13.0), 11.5)
 	for l in [name_lbl, cls_lbl]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -206,6 +212,14 @@ func _layout() -> void:
 	dead_lbl.size = Vector2(size.x, u(30.0))
 	dead_lbl.position = Vector2(0, (size.y - u(30.0)) * 0.5)
 	dead_lbl.add_theme_font_size_override("font_size", maxi(9, int(u(22.0))))
+
+## Réduit la police du nom jusqu'à ce qu'il tienne sur sa ligne (jamais en dessous de 60 %).
+func _fit_name(w: float) -> void:
+	var fs := name_lbl.get_theme_font_size("font_size")
+	var font := name_lbl.get_theme_font("font")
+	var wanted := font.get_string_size(name_lbl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	if wanted > w and wanted > 0.0:
+		name_lbl.add_theme_font_size_override("font_size", maxi(6, int(floorf(fs * maxf(0.6, w / wanted)))))
 
 func _put(l: Label, x: float, y: float, w: float, h: float, fs: float) -> void:
 	l.position = Vector2(x, y)

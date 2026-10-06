@@ -433,7 +433,8 @@ func _layout_stacked(area: Rect2) -> void:
 	_scroll.position = area.position
 	_scroll.size = area.size
 	var cw := minf(area.size.x - 32.0, 420.0)
-	_column.custom_minimum_size = Vector2(area.size.x, 0)
+	_column.custom_minimum_size = Vector2(0, 0)   # la largeur suit celle du défilement (barre verticale comprise) : jamais de débordement
+	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var tsz := _place_title(76, 30, cw, true)
 	_title_box.custom_minimum_size = Vector2(cw, tsz.y)
 	_title_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -451,5 +452,5 @@ func _layout_stacked(area: Rect2) -> void:
 	for b in _links.get_children():
 		b.add_theme_font_size_override("font_size", 14)
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_foot.custom_minimum_size = Vector2(area.size.x, 90)
+	_foot.custom_minimum_size = Vector2(0, 90)
 	_foot.size_flags_horizontal = Control.SIZE_EXPAND_FILL

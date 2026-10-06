@@ -13,9 +13,13 @@ static func open(host: Node, grid: DungeonGrid, rig: PlayerRig, gs: GameState, m
 	var vp := host.get_viewport().get_visible_rect().size
 	var side := minf(vp.y * 0.42, 460.0)
 	var ratio := float(grid.width) / float(grid.height)
-	mp.custom_minimum_size = Vector2(minf(side * ratio, vp.x - 80.0), side)
+	mp.custom_minimum_size = Vector2(minf(side * ratio, vp.x - 130.0), side)
 	mp.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	mp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# un appui sur la carte la referme (consultation rapide sur mobile)
+	mp.mouse_filter = Control.MOUSE_FILTER_STOP
+	mp.gui_input.connect(func(e: InputEvent):
+		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed):
+			m.close())
 	m.content.add_child(mp)
 	var rows := [["▲", L.t("ui.full_map_modal.votre_position_et_direction_actuelles")], ["🚪", L.t("ui.full_map_modal.porte")], ["✨", L.t("ui.full_map_modal.escalier_changement_de_niveau")],
 		["⛲", L.t("ui.full_map_modal.fontaine_soin_endurance_resurrection")], ["🔴", L.t("ui.full_map_modal.monstre_repere")], ["🟡", L.t("ui.full_map_modal.boss_repere")]]

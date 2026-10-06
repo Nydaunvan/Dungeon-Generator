@@ -20,6 +20,7 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène princ
 - Compilation : `godot --headless --path . res://tools/check_compile.tscn`
 - Textes : `python3 tools/check_lang.py`
 - Réglages graphiques : `godot --headless --path . res://tools/check_settings.tscn`
+- Mise en page mobile (aucun débordement à droite, carte masquée) : `godot --headless --path . res://tools/check_mobile.tscn`
 
 ## Commandes (couloir 3D)
 Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner (libellés AZERTY).
