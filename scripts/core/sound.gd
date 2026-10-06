@@ -14,6 +14,10 @@ var _cache: Dictionary = {}
 var _pool: Array[AudioStreamPlayer] = []
 var _pool_next: int = 0
 var _music: AudioStreamPlayer
+var _menu: AudioStreamPlayer          # musique de l'accueil (fichier OGG en boucle, lecture en flux)
+var _menu_tween: Tween
+var _menu_wanted: bool = false
+const MENU_MUSIC := "res://assets/music/menu.ogg"
 var _ambient_key: String = ""
 var _shimmer: Timer
 var _shimmer_kind: String = ""
@@ -58,6 +62,10 @@ func _ready() -> void:
 	_music.bus = "Music"
 	_music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_music)
+	_menu = AudioStreamPlayer.new()
+	_menu.bus = "Music"
+	_menu.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	add_child(_menu)
 	_shimmer = Timer.new()
 	_shimmer.timeout.connect(_on_shimmer)
 	add_child(_shimmer)
@@ -219,6 +227,34 @@ func _spell(b: Synth, style: String) -> void:
 		_: b.tone(500.0, 0.1, "sawtooth", 0.10, 0.012, 0.18, 0.0, 1400.0)   # arcane
 
 # ------------------------------------------------------------------ ambiance et musique
+
+## Musique de l'accueil. `on` = true : fondu d'entrée (elle continue d'un écran du menu à l'autre) ; false : fondu de sortie.
+## Sur le Web, rien ne sort avant le premier geste du joueur : la demande est mémorisée et jouée par unlock().
+func menu_music(on: bool, fade: float = 1.2) -> void:
+	_menu_wanted = on
+	if on and (OS.has_feature("web") and not _unlocked):
+		return
+	if _menu_tween != null:
+		_menu_tween.kill()
+	if on:
+		if _menu.playing and _menu.volume_db > -30.0:
+			return
+		if _menu.stream == null:
+			var st = load(MENU_MUSIC)
+			if st == null:
+				return
+			if st is AudioStreamOggVorbis:
+				st.loop = true
+			_menu.stream = st
+		if not _menu.playing:
+			_menu.volume_db = -60.0
+			_menu.play()
+		_menu_tween = create_tween()
+		_menu_tween.tween_property(_menu, "volume_db", 0.0, fade)
+	elif _menu.playing:
+		_menu_tween = create_tween()
+		_menu_tween.tween_property(_menu, "volume_db", -60.0, fade)
+		_menu_tween.tween_callback(_menu.stop)
 
 ## Lance l'ambiance du thème (ou la musique de boss). Sans effet si déjà en cours.
 ## (Coroutine : si la musique n'a pas été préchargée, elle est synthétisée ici ; sinon tout est immédiat.)
@@ -419,6 +455,8 @@ func unlock() -> void:
 		AudioServer.get_output_device(), int(AudioServer.get_mix_rate()), AudioServer.get_output_latency() * 1000.0,
 		AudioServer.bus_count, "stream", "activé" if enabled else "coupé"])
 	sfx("pickup")
+	if _menu_wanted:
+		menu_music(true)
 
 # ------------------------------------------------------------------ synthèse
 

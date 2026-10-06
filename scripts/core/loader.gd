@@ -85,6 +85,7 @@ func _frames(n: int = 2) -> void:
 # ------------------------------------------------------------------ démarrage du programme
 
 func boot() -> void:
+	Sound.menu_music(true, 2.0)   # bureau : dès le lancement ; Web : à l'entrée (premier clic)
 	_show(L.t("loading.sous_titre_jeu"))
 	await _frames(2)
 	var web := OS.has_feature("web")
@@ -146,6 +147,7 @@ func go(path: String, kind: String = "game") -> void:
 	if _busy:
 		return
 	_show(_subtitle(kind))
+	Sound.menu_music(kind == "home" or kind == "admin", 1.0)
 	await _frames(2)
 	screen.set_progress(0.04)
 	get_tree().change_scene_to_file(path)
