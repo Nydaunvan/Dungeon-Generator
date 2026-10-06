@@ -130,12 +130,23 @@ func _play(stream: AudioStream) -> void:
 	p.play()
 
 ## Bruit de dés qui roulent (fichier OGG, chargé une fois).
-const DICE_SOUND := "res://assets/sounds/dice.ogg"
+const FILE_SOUNDS := {"dice": "res://assets/sounds/dice.ogg", "coins": "res://assets/sounds/coins.ogg", "map_open": "res://assets/sounds/map_open.ogg"}
+
+func _file_sfx(key: String) -> void:
+	if not _cache.has(key):
+		_cache[key] = load(FILE_SOUNDS[key])
+	_play(_cache[key])
 
 func dice() -> void:
-	if not _cache.has("dice"):
-		_cache["dice"] = load(DICE_SOUND)
-	_play(_cache["dice"])
+	_file_sfx("dice")
+
+## Pièces d'or (gain dans une énigme ou un piège, achat et vente chez le marchand).
+func coins() -> void:
+	_file_sfx("coins")
+
+## Ouverture de la grande carte.
+func map_open() -> void:
+	_file_sfx("map_open")
 
 ## Joue un effet. `arg` : type d'arme (swing), style du sort (spell), montée (stairs).
 func sfx(name: String, arg = null) -> void:
@@ -404,7 +415,8 @@ func preload_all(progress: Callable = Callable()) -> void:
 		jobs.append({"label": lbl_sfx, "w": 0.6, "fn": func(): _sfx_stream("swing", w)})
 	for st in PRELOAD_SPELLS:
 		jobs.append({"label": lbl_sfx, "w": 0.8, "fn": func(): _sfx_stream("spell", st)})
-	jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): dice()})
+	for fk in FILE_SOUNDS:
+		jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): _cache[fk] = load(FILE_SOUNDS[fk])})
 	for up in [true, false]:
 		jobs.append({"label": lbl_sfx, "w": 1.0, "fn": func(): _sfx_stream("stairs", up)})
 	for kind in ["shimmer", "drip", "crackle", "wind", "bell"]:

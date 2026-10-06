@@ -515,7 +515,7 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 			paid += unit_p
 		if bought > 0:
 			gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [L.t("ui.shop_modal.le_groupe_achete") if buy else L.t("ui.shop_modal.le_groupe_vend"), "%d× " % bought if bought > 1 else "", rep_name, paid]))
-			Sound.sfx("pickup")
+			Sound.coins()
 		st.qty.erase(gk)
 		st.sel = ""
 		done.call(err if bought == 0 else "", L.fa(L.t("ui.shop_modal.achat_ok") if buy else L.t("ui.shop_modal.vente_ok"), [bought, L.c(rep_name)]) if bought > 0 else ""))

@@ -727,14 +727,14 @@ func _stage_reward() -> void:
 	t.parallel().tween_property(big, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	t.tween_callback(func():
 		_spark_burst()
-		Sound.sfx("pickup"))
+		if r.kind == "gold":
+			Sound.coins()
+		else:
+			Sound.sfx("pickup"))
 	var fmt: String = {"gold": "+%d 💰", "xp": "+%d XP", "heal": "+%d %% PV"}[r.kind]
 	t.tween_method(func(v: float): amount.text = fmt % int(round(v)), 0.0, float(r.amount), 0.8)
 	_foot_show(false, false, true)
 	_next = func(): _finish()
-	if r.kind == "gold":
-		Sound.sfx_later(0.5, "pickup")
-		Sound.sfx_later(0.7, "pickup")
 
 # ------------------------------------------------------------------ effets
 

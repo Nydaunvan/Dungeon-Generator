@@ -340,6 +340,7 @@ func _toggle_map() -> void:
 	var mc := layout.minimap.merchant_cell
 	var m := FullMapModal.open(_modals(), grid, rig, gs, mc)
 	m.set_meta("full_map", true)
+	Sound.map_open()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
