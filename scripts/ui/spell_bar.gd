@@ -18,7 +18,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 	gs = state
 	ctrl = controller
 	alignment = BoxContainer.ALIGNMENT_BEGIN
-	add_theme_constant_override("separation", 8)
+	add_theme_constant_override("separation", 0)    # l'espace entre disques vient de ressorts extensibles (voir _spring) : la largeur minimale ne dépend plus de la largeur actuelle
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_attack = SpellDisc.new()
 	_attack.tone = "attack"
@@ -26,6 +26,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 	_attack.pressed.connect(func(): attack_pressed.emit())
 	add_child(_attack)
 	for i in SLOTS:
+		add_child(_spring())
 		var b := SpellDisc.new()
 		var idx := i
 		b.pressed.connect(func(): _slot_pressed(idx))
@@ -36,6 +37,14 @@ func setup(state: GameState, controller: CombatController) -> void:
 	resized.connect(_apply_size)
 	ctrl.changed.connect(_refresh)
 	_apply_size()
+
+## Espace élastique entre deux disques (« space-between » de l'original) : minimum nul, il prend le reste de la largeur.
+func _spring() -> Control:
+	var c := Control.new()
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.custom_minimum_size = Vector2(2, 0)
+	return c
 
 func _exit_tree() -> void:
 	SpellTip.hide_tip()
@@ -62,7 +71,6 @@ func _apply_size() -> void:
 	_last_w = w
 	var s := UiMetrics.css(clampf(0.09 * w, 30.0, 46.0))
 	slot_size = s
-	add_theme_constant_override("separation", int(maxf(2.0, floorf((w - s * float(SLOTS + 1)) / float(SLOTS)))))
 	_attack.custom_minimum_size = Vector2(s, s)
 	for b in _slots:
 		b.custom_minimum_size = Vector2(s, s)

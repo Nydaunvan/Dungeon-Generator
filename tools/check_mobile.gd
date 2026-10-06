@@ -31,6 +31,9 @@ func _ready() -> void:
 			_over(s, w, "%s %dx%d" % [scene, sz.x, sz.y])
 			if scene == "main":
 				var lay: GameLayout = s.layout
+				# la largeur minimale de l'interface ne doit jamais suivre sa largeur actuelle (sinon elle reste « bloquée » trop large)
+				if lay.spell_bar.get_combined_minimum_size().x > lay.size.x * 0.85:
+					fail("barre de sorts : largeur minimale %.0f trop proche de la largeur affichée %.0f" % [lay.spell_bar.get_combined_minimum_size().x, lay.size.x])
 				if lay.panel_map.is_visible_in_tree():
 					fail("mobile : la carte doit être masquée")
 				if not lay.map_btn.is_visible_in_tree():
