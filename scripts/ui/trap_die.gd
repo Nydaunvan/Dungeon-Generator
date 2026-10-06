@@ -89,6 +89,7 @@ func roll(result: int, dur: float = 3.4) -> void:
 	if _tween:
 		_tween.kill()
 	rolling = true
+	Sound.dice()
 	var f: Face = _by_num[result]
 	var rf := _rows(f.ex, f.ey, f.ez)
 	var sg := func(): return -1.0 if randf() < 0.5 else 1.0

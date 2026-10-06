@@ -129,6 +129,14 @@ func _play(stream: AudioStream) -> void:
 	p.stream = stream
 	p.play()
 
+## Bruit de dés qui roulent (fichier OGG, chargé une fois).
+const DICE_SOUND := "res://assets/sounds/dice.ogg"
+
+func dice() -> void:
+	if not _cache.has("dice"):
+		_cache["dice"] = load(DICE_SOUND)
+	_play(_cache["dice"])
+
 ## Joue un effet. `arg` : type d'arme (swing), style du sort (spell), montée (stairs).
 func sfx(name: String, arg = null) -> void:
 	if not enabled:
@@ -396,6 +404,7 @@ func preload_all(progress: Callable = Callable()) -> void:
 		jobs.append({"label": lbl_sfx, "w": 0.6, "fn": func(): _sfx_stream("swing", w)})
 	for st in PRELOAD_SPELLS:
 		jobs.append({"label": lbl_sfx, "w": 0.8, "fn": func(): _sfx_stream("spell", st)})
+	jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): dice()})
 	for up in [true, false]:
 		jobs.append({"label": lbl_sfx, "w": 1.0, "fn": func(): _sfx_stream("stairs", up)})
 	for kind in ["shimmer", "drip", "crackle", "wind", "bell"]:

@@ -139,10 +139,12 @@ func _apply(d: Dictionary, rot: Vector3, x: float, y: float) -> void:
 
 ## Lance les deux dés (ignoré pour un dé déjà en mouvement).
 func roll() -> void:
+	var started := false
 	for i in 2:
 		var d: Dictionary = _dice[i]
 		if d.busy:
 			continue
+		started = true
 		d.busy = true
 		var amp := randf_range(11.0, 17.0) * (1.12 if i == 1 else 1.0)
 		var dur := (1500.0 + i * 220.0 + randf_range(0.0, 150.0)) / 1000.0
@@ -151,6 +153,8 @@ func roll() -> void:
 		var tot := Vector3(sgn.call(), sgn.call(), sgn.call()) * 90.0
 		tot *= Vector3(roundf(randf_range(6, 11)), roundf(randf_range(6, 11)), roundf(randf_range(6, 11)))
 		d.anim = {"t": -i * 0.07, "dur": dur, "amp": amp, "tx": tx, "x0": d.x, "from": d.rest, "tot": tot}
+	if started:
+		Sound.dice()
 
 func _seg(t: float) -> Array:
 	var k := 0
