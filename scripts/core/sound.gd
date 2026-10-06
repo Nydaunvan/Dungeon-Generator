@@ -1,6 +1,6 @@
 extends Node
 ## Audio du jeu (autoload `Sound`). Comme dans le build HTML, tous les sons sont synthétisés par le code : effets (sons courts
-## mis en cache), ambiance par thème de donjon (nappe bouclée + petits sons aléatoires) et musique de boss (boucle de 4 mesures).
+## mis en cache), ambiance par thème de donjon (nappe bouclée + petits sons aléatoires) et musique de boss (fichier OGG).
 
 const RATE := 22050
 const AMBIENT_RATE := 11025
@@ -37,9 +37,7 @@ const THEME_AMBIENT := {
 	"lava": {"freqs": [41.2, 61.7], "type": "triangle", "gain": 0.13, "shimmer": "crackle"},
 	"temple": {"freqs": [130.8, 196.0, 261.6], "type": "sine", "gain": 0.14, "shimmer": "bell"},
 }
-const BOSS := {"root": 73.42, "fifth": 110.0, "octave": 146.8,
-	"melody1": [220.0, 196.0, 174.6, 220.0, 261.6, 220.0, 196.0, 164.8],
-	"melody2": [293.6, 329.6, 349.2, 392.0, 440.0, 392.0, 349.2, 293.6, 261.6, 220.0]}
+const BOSS_MUSIC := "res://assets/music/boss.ogg"
 const SWING_FREQ := {"sword": 1600.0, "axe": 1000.0, "dagger": 2000.0, "staff": 700.0, "bow": 1800.0, "mace": 800.0, "unarmed": 600.0}
 
 # ------------------------------------------------------------------ mise en place
@@ -272,9 +270,9 @@ func ambient(theme: String, boss: bool = false) -> void:
 	stop_ambient()
 	_ambient_key = key
 	if not _cache.has("amb|" + key):
-		var built: AudioStreamWAV
+		var built: AudioStream
 		if boss:
-			built = await _build_boss()
+			built = _boss_stream()
 		else:
 			built = await _build_ambient(THEME_AMBIENT[key])
 		_cache["amb|" + key] = built
@@ -344,52 +342,12 @@ func _build_ambient(cfg: Dictionary) -> AudioStreamWAV:   # coroutine (voir _bre
 				await _tick()
 	return b.to_stream(true)
 
-func _build_boss() -> AudioStreamWAV:   # coroutine (voir _breath)
-	var beat := 0.4348
-	var bar_len := beat * 4.0
-	var b := Synth.new(RATE, bar_len * 4.0)
-	for bar in 4:
-		await _breath()
-		var o := bar * bar_len
-		if bar < 2:
-			for i in 8:
-				var t0: float = o + i * beat * 0.5
-				var down := i % 2 == 0
-				var note: float = BOSS.fifth if i == 4 else (BOSS.octave / 2.0 if i == 6 else BOSS.root)
-				b.tone(note, 0.15, "sawtooth" if down else "square", 0.2 if down else 0.12, 0.012, 0.1, t0)
-				if down:
-					b.noise(0.1, "lowpass", 110.0, 0.7, 0.16, 0.004, 0.15, t0)
-				else:
-					b.noise(0.03, "highpass", 7000.0, 0.7, 0.055, 0.004, 0.03, t0)
-				if i == 2 or i == 6:
-					b.noise(0.08, "bandpass", 900.0, 0.6, 0.13, 0.004, 0.09, t0)
-			if bar == 1:
-				for i in 8:
-					await _tick()
-					b.tone(BOSS.melody1[i], 0.22, "triangle", 0.13, 0.012, 0.28, o + i * beat * 0.5, 0.0, true)
-		else:
-			for i in 16:
-				await _tick()
-				var t1: float = o + i * beat * 0.25
-				var dn := i % 4 == 0
-				var step := i % 4
-				var nt: float = BOSS.fifth if step == 2 else BOSS.root
-				b.tone(nt, 0.09, "sawtooth" if dn else "square", 0.21 if dn else 0.13, 0.012, 0.06, t1)
-				if dn:
-					b.noise(0.1, "lowpass", 110.0, 0.7, 0.16, 0.004, 0.15, t1)
-				elif i % 2 == 0:
-					b.noise(0.03, "highpass", 7000.0, 0.7, 0.055, 0.004, 0.03, t1)
-				if i == 4 or i == 12:
-					b.noise(0.08, "bandpass", 900.0, 0.6, 0.13, 0.004, 0.09, t1)
-			if bar == 3:
-				for i in 10:
-					await _tick()
-					b.tone(BOSS.melody2[i], 0.16, "sawtooth", 0.14, 0.012, 0.2, o + i * beat * 0.4, 0.0, true)
-				var st := o + beat * 4.0 - 0.05
-				for f in [BOSS.root, BOSS.fifth, BOSS.octave]:
-					b.tone(f, 0.3, "sawtooth", 0.22, 0.012, 0.35, st, 0.0, true)
-				b.noise(0.1, "lowpass", 110.0, 0.7, 0.16, 0.004, 0.15, st)
-	return b.to_stream(true)
+## Musique de boss : fichier OGG en boucle, lu en flux.
+func _boss_stream() -> AudioStream:
+	var st = load(BOSS_MUSIC)
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	return st
 
 # ------------------------------------------------------------------ préchargement
 
@@ -424,7 +382,7 @@ func preload_all(progress: Callable = Callable()) -> void:
 			jobs.append({"label": lbl_amb, "w": 0.4, "fn": func(): _shimmer_stream(kind, v)})
 	for key in THEME_AMBIENT:
 		jobs.append({"label": lbl_amb, "w": 6.0, "fn": func(): await _preload_music(key, false)})
-	jobs.append({"label": lbl_boss, "w": 8.0, "fn": func(): await _preload_music("boss", true)})
+	jobs.append({"label": lbl_boss, "w": 0.5, "fn": func(): await _preload_music("boss", true)})
 	var total := 0.0
 	for j in jobs:
 		total += float(j.w)
@@ -448,7 +406,7 @@ func _preload_music(key: String, boss: bool) -> void:
 	if _cache.has("amb|" + key):
 		return
 	if boss:
-		_cache["amb|boss"] = await _build_boss()
+		_cache["amb|boss"] = _boss_stream()
 	else:
 		_cache["amb|" + key] = await _build_ambient(THEME_AMBIENT[key])
 
