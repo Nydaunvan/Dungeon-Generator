@@ -11,8 +11,11 @@ var stage: CombatStage
 var opening: Dictionary = {}  # id -> true pendant l'animation : la porte reste infranchissable
 var locks: Dictionary = {}   # id de porte -> Sprite3D (cadenas)
 
+## Part de la montée de la grille après laquelle on peut passer dessous.
+const PASSABLE_AT := 0.55
+
 ## Ouvre une porte / grille : le cadenas disparaît, le vantail remonte toujours vers le haut
-## (750 ms, décélération, hauteur CELL × 1,15 — comme updateDoorStates de l'original).
+## (durée du son d'ouverture, hauteur CELL × 1,15).
 func open_door(id: String, instant: bool = false) -> void:
 	if (grid.opened.has(id) or opening.has(id)) and not instant:
 		return
@@ -38,6 +41,7 @@ func open_door(id: String, instant: bool = false) -> void:
 				.set_trans(Tween.TRANS_LINEAR)
 		t.finished.connect(leaf.hide)
 	if not instant:
-		get_tree().create_timer(dur).timeout.connect(func():
+		# franchissable dès que le bas de la grille est au-dessus des têtes (≈ mi-course), sans attendre la fin du son
+		get_tree().create_timer(dur * PASSABLE_AT).timeout.connect(func():
 			opening.erase(id)
 			grid.opened[id] = true)
