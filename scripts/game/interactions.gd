@@ -244,7 +244,6 @@ func try_door(x: int, y: int) -> bool:
 		gs.inventory.remove_at(k)
 		unlocked[str(d.id)] = true
 		bag_changed.emit()
-	Sound.sfx("door_creak")
 	open_door(str(d.id))
 	return true
 

@@ -22,6 +22,10 @@ func open_door(id: String, instant: bool = false) -> void:
 		opening[id] = true
 	if locks.has(id) and is_instance_valid(locks[id]):
 		(locks[id] as Node3D).hide()
+	var dur := 0.75
+	if not instant:
+		dur = Sound.door_open_length()
+		Sound.door_open()
 	for leaf in doors.get(id, []):
 		if not is_instance_valid(leaf):
 			continue
@@ -30,10 +34,10 @@ func open_door(id: String, instant: bool = false) -> void:
 			continue
 		var y0: float = LevelBuilder.CELL * 0.5
 		var t := create_tween()
-		t.tween_property(leaf, "position:y", y0 + LevelBuilder.CELL * 1.15, 0.75) \
-				.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(leaf, "position:y", y0 + LevelBuilder.CELL * 1.15, dur) \
+				.set_trans(Tween.TRANS_LINEAR)
 		t.finished.connect(leaf.hide)
 	if not instant:
-		get_tree().create_timer(0.75).timeout.connect(func():
+		get_tree().create_timer(dur).timeout.connect(func():
 			opening.erase(id)
 			grid.opened[id] = true)

@@ -131,21 +131,37 @@ func set_music_volume(v: float) -> void:
 
 # ------------------------------------------------------------------ lecture
 
-func _play(stream: AudioStream) -> void:
+func _play(stream: AudioStream, gain_key: String = "") -> void:
 	if not enabled or stream == null:
 		return
 	var p := _pool[_pool_next]
 	_pool_next = (_pool_next + 1) % _pool.size()
 	p.stream = stream
+	p.volume_db = float(SFX_GAIN_DB.get(gain_key, 0.0))
 	p.play()
 
+## Correction de niveau par bruitage (dB), mesurée en loudness (EBU R128, cible -34 LUFS)
+## pour que tous les effets sonnent au même volume. Régénérable avec tools/sfx_levels.py.
+const SFX_GAIN_DB := {
+	"blocked": 5.0, "combat_start": -4.5, "door_locked": 0.0, "down": 1.0, "evolve": -3.5,
+	"fountain": -1.0, "game_over": -2.0, "heal": 2.5, "hit": 5.0, "level_up": -0.5,
+	"monster_attack": 5.5, "pickup": 3.5, "victory": -2.0,
+	"spell|arcane": 3.0, "spell|bard": 0.5, "spell|fire": -2.0, "spell|holy": 0.5,
+	"spell|ice": 2.0, "spell|nature": 12.0, "spell|physical": 12.0, "spell|shadow": -0.5,
+	"stairs|true": 1.0, "stairs|false": 1.0,
+	"swing|axe": 12.0, "swing|bow": 10.5, "swing|dagger": 11.5, "swing|mace": 12.0,
+	"swing|staff": 12.0, "swing|sword": 11.5, "swing|unarmed": 12.0,
+	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0,
+}
+
 ## Bruit de dés qui roulent (fichier OGG, chargé une fois).
-const FILE_SOUNDS := {"dice": "res://assets/sounds/dice.ogg", "coins": "res://assets/sounds/coins.ogg", "map_open": "res://assets/sounds/map_open.ogg"}
+const FILE_SOUNDS := {"dice": "res://assets/sounds/dice.ogg", "coins": "res://assets/sounds/coins.ogg", "map_open": "res://assets/sounds/map_open.ogg",
+		"door_open": "res://assets/sounds/door_open.ogg"}
 
 func _file_sfx(key: String) -> void:
 	if not _cache.has(key):
 		_cache[key] = load(FILE_SOUNDS[key])
-	_play(_cache[key])
+	_play(_cache[key], key)
 
 func dice() -> void:
 	_file_sfx("dice")
@@ -158,11 +174,21 @@ func coins() -> void:
 func map_open() -> void:
 	_file_sfx("map_open")
 
+## Grille / porte qui s'ouvre (fichier OGG ~4,4 s).
+func door_open() -> void:
+	_file_sfx("door_open")
+
+## Durée du son d'ouverture des portes (sert à caler l'animation de la grille).
+func door_open_length() -> float:
+	if not _cache.has("door_open"):
+		_cache["door_open"] = load(FILE_SOUNDS["door_open"])
+	return (_cache["door_open"] as AudioStream).get_length()
+
 ## Joue un effet. `arg` : type d'arme (swing), style du sort (spell), montée (stairs).
 func sfx(name: String, arg = null) -> void:
 	if not enabled:
 		return
-	_play(_sfx_stream(name, arg))
+	_play(_sfx_stream(name, arg), name if arg == null else name + "|" + str(arg))
 
 func _sfx_stream(name: String, arg) -> AudioStreamWAV:
 	var key := name + "|" + str(arg)
@@ -395,7 +421,7 @@ func _boss_stream() -> AudioStream:
 
 const PRELOAD_SWINGS := ["sword", "axe", "dagger", "staff", "bow", "mace", "unarmed"]
 const PRELOAD_SPELLS := ["fire", "ice", "holy", "nature", "shadow", "physical", "bard", "arcane"]
-const PRELOAD_PLAIN := ["door_creak", "door_locked", "hit", "monster_attack", "pickup", "level_up", "evolve", "down",
+const PRELOAD_PLAIN := ["door_locked", "hit", "monster_attack", "pickup", "level_up", "evolve", "down",
 	"game_over", "victory", "fountain", "heal", "blocked", "combat_start"]
 
 ## Synthétise à l'avance tous les sons du jeu : effets, petits sons d'ambiance, nappes de chaque thème, musique de boss.
