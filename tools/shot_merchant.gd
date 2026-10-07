@@ -27,6 +27,8 @@ func _init() -> void:
 	var back := mp - nd
 	if g.is_walkable(back.x, back.y) and g.is_walkable(back.x - nd.x, back.y - nd.y):
 		back = back - nd
+	var mn = m.level_node.entities.merchant_node
+	print("stall: ", mn, " pos=", mn.position if mn else null, " vis=", mn.visible if mn else null, " rig=", m.rig.position)
 	m.rig.place(g, mp.x, mp.y, dir)
 	await create_timer(1.0).timeout
 	root.get_texture().get_image().save_png(str(args.get("out", "/tmp/marchand")) + "_pres.png")

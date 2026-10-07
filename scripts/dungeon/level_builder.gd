@@ -8,12 +8,13 @@ const CELL := 4.0
 const NICHE_HALF_W := 1.25    # demi-largeur du décroché de la fontaine
 const NICHE_H := 2.8          # hauteur du décroché
 const NICHE_DEPTH := 1.9      # profondeur dans le mur
-## Décroché de l'étal du marchand : même largeur que l'ancien sprite du marchand (1,5 × 1,3 × 1,2 = 2,34 u),
+## Décroché de l'étal du marchand : 3,2 u de large (une case en fait 4), étal à taille réaliste,
 ## image de l'étal à cette largeur (assets/misc/merchant_stall.webp, 1421 × 983 px).
-const MERCHANT_W := 2.34
+const MERCHANT_W := 3.2
 const MERCHANT_ASPECT := 1421.0 / 983.0
 const MERCHANT_H := MERCHANT_W / MERCHANT_ASPECT
-const MERCHANT_NICHE_H := 2.3    # plus haut que l'étal et que l'œil du joueur (2 u) : le linteau ne masque pas le haut de l'image
+const MERCHANT_DEPTH := 0.6     # creux peu profond : l'étal reste près de l'ouverture et paraît grand
+const MERCHANT_NICHE_H := 2.9    # plus haut que l'étal et que l'œil du joueur (2 u) : le linteau ne masque pas le haut de l'image
 
 ## `sliced` : pendant l'écran de chargement, le travail est réparti sur plusieurs images (l'épée reste fluide) ; l'appelant doit alors `await`.
 static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) -> LevelView:
@@ -47,7 +48,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 			var mp := Vector2i(int(tm.x), int(tm.y))
 			var md := merchant_niche_dir(grid, mp.x, mp.y)
 			if md != Vector2i.ZERO and not niches.has(mp):
-				niches[mp] = {"d": md, "w": MERCHANT_W * 0.5, "h": MERCHANT_NICHE_H}
+				niches[mp] = {"d": md, "w": MERCHANT_W * 0.5, "h": MERCHANT_NICHE_H, "t": 0.28, "dp": MERCHANT_DEPTH}
 	for y in grid.height:
 		if sliced:
 			await Loader.slice()
@@ -71,7 +72,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 				var rot := _rot(d)
 				var nich: Dictionary = niches.get(Vector2i(x, y), {})
 				if n == "#" and not nich.is_empty() and nich.d == d:
-					_add_niche(parts, counts, torches, c, d, rot, theme_name, float(nich.w), float(nich.h))
+					_add_niche(parts, counts, torches, c, d, rot, theme_name, float(nich.w), float(nich.h), float(nich.get("t", 0.5)), float(nich.get("dp", NICHE_DEPTH)))
 				elif n == "#":
 					_quad(parts["wall"], edge + Vector3(0, half, 0), Vector3.UP, Vector3(-d.x, 0, -d.y), half)
 					counts["wall"] += 1
@@ -169,7 +170,7 @@ static func _rect(st: SurfaceTool, o: Vector3, right: Vector3, up: Vector3, n: V
 
 ## Mur percé d'un décroché (niche) : montants + linteau, fond, deux flancs, sol et plafond ; deux torches de part et d'autre.
 static func _add_niche(parts: Dictionary, counts: Dictionary, torches: TorchLayer, c: Vector3, d: Vector2i, rot: float, theme_name: String,
-		half_w: float = NICHE_HALF_W, height: float = NICHE_H) -> void:
+		half_w: float = NICHE_HALF_W, height: float = NICHE_H, torch_gap: float = 0.5, depth: float = NICHE_DEPTH) -> void:
 	var half := CELL * 0.5
 	var dv := Vector3(d.x, 0, d.y)
 	var n := -dv                                   # normale du mur vu depuis la case
@@ -181,19 +182,19 @@ static func _add_niche(parts: Dictionary, counts: Dictionary, torches: TorchLaye
 	_rect(wall, wc, right, Vector3.UP, n, -half, -w, -half, half)
 	_rect(wall, wc, right, Vector3.UP, n, w, half, -half, half)
 	_rect(wall, wc, right, Vector3.UP, n, -w, w, t1, half)
-	var back := wc + dv * NICHE_DEPTH
+	var back := wc + dv * depth
 	_rect(wall, back, right, Vector3.UP, n, -w, w, -half, t1)
 	# flancs : plan x = ±w, profondeur le long de dv
-	_rect(wall, wc - right * w, dv, Vector3.UP, right, 0.0, NICHE_DEPTH, -half, t1)
-	_rect(wall, wc + right * w, -dv, Vector3.UP, -right, -NICHE_DEPTH, 0.0, -half, t1)
+	_rect(wall, wc - right * w, dv, Vector3.UP, right, 0.0, depth, -half, t1)
+	_rect(wall, wc + right * w, -dv, Vector3.UP, -right, -depth, 0.0, -half, t1)
 	counts["wall"] += 7
 	# sol et plafond du décroché
-	_rect(parts["floor"], wc - Vector3(0, half, 0), right, dv, Vector3.UP, -w, w, 0.0, NICHE_DEPTH)
+	_rect(parts["floor"], wc - Vector3(0, half, 0), right, dv, Vector3.UP, -w, w, 0.0, depth)
 	counts["floor"] += 1
-	_rect(parts["ceil"], wc + Vector3(0, t1, 0), -right, dv, Vector3.DOWN, -w, w, 0.0, NICHE_DEPTH)
+	_rect(parts["ceil"], wc + Vector3(0, t1, 0), -right, dv, Vector3.DOWN, -w, w, 0.0, depth)
 	counts["ceil"] += 1
 	for sgn in [-1.0, 1.0]:
-		torches.add_torch(c + dv * CELL * 0.49 + right * sgn * (w + 0.5) + Vector3(0, CELL * 0.62, 0), rot, theme_name)
+		torches.add_torch(c + dv * CELL * 0.49 + right * sgn * (w + torch_gap) + Vector3(0, CELL * 0.62, 0), rot, theme_name)
 
 ## Colonnes aux angles : là où deux murs se rejoignent, et aux deux extrémités d'un mur isolé (port de buildDecor).
 static func _add_columns(view: LevelView, grid: DungeonGrid, wall_mat: Material) -> void:

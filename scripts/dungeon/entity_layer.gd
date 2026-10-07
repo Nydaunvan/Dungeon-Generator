@@ -161,7 +161,7 @@ func _make_stall(x: int, y: int, d: Vector2i) -> MeshInstance3D:
 	mi.material_override = m
 	var dv := Vector3(d.x, 0, d.y)
 	var c := Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL)
-	mi.position = c + dv * (LevelBuilder.CELL * 0.5 + LevelBuilder.NICHE_DEPTH - 0.03) + Vector3(0, LevelBuilder.MERCHANT_H * 0.5, 0)
+	mi.position = c + dv * (LevelBuilder.CELL * 0.5 + LevelBuilder.MERCHANT_DEPTH - 0.03) + Vector3(0, LevelBuilder.MERCHANT_H * 0.5, 0)
 	mi.rotation.y = LevelBuilder._rot(d)
 	mi.name = "MerchantStall"
 	add_child(mi)
