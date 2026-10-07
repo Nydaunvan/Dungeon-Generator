@@ -65,7 +65,7 @@ func _ready() -> void:
 	_build_gate()
 	_build_main()
 	_footer = Label.new()
-	_footer.text = L.t("common.editeur_de_donjon") + " v1.29 · " + L.t("common.portage_godot") + "\nMade by Claude & Nydaunvan"
+	_footer.text = L.t("common.editeur_de_donjon") + " " + AppVersion.label() + " · " + L.t("common.portage_godot") + "\nMade by Claude & Nydaunvan"
 	_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
 	_footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))

@@ -165,7 +165,7 @@ func _build() -> void:
 	fv.alignment = BoxContainer.ALIGNMENT_CENTER
 	fv.add_theme_constant_override("separation", 6)
 	_foot.add_child(fv)
-	var ver := _link(L.t("common.editeur_de_donjon") + " v1.29 · " + L.t("common.portage_godot"), "changelog", 14)
+	var ver := _link(L.t("common.editeur_de_donjon") + " " + AppVersion.label() + " · " + L.t("common.portage_godot"), "changelog", 14)
 	ver.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	fv.add_child(ver)
 	var made := _link("Made by Claude & Nydaunvan", "credits", 13)

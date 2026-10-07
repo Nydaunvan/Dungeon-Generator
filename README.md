@@ -21,6 +21,13 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène princ
 - Textes : `python3 tools/check_lang.py`
 - Réglages graphiques : `godot --headless --path . res://tools/check_settings.tscn`
 - Mise en page mobile (aucun débordement à droite, carte masquée) : `godot --headless --path . res://tools/check_mobile.tscn`
+- Version et journal : `python3 tools/check_version.py`
+
+## Versions et publication
+- Le numéro de version est dans `project.godot` (`config/version`, forme `1.30.1`, ou `1.30.1-test1` pour un build de test). Le jeu l'affiche à partir de là (`AppVersion`).
+- Journal des versions : `data/changelog.json` (affiché dans le jeu). Les notes de la publication GitHub en sont tirées (`tools/release_notes.py`).
+- Publier : pousser sur `migration/donnees` un commit dont le message contient `[exe]` (préversion `v<version>`) ou `[release]` (publication normale). Le workflow « Publication » exporte Windows (`.zip`) et Linux (`.tar.gz`), crée ou met à jour la publication et y joint les fichiers.
+- L'export Web part en FTP à chaque push, sans condition (workflow « Export Web »).
 
 ## Commandes (couloir 3D)
 Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner (libellés AZERTY).

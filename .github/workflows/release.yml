@@ -1,0 +1,116 @@
+name: Publication (Windows + Linux)
+
+# Exporte le jeu en exécutable Windows et Linux avec Godot 4.7.2, puis les publie sur GitHub.
+# La version vient de `config/version` dans project.godot (ex. 1.30.1) ; l'étiquette Git est « v<version> ».
+# Les notes de la publication sont l'entrée correspondante de data/changelog.json (tools/release_notes.py).
+#
+# Déclenchement :
+#  - push sur migration/donnees dont le message de commit contient « [exe] » : préversion v<version> (créée ou mise à jour) ;
+#  - même chose avec « [release] » : publication normale (pas de case « préversion ») ;
+#  - ou à la main (Actions > Publication > Run workflow), si ce fichier est sur la branche par défaut.
+
+on:
+  push:
+    branches: [migration/donnees]
+  workflow_dispatch:
+    inputs:
+      final:
+        description: "Publication normale (sinon : préversion)"
+        type: boolean
+        default: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_BASE: https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exe]') || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version et type de publication
+        id: ver
+        env:
+          EVENT: ${{ github.event_name }}
+          MSG: ${{ github.event.head_commit.message }}
+          INPUT_FINAL: ${{ inputs.final }}
+        run: |
+          set -euo pipefail
+          python3 tools/check_version.py
+          V=$(python3 -c "import sys; sys.path.insert(0,'tools'); from version_util import project_version; print(project_version())")
+          FINAL=false
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            FINAL="$INPUT_FINAL"
+          elif [[ "$MSG" == *"[release]"* ]]; then
+            FINAL=true
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "final=$FINAL" >> "$GITHUB_OUTPUT"
+          echo "Version $V (publication normale : $FINAL)"
+
+      - name: Cache de Godot et des modèles d'export
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-windows-linux
+
+      - name: Installer Godot et les modèles d'export Windows et Linux
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin ~/.local/share/godot/export_templates
+          curl -fsSL -o /tmp/godot.zip "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+          curl -fsSL -o /tmp/templates.tpz "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/templates.tpz 'templates/windows_*' 'templates/linux_*' templates/version.txt -d /tmp/templates
+          T=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$T"
+          cp /tmp/templates/templates/windows_* /tmp/templates/templates/linux_* /tmp/templates/templates/version.txt "$T/"
+          rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot.zip
+
+      - name: Importer les ressources et exporter Windows et Linux
+        run: |
+          set -euo pipefail
+          GODOT=~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          chmod +x "$GODOT"
+          V="${{ steps.ver.outputs.version }}"
+          mkdir -p build/windows build/linux dist
+          "$GODOT" --headless --path . --import
+          "$GODOT" --headless --path . --export-release "Windows" "build/windows/Dungeon Generator.exe"
+          "$GODOT" --headless --path . --export-release "Linux" "build/linux/Dungeon Generator.x86_64"
+          (cd build/windows && zip -q -9 "../../dist/Dungeon-Generator-$V-windows.zip" "Dungeon Generator.exe")
+          chmod +x "build/linux/Dungeon Generator.x86_64"
+          tar -C build/linux -czf "dist/Dungeon-Generator-$V-linux.tar.gz" "Dungeon Generator.x86_64"
+          ls -la dist
+
+      - name: Garder les fichiers en pièce jointe (14 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dungeon-generator-${{ steps.ver.outputs.version }}
+          path: dist/*
+          retention-days: 14
+
+      - name: Créer ou mettre à jour la publication GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          V="${{ steps.ver.outputs.version }}"
+          TAG="v$V"
+          python3 tools/release_notes.py "$V" > notes.md
+          PRE=true
+          if [ "${{ steps.ver.outputs.final }}" = "true" ]; then PRE=false; fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Dungeon Generator $V" --notes-file notes.md --prerelease="$PRE"
+          else
+            gh release create "$TAG" --target "${{ github.sha }}" --title "Dungeon Generator $V" --notes-file notes.md --prerelease="$PRE"
+          fi
+          gh release upload "$TAG" dist/* --clobber
