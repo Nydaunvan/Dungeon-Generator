@@ -254,6 +254,14 @@ func _label(text: String, size: int = 14, color: Color = UiTheme.PARCH, font_pat
 		l.add_theme_font_override("font", UiTheme.font(font_path))
 	return l
 
+## Texte de la fiche de détail : toujours coupé à la largeur du volet (une longue ligne ne doit jamais l'élargir ni le déformer).
+func _wrap_label(text: String, size: int = 13, color: Color = UiTheme.PARCH, font_path: String = "") -> Label:
+	var l := _label(text, size, color, font_path)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size = Vector2(0, 0)
+	return l
+
 ## Icône centrée dans son parent (texture ou emoji), sans jamais déborder.
 func _icon_node(icon: String, inset: float, font_px: int = 30) -> Control:
 	var t := IconResolver.texture(icon)
@@ -608,7 +616,7 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.custom_minimum_size = Vector2(120, 0)
 	hv.add_child(nm)
-	hv.add_child(_label(type_label(it), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
+	hv.add_child(_wrap_label(type_label(it), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	head.add_child(hv)
 	v.add_child(head)
 	var type := str(it.get("type", ""))
@@ -624,15 +632,14 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 		actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	elif type == "potion":
 		for line in Inventory.describe(it, gs.cfg):
-			var fl := _label(line, 13, UiTheme.PARCH)
-			v.add_child(fl)
+			v.add_child(_wrap_label(line))
 		actions.add_child(_action_button(L.t("ui.equip_dock.utiliser"), "go", func(): _use_potion(int(resolved.idx))))
 		actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	else:
 		for line in Inventory.describe(it, gs.cfg):
-			v.add_child(_label(line, 13, UiTheme.PARCH))
+			v.add_child(_wrap_label(line))
 		if type == "scroll":
-			v.add_child(_label(L.t("ui.equip_dock.utilise_en_combat"), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
+			v.add_child(_wrap_label(L.t("ui.equip_dock.utilise_en_combat"), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 		if type != "key":
 			actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	if actions.get_child_count() > 0:
@@ -659,8 +666,7 @@ func _add_stat_lines(v: VBoxContainer, it: Dictionary, c: Dictionary, slot: Stri
 			if x.key == r.key:
 				val = int(x.value)
 		var h := HBoxContainer.new()
-		var a := _label(str(r.label), 13, UiTheme.PARCH)
-		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var a := _wrap_label(str(r.label))
 		h.add_child(a)
 		h.add_child(_label("%s%d" % ["+" if val > 0 else "", val], 13, UiTheme.PARCH))
 		if eq != null:
