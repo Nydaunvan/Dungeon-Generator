@@ -177,7 +177,11 @@ func bump_merchant(tx: int, ty: int) -> bool:
 	var mm: Dictionary = wand.merchant()
 	if rig.gx != int(mm.x) or rig.gy != int(mm.y) or Vector2i(tx - rig.gx, ty - rig.gy) != nd:
 		return false
-	_meet_merchant(mm)
+	mm["discovered"] = true
+	if wand != null:
+		wand.merchant_moved.emit()
+	_log(L.t("game.interactions.un_marchand_ambulant_vous_salue"))
+	open_merchant(mm)      # l'étal est dans le mur : on ne peut pas passer, donc pas de choix « continuer »
 	return true
 
 func _meet_merchant(mm: Dictionary) -> void:
