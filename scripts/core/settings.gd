@@ -16,8 +16,8 @@ const OPTION_KEYS := ["res_scale", "msaa", "aniso", "torch_lights", "particles",
 const INT_KEYS := ["msaa", "aniso", "torch_lights", "flame_fps"]
 const FLOAT_KEYS := ["res_scale", "particles", "view_distance"]
 const BOOL_KEYS := ["spell_lamps", "texture_hd"]
-const TARGETS := [30, 45, 60]
-const FPS_CAPS := [0, 30, 60, 120]
+const TARGETS := [30, 45, 60, 90, 120]
+const FPS_CAPS := [0, 30, 60, 90, 120, 144, 240]
 
 # adaptation dynamique
 const WINDOW := 5.0         # secondes d'observation avant chaque décision
@@ -47,6 +47,8 @@ var auto_adapt := true
 var target_fps := 60
 var fps_cap := 0                 # 0 = illimité
 var vsync := true
+var refresh_override := 0.0      # tests : fréquence d'écran simulée
+var _peak_fps := 0.0             # meilleure moyenne mesurée en jeu (cible plafonnée tant que l'écran est inconnu)
 var reduced_motion := false
 var perf_overlay := false
 var ceiling := ""                # niveau maximal tenu lors des essais (mode Auto, mémorisé)
@@ -462,7 +464,24 @@ func _target() -> float:
 	var t := float(target_fps)
 	if fps_cap > 0:
 		t = minf(t, float(fps_cap))
+	# Avec la synchro verticale (et toujours dans un navigateur), l'écran plafonne les images : viser plus haut que sa fréquence
+	# ferait croire à un jeu « trop lent » et dégraderait la qualité pour rien.
+	if vsync or is_web():
+		var r := refresh_rate()
+		if r > 0.0:
+			t = minf(t, r)
+		elif is_web():     # navigateur : fréquence inconnue, on ne dépasse que ce qui a déjà été mesuré en jeu
+			t = minf(t, maxf(60.0, _peak_fps))
 	return t
+
+## Fréquence de l'écran en Hz (0 si inconnue, ex. dans un navigateur).
+func refresh_rate() -> float:
+	if refresh_override > 0.0:
+		return refresh_override
+	if is_web():
+		return 0.0
+	var r := DisplayServer.screen_get_refresh_rate(DisplayServer.window_get_current_screen())
+	return r if r > 1.0 else 0.0
 
 func _max_idx() -> int:
 	var cap := 3
@@ -475,6 +494,7 @@ func _max_idx() -> int:
 	return mini(cap, _session_cap)
 
 func _evaluate(avg: float) -> void:
+	_peak_fps = maxf(_peak_fps, avg)
 	var slow := avg < _target() * SLOW_RATIO
 	if slow:
 		_stable_t = 0.0

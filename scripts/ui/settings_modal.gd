@@ -186,8 +186,10 @@ func _graphics() -> void:
 		Settings.set_auto_adapt(v)
 		_refresh(), custom)
 	_hint(L.t("ui.settings.adapt_unavailable") if custom else L.t("ui.settings.adapt_hint"))
-	_row(L.t("ui.settings.adapt_target"), _drop([[30, "30"], [45, "45"], [60, "60"]], Settings.target_fps,
+	_row(L.t("ui.settings.adapt_target"), _drop(Settings.TARGETS.map(func(v): return [v, str(v)]), Settings.target_fps,
 		func(v): Settings.set_target_fps(int(v)), custom or not Settings.auto_adapt))
+	var hz := Settings.refresh_rate()
+	_hint(L.t("ui.settings.target_hint") + " " + (L.fa(L.t("ui.settings.refresh_info"), int(round(hz))) if hz > 0.0 else L.t("ui.settings.refresh_unknown")))
 
 	_section(L.t("ui.settings.details_title"))
 	var res_opts: Array = []

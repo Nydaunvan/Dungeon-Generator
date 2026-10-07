@@ -180,6 +180,18 @@ func _adaptation() -> void:
 	Settings.set_fps_cap(30)
 	expect(Settings._target() == 30.0, "limite 30 i/s : cible 30")
 	Settings.set_fps_cap(0)
+	# cible 120 : plafonnée par la fréquence de l'écran avec la synchro verticale
+	Settings.set_target_fps(120)
+	Settings.refresh_override = 60.0
+	expect(Settings._target() == 60.0, "cible 120 sur écran 60 Hz : 60")
+	Settings.refresh_override = 144.0
+	expect(Settings._target() == 120.0, "cible 120 sur écran 144 Hz : 120")
+	Settings.refresh_override = 60.0
+	Settings.vsync = false
+	expect(Settings._target() == 120.0, "sans synchro verticale : cible 120")
+	Settings.vsync = true
+	Settings.refresh_override = 0.0
+	Settings.set_target_fps(60)
 	# 7) adaptation désactivable
 	Settings.set_auto_adapt(false)
 	expect(not Settings._adapt_active(), "adaptation désactivée : inactive")
