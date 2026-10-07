@@ -150,26 +150,8 @@ func _build_view_controls() -> void:
 	kt.add_theme_font_size_override("font_size", int(UiMetrics.css(12.5)))
 	kt.add_theme_color_override("font_color", Color("ffd98a"))
 	kv.add_child(kt)
-	for r in KEY_COMMANDS:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
-		var k := Label.new()
-		k.text = r[0]
-		k.custom_minimum_size.x = UiMetrics.css(110.0)
-		k.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-		k.add_theme_font_size_override("font_size", int(UiMetrics.css(11.5)))
-		k.add_theme_color_override("font_color", Color("e8d9b5"))
-		k.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var d := Label.new()
-		d.text = r[1]
-		d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		d.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-		d.add_theme_font_size_override("font_size", int(UiMetrics.css(11.5)))
-		d.add_theme_color_override("font_color", Color("b9a880"))
-		row.add_child(k)
-		row.add_child(d)
-		kv.add_child(row)
+	_keys_box = kv
+	_rebuild_keys()
 	# panneau Son
 	sound_panel = _drop_panel(190.0)
 	var sv := VBoxContainer.new()
@@ -200,18 +182,77 @@ func _build_view_controls() -> void:
 				Sound.set_music_volume(v))
 		sv.add_child(sl)
 
-const KEY_COMMANDS := [
-	["↑ ↓ ← →  /  Z Q S D", "ui.game_layout.avancer_reculer_tourner"],
-	["Espace", "ui.game_layout.attaquer_heros_actif"],
-	["1", "ui.game_layout.attaque_du_heros_actif"],
-	["2 – 7", "ui.game_layout.sorts_du_heros_actif"],
-	["I", "ui.game_layout.inventaire_du_heros_selectionne"],
-	["M", "ui.game_layout.carte_en_plein_ecran"],
-	["ui.game_layout.echap", "ui.game_layout.fermer_la_fenetre_ouverte"],
-	["ui.game_layout.clic_sur_un_portrait", "ui.game_layout.choisir_le_heros_actif"],
-	["ui.game_layout.icone_coffre_un_portrait", "ui.game_layout.ouvrir_l_inventaire_de_ce"],
-	["ui.game_layout.molette_sur_la_carte", "ui.game_layout.zoomer_la_mini_carte"],
-]
+var _keys_box: VBoxContainer
+
+## Lignes du mémo des commandes, d'après les touches réglées dans Paramètres › Commandes.
+func _key_rows() -> Array:
+	var move: Array = []
+	var alt: Array = []
+	for id in ["forward", "turn_left", "back", "turn_right"]:
+		var sl := Keybinds.slots(id)
+		if int(sl[0]) != 0:
+			move.append(Keybinds.label(int(sl[0])))
+		if int(sl[1]) != 0:
+			alt.append(Keybinds.label(int(sl[1])))
+	var move_txt := " ".join(move)
+	if not alt.is_empty():
+		move_txt += "  /  " + " ".join(alt)
+	var spells: Array = []
+	for i in range(2, 8):
+		spells.append(Keybinds.text("slot_%d" % i))
+	var spells_txt := "%s – %s" % [spells[0], spells[5]] if _slots_follow() else " ".join(spells)
+	return [
+		[move_txt if move_txt != "" else "—", "ui.game_layout.avancer_reculer_tourner"],
+		[Keybinds.text("strafe_left") + "  " + Keybinds.text("strafe_right"), "ui.keys.strafe_both"],
+		[Keybinds.text("attack"), "ui.game_layout.attaquer_heros_actif"],
+		[Keybinds.text("interact"), "ui.keys.act_interact"],
+		[Keybinds.text("flee"), "ui.keys.act_flee"],
+		[Keybinds.text("slot_1"), "ui.game_layout.attaque_du_heros_actif"],
+		[spells_txt, "ui.game_layout.sorts_du_heros_actif"],
+		[Keybinds.text("inventory"), "ui.game_layout.inventaire_du_heros_selectionne"],
+		[Keybinds.text("map"), "ui.game_layout.carte_en_plein_ecran"],
+		["ui.game_layout.echap", "ui.game_layout.fermer_la_fenetre_ouverte"],
+		["ui.game_layout.clic_sur_un_portrait", "ui.game_layout.choisir_le_heros_actif"],
+		["ui.game_layout.icone_coffre_un_portrait", "ui.game_layout.ouvrir_l_inventaire_de_ce"],
+		["ui.game_layout.molette_sur_la_carte", "ui.game_layout.zoomer_la_mini_carte"],
+	]
+
+## Les touches des sorts 2 à 7 se suivent (ex. 2 … 7) : on les résume « 2 – 7 ».
+func _slots_follow() -> bool:
+	var prev := -1
+	for i in range(2, 8):
+		var k := Keybinds.keys("slot_%d" % i)
+		if k.size() != 1:
+			return false
+		if prev != -1 and int(k[0]) != prev + 1:
+			return false
+		prev = int(k[0])
+	return true
+
+func _rebuild_keys() -> void:
+	for ch in _keys_box.get_children().slice(1):   # le premier enfant est le titre
+		_keys_box.remove_child(ch)
+		ch.queue_free()
+	for r in _key_rows():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
+		var k := Label.new()
+		k.text = r[0]
+		k.custom_minimum_size.x = UiMetrics.css(110.0)
+		k.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+		k.add_theme_font_size_override("font_size", int(UiMetrics.css(11.5)))
+		k.add_theme_color_override("font_color", Color("e8d9b5"))
+		k.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var d := Label.new()
+		d.text = r[1]
+		d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+		d.add_theme_font_size_override("font_size", int(UiMetrics.css(11.5)))
+		d.add_theme_color_override("font_color", Color("b9a880"))
+		row.add_child(k)
+		row.add_child(d)
+		_keys_box.add_child(row)
 
 func _drop_panel(w: float) -> PanelContainer:
 	var p := PanelContainer.new()
@@ -238,6 +279,8 @@ func _view_btn(n: String) -> void:
 		"Clavier":
 			sound_panel.visible = false
 			keys_panel.visible = not keys_panel.visible
+			if keys_panel.visible:
+				_rebuild_keys()
 		"Son":
 			keys_panel.visible = false
 			sound_panel.visible = not sound_panel.visible

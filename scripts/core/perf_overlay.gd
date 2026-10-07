@@ -28,7 +28,7 @@ func _ready() -> void:
 	_apply()
 
 func _unhandled_input(e: InputEvent) -> void:
-	if e is InputEventKey and e.pressed and not e.echo and e.keycode == KEY_F3:
+	if e is InputEventKey and e.pressed and not e.echo and Keybinds.matches("perf", e):
 		toggle()
 		get_viewport().set_input_as_handled()
 

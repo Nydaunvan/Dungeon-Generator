@@ -4,7 +4,7 @@ extends RefCounted
 ## options détaillées), Affichage, Son, Accessibilité et Diagnostic. Les valeurs vivent dans l'autoload `Settings`.
 
 const TABS := [["graphics", "ui.settings.tab_graphics"], ["display", "ui.settings.tab_display"], ["sound", "ui.settings.tab_sound"],
-	["access", "ui.settings.tab_access"], ["diag", "ui.settings.tab_diag"]]
+	["controls", "ui.settings.tab_controls"], ["access", "ui.settings.tab_access"], ["diag", "ui.settings.tab_diag"]]
 const WIDTH := 700.0
 
 # choix proposés pour chaque option graphique (valeur, clé de texte ou libellé)
@@ -22,6 +22,18 @@ var _tab := "graphics"
 var _tab_buttons: Dictionary = {}
 var _timer: Timer
 var _live: Dictionary = {}     # libellés de l'onglet Diagnostic mis à jour en direct
+var _listen: Dictionary = {}   # onglet Commandes : touche en cours d'écoute {id, slot, btn}
+var _capture: KeyCapture
+var _note: String = ""         # dernier conflit de touches résolu
+
+const KEY_GROUPS := {"move": "ui.keys.group_move", "combat": "ui.keys.group_combat", "interface": "ui.keys.group_interface"}
+const KEY_ACTIONS := {
+	"forward": "ui.keys.act_forward", "back": "ui.keys.act_back", "turn_left": "ui.keys.act_turn_left", "turn_right": "ui.keys.act_turn_right",
+	"strafe_left": "ui.keys.act_strafe_left", "strafe_right": "ui.keys.act_strafe_right", "attack": "ui.keys.act_attack",
+	"interact": "ui.keys.act_interact", "flee": "ui.keys.act_flee", "slot_1": "ui.keys.act_slot_1", "slot_2": "ui.keys.act_slot_2",
+	"slot_3": "ui.keys.act_slot_3", "slot_4": "ui.keys.act_slot_4", "slot_5": "ui.keys.act_slot_5", "slot_6": "ui.keys.act_slot_6",
+	"slot_7": "ui.keys.act_slot_7", "inventory": "ui.keys.act_inventory", "map": "ui.keys.act_map", "perf": "ui.keys.act_perf",
+	"fullscreen": "ui.keys.act_fullscreen"}
 
 static func open(host: Node, tab: String = "graphics") -> Modal:
 	return SettingsModal.new()._build(host, tab)
@@ -58,6 +70,7 @@ func _build(host: Node, tab: String) -> Modal:
 	return _m
 
 func _show(tab: String) -> void:
+	_end_listen(false)
 	_tab = tab
 	_live = {}
 	_timer.stop()
@@ -67,6 +80,7 @@ func _show(tab: String) -> void:
 	match tab:
 		"display": _display()
 		"sound": SoundModal.fill(_body)
+		"controls": _controls()
 		"access": _access()
 		"diag": _diag()
 		_: _graphics()
@@ -229,6 +243,93 @@ func _display() -> void:
 		cap_opts.append([v, L.t("ui.settings.unlimited") if v == 0 else L.t("ui.settings.fps_unit") % v])
 	_row(L.t("ui.settings.fps_cap"), _drop(cap_opts, Settings.fps_cap, func(v): Settings.set_fps_cap(int(v))))
 	_hint(L.t("ui.settings.fps_cap_hint"))
+
+# ------------------------------------------------------------------ Commandes
+
+func _controls() -> void:
+	_section(L.t("ui.settings.tab_controls"))
+	_hint(L.t("ui.keys.hint"))
+	_hint(L.t("ui.keys.default_note"))
+	if _note != "":
+		var n := _hint(_note)
+		n.add_theme_color_override("font_color", UiTheme.GOLD)
+	for g in Keybinds.GROUPS:
+		_body.add_child(AdminUtil.label(L.t(KEY_GROUPS[g]), 15, UiTheme.GOLD))
+		for a in Keybinds.ACTIONS:
+			if a.group == g:
+				_key_row(str(a.id))
+	_hint(L.t("ui.keys.fixed_note"))
+	_button(L.t("ui.keys.reset_all"), func():
+		Keybinds.reset_all()
+		_note = ""
+		_refresh())
+
+func _key_row(id: String) -> void:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var l := AdminUtil.label(L.t(KEY_ACTIONS[id]), 14, UiTheme.PARCH)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(110, 0)
+	h.add_child(l)
+	var sl := Keybinds.slots(id)
+	for i in Keybinds.SLOTS:
+		var b := Button.new()
+		b.text = Keybinds.label(int(sl[i]))
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(UiMetrics.css(96.0), 0)
+		b.clip_text = true
+		var slot := i
+		b.pressed.connect(func(): _begin_listen(id, slot, b))
+		b.gui_input.connect(func(ev: InputEvent):
+			var mb := ev as InputEventMouseButton
+			if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+				Keybinds.clear_slot(id, slot)
+				_note = ""
+				_refresh())
+		h.add_child(b)
+	var r := Button.new()
+	r.text = "↺"
+	r.tooltip_text = L.t("ui.keys.reset_one")
+	r.focus_mode = Control.FOCUS_NONE
+	r.disabled = not Keybinds.is_custom(id)
+	r.pressed.connect(func():
+		Keybinds.reset(id)
+		_note = ""
+		_refresh())
+	h.add_child(r)
+	_body.add_child(h)
+
+func _begin_listen(id: String, slot: int, btn: Button) -> void:
+	_end_listen(true)
+	_listen = {"id": id, "slot": slot, "btn": btn}
+	btn.text = L.t("ui.keys.press_key")
+	_capture = KeyCapture.new()
+	_capture.captured.connect(_on_captured)
+	_capture.cancelled.connect(func(): _end_listen(true))
+	_m.add_child(_capture)   # dernier enfant : reçoit les touches avant la fenêtre (Échap annule sans la fermer)
+
+func _end_listen(restore: bool) -> void:
+	if _capture != null and is_instance_valid(_capture):
+		_capture.queue_free()
+	_capture = null
+	if restore and not _listen.is_empty() and is_instance_valid(_listen.btn):
+		(_listen.btn as Button).text = Keybinds.label(int(Keybinds.slots(str(_listen.id))[int(_listen.slot)]))
+	_listen = {}
+
+func _on_captured(code: int) -> void:
+	var id := str(_listen.id)
+	var slot := int(_listen.slot)
+	_end_listen(false)
+	var lost := Keybinds.assign(id, slot, code)
+	_note = ""
+	if not lost.is_empty():
+		var names: Array = []
+		for o in lost:
+			names.append(L.t(KEY_ACTIONS[o]))
+		_note = L.fa(L.t("ui.keys.moved"), [Keybinds.label(code), ", ".join(names)])
+	_refresh()
 
 # ------------------------------------------------------------------ Accessibilité
 

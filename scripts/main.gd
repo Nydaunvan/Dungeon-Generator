@@ -311,26 +311,6 @@ func _setup_environment() -> void:
 	_we = WorldEnvironment.new()
 	_we.environment = env
 
-func _setup_input() -> void:
-	var map := {
-		"forward": [KEY_UP, KEY_W],
-		"back": [KEY_DOWN, KEY_S],
-		"left": [KEY_A],
-		"right": [KEY_D],
-		"turn_left": [KEY_LEFT, KEY_Q],
-		"turn_right": [KEY_RIGHT, KEY_E],
-		"attack": [KEY_X, KEY_SPACE],
-		"interact": [KEY_F, KEY_ENTER],
-		"flee": [KEY_C],
-	}
-	for action in map:
-		if not InputMap.has_action(action):
-			InputMap.add_action(action)
-		for k in map[action]:
-			var ev := InputEventKey.new()
-			ev.physical_keycode = k
-			InputMap.action_add_event(action, ev)
-
 ## Carte plein écran (M) ; un second appui la referme.
 func _toggle_map() -> void:
 	for n in get_tree().get_nodes_in_group("modal"):
@@ -344,54 +324,56 @@ func _toggle_map() -> void:
 	Sound.map_open()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		var lk: Key = event.keycode if event.keycode != KEY_NONE else event.physical_keycode
-		var dk: Key = event.physical_keycode
-		if dk >= KEY_1 and dk <= KEY_7:
-			lk = dk
-		match lk:
-			KEY_M:
-				_toggle_map()
-				get_viewport().set_input_as_handled()
-				return
-			KEY_I:
-				if get_tree().get_nodes_in_group("modal").is_empty():
-					var who := gs.active_char_id
-					if ctrl.in_combat():
-						inter.open_sheet(who)
-					else:
-						dock.toggle_for(who)
-				get_viewport().set_input_as_handled()
-				return
-			KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7:
-				if get_tree().get_nodes_in_group("modal").is_empty() and ctrl.in_combat():
-					var slot: int = int(lk) - int(KEY_1)
-					if slot == 0:
-						ctrl.attack()
-					else:
-						var c := gs.char_by_id(gs.active_char_id)
-						var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
-						if slot - 1 < known.size():
-							ctrl.cast(str(known[slot - 1]))
-				get_viewport().set_input_as_handled()
-				return
+	if not (event is InputEventKey and event.pressed):
+		return
+	# Touches modifiables dans Paramètres › Commandes (voir Keybinds) ; Échap reste géré par chaque fenêtre.
+	var act := Keybinds.action_for(event)
+	if act == "":
+		return
+	var is_move := act in ["forward", "back", "strafe_left", "strafe_right", "turn_left", "turn_right"]
+	if event.echo and not is_move:
+		return
+	if act == "map":
+		_toggle_map()
+		get_viewport().set_input_as_handled()
+		return
+	if act == "inventory":
+		if get_tree().get_nodes_in_group("modal").is_empty():
+			var who := gs.active_char_id
+			if ctrl.in_combat():
+				inter.open_sheet(who)
+			else:
+				dock.toggle_for(who)
+		get_viewport().set_input_as_handled()
+		return
+	if act.begins_with("slot_"):
+		if get_tree().get_nodes_in_group("modal").is_empty() and ctrl.in_combat():
+			var slot := int(act.substr(5)) - 1
+			if slot == 0:
+				ctrl.attack()
+			else:
+				var c := gs.char_by_id(gs.active_char_id)
+				var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
+				if slot - 1 < known.size():
+					ctrl.cast(str(known[slot - 1]))
+		get_viewport().set_input_as_handled()
+		return
 	if not get_tree().get_nodes_in_group("modal").is_empty():
 		return
-	if event is InputEventKey and event.pressed:
-		# Touches « logiques » (celles qui s'impriment sur la touche) : Z/Q/S/D sur AZERTY, W/A/S/D sur QWERTY, sans réglage.
-		var k: Key = event.keycode if event.keycode != KEY_NONE else event.physical_keycode
-		var cmd := ""
-		match k:
-			KEY_UP, KEY_Z, KEY_W: cmd = "forward"
-			KEY_DOWN, KEY_S: cmd = "back"
-			KEY_LEFT, KEY_Q, KEY_A: cmd = "turn_left"
-			KEY_RIGHT, KEY_D: cmd = "turn_right"
-			KEY_SPACE, KEY_X: cmd = "attack"
-			KEY_F, KEY_ENTER, KEY_KP_ENTER: cmd = "interact"
-			KEY_C: cmd = "flee"
-		if cmd != "" and (not event.echo or cmd in ["forward", "back", "turn_left", "turn_right"]):
-			_on_command(cmd)
-			get_viewport().set_input_as_handled()
+	var cmd := ""
+	match act:
+		"forward": cmd = "forward"
+		"back": cmd = "back"
+		"strafe_left": cmd = "left"
+		"strafe_right": cmd = "right"
+		"turn_left": cmd = "turn_left"
+		"turn_right": cmd = "turn_right"
+		"attack": cmd = "attack"
+		"interact": cmd = "interact"
+		"flee": cmd = "flee"
+	if cmd != "":
+		_on_command(cmd)
+		get_viewport().set_input_as_handled()
 
 ## Équivalent de isGamePaused() de l'original : volet d'inventaire déployé ou fenêtre bloquante ouverte
 ## (piège, fontaine, marchand, sauvegarde, évolution, fiche…). Plus rien n'avance pendant ce temps.

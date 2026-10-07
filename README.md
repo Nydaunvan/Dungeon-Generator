@@ -21,6 +21,7 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène princ
 - Textes : `python3 tools/check_lang.py`
 - Réglages graphiques : `godot --headless --path . res://tools/check_settings.tscn`
 - Mise en page mobile (aucun débordement à droite, carte masquée) : `godot --headless --path . res://tools/check_mobile.tscn`
+- Touches du clavier (défauts par langue, réassignation, conflits, onglet Commandes) : `godot --headless --path . res://tools/check_keys.tscn`
 - Version et journal : `python3 tools/check_version.py`
 
 ## Versions et publication
