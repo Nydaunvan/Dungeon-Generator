@@ -249,6 +249,8 @@ func _run_turns() -> void:
 	_turn_elapsed = 0.0
 	changed.emit()
 
+const SUPPORT_MODES := ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"]
+
 func _drain() -> void:
 	var evs := combat.events.duplicate()
 	combat.events.clear()
@@ -262,6 +264,21 @@ func _drain() -> void:
 				fx3d.emit(str(e.spell), e.get("ctx", {}))
 			_:
 				rest.append(e)
+	# Un sort de soutien (soin, endurance, bouclier, buff…) s'applique à l'instant : jauges et chiffres sans attendre l'effet visuel
+	# (qui continue de jouer ; les autres actions attendent toujours sa fin).
+	var support_only := false
+	for e in evs:
+		if str(e.type) == "fx3d":
+			support_only = SUPPORT_MODES.has(str(e.get("ctx", {}).get("mode", "")))
+			if not support_only:
+				break
+	if support_only:
+		support_only = rest.all(func(r): return str(r.type) == "popup")
+	if support_only:
+		for e in rest:
+			popup.emit(str(e.text), e.color)
+		rest = []
+		changed.emit()
 	# 2) le reste (chiffres, mort d'un monstre, porte, fin de partie) attend la fin de l'effet visuel
 	if SpellFx3D.busy():
 		_draining = true
