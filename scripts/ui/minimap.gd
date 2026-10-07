@@ -29,6 +29,22 @@ func bind(g: DungeonGrid, r: PlayerRig, state: GameState) -> void:
 func _ls() -> Dictionary:
 	return gs.level_state(grid.level)
 
+## Vrai si l'escalier en (x, y) mène vers un niveau suivant (ou la victoire) ; faux s'il redescend.
+func stair_goes_up(x: int, y: int) -> bool:
+	var st := grid.stairs_at(x, y)
+	var act: Dictionary = st.get("action", {})
+	if str(act.get("type", "")) != "level":
+		return true
+	var levels: Array = gs.cfg.get("levels", [])
+	var cur := -1
+	var tgt := -1
+	for i in levels.size():
+		if str(levels[i].id) == str(grid.level.get("id", "")):
+			cur = i
+		if str(levels[i].id) == str(act.get("targetId", "")):
+			tgt = i
+	return tgt < 0 or tgt > cur
+
 static func _k(x: int, y: int) -> String:
 	return "%d,%d" % [x, y]
 
@@ -80,7 +96,7 @@ func _cell_tip(p: Vector2) -> void:
 			var locked: bool = not d.is_empty() and bool(d.get("locked", true)) and not ls.get("door_unlocked", {}).has(str(d.id)) and not grid.opened.has(str(d.id))
 			text = L.fa(L.t("ui.minimap.porte"), (L.t("ui.minimap.verrouillee") if locked else L.t("ui.minimap.deverrouillee")))
 		"S":
-			text = L.t("common.escalier")
+			text = L.t("ui.minimap.escalier_montant") if stair_goes_up(cx, cy) else L.t("ui.minimap.escalier_descendant")
 		_:
 			if cx == rig.gx and cy == rig.gy:
 				text = L.t("ui.minimap.vous_etes_ici")
@@ -158,8 +174,11 @@ func _draw() -> void:
 			draw_rect(Rect2(pos, Vector2(cs, cs) * (1.0 - 1.0 / float(cpx))), col)
 			if ch == "S" and cs >= 5.0:
 				var c := pos + Vector2(cs, cs) * 0.5
-				var r := cs * 0.32
-				draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)]), Color("ffe08a"))
+				var r := cs * 0.36
+				if stair_goes_up(x, y):   # ▲ doré : monte vers le niveau suivant
+					draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, r * 0.8), c + Vector2(-r, r * 0.8)]), Color("ffe08a"))
+				else:                      # ▼ bleu : redescend vers le niveau précédent
+					draw_colored_polygon(PackedVector2Array([c + Vector2(0, r), c + Vector2(r, -r * 0.8), c + Vector2(-r, -r * 0.8)]), Color("7ec8ff"))
 			elif ch == "D" and cs >= 5.0:
 				draw_rect(Rect2(pos + Vector2(cs, cs) * 0.3, Vector2(cs, cs) * 0.4), Color("e8b45c"))
 	for it in grid.level.get("items", []):

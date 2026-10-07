@@ -1385,7 +1385,9 @@
   "ui.keys.strafe_both": "Sidestep (left / right)",
   "ui.settings.target_hint": "90 and 120 frames per second need a 90 or 120 Hz (or faster) display and a powerful machine: quality is then lowered to reach them.",
   "ui.settings.refresh_info": "Your display's refresh rate: %d Hz. With vertical sync, the target never goes above this value.",
-  "ui.settings.refresh_unknown": "Display refresh rate unknown (browser): the target stays at 60 until the game has measured better."
+  "ui.settings.refresh_unknown": "Display refresh rate unknown (browser): the target stays at 60 until the game has measured better.",
+  "ui.minimap.escalier_montant": "Stairs up (next level)",
+  "ui.minimap.escalier_descendant": "Stairs down (previous level)"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

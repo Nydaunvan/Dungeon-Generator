@@ -21,7 +21,7 @@ static func open(host: Node, grid: DungeonGrid, rig: PlayerRig, gs: GameState, m
 		if (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT) or (e is InputEventScreenTouch and e.pressed):
 			m.close())
 	m.content.add_child(mp)
-	var rows := [["▲", L.t("ui.full_map_modal.votre_position_et_direction_actuelles")], ["🚪", L.t("ui.full_map_modal.porte")], ["✨", L.t("ui.full_map_modal.escalier_changement_de_niveau")],
+	var rows := [["▲", L.t("ui.full_map_modal.votre_position_et_direction_actuelles")], ["🚪", L.t("ui.full_map_modal.porte")], ["🔼", L.t("ui.minimap.escalier_montant")], ["🔽", L.t("ui.minimap.escalier_descendant")],
 		["⛲", L.t("ui.full_map_modal.fontaine_soin_endurance_resurrection")], ["🔴", L.t("ui.full_map_modal.monstre_repere")], ["🟡", L.t("ui.full_map_modal.boss_repere")]]
 	if grid.level.has("travelingMerchant"):
 		rows.append(["🧙", L.t("ui.full_map_modal.marchand_ambulant")])
