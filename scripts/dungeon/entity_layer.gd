@@ -147,7 +147,10 @@ func add_merchant(x: int, y: int, big: bool = false) -> void:
 func _make_stall(x: int, y: int, d: Vector2i) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var q := QuadMesh.new()
-	q.size = Vector2(LevelBuilder.MERCHANT_W, LevelBuilder.MERCHANT_H)
+	var sp := LevelBuilder.merchant_niche_spec(_grid, x, y)
+	var sw: float = float(sp.w) * 2.0
+	var sh: float = minf(sw / LevelBuilder.MERCHANT_ASPECT, LevelBuilder.CELL)
+	q.size = Vector2(sw, sh)
 	mi.mesh = q
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -161,7 +164,7 @@ func _make_stall(x: int, y: int, d: Vector2i) -> MeshInstance3D:
 	mi.material_override = m
 	var dv := Vector3(d.x, 0, d.y)
 	var c := Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL)
-	mi.position = c + dv * (LevelBuilder.CELL * 0.5 + LevelBuilder.MERCHANT_DEPTH - 0.03) + Vector3(0, LevelBuilder.MERCHANT_H * 0.5, 0)
+	mi.position = c + dv * (LevelBuilder.CELL * 0.5 + LevelBuilder.MERCHANT_DEPTH - 0.03) + Vector3(0, sh * 0.5, 0)
 	mi.rotation.y = LevelBuilder._rot(d)
 	mi.name = "MerchantStall"
 	add_child(mi)

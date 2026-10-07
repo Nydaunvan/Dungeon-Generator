@@ -36,4 +36,9 @@ func _init() -> void:
 		m.rig.place(g, back.x, back.y, dir)
 		await create_timer(1.0).timeout
 		root.get_texture().get_image().save_png(str(args.get("out", "/tmp/marchand")) + "_loin.png")
+	var side := mp + Vector2i(-nd.y, nd.x)
+	if g.is_walkable(side.x, side.y):
+		m.rig.place(g, side.x, side.y, dir)
+		await create_timer(1.0).timeout
+		root.get_texture().get_image().save_png(str(args.get("out", "/tmp/marchand")) + "_cote.png")
 	quit()

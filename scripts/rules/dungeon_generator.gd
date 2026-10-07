@@ -691,7 +691,8 @@ func _place_merchant(lvls: Array) -> void:
 	occupied[_key(int(ml.startX), int(ml.startY))] = true
 	var rows: Array = ml.mapRows
 	var free: Array = []
-	var back: Array = []   # cases contre un mur dont le retrait ne coupe pas la carte
+	var back: Array = []   # cases contre un mur
+	var wide: Array = []   # cases contre un mur assez long pour le grand étal (voir LevelBuilder.merchant_niche_spec)
 	for y in rows.size():
 		var row: String = rows[y]
 		for x in row.length():
@@ -699,13 +700,31 @@ func _place_merchant(lvls: Array) -> void:
 				free.append(Vector2i(x, y))
 				if _wall_sides(rows, x, y) > 0 and not _near_special(ml, x, y):
 					back.append(Vector2i(x, y))
+					if _wide_wall(rows, x, y):
+						wide.append(Vector2i(x, y))
 	# l'étal est logé dans un décroché du mur : il ne bloque jamais la case, donc aucune contrainte de connexité
-	var pool: Array = back
+	var pool: Array = wide if not wide.is_empty() else back
 	if pool.is_empty():   # à défaut : une case libre dont l'occupation ne coupe jamais la carte (le marchand s'y tient alors)
 		pool = free.filter(func(c): return _keeps_connected(rows, c))
 	if not pool.is_empty():
 		var spot: Vector2i = choice(pool)
 		ml["travelingMerchant"] = {"x": spot.x, "y": spot.y, "patrolRadius": 0}
+
+## Mur assez long pour le grand étal : les deux cases voisines le long du mur sont libres et pleines derrière.
+static func _wide_wall(rows: Array, x: int, y: int) -> bool:
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		if not _wall_at(rows, x + d.x, y + d.y):
+			continue
+		var r := Vector2i(-d.y, d.x)
+		var ok := true
+		for k in [-1, 1]:
+			var nx: int = x + r.x * k
+			var ny: int = y + r.y * k
+			if _wall_at(rows, nx, ny) or (rows[ny] as String)[nx] != "." or not _wall_at(rows, nx + d.x, ny + d.y):
+				ok = false
+		if ok:
+			return true
+	return false
 
 static func _wall_at(rows: Array, x: int, y: int) -> bool:
 	return y < 0 or y >= rows.size() or x < 0 or x >= (rows[y] as String).length() or (rows[y] as String)[x] == "#"
