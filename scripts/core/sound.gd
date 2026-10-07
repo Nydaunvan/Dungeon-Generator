@@ -22,6 +22,8 @@ var _credits_on: bool = false
 var _credits_resume_menu: bool = false
 var _menu_wanted: bool = false
 const CREDITS_MUSIC := "res://assets/music/credits.ogg"
+## Légère baisse (dB) des musiques d'accueil, d'ambiance et de boss par rapport au curseur « Musique » ; le générique garde son niveau.
+const MUSIC_TRIM_DB := -3.0
 const MENU_MUSIC := "res://assets/music/menu.ogg"
 var _ambient_key: String = ""
 var _shimmer: Timer
@@ -64,6 +66,7 @@ func _ready() -> void:
 	_music = AudioStreamPlayer.new()
 	_music.bus = "Music"
 	_music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	_music.volume_db = MUSIC_TRIM_DB
 	add_child(_music)
 	_menu = AudioStreamPlayer.new()
 	_menu.bus = "Music"
@@ -294,7 +297,7 @@ func menu_music(on: bool, fade: float = 1.2) -> void:
 			_menu.volume_db = -60.0
 			_menu.play()
 		_menu_tween = create_tween()
-		_menu_tween.tween_property(_menu, "volume_db", 0.0, fade)
+		_menu_tween.tween_property(_menu, "volume_db", MUSIC_TRIM_DB, fade)
 	elif _menu.playing:
 		_menu_tween = create_tween()
 		_menu_tween.tween_property(_menu, "volume_db", -60.0, fade)
