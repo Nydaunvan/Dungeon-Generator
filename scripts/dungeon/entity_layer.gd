@@ -33,7 +33,11 @@ var _poll := 0.0
 const FOUNTAIN_SCALE := 0.8
 const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
 
+var _grid: DungeonGrid = null
+const STALL_TEX := "res://assets/misc/merchant_stall.webp"
+
 func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false) -> void:
+	_grid = grid
 	if bool(level.get("outdoor", false)):
 		if level.get("blacksmith") is Dictionary:
 			add_npc("@icon:blacksmith", int(level.blacksmith.x), int(level.blacksmith.y))
@@ -126,6 +130,11 @@ func add_npc(icon: String, x: int, y: int) -> void:
 func add_merchant(x: int, y: int, big: bool = false) -> void:
 	if merchant_node != null:
 		merchant_node.queue_free()
+	if not big and _grid != null:
+		var nd := LevelBuilder.merchant_niche_dir(_grid, x, y)
+		if nd != Vector2i.ZERO:
+			merchant_node = _make_stall(x, y, nd)
+			return
 	var icon := "@icon:merchant" if big else "@icon:merchant_dungeon"   # le village garde son marchand d'origine
 	var n := _make_sprite(icon, big, false, 1.0 if big else 1.2)
 	if n == null:
@@ -133,6 +142,30 @@ func add_merchant(x: int, y: int, big: bool = false) -> void:
 	_place_on_floor(n, Vector2i(x, y), icon)
 	add_child(n)
 	merchant_node = n
+
+## Étal du marchand logé dans un décroché du mur (case (x, y), mur côté `d`) : image posée au fond de la niche.
+func _make_stall(x: int, y: int, d: Vector2i) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(LevelBuilder.MERCHANT_W, LevelBuilder.MERCHANT_H)
+	mi.mesh = q
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	m.alpha_scissor_threshold = 0.4
+	m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_texture = load(STALL_TEX)
+	m.albedo_color = Color(0.92, 0.9, 0.88)
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	mi.material_override = m
+	var dv := Vector3(d.x, 0, d.y)
+	var c := Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL)
+	mi.position = c + dv * (LevelBuilder.CELL * 0.5 + LevelBuilder.NICHE_DEPTH - 0.03) + Vector3(0, LevelBuilder.MERCHANT_H * 0.5, 0)
+	mi.rotation.y = LevelBuilder._rot(d)
+	mi.name = "MerchantStall"
+	add_child(mi)
+	return mi
 
 func move_merchant(x: int, y: int) -> void:
 	if merchant_node != null:

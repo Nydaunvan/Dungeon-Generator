@@ -676,7 +676,7 @@ func _try_locking_door(grid: Array, dist: Array, rooms: Array, candidates: Array
 				break
 	return best
 
-## Marchand ambulant sur le 2ᵉ niveau (ou le seul), sur une case libre.
+## Marchand ambulant sur le 2ᵉ niveau (ou le seul) : étal logé dans un décroché du mur, sur une case libre contre un mur.
 func _place_merchant(lvls: Array) -> void:
 	var ml: Dictionary = lvls[mini(1, lvls.size() - 1)]
 	var occupied := {}
@@ -697,10 +697,11 @@ func _place_merchant(lvls: Array) -> void:
 		for x in row.length():
 			if row[x] == "." and not occupied.has(_key(x, y)):
 				free.append(Vector2i(x, y))
-				if _wall_sides(rows, x, y) > 0 and not _near_special(ml, x, y) and _keeps_connected(rows, Vector2i(x, y)):
+				if _wall_sides(rows, x, y) > 0 and not _near_special(ml, x, y):
 					back.append(Vector2i(x, y))
+	# l'étal est logé dans un décroché du mur : il ne bloque jamais la case, donc aucune contrainte de connexité
 	var pool: Array = back
-	if pool.is_empty():   # à défaut : une case libre dont l'occupation ne coupe jamais la carte (sinon pas de marchand)
+	if pool.is_empty():   # à défaut : une case libre dont l'occupation ne coupe jamais la carte (le marchand s'y tient alors)
 		pool = free.filter(func(c): return _keeps_connected(rows, c))
 	if not pool.is_empty():
 		var spot: Vector2i = choice(pool)

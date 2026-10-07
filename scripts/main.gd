@@ -426,7 +426,7 @@ func _interact() -> void:
 			inter.try_door(f.x, f.y)
 	elif ch == "S":
 		_use_stairs(f)
-	else:
+	elif not (ch == "#" and inter.bump_merchant(f.x, f.y)):
 		show_message(L.t("main.rien_a_faire_ici"))
 
 ## Clic sur une carte : cible d'un sort, fiche (en combat) ou volet d'équipement (hors combat).
@@ -499,7 +499,7 @@ func _on_blocked(x: int, y: int) -> void:
 		Sound.sfx("blocked")
 		return
 	if grid.cell(x, y) == "#":
-		if inter.bump_fountain(x, y):
+		if inter.bump_fountain(x, y) or inter.bump_merchant(x, y):
 			return
 		Sound.sfx("blocked")
 		inter.bump_wall(x, y)

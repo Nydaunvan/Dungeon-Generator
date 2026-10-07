@@ -8,6 +8,12 @@ const CELL := 4.0
 const NICHE_HALF_W := 1.25    # demi-largeur du décroché de la fontaine
 const NICHE_H := 2.8          # hauteur du décroché
 const NICHE_DEPTH := 1.9      # profondeur dans le mur
+## Décroché de l'étal du marchand : même largeur que l'ancien sprite du marchand (1,5 × 1,3 × 1,2 = 2,34 u),
+## image de l'étal à cette largeur (assets/misc/merchant_stall.webp, 1421 × 983 px).
+const MERCHANT_W := 2.34
+const MERCHANT_ASPECT := 1421.0 / 983.0
+const MERCHANT_H := MERCHANT_W / MERCHANT_ASPECT
+const MERCHANT_NICHE_H := 2.3    # plus haut que l'étal et que l'œil du joueur (2 u) : le linteau ne masque pas le haut de l'image
 
 ## `sliced` : pendant l'écran de chargement, le travail est réparti sur plusieurs images (l'épée reste fluide) ; l'appelant doit alors `await`.
 static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) -> LevelView:
@@ -29,13 +35,19 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		parts[k].begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var half := CELL * 0.5
-	var niches := {}      # Vector2i(case) -> Vector2i(direction du mur évidé)
+	var niches := {}      # Vector2i(case) -> {d: direction du mur évidé, w: demi-largeur, h: hauteur}
 	if not outdoor:
 		for it in level.get("items", []):
 			if str(it.get("type", "")) == "fountain":
 				var nd := fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id))
 				if nd != Vector2i.ZERO:
-					niches[Vector2i(int(it.x), int(it.y))] = nd
+					niches[Vector2i(int(it.x), int(it.y))] = {"d": nd, "w": NICHE_HALF_W, "h": NICHE_H}
+		var tm = level.get("travelingMerchant")
+		if tm is Dictionary:
+			var mp := Vector2i(int(tm.x), int(tm.y))
+			var md := merchant_niche_dir(grid, mp.x, mp.y)
+			if md != Vector2i.ZERO and not niches.has(mp):
+				niches[mp] = {"d": md, "w": MERCHANT_W * 0.5, "h": MERCHANT_NICHE_H}
 	for y in grid.height:
 		if sliced:
 			await Loader.slice()
@@ -57,8 +69,9 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 				var n := grid.cell(x + d.x, y + d.y)
 				var edge := c + Vector3(d.x * half, 0.0, d.y * half)   # milieu de l'arête au sol
 				var rot := _rot(d)
-				if n == "#" and niches.get(Vector2i(x, y), Vector2i.ZERO) == d:
-					_add_niche(parts, counts, torches, c, d, rot, theme_name)
+				var nich: Dictionary = niches.get(Vector2i(x, y), {})
+				if n == "#" and not nich.is_empty() and nich.d == d:
+					_add_niche(parts, counts, torches, c, d, rot, theme_name, float(nich.w), float(nich.h))
 				elif n == "#":
 					_quad(parts["wall"], edge + Vector3(0, half, 0), Vector3.UP, Vector3(-d.x, 0, -d.y), half)
 					counts["wall"] += 1
@@ -123,6 +136,16 @@ static func fountain_niche_dir(grid: DungeonGrid, x: int, y: int, id: String) ->
 		return Vector2i.ZERO
 	return cands[absi(id.hash()) % cands.size()]
 
+## Direction du mur à évider pour loger l'étal du marchand de la case (x, y), ou ZERO s'il n'y a aucun mur autour.
+static func merchant_niche_dir(grid: DungeonGrid, x: int, y: int) -> Vector2i:
+	var cands: Array[Vector2i] = []
+	for d in DungeonGrid.DIRS:
+		if grid.cell(x + d.x, y + d.y) == "#":
+			cands.append(d)
+	if cands.is_empty():
+		return Vector2i.ZERO
+	return cands[absi(("merchant_%d_%d" % [x, y]).hash()) % cands.size()]
+
 ## Position (monde) et lacet de la fontaine logée dans le décroché de la case (x, y) côté `d`.
 static func fountain_niche_pose(x: int, y: int, d: Vector2i) -> Dictionary:
 	var c := Vector3(x * CELL, 0.0, y * CELL)
@@ -145,14 +168,15 @@ static func _rect(st: SurfaceTool, o: Vector3, right: Vector3, up: Vector3, n: V
 	_v(st, br, n, uv.call(s1, t0))
 
 ## Mur percé d'un décroché (niche) : montants + linteau, fond, deux flancs, sol et plafond ; deux torches de part et d'autre.
-static func _add_niche(parts: Dictionary, counts: Dictionary, torches: TorchLayer, c: Vector3, d: Vector2i, rot: float, theme_name: String) -> void:
+static func _add_niche(parts: Dictionary, counts: Dictionary, torches: TorchLayer, c: Vector3, d: Vector2i, rot: float, theme_name: String,
+		half_w: float = NICHE_HALF_W, height: float = NICHE_H) -> void:
 	var half := CELL * 0.5
 	var dv := Vector3(d.x, 0, d.y)
 	var n := -dv                                   # normale du mur vu depuis la case
 	var wc := c + dv * half + Vector3(0, half, 0)  # centre du pan de mur
 	var right := Vector3.UP.cross(n)
-	var w := NICHE_HALF_W
-	var t1 := NICHE_H - half
+	var w := half_w
+	var t1 := height - half
 	var wall: SurfaceTool = parts["wall"]
 	_rect(wall, wc, right, Vector3.UP, n, -half, -w, -half, half)
 	_rect(wall, wc, right, Vector3.UP, n, w, half, -half, half)

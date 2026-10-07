@@ -105,7 +105,7 @@ var _pass_merchant := false
 
 func blocks_cell(x: int, y: int) -> bool:
 	if not bool(level.get("outdoor", false)):
-		return npc_at(x, y) == "merchant" and not _pass_merchant   # marchand ambulant : fixe contre un mur, on le heurte au lieu de marcher dessus
+		return npc_at(x, y) == "merchant" and not _pass_merchant and merchant_niche_dir() == Vector2i.ZERO   # marchand ambulant : fixe contre un mur, on le heurte au lieu de marcher dessus
 	return (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]) or npc_at(x, y) != ""
 
 func npc_at(x: int, y: int) -> String:
@@ -126,7 +126,7 @@ func npc_at(x: int, y: int) -> String:
 func bump_village(x: int, y: int) -> bool:
 	if not bool(level.get("outdoor", false)):
 		var tm: Dictionary = wand.merchant() if wand != null else {}
-		if npc_at(x, y) == "merchant" and not tm.is_empty():
+		if npc_at(x, y) == "merchant" and not tm.is_empty() and merchant_niche_dir() == Vector2i.ZERO:
 			_meet_merchant(tm)
 			return true
 		return false
@@ -159,6 +159,26 @@ func bump_village(x: int, y: int) -> bool:
 	return false
 
 # ------------------------------------------------------------------ marchand itinérant
+
+## Direction du mur où l'étal du marchand est logé (ZERO : pas de niche, il se tient sur sa case).
+func merchant_niche_dir() -> Vector2i:
+	if wand == null or bool(level.get("outdoor", false)):
+		return Vector2i.ZERO
+	var mm: Dictionary = wand.merchant()
+	if mm.is_empty():
+		return Vector2i.ZERO
+	return LevelBuilder.merchant_niche_dir(grid, int(mm.x), int(mm.y))
+
+## Le groupe, debout devant l'étal, avance contre le mur creusé : le marchand l'accueille. Renvoie true si c'est le cas.
+func bump_merchant(tx: int, ty: int) -> bool:
+	var nd := merchant_niche_dir()
+	if nd == Vector2i.ZERO:
+		return false
+	var mm: Dictionary = wand.merchant()
+	if rig.gx != int(mm.x) or rig.gy != int(mm.y) or Vector2i(tx - rig.gx, ty - rig.gy) != nd:
+		return false
+	_meet_merchant(mm)
+	return true
 
 func _meet_merchant(mm: Dictionary) -> void:
 	mm["discovered"] = true
