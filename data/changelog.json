@@ -1,5 +1,33 @@
 [
  {
+  "version": "1.30.1",
+  "changes": [
+   "## Menu Paramètres et qualité graphique",
+   "Nouveau bouton « Paramètres » dans l'en-tête : niveaux de qualité Faible, Moyen, Élevé et Ultra (résolution 3D, lissage, lumières des torches, particules, distance de vue, textures HD…), détection de la machine et réglages détaillés.",
+   "À chaque lancement, le jeu mesure les performances et choisit la qualité pour tenir au moins 60 images par seconde avec des textures de qualité moyenne (moins seulement si la machine ne peut pas faire mieux). L'adaptation dynamique peut être désactivée.",
+   "## Mobile",
+   "Sur téléphone en portrait, tout tient dans la largeur de l'écran : en-tête réduit à ses icônes, cartes du groupe, onglets, boussole, accueil et écran de chargement ajustés.",
+   "La carte est masquée et s'ouvre d'un toucher sur le bouton 🗺 (un toucher sur la carte la referme) : la vue du donjon est plus grande.",
+   "## Chargement et fluidité",
+   "Le chargement initial prépare tout d'avance : scripts et scènes compilés, textures et matériaux, shaders de la scène 3D (mini-scène dessinée hors écran), sons. Les changements de donjon sont plus rapides et l'épée de la barre de chargement reste fluide.",
+   "Chargement d'un donjon découpé en petites étapes : l'écran de chargement ne se fige plus.",
+   "## Musiques",
+   "Musique d'accueil dès le lancement du jeu (sur le Web, au premier clic sur « Entrer », comme l'exigent les navigateurs) : elle continue d'un écran du menu à l'autre, puis s'efface en fondu quand on entre dans un donjon.",
+   "Nouvelle musique pour les combats contre un boss (remplace l'ancienne musique synthétisée).",
+   "## Sons",
+   "Nouveaux sons : lancer de dés (accueil et d20 des pièges), pièces d'or (gain dans un piège ou une énigme, achat et vente chez le marchand), ouverture de la grande carte.",
+   "Retrait du bruit de pas lors des déplacements et du bruit d'approche des monstres.",
+   "## Générique",
+   "Le texte « Made by Claude & Nydaunvan » (accueil et pied de page du jeu) ouvre un générique : crédits centrés qui défilent de bas en haut, avec sa musique ; un clic ou Échap le ferme.",
+   "## Interface",
+   "Bouton « Quitter » : icône de porte à la place du symbole d'alimentation.",
+   "## Correctifs",
+   "Écran très grand (32 pouces) : l'interface ne reste plus trop large ni coupée après un redimensionnement (barre de sorts qui grandissait en boucle).",
+   "## Publication",
+   "Numéro de version unique (1.30.1), affiché dans le jeu ; nouvelle version Linux (exécutable) en plus de Windows et Web ; publication Windows et Linux automatisée sur GitHub avec les notes tirées de ce journal."
+  ]
+ },
+ {
   "version": "1.29",
   "changes": [
    "## Nouveaux monstres",
