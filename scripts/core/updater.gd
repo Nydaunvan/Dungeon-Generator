@@ -224,11 +224,42 @@ func _install() -> void:
 	else:
 		finished.emit(true, "")
 
-## Écrit un script de remplacement : attend que le jeu soit fermé, met le nouvel exécutable en place, le relance.
+## Script de remplacement Windows (VBScript lancé par wscript : aucune fenêtre, contrairement à cmd). Il attend que le jeu soit
+## fermé (la copie échoue tant que l'exécutable est verrouillé), recopie le nouvel exécutable, le relance et s'efface.
 static func windows_script(new_exe: String, exe: String) -> String:
 	var n := new_exe.replace("/", "\\")
 	var e := exe.replace("/", "\\")
-	return "@echo off\r\nset N=0\r\n:wait\r\nping 127.0.0.1 -n 2 >nul\r\nset /a N+=1\r\nmove /Y \"%s\" \"%s\" >nul 2>&1\r\nif errorlevel 1 (\r\n  if %%N%% LSS 30 goto wait\r\n  exit /b 1\r\n)\r\nstart \"\" \"%s\"\r\n(goto) 2>nul & del \"%%~f0\"\r\n" % [n, e, e]
+	var lines := [
+		"Dim fso, sh, i, ok",
+		"Set fso = CreateObject(\"Scripting.FileSystemObject\")",
+		"Set sh = CreateObject(\"WScript.Shell\")",
+		"ok = False",
+		"For i = 1 To 60",
+		"  WScript.Sleep 500",
+		"  On Error Resume Next",
+		"  fso.CopyFile \"%s\", \"%s\", True" % [n, e],
+		"  If Err.Number = 0 Then ok = True",
+		"  Err.Clear",
+		"  On Error GoTo 0",
+		"  If ok Then Exit For",
+		"Next",
+		"If ok Then",
+		"  On Error Resume Next",
+		"  fso.DeleteFile \"%s\", True" % n,
+		"  On Error GoTo 0",
+		"  sh.CurrentDirectory = fso.GetParentFolderName(\"%s\")" % e,
+		"  sh.Run Chr(34) & \"%s\" & Chr(34), 1, False" % e,
+		"End If",
+		"On Error Resume Next",
+		"fso.DeleteFile WScript.ScriptFullName, True",
+		""]
+	return "\r\n".join(lines)
+
+## Octets d'un script VBS : UTF-16 avec marque d'ordre des octets (les chemins avec accents restent corrects).
+static func vbs_bytes(text: String) -> PackedByteArray:
+	var b := PackedByteArray([0xFF, 0xFE])
+	b.append_array(text.to_utf16_buffer())
+	return b
 
 static func linux_script(new_exe: String, exe: String) -> String:
 	return "#!/bin/sh\nsleep 1\ni=0\nwhile ! mv -f '%s' '%s' 2>/dev/null; do\n  i=$((i+1))\n  [ $i -ge 30 ] && exit 1\n  sleep 1\ndone\nchmod +x '%s'\nnohup '%s' >/dev/null 2>&1 &\nrm -- \"$0\"\n" % [new_exe, exe, exe, exe]
@@ -253,13 +284,15 @@ func _install_windows(exe: String) -> String:
 		return "dossier d'installation protégé en écriture"
 	f.store_buffer(bytes)
 	f.close()
-	var bat := ProjectSettings.globalize_path(DIR) + "/apply.bat"
-	var bf := FileAccess.open(bat, FileAccess.WRITE)
+	var vbs := ProjectSettings.globalize_path(DIR) + "/apply.vbs"
+	var bf := FileAccess.open(vbs, FileAccess.WRITE)
 	if bf == null:
 		return "script"
-	bf.store_string(windows_script(new_exe, exe))
+	bf.store_buffer(vbs_bytes(windows_script(new_exe, exe)))
 	bf.close()
-	OS.create_process("cmd.exe", ["/c", "start", "", "/min", bat.replace("/", "\\")])
+	# wscript //B : pas de fenêtre ni de boîte de dialogue ; le script attend la fermeture du jeu
+	if OS.create_process("wscript.exe", ["//B", "//Nologo", vbs.replace("/", "\\")]) < 0:
+		return "lancement du script"
 	return ""
 
 func _install_linux(exe: String) -> String:
@@ -290,6 +323,9 @@ func _install_linux(exe: String) -> String:
 
 ## Nettoyage au lancement : archive téléchargée et fichiers temporaires de la mise à jour précédente.
 static func cleanup() -> void:
+	var stale := OS.get_executable_path() + ".new"
+	if FileAccess.file_exists(stale):
+		DirAccess.remove_absolute(stale)
 	var dir := ProjectSettings.globalize_path(DIR)
 	if not DirAccess.dir_exists_absolute(dir):
 		return

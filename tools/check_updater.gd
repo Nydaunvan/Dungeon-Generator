@@ -34,8 +34,10 @@ func _ready() -> void:
 	t.call("somme windows", Updater.expected_sum(sums, "Dungeon-Generator-1.31.0-windows.zip") == "aaa111")
 	t.call("somme linux", Updater.expected_sum(sums, "Dungeon-Generator-1.31.0-linux.tar.gz") == "bbb222")
 	t.call("somme absente", Updater.expected_sum(sums, "x.zip") == "")
-	var bat := Updater.windows_script("C:/J/g.exe.new", "C:/J/g.exe")
-	t.call("script windows", bat.contains("move /Y \"C:\\J\\g.exe.new\" \"C:\\J\\g.exe\"") and bat.contains("%N% LSS 30") and bat.contains("start \"\" \"C:\\J\\g.exe\""))
+	var bat := Updater.windows_script("C:/J é/g.exe.new", "C:/J é/g.exe")
+	t.call("script windows", bat.contains("fso.CopyFile \"C:\\J é\\g.exe.new\", \"C:\\J é\\g.exe\", True") and bat.contains("sh.Run Chr(34) & \"C:\\J é\\g.exe\" & Chr(34)") and not bat.to_lower().contains("cmd"))
+	var vb := Updater.vbs_bytes("é")
+	t.call("VBS en UTF-16 avec marque", vb[0] == 0xFF and vb[1] == 0xFE and vb.size() == 4)
 	var sh := Updater.linux_script("/o/g.new", "/o/g")
 	t.call("script linux", sh.contains("mv -f '/o/g.new' '/o/g'") and sh.contains("nohup '/o/g'"))
 	# extraction d'une archive Windows factice
