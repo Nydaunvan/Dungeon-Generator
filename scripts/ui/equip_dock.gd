@@ -597,7 +597,7 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 		_render())
 	body.add_child(rail)
 	var grid := GridContainer.new()
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
@@ -608,14 +608,14 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 		if i < entries.size():
 			var e: Dictionary = entries[i]
 			var is_sel: bool = not resolved.is_empty() and resolved.src == "bag" and sel.get("key") == e.key
-			var tile := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.count), is_sel, 56.0, char_id, true)
+			var tile := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.count), is_sel, 54.0, char_id, true)
 			var k: String = e.key
 			tile.pressed.connect(func(): _bag_clicked(k))
 			tile.quick.connect(_quick)
 			UiFx.hover_pop(tile, 1.06)
 			grid.add_child(tile)
 		else:
-			grid.add_child(BagCommon.empty_cell(56.0))
+			grid.add_child(BagCommon.empty_cell(54.0))
 	col.add_child(_build_detail(c, resolved))
 	return col
 

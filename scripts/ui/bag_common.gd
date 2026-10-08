@@ -214,7 +214,7 @@ static func empty_cell(min_size: float) -> Control:
 	sb.set_corner_radius_all(int(UiMetrics.css(5.0)))
 	p.add_theme_stylebox_override("panel", sb)
 	p.custom_minimum_size = Vector2(min_size, min_size)
-	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return p
 
@@ -228,7 +228,7 @@ static func make_tile(gs: GameState, it: Dictionary, idx: int, count: int, selec
 	b.double_click_quick = double_click_quick
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(min_size, min_size)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.icon = IconResolver.texture(str(it.get("icon", "")))
 	b.expand_icon = true
 	style_tile(b, it, selected)

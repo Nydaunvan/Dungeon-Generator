@@ -6,7 +6,7 @@ signal item_pressed(index: int)
 signal item_quick(index: int)      # clic droit : boire la potion / équiper l'objet (personnage actif)
 
 const CAPACITY := Inventory.MAX_PER_TAB
-const COLS := 3
+const COLS := 4
 const TAB_IDS := ["items", "potions", "keys"]
 const TAB_ICONS := ["@icon:sword_broad", "@icon:potion_heal", "@icon:misc_key"]
 const EMPTY := ["ui.bag_panel.aucun_objet_equipable", "ui.bag_panel.aucune_potion", "ui.bag_panel.aucune_cle_ni_parchemin"]
@@ -64,14 +64,14 @@ func setup(state: GameState) -> void:
 	row.add_child(inset)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size = Vector2(0, 4.0 * (UiMetrics.css(44.0) + 4.0))
+	scroll.custom_minimum_size = Vector2(0, 3.0 * (UiMetrics.css(52.0) + 4.0))
 	inset.add_child(scroll)
 	var stack := VBoxContainer.new()
 	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(stack)
 	_grid = GridContainer.new()
 	_grid.columns = COLS
-	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_grid.add_theme_constant_override("h_separation", 4)
 	_grid.add_theme_constant_override("v_separation", 4)
 	stack.add_child(_grid)
@@ -141,7 +141,7 @@ func refresh() -> void:
 		tiles.append(e)
 		shown += 1
 	for e in tiles:
-		var b := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.n), false, 44.0, gs.active_char_id)
+		var b := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.n), false, UiMetrics.css(52.0), gs.active_char_id)
 		var i2: int = e.idx
 		b.pressed.connect(func(): item_pressed.emit(i2))
 		b.quick.connect(func(i: int): item_quick.emit(i))
@@ -149,7 +149,7 @@ func refresh() -> void:
 		_grid.add_child(b)
 	var cells := maxi(CAPACITY, int(ceil(shown / float(COLS))) * COLS)
 	for _i in range(shown, cells):
-		_grid.add_child(BagCommon.empty_cell(44.0))
+		_grid.add_child(BagCommon.empty_cell(UiMetrics.css(52.0)))
 	_empty.text = ""
 
 
