@@ -1,0 +1,11 @@
+Model Information:
+* title:	FREE Battlemage Wizard
+* source:	https://sketchfab.com/3d-models/free-battlemage-wizard-f87909cb099f4b599eab272baf8353bd
+* author:	Axinovium (https://sketchfab.com/Axinovium)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "FREE Battlemage Wizard" (https://sketchfab.com/3d-models/free-battlemage-wizard-f87909cb099f4b599eab272baf8353bd) by Axinovium (https://sketchfab.com/Axinovium) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

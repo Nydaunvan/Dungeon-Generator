@@ -513,7 +513,36 @@ func _build_lantern() -> void:
 	body.add_child(_lantern_light)
 	_sway.append([holder, randf() * TAU, 0.03, "z"])
 
+const WIZARD_GLB := "res://assets/misc/merchant3d/wizard/scene.gltf"   # « FREE Battlemage Wizard » par Axinovium (CC-BY 4.0)
+const WIZARD_SCALE := 1.32
+
+var _wiz: Node3D
+
 func _build_merchant() -> void:
+	if ResourceLoader.exists(WIZARD_GLB):
+		var packed: PackedScene = load(WIZARD_GLB)
+		_wiz = Node3D.new()
+		_wiz.name = "Marchand"
+		# le modèle fait 2 u de haut, centré sur l'origine, face à +Z : pieds au sol, derrière le comptoir
+		_wiz.position = Vector3(0.1, 0.0, -0.1)
+		add_child(_wiz)
+		var model: Node3D = packed.instantiate()
+		model.scale = Vector3.ONE * WIZARD_SCALE
+		model.position = Vector3(0, 1.0 * WIZARD_SCALE + 0.1, 0)
+		_wiz.add_child(model)
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			var m := mi as MeshInstance3D
+			for i in m.mesh.get_surface_count():
+				var mat := m.mesh.surface_get_material(i)
+				if mat is StandardMaterial3D:
+					var sm := (mat as StandardMaterial3D).duplicate() as StandardMaterial3D
+					sm.cull_mode = BaseMaterial3D.CULL_BACK
+					sm.roughness = 0.75
+					sm.rim_enabled = true
+					sm.rim = 0.2
+					sm.rim_tint = 0.5
+					m.set_surface_override_material(i, sm)
+		return
 	var w := Wizard3D.new()
 	w.name = "Marchand"
 	w.position = Vector3(0.1, 0.0, -0.1)
@@ -535,6 +564,9 @@ func _process(delta: float) -> void:
 			n.rotation.z = a
 		else:
 			n.rotation.x = a * 0.5
+	if _wiz != null:
+		_wiz.scale = Vector3(1.0, 1.0 + 0.006 * sin(_t * 1.6), 1.0)
+		_wiz.rotation.y = 0.035 * sin(_t * 0.45)
 	if _torso != null:
 		_torso.scale = Vector3(1.0, 1.0 + 0.008 * sin(_t * 1.6), 1.0)
 		_head.rotation.y = 0.12 * sin(_t * 0.45)
