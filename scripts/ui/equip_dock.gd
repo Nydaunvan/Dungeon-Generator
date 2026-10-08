@@ -22,6 +22,7 @@ var char_id: String = ""
 var tab: String = "items"
 var sel: Dictionary = {}          # {"src":"bag","key":..} | {"src":"slot","slot":..}
 var details_open: bool = false
+var _rail_prev := -1
 var sort_mode: int = 0            # indice dans Inventory.SORT_MODES (dernier tri demandé)
 var _catcher: DropCatcher
 
@@ -579,17 +580,22 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 12)
 	col.add_child(body)
-	var rail := VBoxContainer.new()
-	rail.add_theme_constant_override("separation", 8)
+	var defs: Array = []
+	var counts: Array = []
+	var cur := 0
+	for k in TABS.size():
+		defs.append([TABS[k][1], L.t(Inventory.TAB_LABELS[TABS[k][0]])])
+		counts.append(Inventory.tab_count(gs, TABS[k][0]))
+		if TABS[k][0] == tab:
+			cur = k
+	var rail := BagCommon.Rail.new()
+	rail.setup(defs, Vector2(52, 58), 8.0, counts, cur, _rail_prev)
+	_rail_prev = cur
+	rail.selected.connect(func(i: int):
+		tab = TABS[i][0]
+		sel = {}
+		_render())
 	body.add_child(rail)
-	for tdef in TABS:
-		var tid: String = tdef[0]
-		var rb := BagCommon.rail_tab(tdef[1], Inventory.tab_count(gs, tid), tab == tid, Vector2(52, 58), L.t(Inventory.TAB_LABELS[tid]))
-		rb.pressed.connect(func():
-			tab = tid
-			sel = {}
-			_render())
-		rail.add_child(rb)
 	var grid := GridContainer.new()
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.columns = 4

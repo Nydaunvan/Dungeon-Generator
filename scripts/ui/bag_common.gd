@@ -38,8 +38,8 @@ static func coin(size: float = 16.0) -> Control:
 	return p
 
 ## Onglet de besace : icône + « n/12 » (rouge quand l'onglet est plein).
-## Onglet « rail » : bouton d'icône carré, pastille de compteur en bas à droite, liseré doré à gauche si actif.
-static func rail_tab(icon: String, count: int, active: bool, size: Vector2, tip: String) -> Button:
+## Onglet « rail » : bouton d'icône carré avec pastille de compteur (le style dépend de l'état : voir `rail_style`).
+static func rail_tab(icon: String, size: Vector2, tip: String) -> Button:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = size
@@ -49,10 +49,30 @@ static func rail_tab(icon: String, count: int, active: bool, size: Vector2, tip:
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 	b.add_theme_constant_override("icon_max_width", int(size.x * 0.62))
 	b.tooltip_text = tip
-	b.modulate = Color(1, 1, 1, 1.0 if active else 0.72)
-	var mk := func(bg: Color, bd: Color, lift: float) -> StyleBoxFlat:
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var badge := PanelContainer.new()
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := Label.new()
+	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.66)))
+	badge.add_child(l)
+	badge.anchor_left = 1.0
+	badge.anchor_right = 1.0
+	badge.anchor_top = 1.0
+	badge.anchor_bottom = 1.0
+	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	badge.offset_right = UiMetrics.css(3.0)
+	badge.offset_bottom = UiMetrics.css(3.0)
+	b.add_child(badge)
+	b.set_meta("badge", badge)
+	b.set_meta("badge_label", l)
+	return b
+
+static func rail_style(b: Button, count: int, active: bool) -> void:
+	var mk := func(bg: Color, bd: Color) -> StyleBoxFlat:
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = bg.lightened(lift)
+		sb.bg_color = bg
 		sb.set_corner_radius_all(int(UiMetrics.css(8.0)))
 		sb.set_content_margin_all(UiMetrics.css(4.0))
 		sb.set_border_width_all(1)
@@ -64,13 +84,10 @@ static func rail_tab(icon: String, count: int, active: bool, size: Vector2, tip:
 	var bg := Color("2a2018") if active else Color("0b0805")
 	var bd := Color("a9793a") if active else Color("241a11")
 	for st in ["normal", "pressed"]:
-		b.add_theme_stylebox_override(st, mk.call(bg, bd, 0.0))
+		b.add_theme_stylebox_override(st, mk.call(bg, bd))
 	for st in ["hover", "hover_pressed"]:
-		b.add_theme_stylebox_override(st, mk.call(bg, Color("a9793a") if active else Color("5a4631"), 0.05))
-	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		b.add_theme_stylebox_override(st, mk.call(bg.lightened(0.05), Color("a9793a") if active else Color("5a4631")))
 	var full := count >= Inventory.MAX_PER_TAB
-	var badge := PanelContainer.new()
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bs := StyleBoxFlat.new()
 	bs.bg_color = Color("7a2a1c") if full else Color("080604")
 	bs.border_color = Color("ff7a62") if full else Color("5a4631")
@@ -80,32 +97,90 @@ static func rail_tab(icon: String, count: int, active: bool, size: Vector2, tip:
 	bs.content_margin_right = UiMetrics.css(4.0)
 	bs.content_margin_top = 0.0
 	bs.content_margin_bottom = 0.0
-	badge.add_theme_stylebox_override("panel", bs)
-	var l := Label.new()
+	(b.get_meta("badge") as PanelContainer).add_theme_stylebox_override("panel", bs)
+	var l: Label = b.get_meta("badge_label")
 	l.text = str(count)
-	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-	l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.66)))
 	l.add_theme_color_override("font_color", Color("fff1d6") if full else Color("e2d2b0"))
-	badge.add_child(l)
-	badge.anchor_left = 1.0
-	badge.anchor_right = 1.0
-	badge.anchor_top = 1.0
-	badge.anchor_bottom = 1.0
-	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	badge.offset_right = UiMetrics.css(3.0)
-	badge.offset_bottom = UiMetrics.css(3.0)
-	b.add_child(badge)
-	if active:
-		var bar := ColorRect.new()
-		bar.color = Color("e0a24c")
-		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bar.anchor_top = 0.2
-		bar.anchor_bottom = 0.8
-		bar.offset_left = -UiMetrics.css(7.0)
-		bar.offset_right = -UiMetrics.css(4.0)
-		b.add_child(bar)
-	return b
+	var tw := b.create_tween()
+	tw.tween_property(b, "modulate:a", 1.0 if active else 0.72, 0.18)
+
+## Rail d'onglets verticaux : le tiret doré glisse d'un onglet à l'autre (`from` = onglet d'où il part, -1 = sans glissement).
+class Rail extends Control:
+	signal selected(index: int)
+	var _btns: Array[Button] = []
+	var _bar: ColorRect
+	var _sz: Vector2
+	var _sep: float
+	var _pad: float
+	var _active := -1
+	var _tw: Tween
+
+	func setup(defs: Array, sz: Vector2, sep: float, counts: Array, active: int, from: int = -1) -> void:
+		_sz = sz
+		_sep = sep
+		_pad = UiMetrics.css(10.0)
+		custom_minimum_size = Vector2(_pad + sz.x, defs.size() * sz.y + (defs.size() - 1) * sep)
+		for i in defs.size():
+			var b := BagCommon.rail_tab(defs[i][0], sz, defs[i][1])
+			b.position = Vector2(_pad, i * (sz.y + sep))
+			b.size = sz
+			var idx := i
+			b.pressed.connect(func(): selected.emit(idx))
+			add_child(b)
+			_btns.append(b)
+		_bar = ColorRect.new()
+		_bar.color = Color("e0a24c")
+		_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_bar.size = Vector2(maxf(2.0, UiMetrics.css(3.0)), sz.y * 0.6)
+		_bar.position = Vector2(UiMetrics.css(1.0), _bar_y(from if from >= 0 else active))
+		add_child(_bar)
+		update(counts, active)
+
+	func _bar_y(i: int) -> float:
+		return i * (_sz.y + _sep) + _sz.y * 0.2
+
+	func update(counts: Array, active: int) -> void:
+		for i in _btns.size():
+			BagCommon.rail_style(_btns[i], int(counts[i]), i == active)
+		if active != _active:
+			_active = active
+			if _tw != null and _tw.is_valid():
+				_tw.kill()
+			_tw = create_tween()
+			_tw.tween_property(_bar, "position:y", _bar_y(active), 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## Infobulle riche d'objet, dans une couche dédiée au-dessus de toute l'interface (volet, fenêtres, infobulles simples).
+static var _tip_layer: CanvasLayer
+static var _tip_node: Control
+
+static func show_item_tip(host: Control, gs: GameState, it: Dictionary, char_id: String) -> void:
+	hide_item_tip()
+	if _tip_layer == null or not is_instance_valid(_tip_layer):
+		_tip_layer = CanvasLayer.new()
+		_tip_layer.name = "ItemTipLayer"
+		_tip_layer.layer = 230
+		host.get_tree().root.add_child(_tip_layer)
+	var t := tooltip_for(gs, it, char_id)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	t.modulate.a = 0.0
+	_tip_node = t
+	_tip_layer.add_child(t)
+	await host.get_tree().process_frame
+	if _tip_node != t or not is_instance_valid(host) or not host.is_inside_tree():
+		return
+	var r := host.get_global_rect()
+	var vs := host.get_viewport().get_visible_rect().size
+	var x := clampf(r.position.x + r.size.x * 0.5 - t.size.x * 0.5, 4.0, maxf(4.0, vs.x - t.size.x - 4.0))
+	var y := r.position.y - t.size.y - 8.0
+	if y < 4.0:
+		y = minf(r.end.y + 8.0, vs.y - t.size.y - 4.0)
+	t.position = Vector2(x, y)
+	t.modulate.a = 1.0
+
+static func hide_item_tip() -> void:
+	if _tip_node != null and is_instance_valid(_tip_node):
+		_tip_node.queue_free()
+	_tip_node = null
 
 ## Fond d'une case : teinte du type, liseré fin, cadre doré si sélectionnée.
 static func style_tile(b: Button, it: Dictionary, selected: bool) -> void:
@@ -156,7 +231,6 @@ static func make_tile(gs: GameState, it: Dictionary, idx: int, count: int, selec
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.icon = IconResolver.texture(str(it.get("icon", "")))
 	b.expand_icon = true
-	b.tooltip_text = str(it.get("name", ""))   # non vide : déclenche l'infobulle riche (_make_custom_tooltip)
 	style_tile(b, it, selected)
 	if count > 1:
 		b.add_child(_corner_label("×%d" % count, Color("ffd88a"), false))
@@ -269,8 +343,15 @@ class Tile extends Button:
 				quick.emit(idx)
 				accept_event()
 
-	func _make_custom_tooltip(_for_text: String) -> Object:
-		return BagCommon.tooltip_for(gs, it, char_id)
+	func _ready() -> void:
+		mouse_entered.connect(func(): BagCommon.show_item_tip(self, gs, it, char_id))
+		mouse_exited.connect(BagCommon.hide_item_tip)
+		button_down.connect(BagCommon.hide_item_tip)
+		tree_exiting.connect(BagCommon.hide_item_tip)
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_DRAG_BEGIN:
+			BagCommon.hide_item_tip()
 
 	func _get_drag_data(_at: Vector2) -> Variant:
 		var pic := TextureRect.new()

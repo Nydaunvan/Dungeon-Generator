@@ -14,7 +14,7 @@ var gs: GameState
 var _gold: Label
 var _count: Label
 var _tab: int = 0
-var _rail: VBoxContainer
+var _rail: BagCommon.Rail
 var _grid: GridContainer
 var _empty: Label
 var _total: Label
@@ -45,8 +45,13 @@ func setup(state: GameState) -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
 	add_child(row)
-	_rail = VBoxContainer.new()
-	_rail.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
+	var sz := Vector2(UiMetrics.css(46.0), UiMetrics.css(50.0))
+	var defs: Array = []
+	for i in TAB_IDS.size():
+		defs.append([TAB_ICONS[i], L.t(Inventory.TAB_LABELS[TAB_IDS[i]])])
+	_rail = BagCommon.Rail.new()
+	_rail.setup(defs, sz, UiMetrics.css(8.0), [0, 0, 0], 0)
+	_rail.selected.connect(_select)
 	row.add_child(_rail)
 	var inset := PanelContainer.new()
 	inset.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -110,15 +115,12 @@ func refresh() -> void:
 	_sig = sig
 	_gold.text = L.fa(L.t("ui.shop_modal.pieces_or"), gs.gold)
 	var total := 0
-	for ch in _rail.get_children():
-		ch.queue_free()
+	var counts: Array = []
 	for i in TAB_IDS.size():
 		var n := Inventory.tab_count(gs, TAB_IDS[i])
 		total += n
-		var rb := BagCommon.rail_tab(TAB_ICONS[i], n, i == _tab, Vector2(UiMetrics.css(46.0), UiMetrics.css(50.0)), L.t(Inventory.TAB_LABELS[TAB_IDS[i]]))
-		var idx := i
-		rb.pressed.connect(func(): _select(idx))
-		_rail.add_child(rb)
+		counts.append(n)
+	_rail.update(counts, _tab)
 	_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * TAB_IDS.size()])
 	for ch in _grid.get_children():
 		ch.queue_free()

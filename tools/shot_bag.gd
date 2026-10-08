@@ -31,4 +31,20 @@ func _init() -> void:
 	m.dock.open_for(m.gs.active_char_id, inv[0])
 	await create_timer(1.5).timeout
 	root.get_texture().get_image().save_png(out + "_volet.png")
+	var tile = null
+	for n in m.dock.find_children("*", "Button", true, false):
+		if n.has_signal("quick"):
+			tile = n
+			break
+	if tile != null:
+		load("res://scripts/ui/bag_common.gd").show_item_tip(tile, m.gs, tile.it, m.gs.active_char_id)
+		await create_timer(1.0).timeout
+		root.get_texture().get_image().save_png(out + "_tip.png")
+		load("res://scripts/ui/bag_common.gd").hide_item_tip()
+	for n in m.dock.find_children("*", "Control", true, false):
+		if n.has_signal("selected") and n.get("_bar") != null:
+			n.selected.emit(1)
+			break
+	await create_timer(0.05).timeout
+	root.get_texture().get_image().save_png(out + "_slide.png")
 	quit()
