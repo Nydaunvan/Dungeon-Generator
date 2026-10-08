@@ -38,20 +38,74 @@ static func coin(size: float = 16.0) -> Control:
 	return p
 
 ## Onglet de besace : icône + « n/12 » (rouge quand l'onglet est plein).
-static func style_tab(b: Button, icon: String, count: int, font_px: int) -> void:
+## Onglet « rail » : bouton d'icône carré, pastille de compteur en bas à droite, liseré doré à gauche si actif.
+static func rail_tab(icon: String, count: int, active: bool, size: Vector2, tip: String) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = size
 	b.icon = IconResolver.texture(icon)
 	b.expand_icon = true
-	b.add_theme_constant_override("icon_max_width", int(UiMetrics.css(26.0)))
-	b.add_theme_constant_override("h_separation", int(UiMetrics.css(6.0)))
-	b.text = "%d/%d" % [count, Inventory.MAX_PER_TAB]
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	b.add_theme_constant_override("icon_max_width", int(size.x * 0.62))
+	b.tooltip_text = tip
+	b.modulate = Color(1, 1, 1, 1.0 if active else 0.72)
+	var mk := func(bg: Color, bd: Color, lift: float) -> StyleBoxFlat:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = bg.lightened(lift)
+		sb.set_corner_radius_all(int(UiMetrics.css(8.0)))
+		sb.set_content_margin_all(UiMetrics.css(4.0))
+		sb.set_border_width_all(1)
+		sb.border_color = bd
+		if active:
+			sb.shadow_color = Color(0.88, 0.64, 0.30, 0.22)
+			sb.shadow_size = int(UiMetrics.css(6.0))
+		return sb
+	var bg := Color("2a2018") if active else Color("0b0805")
+	var bd := Color("a9793a") if active else Color("241a11")
+	for st in ["normal", "pressed"]:
+		b.add_theme_stylebox_override(st, mk.call(bg, bd, 0.0))
+	for st in ["hover", "hover_pressed"]:
+		b.add_theme_stylebox_override(st, mk.call(bg, Color("a9793a") if active else Color("5a4631"), 0.05))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	var full := count >= Inventory.MAX_PER_TAB
-	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-	b.add_theme_font_size_override("font_size", font_px)
-	var base := Color("ff7a62") if full else Color("e2d2b0")
-	for k in ["font_color", "font_hover_color"]:
-		b.add_theme_color_override(k, base)
-	for k in ["font_pressed_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(k, Color("ff9a82") if full else Color("ffd88a"))
+	var badge := PanelContainer.new()
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bs := StyleBoxFlat.new()
+	bs.bg_color = Color("7a2a1c") if full else Color("080604")
+	bs.border_color = Color("ff7a62") if full else Color("5a4631")
+	bs.set_border_width_all(1)
+	bs.set_corner_radius_all(int(UiMetrics.css(8.0)))
+	bs.content_margin_left = UiMetrics.css(4.0)
+	bs.content_margin_right = UiMetrics.css(4.0)
+	bs.content_margin_top = 0.0
+	bs.content_margin_bottom = 0.0
+	badge.add_theme_stylebox_override("panel", bs)
+	var l := Label.new()
+	l.text = str(count)
+	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.66)))
+	l.add_theme_color_override("font_color", Color("fff1d6") if full else Color("e2d2b0"))
+	badge.add_child(l)
+	badge.anchor_left = 1.0
+	badge.anchor_right = 1.0
+	badge.anchor_top = 1.0
+	badge.anchor_bottom = 1.0
+	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	badge.offset_right = UiMetrics.css(3.0)
+	badge.offset_bottom = UiMetrics.css(3.0)
+	b.add_child(badge)
+	if active:
+		var bar := ColorRect.new()
+		bar.color = Color("e0a24c")
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.anchor_top = 0.2
+		bar.anchor_bottom = 0.8
+		bar.offset_left = -UiMetrics.css(7.0)
+		bar.offset_right = -UiMetrics.css(4.0)
+		b.add_child(bar)
+	return b
 
 ## Fond d'une case : teinte du type, liseré fin, cadre doré si sélectionnée.
 static func style_tile(b: Button, it: Dictionary, selected: bool) -> void:

@@ -568,26 +568,6 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	th.add_child(BagCommon.coin(15.0))
 	th.add_child(_label(str(gs.gold), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	col.add_child(th)
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 6)
-	for tdef in TABS:
-		var b := Button.new()
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(56, 34)
-		for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
-			b.add_theme_stylebox_override(st, BagPanel.TrapBox.new(st in ["pressed", "hover_pressed"], st.begins_with("hover")))
-		BagCommon.style_tab(b, tdef[1], Inventory.tab_count(gs, tdef[0]), 12)
-		b.button_pressed = tab == tdef[0]
-		b.tooltip_text = L.t(Inventory.TAB_LABELS[tdef[0]])
-		var tid: String = tdef[0]
-		b.pressed.connect(func():
-			tab = tid
-			sel = {}
-			_render())
-		tabs.add_child(b)
-	col.add_child(tabs)
 	var sorter := Button.new()
 	sorter.focus_mode = Control.FOCUS_NONE
 	sorter.text = "⇅ " + L.fa(L.t("ui.bag.trier"), [L.t("ui.bag.tri_type"), L.t("ui.bag.tri_power"), L.t("ui.bag.tri_name")][sort_mode])
@@ -596,11 +576,26 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	sorter.add_theme_font_size_override("font_size", 11)
 	sorter.pressed.connect(_sort_clicked)
 	col.add_child(sorter)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 12)
+	col.add_child(body)
+	var rail := VBoxContainer.new()
+	rail.add_theme_constant_override("separation", 8)
+	body.add_child(rail)
+	for tdef in TABS:
+		var tid: String = tdef[0]
+		var rb := BagCommon.rail_tab(tdef[1], Inventory.tab_count(gs, tid), tab == tid, Vector2(52, 58), L.t(Inventory.TAB_LABELS[tid]))
+		rb.pressed.connect(func():
+			tab = tid
+			sel = {}
+			_render())
+		rail.add_child(rb)
 	var grid := GridContainer.new()
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
-	col.add_child(grid)
+	body.add_child(grid)
 	var entries := _entries()
 	var total := maxi(Inventory.MAX_PER_TAB, int(ceil(entries.size() / 4.0)) * 4)
 	for i in total:

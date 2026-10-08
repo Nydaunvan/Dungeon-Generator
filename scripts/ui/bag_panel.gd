@@ -6,6 +6,7 @@ signal item_pressed(index: int)
 signal item_quick(index: int)      # clic droit : boire la potion / équiper l'objet (personnage actif)
 
 const CAPACITY := Inventory.MAX_PER_TAB
+const COLS := 3
 const TAB_IDS := ["items", "potions", "keys"]
 const TAB_ICONS := ["@icon:sword_broad", "@icon:potion_heal", "@icon:misc_key"]
 const EMPTY := ["ui.bag_panel.aucun_objet_equipable", "ui.bag_panel.aucune_potion", "ui.bag_panel.aucune_cle_ni_parchemin"]
@@ -13,7 +14,7 @@ var gs: GameState
 var _gold: Label
 var _count: Label
 var _tab: int = 0
-var _tab_buttons: Array[Button] = []
+var _rail: VBoxContainer
 var _grid: GridContainer
 var _empty: Label
 var _total: Label
@@ -40,43 +41,31 @@ func setup(state: GameState) -> void:
 	_total.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
 	_total.add_theme_color_override("font_color", UiTheme.DIM)
 	head.add_child(_total)
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", int(UiMetrics.css(4.0)))
-	add_child(tabs)
-	for i in TAB_IDS.size():
-		var b := Button.new()
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
-			b.add_theme_stylebox_override(st, TrapBox.new(st in ["pressed", "hover_pressed"], st.begins_with("hover")))
-		b.tooltip_text = Inventory.TAB_LABELS[TAB_IDS[i]]
-		var idx := i
-		b.pressed.connect(func(): _select(idx))
-		tabs.add_child(b)
-		_tab_buttons.append(b)
-	var tsep := ColorRect.new()
-	tsep.color = Color("070504")
-	tsep.custom_minimum_size = Vector2(0, maxf(1.0, UiMetrics.css(2.0)))
-	add_child(tsep)
-	move_child(tsep, tabs.get_index() + 1)
+	var row := HBoxContainer.new()
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
+	add_child(row)
+	_rail = VBoxContainer.new()
+	_rail.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
+	row.add_child(_rail)
 	var inset := PanelContainer.new()
 	inset.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var isb := StyleBoxFlat.new()
 	isb.bg_color = Color("080604")
 	isb.set_content_margin_all(UiMetrics.css(6.0))
 	isb.shadow_color = Color(0, 0, 0, 0.6)
 	inset.add_theme_stylebox_override("panel", isb)
-	add_child(inset)
+	row.add_child(inset)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size = Vector2(0, 3.0 * (UiMetrics.css(40.0) + 4.0))
+	scroll.custom_minimum_size = Vector2(0, 4.0 * (UiMetrics.css(44.0) + 4.0))
 	inset.add_child(scroll)
 	var stack := VBoxContainer.new()
 	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(stack)
 	_grid = GridContainer.new()
-	_grid.columns = 4
+	_grid.columns = COLS
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.add_theme_constant_override("h_separation", 4)
 	_grid.add_theme_constant_override("v_separation", 4)
@@ -121,11 +110,15 @@ func refresh() -> void:
 	_sig = sig
 	_gold.text = L.fa(L.t("ui.shop_modal.pieces_or"), gs.gold)
 	var total := 0
-	for i in _tab_buttons.size():
+	for ch in _rail.get_children():
+		ch.queue_free()
+	for i in TAB_IDS.size():
 		var n := Inventory.tab_count(gs, TAB_IDS[i])
 		total += n
-		_tab_buttons[i].set_pressed_no_signal(i == _tab)
-		BagCommon.style_tab(_tab_buttons[i], TAB_ICONS[i], n, int(UiMetrics.rem(0.8)))
+		var rb := BagCommon.rail_tab(TAB_ICONS[i], n, i == _tab, Vector2(UiMetrics.css(46.0), UiMetrics.css(50.0)), L.t(Inventory.TAB_LABELS[TAB_IDS[i]]))
+		var idx := i
+		rb.pressed.connect(func(): _select(idx))
+		_rail.add_child(rb)
 	_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * TAB_IDS.size()])
 	for ch in _grid.get_children():
 		ch.queue_free()
@@ -146,15 +139,15 @@ func refresh() -> void:
 		tiles.append(e)
 		shown += 1
 	for e in tiles:
-		var b := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.n), false, 40.0, gs.active_char_id)
+		var b := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.n), false, 44.0, gs.active_char_id)
 		var i2: int = e.idx
 		b.pressed.connect(func(): item_pressed.emit(i2))
 		b.quick.connect(func(i: int): item_quick.emit(i))
 		UiFx.hover_pop(b, 1.07)
 		_grid.add_child(b)
-	var cells := maxi(CAPACITY, int(ceil(shown / 4.0)) * 4)
+	var cells := maxi(CAPACITY, int(ceil(shown / float(COLS))) * COLS)
 	for _i in range(shown, cells):
-		_grid.add_child(BagCommon.empty_cell(40.0))
+		_grid.add_child(BagCommon.empty_cell(44.0))
 	_empty.text = ""
 
 
