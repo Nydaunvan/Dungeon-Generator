@@ -146,7 +146,7 @@ func bump_village(x: int, y: int) -> bool:
 			_log(L.t("game.interactions.le_marchand_vous_accueille_et"))
 			if mm.get("offers") == null:
 				mm["offers"] = Shop.village_offers(gs.cfg, gs.run_number)
-			ShopModal.open(host, gs, mm.offers, true, on_change)
+			_open_shop(mm.offers, true, on_change)
 			return true
 		"blacksmith":
 			_log(L.t("game.interactions.le_forgeron_vous_accueille_dans"))
@@ -222,13 +222,52 @@ func _walk_through(mm: Dictionary) -> void:
 	if rig.grid.is_walkable(nx, ny) and not (rig.extra_block.is_valid() and rig.extra_block.call(nx, ny)):
 		rig.step(rel)
 
+## Boutique : le jeu est en pause tant qu'elle est ouverte (monde 3D figé, délais de sorts et de fontaines gelés) ; seul le marchand est actif.
+func _open_shop(offers: Array, village: bool, on_change: Callable) -> void:
+	var resume := _freeze_world()
+	var m := ShopModal.open(host, gs, offers, village, on_change)
+	m.tree_exited.connect(resume)
+
+## Fige le monde et renvoie la fonction qui le relance (en rendant le temps écoulé aux délais qui courent en temps réel).
+func _freeze_world() -> Callable:
+	if _frozen:
+		return func(): pass
+	_frozen = true
+	var t0 := Time.get_ticks_msec()
+	var u0 := Time.get_unix_time_from_system() * 1000.0
+	if view != null:
+		view.process_mode = Node.PROCESS_MODE_DISABLED
+	if rig != null:
+		rig.process_mode = Node.PROCESS_MODE_DISABLED
+	return func():
+		_frozen = false
+		if view != null and is_instance_valid(view):
+			view.process_mode = Node.PROCESS_MODE_INHERIT
+		if rig != null and is_instance_valid(rig):
+			rig.process_mode = Node.PROCESS_MODE_INHERIT
+		var dt_t := Time.get_ticks_msec() - t0
+		var dt_u := Time.get_unix_time_from_system() * 1000.0 - u0
+		for c in gs.party:
+			var cds: Dictionary = c.get("spellCooldowns", {})
+			for sid in cds.keys():
+				cds[sid] = int(cds[sid]) + dt_t
+		for lid in gs.level_states:
+			var items: Dictionary = (gs.level_states[lid] as Dictionary).get("items_state", {})
+			for iid in items:
+				var st: Dictionary = items[iid]
+				if st.has("usedAt"):
+					st["usedAt"] = float(st.usedAt) + dt_u
+		ctrl.changed.emit()
+
+var _frozen := false
+
 func open_merchant(mm: Dictionary) -> void:
 	if mm.get("offers") == null:
 		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), maxi(1, gs.run_number))
 	var on_change := func():
 		bag_changed.emit()
 		ctrl.changed.emit()
-	ShopModal.open(host, gs, mm.offers, false, on_change)
+	_open_shop(mm.offers, false, on_change)
 
 func _pickup(it: Dictionary) -> void:
 	var inst := Inventory.make_instance(it)

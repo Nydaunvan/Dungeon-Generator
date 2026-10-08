@@ -174,7 +174,14 @@ func _tick() -> void:
 		# le monstre arrive au contact : on attend la fin du glissement avant d'engager le combat
 		get_tree().create_timer(0.45).timeout.connect(func():
 			if not gs.game_over:
-				ctrl.refresh())
+				_engage_when_free())
+
+## Le combat ne s'engage jamais derrière une fenêtre ouverte (boutique…) : on attend qu'elle se ferme.
+func _engage_when_free() -> void:
+	while paused_if.is_valid() and paused_if.call() and not gs.game_over:
+		await get_tree().process_frame
+	if not gs.game_over:
+		ctrl.refresh()
 
 func _tick_merchant() -> void:
 	var mm := merchant()
