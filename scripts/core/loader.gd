@@ -126,6 +126,7 @@ func boot() -> void:
 	screen.set_progress(1.0, L.t("loading.pret"))
 	while not screen.is_full():
 		await get_tree().process_frame
+	await _check_updates()
 	if web:
 		screen.show_gate()
 		await screen.entered
@@ -133,6 +134,34 @@ func boot() -> void:
 	else:
 		await get_tree().create_timer(0.25).timeout
 	booted = true
+
+## Recherche de mise à jour au lancement (Windows et Linux) : sablier derrière lequel le jeu interroge GitHub ; s'il y a du
+## nouveau, la fenêtre s'affiche au-dessus de l'écran de chargement et le jeu attend la réponse du joueur ; sinon on continue.
+func _check_updates() -> void:
+	if not Updater.can_self_update() or not bool(Updater.pref("auto_check", true)):
+		return
+	screen.show_hourglass(L.t("ui.update.recherche"))
+	var u := Updater.new()
+	add_child(u)
+	var t0 := Time.get_ticks_msec()
+	var got: Array = []
+	u.check_done.connect(func(d: Dictionary): got.append(d))
+	u.check()
+	while got.is_empty():
+		await get_tree().process_frame
+	var r: Dictionary = got[0]
+	u.queue_free()
+	var left := 900 - (Time.get_ticks_msec() - t0)      # le sablier reste visible au moins un instant
+	if left > 0:
+		await get_tree().create_timer(left / 1000.0).timeout
+	screen.hide_hourglass()
+	if r.is_empty() or r.has("error"):
+		return
+	var host := CanvasLayer.new()
+	host.layer = layer + 50
+	get_tree().root.add_child(host)
+	var m := UpdateModal.open(host, r)
+	await m.closed
 
 ## Après le chargement initial : bascule vers l'accueil puis lève le rideau.
 func finish_boot() -> void:

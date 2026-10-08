@@ -3,7 +3,7 @@
   "version": "1.31.0",
   "changes": [
    "## Mises à jour dans le jeu",
-   "Au lancement, le jeu vérifie (une fois par jour) si une nouvelle version est publiée et propose, dans une fenêtre avec les notes de version, de la télécharger et de l'installer : « Mettre à jour », « Plus tard » ou « Ignorer cette version ». Le téléchargement est vérifié (somme SHA-256), puis le jeu se remplace et redémarre tout seul (Windows et Linux).",
+   "Au lancement, un sablier s'affiche pendant que le jeu vérifie si une nouvelle version est publiée et propose, dans une fenêtre avec les notes de version, de la télécharger et de l'installer : « Mettre à jour », « Plus tard » ou « Ignorer cette version ». Le téléchargement est vérifié (somme SHA-256), puis le jeu se remplace et redémarre tout seul (Windows et Linux).",
    "Nouvelle section « Mises à jour » dans les Paramètres : vérification au lancement, inclusion des préversions pour les testeurs, bouton « Vérifier maintenant ».",
    "## Sauvegardes",
    "Les sauvegardes portent désormais un numéro de schéma et sont mises à jour automatiquement à la lecture : une partie existante récupère les nouveaux objets, sorts, réglages et icônes du jeu. Une copie de secours (slot_N.v1.bak) est conservée avant toute migration.",

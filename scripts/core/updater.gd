@@ -12,7 +12,6 @@ const REPO := "Nydaunvan/Dungeon-Generator"
 const API := "https://api.github.com/repos/%s/releases?per_page=20"
 const PREFS := "user://update.cfg"
 const DIR := "user://update"
-const CHECK_EVERY := 86400            # au plus une vérification automatique par jour
 const SUMS_NAME := "SHA256SUMS.txt"
 const SEMVER := "^\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.]+)?$"
 
@@ -137,11 +136,11 @@ func check(force: bool = false) -> void:
 		check_done.emit({})
 		return
 	if not force:
-		if not bool(pref("auto_check", true)) or int(Time.get_unix_time_from_system()) - int(pref("last_check", 0)) < CHECK_EVERY:
+		if not bool(pref("auto_check", true)):
 			check_done.emit({})
 			return
 	_req = HTTPRequest.new()
-	_req.timeout = 12.0
+	_req.timeout = 8.0
 	add_child(_req)
 	_req.request_completed.connect(_on_list.bind(force))
 	if _req.request(API % REPO, PackedStringArray(["User-Agent: DungeonGenerator", "Accept: application/vnd.github+json"])) != OK:

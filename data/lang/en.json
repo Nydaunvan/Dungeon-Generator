@@ -1389,6 +1389,7 @@
   "ui.minimap.escalier_montant": "Stairs up (next level)",
   "ui.minimap.escalier_descendant": "Stairs down (previous level)",
   "ui.bag.legende": "▲ better than equipped · ▼ worse · right-click: drink / equip",
+  "ui.update.recherche": "Checking for updates…",
   "ui.update.titre": "Update available",
   "ui.update.titre_verif": "Updates",
   "ui.update.texte": "Version %s is available (you are running version %s).",

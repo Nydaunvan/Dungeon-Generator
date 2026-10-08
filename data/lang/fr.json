@@ -1389,6 +1389,7 @@
   "ui.minimap.escalier_montant": "Escalier montant (niveau suivant)",
   "ui.minimap.escalier_descendant": "Escalier descendant (niveau précédent)",
   "ui.bag.legende": "▲ meilleur que l'équipé · ▼ moins bon · clic droit : boire / équiper",
+  "ui.update.recherche": "Recherche de mises à jour…",
   "ui.update.titre": "Mise à jour disponible",
   "ui.update.titre_verif": "Mises à jour",
   "ui.update.texte": "La version %s est disponible (vous utilisez la version %s).",

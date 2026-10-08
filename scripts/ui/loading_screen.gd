@@ -24,6 +24,8 @@ var _t := 0.0
 var _tip_i := 0
 var _tip_t := 0.0
 var _center: CenterContainer
+var _hourglass: Control
+var _hg_text: Label
 
 func _ready() -> void:
 	theme = UiTheme.shared()
@@ -233,6 +235,32 @@ func show_gate() -> void:
 	_gate.visible = true
 	_gate_hint.visible = true
 
+## Sablier animé à la place de l'épée et de la barre (recherche de mise à jour au lancement) ; la mise en page ne bouge pas.
+func show_hourglass(text: String) -> void:
+	if _hourglass != null:
+		return
+	_bar.visible = false
+	_pct.visible = false
+	_step.visible = false
+	_hourglass = Hourglass.new()
+	_hourglass.scale = Vector2.ONE * 1.8
+	_hourglass.position = Vector2((880.0 - 56.0 * 1.8) * 0.5, 120.0)
+	_bar_box.add_child(_hourglass)
+	_hg_text = _label(text, UiTheme.F_BODY_ITALIC, 22, UiTheme.PARCH)
+	_hg_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hg_text.position = Vector2(0, 120.0 + 80.0 * 1.8 + 24.0)
+	_hg_text.size = Vector2(880, 32)
+	_bar_box.add_child(_hg_text)
+
+func hide_hourglass() -> void:
+	if _hourglass != null:
+		_hourglass.queue_free()
+		_hg_text.queue_free()
+		_hourglass = null
+	_bar.visible = true
+	_pct.visible = true
+	_step.visible = true
+
 func is_full() -> bool:
 	return _shown >= 0.999
 
@@ -304,3 +332,53 @@ class LoadingBar extends Control:
 		for x in [-2.0, size.x + 2.0]:
 			draw_circle(Vector2(x, size.y * 0.5), 4.0, Color("a88a5c"))
 			draw_circle(Vector2(x - 1.0, size.y * 0.5 - 1.0), 1.6, Color("e9d9b0"))
+
+
+## Sablier : verre, cadre de bronze, sable qui s'écoule puis retournement.
+class Hourglass extends Control:
+	var _t := 0.0
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(56, 80)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+
+	func _hw(y: float, w: float, h: float) -> float:
+		return 2.5 + (w - 2.5) * clampf(absf(y) / h, 0.0, 1.0)
+
+	func _draw() -> void:
+		var cyc := 2.6
+		var k := fmod(_t, cyc) / cyc
+		var run := minf(k / 0.82, 1.0)
+		var flip := clampf((k - 0.82) / 0.18, 0.0, 1.0)
+		var rot := (flip * flip * (3.0 - 2.0 * flip)) * PI
+		draw_set_transform(size * 0.5, rot, Vector2.ONE)
+		var w := 17.0
+		var h := 28.0
+		var glass := Color(0.9, 0.82, 0.65, 0.13)
+		draw_colored_polygon(PackedVector2Array([Vector2(-w, -h), Vector2(w, -h), Vector2(2.5, 0), Vector2(-2.5, 0)]), glass)
+		draw_colored_polygon(PackedVector2Array([Vector2(-2.5, 0), Vector2(2.5, 0), Vector2(w, h), Vector2(-w, h)]), glass)
+		var sand := Color("e8b45c")
+		var top := 1.0 - run if flip == 0.0 else 0.0
+		var bottom := run if flip == 0.0 else 1.0
+		if flip > 0.0:
+			top = 0.0
+			bottom = 1.0
+		if top > 0.01:
+			var y := -top * h * 0.92
+			draw_colored_polygon(PackedVector2Array([Vector2(-_hw(y, w, h), y), Vector2(_hw(y, w, h), y), Vector2(2.5, -1.0), Vector2(-2.5, -1.0)]), sand)
+		if bottom > 0.01:
+			var yb := h - bottom * h * 0.92
+			draw_colored_polygon(PackedVector2Array([Vector2(-w + 1.0, h), Vector2(w - 1.0, h), Vector2(_hw(yb, w, h) - 1.0, yb), Vector2(-_hw(yb, w, h) + 1.0, yb)]), sand.darkened(0.12))
+			if flip == 0.0 and run < 1.0:
+				draw_line(Vector2(0, 0), Vector2(0, yb), sand, 1.6)
+		var line := Color("a9793a")
+		for pts in [[Vector2(-w, -h), Vector2(w, -h), Vector2(2.5, 0), Vector2(-w, -h)], [Vector2(-2.5, 0), Vector2(2.5, 0), Vector2(w, h), Vector2(-w, h), Vector2(-2.5, 0)]]:
+			draw_polyline(PackedVector2Array(pts), line, 1.6, true)
+		for sy in [-h - 6.0, h + 1.0]:
+			draw_rect(Rect2(-w - 5.0, sy, 2.0 * w + 10.0, 5.0), Color("6b4a22"))
+			draw_rect(Rect2(-w - 5.0, sy, 2.0 * w + 10.0, 1.5), Color("c99a52"))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
