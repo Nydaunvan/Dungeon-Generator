@@ -7,6 +7,7 @@ signal command(cmd: String)
 signal menu_pressed(name: String)
 signal credits_pressed
 signal monster_pressed(def: Dictionary, st: Dictionary)
+signal item_quick(index: int)
 signal item_pressed(index: int)
 signal card_opened(char_id: String)
 signal card_pressed(char_id: String)
@@ -549,6 +550,7 @@ func _build_parts() -> void:
 	bag = BagPanel.new()
 	bag.setup(gs)
 	bag.item_pressed.connect(func(i): item_pressed.emit(i))
+	bag.item_quick.connect(func(i): item_quick.emit(i))
 	panel_bag.body.add_child(bag)
 	panel_log = OrnatePanel.new(L.t("ui.game_layout.grimoire_des_evenements"))
 	panel_log.name = "Journal"

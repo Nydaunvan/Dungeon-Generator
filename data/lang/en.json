@@ -1387,7 +1387,17 @@
   "ui.settings.refresh_info": "Your display's refresh rate: %d Hz. With vertical sync, the target never goes above this value.",
   "ui.settings.refresh_unknown": "Display refresh rate unknown (browser): the target stays at 60 until the game has measured better.",
   "ui.minimap.escalier_montant": "Stairs up (next level)",
-  "ui.minimap.escalier_descendant": "Stairs down (previous level)"
+  "ui.minimap.escalier_descendant": "Stairs down (previous level)",
+  "ui.bag.legende": "▲ better than equipped · ▼ worse · right-click: drink / equip",
+  "ui.bag.total": "Total %d / %d",
+  "ui.bag.remplace": "Replaces: %s",
+  "ui.bag.emplacement_libre": "Free slot",
+  "ui.bag.trier": "Sort: %s",
+  "ui.bag.tri_type": "type",
+  "ui.bag.tri_power": "power",
+  "ui.bag.tri_name": "name",
+  "ui.bag.raccourcis": "double-click: equip · Enter · Del",
+  "ui.bag.deposer_ici": "drop here"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

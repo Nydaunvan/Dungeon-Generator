@@ -62,6 +62,71 @@ static func add(gs: GameState, it: Dictionary) -> bool:
 	gs.inventory.append(it)
 	return true
 
+## Puissance brute d'un objet équipable (sert aux repères ▲ / ▼ et au tri) : attaque moyenne + somme des bonus.
+static func power(it) -> float:
+	if it == null:
+		return 0.0
+	return float(int(it.get("bonusAtkMin", 0)) + int(it.get("bonusAtkMax", 0))) * 0.5 + float(it.get("bonusHp", 0)) * 0.3 \
+		+ float(int(it.get("bonusSpellDmg", 0)) + int(it.get("bonusForce", 0)) + int(it.get("bonusDex", 0)) + int(it.get("bonusCon", 0)) \
+		+ int(it.get("bonusInt", 0)) + int(it.get("bonusSpeed", 0)))
+
+## Compare un objet de la besace à ce que porte le personnage `c` à son emplacement : 1 meilleur, -1 moins bon, 0 égal ou non équipable.
+static func upgrade(c: Dictionary, it: Dictionary) -> int:
+	var slot := slot_of(it)
+	if slot == "" or c.is_empty():
+		return 0
+	var d := power(it) - power(c.get("equipment", {}).get(slot))
+	return 1 if d > 0.001 else (-1 if d < -0.001 else 0)
+
+const SORT_MODES := ["type", "power", "name"]
+
+static func _rank(it: Dictionary) -> int:
+	match str(it.get("type", "")):
+		"weapon": return 0
+		"armor": return 1 + ["head", "body", "hands", "feet"].find(str(it.get("slot", "body")))
+		"jewelry": return 6
+		"potion": return 7
+		"scroll": return 8
+		"key": return 9
+	return 10
+
+## Range les objets d'un onglet (à leurs emplacements actuels) : par type, par puissance décroissante ou par nom. Stable.
+static func sort_tab(gs: GameState, tab: String, mode: String) -> void:
+	var slots: Array = []
+	var entries: Array = []
+	for i in gs.inventory.size():
+		var it: Dictionary = gs.inventory[i]
+		if tab_of(it) == tab:
+			slots.append(i)
+			entries.append({"it": it, "n": entries.size()})
+	entries.sort_custom(func(a, b):
+		var x: Dictionary = a.it
+		var y: Dictionary = b.it
+		var kx := 0.0
+		var ky := 0.0
+		match mode:
+			"power":
+				kx = -power(x)
+				ky = -power(y)
+			"name":
+				var nx := str(x.get("name", "")).to_lower()
+				var ny := str(y.get("name", "")).to_lower()
+				if nx != ny:
+					return nx < ny
+			_:
+				kx = float(_rank(x))
+				ky = float(_rank(y))
+				if kx == ky:
+					var nx2 := str(x.get("name", "")).to_lower()
+					var ny2 := str(y.get("name", "")).to_lower()
+					if nx2 != ny2:
+						return nx2 < ny2
+		if kx != ky:
+			return kx < ky
+		return int(a.n) < int(b.n))
+	for k in slots.size():
+		gs.inventory[slots[k]] = entries[k].it
+
 static func slot_of(it: Dictionary) -> String:
 	match str(it.get("type", "")):
 		"weapon": return "weapon"

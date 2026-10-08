@@ -3,10 +3,11 @@ extends VBoxContainer
 ## Besace commune (colonne de droite) : or, capacité, trois onglets à icône, grille défilante. Cliquer un objet l'ouvre.
 
 signal item_pressed(index: int)
+signal item_quick(index: int)      # clic droit : boire la potion / équiper l'objet (personnage actif)
 
 const CAPACITY := Inventory.MAX_PER_TAB
 const TAB_IDS := ["items", "potions", "keys"]
-const TAB_EMOJI := ["⚒️", "🧪", "🗝️"]
+const TAB_ICONS := ["@icon:sword_broad", "@icon:potion_heal", "@icon:misc_key"]
 const EMPTY := ["ui.bag_panel.aucun_objet_equipable", "ui.bag_panel.aucune_potion", "ui.bag_panel.aucune_cle_ni_parchemin"]
 var gs: GameState
 var _gold: Label
@@ -15,22 +16,30 @@ var _tab: int = 0
 var _tab_buttons: Array[Button] = []
 var _grid: GridContainer
 var _empty: Label
+var _total: Label
+var _sig := ""
 
 func setup(state: GameState) -> void:
 	gs = state
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation", 4)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
+	add_child(head)
+	head.add_child(BagCommon.coin(UiMetrics.rem(1.0)))
 	_gold = Label.new()
-	_gold.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
+	_gold.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.95)))
+	_gold.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
 	_gold.add_theme_color_override("font_color", Color("ffd88a"))
 	_gold.add_theme_color_override("font_shadow_color", Color.BLACK)
 	_gold.add_theme_constant_override("shadow_offset_y", 1)
-	add_child(_gold)
-	_count = Label.new()
-	_count.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
-	_count.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
-	_count.add_theme_color_override("font_color", UiTheme.DIM)
-	add_child(_count)
+	_gold.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(_gold)
+	_total = Label.new()
+	_total.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	_total.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
+	_total.add_theme_color_override("font_color", UiTheme.DIM)
+	head.add_child(_total)
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", int(UiMetrics.css(4.0)))
 	add_child(tabs)
@@ -39,13 +48,6 @@ func setup(state: GameState) -> void:
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.text = TAB_EMOJI[i]
-		b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-		b.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.0)))
-		b.add_theme_color_override("font_color", Color("e2d2b0"))
-		b.add_theme_color_override("font_pressed_color", Color("ffd88a"))
-		b.add_theme_color_override("font_hover_color", Color("ffd88a"))
-		b.add_theme_color_override("font_hover_pressed_color", Color("ffd88a"))
 		for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 			b.add_theme_stylebox_override(st, TrapBox.new(st in ["pressed", "hover_pressed"], st.begins_with("hover")))
 		b.tooltip_text = Inventory.TAB_LABELS[TAB_IDS[i]]
@@ -68,6 +70,7 @@ func setup(state: GameState) -> void:
 	add_child(inset)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(0, 3.0 * (UiMetrics.css(40.0) + 4.0))
 	inset.add_child(scroll)
 	var stack := VBoxContainer.new()
 	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -79,29 +82,56 @@ func setup(state: GameState) -> void:
 	_grid.add_theme_constant_override("v_separation", 4)
 	stack.add_child(_grid)
 	_empty = Label.new()
-	_empty.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
-	_empty.add_theme_font_size_override("font_size", 14)
-	_empty.add_theme_color_override("font_color", UiTheme.DIM.darkened(0.3))
+	_empty.visible = false
 	stack.add_child(_empty)
+	var hint := Label.new()
+	hint.text = L.t("ui.bag.legende")
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+	hint.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.66)))
+	hint.add_theme_color_override("font_color", UiTheme.DIM)
+	add_child(hint)
 	_select(0)
 
 func _select(i: int) -> void:
 	_tab = i
+	_sig = ""
 	refresh()
 
 func select_tab_of(it: Dictionary) -> void:
 	_tab = maxi(0, TAB_IDS.find(Inventory.tab_of(it)))
+	_sig = ""
 	refresh()
 
+## Signature de ce qui est affiché : on ne reconstruit la grille que si quelque chose a changé.
+func _signature() -> String:
+	var parts: Array = [_tab, gs.gold, gs.active_char_id]
+	for it in gs.inventory:
+		parts.append(str(it.get("uid", it.get("id", ""))))
+	var c := gs.char_by_id(gs.active_char_id)
+	for slot in ["weapon", "head", "body", "hands", "feet", "accessory"]:
+		var e = c.get("equipment", {}).get(slot)
+		parts.append(str(e.get("uid", e.get("id", ""))) if e != null else "-")
+	return "|".join(PackedStringArray(parts.map(func(x): return str(x))))
+
 func refresh() -> void:
-	_gold.text = L.fa(L.t("common.pieces_or"), gs.gold)
-	_count.text = "🎒 %d/%d" % [Inventory.tab_count(gs, TAB_IDS[_tab]), CAPACITY]
+	var sig := _signature()
+	if sig == _sig:
+		return
+	_sig = sig
+	_gold.text = L.fa(L.t("ui.shop_modal.pieces_or"), gs.gold)
+	var total := 0
 	for i in _tab_buttons.size():
+		var n := Inventory.tab_count(gs, TAB_IDS[i])
+		total += n
 		_tab_buttons[i].set_pressed_no_signal(i == _tab)
+		BagCommon.style_tab(_tab_buttons[i], TAB_ICONS[i], n, int(UiMetrics.rem(0.8)))
+	_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * TAB_IDS.size()])
 	for ch in _grid.get_children():
 		ch.queue_free()
 	var stacks := {}
 	var shown := 0
+	var tiles: Array = []
 	for idx in gs.inventory.size():
 		var it: Dictionary = gs.inventory[idx]
 		if Inventory.tab_of(it) != TAB_IDS[_tab]:
@@ -109,36 +139,23 @@ func refresh() -> void:
 		var k := Inventory.stack_key(it)
 		if k != "" and stacks.has(k):
 			stacks[k].n += 1
-			stacks[k].badge.text = "×%d" % stacks[k].n
 			continue
-		var b := Button.new()
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(40, 40)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.icon = IconResolver.texture(str(it.get("icon", "")))
-		b.expand_icon = true
-		bare_tile(b)
-		b.tooltip_text = str(it.get("name", ""))
-		var i2 := idx
-		b.pressed.connect(func(): item_pressed.emit(i2))
-		UiFx.hover_pop(b, 1.07)
-		var badge := Label.new()
-		badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-		badge.offset_left = -30
-		badge.offset_top = -18
-		badge.offset_right = -3
-		badge.offset_bottom = -1
-		badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		badge.add_theme_font_size_override("font_size", 12)
-		badge.add_theme_color_override("font_color", UiTheme.GOLD)
-		badge.add_theme_constant_override("outline_size", 4)
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(badge)
-		_grid.add_child(b)
+		var e := {"it": it, "idx": idx, "n": 1}
 		if k != "":
-			stacks[k] = {"n": 1, "badge": badge}
+			stacks[k] = e
+		tiles.append(e)
 		shown += 1
-	_empty.text = "" if shown > 0 else str(EMPTY[_tab])
+	for e in tiles:
+		var b := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.n), false, 40.0, gs.active_char_id)
+		var i2: int = e.idx
+		b.pressed.connect(func(): item_pressed.emit(i2))
+		b.quick.connect(func(i: int): item_quick.emit(i))
+		UiFx.hover_pop(b, 1.07)
+		_grid.add_child(b)
+	var cells := maxi(CAPACITY, int(ceil(shown / 4.0)) * 4)
+	for _i in range(shown, cells):
+		_grid.add_child(BagCommon.empty_cell(40.0))
+	_empty.text = ""
 
 
 ## Case d'objet de la besace : fond plat, aucun cadre, liseré ni halo autour de l'objet.

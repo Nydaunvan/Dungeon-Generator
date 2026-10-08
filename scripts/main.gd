@@ -120,6 +120,8 @@ func _ready() -> void:
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
 	layout.item_pressed.connect(_on_bag_item)
+	layout.item_quick.connect(_on_bag_quick)
+	ctrl.changed.connect(layout.bag.refresh)     # ▲ / ▼ : suivent le personnage actif et son équipement
 	layout.potion_quick.connect(func(i): inter.use_potion_at(gs.active_char_id, i))
 	layout.scrolls_quick.connect(func(): inter.open_scroll_picker(gs.active_char_id))
 	layout.card_pressed.connect(_on_card_pressed)
@@ -467,6 +469,27 @@ func _on_bag_item(idx: int) -> void:
 			return
 		who = str(alive[0].id)
 	dock.open_for(who, gs.inventory[idx])
+
+## Clic droit sur une case de la besace : boire la potion / équiper l'objet pour le personnage actif.
+func _on_bag_quick(idx: int) -> void:
+	if idx < 0 or idx >= gs.inventory.size():
+		return
+	if ctrl.in_combat():
+		inter.open_item_menu(idx)
+		return
+	var c := gs.char_by_id(gs.active_char_id)
+	if c.is_empty() or int(c.hp) <= 0:
+		_on_bag_item(idx)
+		return
+	var it: Dictionary = gs.inventory[idx]
+	if str(it.get("type", "")) == "potion":
+		inter.use_potion_at(gs.active_char_id, idx)
+	elif Inventory.can_equip(it):
+		if Inventory.equip(gs, c, idx):
+			layout.bag.refresh()
+			ctrl.changed.emit()
+	else:
+		_on_bag_item(idx)
 
 func _on_turned() -> void:
 	# Un simple quart de tour ne déclenche ni objet, ni tour de jeu (comme l'original).

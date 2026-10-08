@@ -12,6 +12,7 @@ const SLOT_DEFS := [
 	{"id": "weapon", "label": "common.arme"}, {"id": "head", "label": "ui.equip_dock.casque"}, {"id": "body", "label": "common.armure"},
 	{"id": "hands", "label": "ui.equip_dock.gants"}, {"id": "feet", "label": "ui.equip_dock.bottes"}, {"id": "accessory", "label": "common.bijou"},
 ]
+const DETAIL_H := 250.0
 const TABS := [["items", "@icon:sword_broad"], ["potions", "@icon:potion_heal"], ["keys", "@icon:misc_key"]]
 
 var gs: GameState
@@ -21,6 +22,8 @@ var char_id: String = ""
 var tab: String = "items"
 var sel: Dictionary = {}          # {"src":"bag","key":..} | {"src":"slot","slot":..}
 var details_open: bool = false
+var sort_mode: int = 0            # indice dans Inventory.SORT_MODES (dernier tri demandé)
+var _catcher: DropCatcher
 
 var _panel: PanelContainer
 var _scroll: ScrollContainer
@@ -46,6 +49,12 @@ func setup(state: GameState, controller: CombatController) -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override("separation", 8)
 	_scroll.add_child(_body)
+	_catcher = DropCatcher.new()
+	_catcher.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_catcher.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_catcher.dropped.connect(_discard)
+	add_child(_catcher)
+	move_child(_catcher, 0)
 	get_viewport().size_changed.connect(_place)
 	ctrl.changed.connect(_on_state_changed)
 
@@ -126,10 +135,45 @@ func close() -> void:
 	_tween.tween_callback(func(): visible = false)
 	closed.emit()
 
+func _notification(what: int) -> void:
+	# pendant un glisser d'objet, tout l'écran hors du volet devient une zone « jeter »
+	if what == NOTIFICATION_DRAG_BEGIN and is_open and _catcher != null:
+		var d = get_viewport().gui_get_drag_data()
+		if d is Dictionary and d.get("kind") == "bag_item":
+			_catcher.mouse_filter = Control.MOUSE_FILTER_STOP
+	elif what == NOTIFICATION_DRAG_END and _catcher != null:
+		_catcher.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 func _unhandled_key_input(event: InputEvent) -> void:
-	if is_open and event.is_action_pressed("ui_cancel"):
+	if not is_open:
+		return
+	if event.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()
+		return
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	var c := gs.char_by_id(char_id)
+	var resolved := _resolve_sel(c)
+	match event.keycode:
+		KEY_TAB:    # onglet suivant / précédent
+			var ids := ["items", "potions", "keys"]
+			var d := -1 if event.shift_pressed else 1
+			tab = ids[posmod(ids.find(tab) + d, ids.size())]
+			sel = {}
+			_render()
+			get_viewport().set_input_as_handled()
+		KEY_ENTER, KEY_KP_ENTER:
+			if not resolved.is_empty():
+				if resolved.src == "slot":
+					_unequip(str(resolved.slot))
+				else:
+					_quick(int(resolved.idx))
+				get_viewport().set_input_as_handled()
+		KEY_DELETE:
+			if not resolved.is_empty() and resolved.src == "bag":
+				_discard(int(resolved.idx))
+				get_viewport().set_input_as_handled()
 
 # ------------------------------------------------------------------ données
 
@@ -389,7 +433,10 @@ func _slot_button(c: Dictionary, def: Dictionary, resolved: Dictionary) -> Contr
 	var target: bool = compat and Inventory.slot_of(resolved.it) == def.id
 	var dim: bool = compat and not target
 	var is_sel: bool = not resolved.is_empty() and resolved.src == "slot" and resolved.slot == def.id
-	var b := Button.new()
+	var b := SlotButton.new()
+	b.slot_id = str(def.id)
+	b.accepts = func(data: Dictionary) -> bool: return Inventory.slot_of(data.it) == str(def.id)
+	b.dropped.connect(func(data: Dictionary): _equip(int(data.idx)))
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(64, 64)
 	b.size = Vector2(64, 64)
@@ -514,10 +561,12 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 6)
 	var th := HBoxContainer.new()
+	th.add_theme_constant_override("separation", 8)
 	var t := _label(L.t("ui.equip_dock.besace_du_groupe"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	th.add_child(t)
-	th.add_child(_label("%d/%d · %d or" % [Inventory.tab_count(gs, tab), Inventory.MAX_PER_TAB, gs.gold], 12, UiTheme.DIM))
+	th.add_child(BagCommon.coin(15.0))
+	th.add_child(_label(str(gs.gold), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	col.add_child(th)
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
@@ -525,12 +574,13 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 		var b := Button.new()
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size = Vector2(56, 34)
 		for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 			b.add_theme_stylebox_override(st, BagPanel.TrapBox.new(st in ["pressed", "hover_pressed"], st.begins_with("hover")))
-		b.add_child(_icon_node(tdef[1], 5.0, 18))
+		BagCommon.style_tab(b, tdef[1], Inventory.tab_count(gs, tdef[0]), 12)
 		b.button_pressed = tab == tdef[0]
-		b.tooltip_text = Inventory.TAB_LABELS[tdef[0]]
+		b.tooltip_text = L.t(Inventory.TAB_LABELS[tdef[0]])
 		var tid: String = tdef[0]
 		b.pressed.connect(func():
 			tab = tid
@@ -538,6 +588,14 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 			_render())
 		tabs.add_child(b)
 	col.add_child(tabs)
+	var sorter := Button.new()
+	sorter.focus_mode = Control.FOCUS_NONE
+	sorter.text = "⇅ " + L.fa(L.t("ui.bag.trier"), [L.t("ui.bag.tri_type"), L.t("ui.bag.tri_power"), L.t("ui.bag.tri_name")][sort_mode])
+	sorter.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sorter.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	sorter.add_theme_font_size_override("font_size", 11)
+	sorter.pressed.connect(_sort_clicked)
+	col.add_child(sorter)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 6)
@@ -546,48 +604,24 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	var entries := _entries()
 	var total := maxi(Inventory.MAX_PER_TAB, int(ceil(entries.size() / 4.0)) * 4)
 	for i in total:
-		var cell: Control
 		if i < entries.size():
 			var e: Dictionary = entries[i]
-			var it: Dictionary = e.it
-			var tile := Button.new()
-			tile.focus_mode = Control.FOCUS_NONE
-			tile.icon = IconResolver.texture(str(it.get("icon", "")))
-			tile.expand_icon = true
-			tile.tooltip_text = str(it.get("name", ""))
 			var is_sel: bool = not resolved.is_empty() and resolved.src == "bag" and sel.get("key") == e.key
-			BagPanel.bare_tile(tile, is_sel)
-			if e.count > 1:
-				var cnt := _label(str(e.count), 12, UiTheme.GOLD, UiTheme.F_BODY_BOLD)
-				cnt.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-				cnt.offset_left = -24
-				cnt.offset_top = -18
-				cnt.offset_right = -4
-				cnt.offset_bottom = -1
-				cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-				cnt.add_theme_constant_override("outline_size", 4)
-				cnt.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				tile.add_child(cnt)
+			var tile := BagCommon.make_tile(gs, e.it, int(e.idx), int(e.count), is_sel, 56.0, char_id, true)
 			var k: String = e.key
 			tile.pressed.connect(func(): _bag_clicked(k))
+			tile.quick.connect(_quick)
 			UiFx.hover_pop(tile, 1.06)
-			cell = tile
+			grid.add_child(tile)
 		else:
-			var empty := Panel.new()
-			var esb := StyleBoxFlat.new()
-			esb.bg_color = Color("0e0906")
-			esb.set_corner_radius_all(5)
-			empty.add_theme_stylebox_override("panel", esb)
-			cell = empty
-		cell.custom_minimum_size = Vector2(56, 56)
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(cell)
+			grid.add_child(BagCommon.empty_cell(56.0))
 	col.add_child(_build_detail(c, resolved))
 	return col
 
 func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [10, 10, 10, 10]))
+	box.custom_minimum_size = Vector2(0, DETAIL_H)     # hauteur fixe : la grille ne bouge plus quand on change d'objet
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	box.add_child(v)
@@ -628,6 +662,9 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	elif Inventory.can_equip(it):
 		var slot := Inventory.slot_of(it)
 		_add_stat_lines(v, it, c, slot, true)
+		var worn = c.get("equipment", {}).get(slot)
+		if worn != null:
+			v.add_child(_wrap_label(L.fa(L.t("ui.bag.remplace"), str(worn.get("name", ""))), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 		actions.add_child(_action_button(L.t("ui.equip_dock.equiper"), "go", func(): _equip(int(resolved.idx))))
 		actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	elif type == "potion":
@@ -643,7 +680,11 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 		if type != "key":
 			actions.add_child(_action_button(L.t("common.jeter"), "del", func(): _discard(int(resolved.idx))))
 	if actions.get_child_count() > 0:
+		var fill := Control.new()
+		fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		v.add_child(fill)
 		v.add_child(actions)
+		v.add_child(_label(L.t("ui.bag.raccourcis"), 11, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	return box
 
 func _add_stat_lines(v: VBoxContainer, it: Dictionary, c: Dictionary, slot: String, with_diff: bool) -> void:
@@ -790,6 +831,23 @@ func _slot_clicked(slot: String) -> void:
 		sel = {"src": "slot", "slot": slot}
 	_render()
 
+func _sort_clicked() -> void:
+	sort_mode = (sort_mode + 1) % Inventory.SORT_MODES.size()
+	Inventory.sort_tab(gs, tab, str(Inventory.SORT_MODES[sort_mode]))
+	sel = {}
+	bag_changed.emit()
+	_render()
+
+## Action rapide (clic droit / double-clic) : boire la potion, équiper l'objet.
+func _quick(idx: int) -> void:
+	if idx < 0 or idx >= gs.inventory.size():
+		return
+	var it: Dictionary = gs.inventory[idx]
+	if str(it.get("type", "")) == "potion":
+		_use_potion(idx)
+	elif Inventory.can_equip(it):
+		_equip(idx)
+
 func _equip(idx: int) -> void:
 	if Inventory.equip(gs, gs.char_by_id(char_id), idx):
 		sel = {}
@@ -826,3 +884,26 @@ func _after() -> void:
 	bag_changed.emit()
 	ctrl.changed.emit()
 	changed.emit()
+
+
+## Emplacement d'équipement qui accepte un objet déposé depuis la besace (si `accepts` le permet).
+class SlotButton extends Button:
+	signal dropped(data: Dictionary)
+	var slot_id: String = ""
+	var accepts: Callable
+
+	func _can_drop_data(_at: Vector2, data: Variant) -> bool:
+		return data is Dictionary and data.get("kind") == "bag_item" and accepts.is_valid() and accepts.call(data)
+
+	func _drop_data(_at: Vector2, data: Variant) -> void:
+		dropped.emit(data)
+
+## Zone « jeter » : couvre l'écran (hors du volet) uniquement pendant qu'un objet est glissé.
+class DropCatcher extends Control:
+	signal dropped(idx: int)
+
+	func _can_drop_data(_at: Vector2, data: Variant) -> bool:
+		return data is Dictionary and data.get("kind") == "bag_item"
+
+	func _drop_data(_at: Vector2, data: Variant) -> void:
+		dropped.emit(int(data.idx))

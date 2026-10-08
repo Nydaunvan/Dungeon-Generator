@@ -1387,7 +1387,17 @@
   "ui.settings.refresh_info": "Fréquence de votre écran : %d Hz. Avec la synchro verticale, la cible ne dépasse jamais cette valeur.",
   "ui.settings.refresh_unknown": "Fréquence de l'écran inconnue (navigateur) : la cible ne dépasse pas 60 tant que le jeu n'a pas mesuré mieux.",
   "ui.minimap.escalier_montant": "Escalier montant (niveau suivant)",
-  "ui.minimap.escalier_descendant": "Escalier descendant (niveau précédent)"
+  "ui.minimap.escalier_descendant": "Escalier descendant (niveau précédent)",
+  "ui.bag.legende": "▲ meilleur que l'équipé · ▼ moins bon · clic droit : boire / équiper",
+  "ui.bag.total": "Total %d / %d",
+  "ui.bag.remplace": "Remplace : %s",
+  "ui.bag.emplacement_libre": "Emplacement libre",
+  "ui.bag.trier": "Trier : %s",
+  "ui.bag.tri_type": "type",
+  "ui.bag.tri_power": "puissance",
+  "ui.bag.tri_name": "nom",
+  "ui.bag.raccourcis": "double-clic : équiper · Entrée · Suppr",
+  "ui.bag.deposer_ici": "déposer ici"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",
