@@ -102,6 +102,10 @@ func _build_text() -> void:
 	_col.add_child(_label(L.t("ui.credits.merci_2"), 24, parch))
 	_space(110)
 	_col.add_child(_about())
+	_space(90)
+	var cc := _label(L.t("ui.credits.modele_3d"), 20, parch)
+	cc.modulate = Color(1, 1, 1, 0.85)
+	_col.add_child(cc)
 	_space(130)
 	_col.add_child(_label(L.t("ui.credits.merci_fans"), 40, gold, UiTheme.F_DISPLAY_BOLD))
 

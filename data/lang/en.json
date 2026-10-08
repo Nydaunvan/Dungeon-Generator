@@ -1348,6 +1348,7 @@
   "ui.credits.annee": "2026",
   "ui.credits.merci_1": "Thanks to my family, my friends and Laurent\nfor all the ideas and the testing.",
   "ui.credits.merci_2": "To Théo and Stéphane for their sharp eye.",
+  "ui.credits.modele_3d": "Merchant 3D model: \"FREE Battlemage Wizard\" by Axinovium\n(Sketchfab, CC-BY 4.0 license)",
   "ui.credits.a_propos": "This game is made by a fan of the genre who knows nothing about development. There is a full Web version, but I moved to Godot on the advice of Laurent, who is developing his own game (go check it out!):\nhttps://jyraia-sama.github.io/Brother-of-Legacy-Tears-and-Blood-Godot/",
   "ui.credits.merci_fans": "Thanks to the fans",
   "ui.credits.fermer_indice": "Click or Esc to close",
