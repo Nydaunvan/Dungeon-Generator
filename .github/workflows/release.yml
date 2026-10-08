@@ -89,6 +89,8 @@ jobs:
           (cd build/windows && zip -q -9 "../../dist/Dungeon-Generator-$V-windows.zip" "Dungeon Generator.exe")
           chmod +x "build/linux/Dungeon Generator.x86_64"
           tar -C build/linux -czf "dist/Dungeon-Generator-$V-linux.tar.gz" "Dungeon Generator.x86_64"
+          # sommes de contrôle : le jeu les vérifie avant d'installer une mise à jour
+          (cd dist && sha256sum "Dungeon-Generator-$V-windows.zip" "Dungeon-Generator-$V-linux.tar.gz" > SHA256SUMS.txt)
           ls -la dist
 
       - name: Garder les fichiers en pièce jointe (14 jours)

@@ -235,6 +235,7 @@ func _display() -> void:
 	_section(L.t("ui.settings.tab_display"))
 	if Settings.is_web():
 		_hint(L.t("ui.settings.display_web_note"))
+		_hint(L.t("ui.update.web_note"))
 		return
 	_row(L.t("ui.settings.win_mode"), _drop([[1, L.t("ui.settings.win_full")], [0, L.t("ui.settings.win_windowed")]],
 		1 if Settings.is_fullscreen() else 0, func(v): Settings.set_fullscreen(int(v) == 1)))
@@ -245,6 +246,17 @@ func _display() -> void:
 		cap_opts.append([v, L.t("ui.settings.unlimited") if v == 0 else L.t("ui.settings.fps_unit") % v])
 	_row(L.t("ui.settings.fps_cap"), _drop(cap_opts, Settings.fps_cap, func(v): Settings.set_fps_cap(int(v))))
 	_hint(L.t("ui.settings.fps_cap_hint"))
+	_updates()
+
+## Mises à jour : vérification au lancement, préversions, vérification immédiate.
+func _updates() -> void:
+	_section(L.t("ui.update.section"))
+	_check(L.t("ui.update.auto"), bool(Updater.pref("auto_check", true)), func(v: bool): Updater.set_pref("auto_check", v))
+	_check(L.t("ui.update.pre"), bool(Updater.pref("include_pre", false)), func(v: bool):
+		Updater.set_pref("include_pre", v)
+		Updater.set_pref("ignored", ""))
+	_hint(L.t("ui.update.sauvegardes"))
+	_button(L.t("ui.update.verifier"), func(): UpdateModal.check(_m.get_parent(), true))
 
 # ------------------------------------------------------------------ Commandes
 

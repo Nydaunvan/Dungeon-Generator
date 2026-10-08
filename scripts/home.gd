@@ -14,6 +14,9 @@ func _ready() -> void:
 	add_child(_modal_layer)
 	screen.action.connect(_on_action)
 	screen.nav.connect(_on_nav)
+	Updater.cleanup()
+	# vérification discrète au lancement (une fois par jour, hors Web) : la fenêtre n'apparaît que s'il y a du nouveau
+	get_tree().create_timer(2.5).timeout.connect(func(): UpdateModal.check(_modal_layer))
 
 func _on_nav(name: String) -> void:
 	match name:
