@@ -1,5 +1,12 @@
 [
  {
+  "version": "1.31.3",
+  "changes": [
+   "## Mises à jour",
+   "Version de contrôle de la mise à jour automatique : aucune nouveauté de jeu. Elle permet de vérifier, depuis la 1.31.2, le téléchargement, le remplacement de l'exécutable et le redémarrage sans fenêtre de commande."
+  ]
+ },
+ {
   "version": "1.31.2",
   "changes": [
    "## Mises à jour dans le jeu",
