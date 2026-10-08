@@ -13,11 +13,70 @@ const WOOD_DARK := Color(0.62, 0.5, 0.42)
 
 static var _cache: Dictionary = {}
 var _t := 0.0
+var _built := false
 var _lantern_light: OmniLight3D
 var _flame: MeshInstance3D
 var _sway: Array = []        # [node, phase, amplitude, axe]
 var _torso: Node3D
 var _head: Node3D
+
+# ------------------------------------------------------------------ réserve d'étals préparés
+
+## Étals déjà construits (sans parent). Le niveau du marchand en prend un ici au lieu de tout reconstruire ; en le quittant il le rend.
+static var _pool: Array = []
+static var _wizard_scene: PackedScene = null
+
+## À appeler au chargement du donjon : charge le magicien et les textures, construit un étal et le dessine une fois hors écran
+## (les shaders sont compilés maintenant, pas à l'arrivée au niveau du marchand).
+static func prewarm(host: Node) -> void:
+	if not _pool.is_empty():
+		return
+	if _wizard_scene == null and ResourceLoader.exists(WIZARD_GLB):
+		_wizard_scene = load(WIZARD_GLB)
+	var m := Merchant3D.new()
+	m.build()
+	var tree := host.get_tree()
+	var vp := SubViewport.new()
+	vp.size = Vector2i(96, 96)
+	vp.own_world_3d = true
+	vp.transparent_bg = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	host.add_child(vp)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 2.0, 8.0)
+	cam.fov = 60
+	vp.add_child(cam)
+	vp.add_child(m)
+	cam.look_at(Vector3(0, 1.8, 0))
+	await tree.process_frame
+	await tree.process_frame
+	vp.remove_child(m)
+	vp.queue_free()
+	_pool.append(m)
+
+static func acquire() -> Merchant3D:
+	while not _pool.is_empty():
+		var m = _pool.pop_back()
+		if is_instance_valid(m):
+			return m
+	return Merchant3D.new()
+
+static func release(m: Merchant3D) -> void:
+	if not is_instance_valid(m):
+		return
+	if m.get_parent() != null:
+		m.get_parent().remove_child(m)
+	m.position = Vector3.ZERO
+	m.rotation = Vector3.ZERO
+	m.scale = Vector3.ONE
+	_pool.append(m)
+
+static func clear_pool() -> void:
+	for m in _pool:
+		if is_instance_valid(m):
+			(m as Node).free()
+	_pool.clear()
+	_wizard_scene = null
 
 # ------------------------------------------------------------------ matériaux
 
@@ -169,6 +228,13 @@ static func cloth_mesh(nu: int, nv: int, fn: Callable) -> ArrayMesh:
 # ------------------------------------------------------------------ construction
 
 func _ready() -> void:
+	build()
+
+## Construit l'étal (une seule fois) : possible hors de l'arbre, pour préparer l'étal pendant le chargement du donjon.
+func build() -> void:
+	if _built:
+		return
+	_built = true
 	name = "Merchant3D"
 	_build_frame()
 	_build_back()
@@ -514,11 +580,11 @@ var _wiz: Node3D
 
 func _build_merchant() -> void:
 	if ResourceLoader.exists(WIZARD_GLB):
-		var packed: PackedScene = load(WIZARD_GLB)
+		var packed: PackedScene = _wizard_scene if _wizard_scene != null else load(WIZARD_GLB)
 		_wiz = Node3D.new()
 		_wiz.name = "Marchand"
 		# le modèle fait 2 u de haut, centré sur l'origine, face à +Z : pieds au sol, derrière le comptoir
-		_wiz.position = Vector3(0.1, 0.0, -0.1)
+		_wiz.position = Vector3(0.1, 0.0, -0.5)   # derrière le comptoir (plateau de z = -0,1 à 0,9), pas dedans
 		add_child(_wiz)
 		var model: Node3D = packed.instantiate()
 		model.scale = Vector3.ONE * WIZARD_SCALE

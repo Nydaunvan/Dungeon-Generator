@@ -24,6 +24,7 @@ var _modal_layer: CanvasLayer
 
 func _exit_tree() -> void:
 	Data.game_scale_mode = false
+	Merchant3D.clear_pool()
 
 func _ready() -> void:
 	Data.game_scale_mode = true
@@ -131,6 +132,8 @@ func _ready() -> void:
 	ctrl.changed.connect(_update_music)
 	ctrl.changed.connect(_sync_stage)
 	layout.stage.gui_input.connect(_on_stage_input)
+	if _has_merchant_level():
+		await Merchant3D.prewarm(self)     # étal du marchand : chargé ici, pas à l'arrivée à son niveau
 	await Loader.step(0.55, L.t("loading.etape_donjon"))
 	await load_level(level_index, resume, {}, true)
 	await Loader.step(0.92, L.t("loading.etape_reprise") if resume else "")
@@ -203,11 +206,18 @@ func _apply_quality() -> void:
 	vp.anisotropic_filtering_level = Settings.aniso_mode() as Viewport.AnisotropicFiltering
 	rig.camera.far = 100.0 * Settings.view_distance()
 
+func _has_merchant_level() -> bool:
+	for lv in gs.cfg.levels:
+		if lv.get("travelingMerchant") is Dictionary and not bool(lv.get("outdoor", false)):
+			return true
+	return false
+
 ## `sliced` : chargement derrière l'écran de chargement, réparti sur plusieurs images (l'appelant `await`). Sans cela, tout est immédiat.
 func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sliced: bool = false) -> void:
 	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
 	if level_node:
+		level_node.entities.release_stall()
 		level_node.queue_free()
 	level_index = index
 	grid = DungeonGrid.new(level)

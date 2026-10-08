@@ -127,7 +127,7 @@
   {
    "id": "spell_bard2",
    "name": "Note Perçante",
-   "icon": "🎶",
+   "icon": "@icon:spell_sonicnote",
    "style": "bard",
    "mode": "damage",
    "dmgMin": 3,

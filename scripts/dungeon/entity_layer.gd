@@ -127,8 +127,10 @@ func add_npc(icon: String, x: int, y: int) -> void:
 
 ## Marchand itinérant (sprite unique, déplaçable). `big` : grand format des PNJ du village.
 func add_merchant(x: int, y: int, big: bool = false) -> void:
+	release_stall()
 	if merchant_node != null:
 		merchant_node.queue_free()
+		merchant_node = null
 	if not big and _grid != null:
 		var nd := LevelBuilder.merchant_niche_dir(_grid, x, y)
 		if nd != Vector2i.ZERO:
@@ -147,7 +149,7 @@ func add_merchant(x: int, y: int, big: bool = false) -> void:
 func _make_stall(x: int, y: int, d: Vector2i) -> Node3D:
 	var sp := LevelBuilder.merchant_niche_spec(_grid, x, y)
 	var sc := LevelBuilder.merchant_stall_scale(float(sp.w))
-	var st := Merchant3D.new()
+	var st := Merchant3D.acquire()
 	st.scale = Vector3.ONE * sc
 	var dv := Vector3(d.x, 0, d.y)
 	var c := Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL)
@@ -156,6 +158,12 @@ func _make_stall(x: int, y: int, d: Vector2i) -> Node3D:
 	st.name = "MerchantStall"
 	add_child(st)
 	return st
+
+## Rend l'étal 3D à la réserve (il resservira au prochain niveau de marchand sans être reconstruit).
+func release_stall() -> void:
+	if merchant_node is Merchant3D:
+		Merchant3D.release(merchant_node as Merchant3D)
+		merchant_node = null
 
 func move_merchant(x: int, y: int) -> void:
 	if merchant_node != null:
