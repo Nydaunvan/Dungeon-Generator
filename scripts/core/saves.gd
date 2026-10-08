@@ -119,13 +119,32 @@ static func write_slot(i: int, cfg: Dictionary, save: Dictionary, origin: String
 	if f == null:
 		return false
 	f.store_string(stringify({"format": "godot-1", "config": cfg, "save": save, "savedAt": Time.get_unix_time_from_system() * 1000.0,
-		"buildId": BUILD_ID, "dungeonOrigin": origin}))
+		"buildId": BUILD_ID, "schema": SaveMigrations.SCHEMA, "dungeonOrigin": origin}))
 	return true
 
+## Dernières migrations appliquées à une sauvegarde lue : {emplacement : [changements]} (pour le journal de la partie).
+static var migrated_notes: Dictionary = {}
+
+## Lit un emplacement. Une sauvegarde d'un ancien schéma est d'abord copiée (slot_N.vK.bak, une seule fois), puis migrée et
+## réécrite : on ne perd jamais l'original.
 static func read_slot(i: int) -> Dictionary:
 	if not FileAccess.file_exists(_path(i)):
 		return {}
-	return parse(FileAccess.get_file_as_string(_path(i)))
+	var raw := FileAccess.get_file_as_string(_path(i))
+	var d := parse(raw)
+	if d.is_empty() or not (d.get("save") is Dictionary) or not SaveMigrations.needs_migration(d):
+		return d
+	var bak := "%s/slot_%d.v%d.bak" % [DIR, i, SaveMigrations.schema_of(d)]
+	if not FileAccess.file_exists(bak):
+		var bf := FileAccess.open(bak, FileAccess.WRITE)
+		if bf != null:
+			bf.store_string(raw)
+	var notes := SaveMigrations.migrate(d, Data.original_config)
+	migrated_notes[i] = notes
+	var f := FileAccess.open(_path(i), FileAccess.WRITE)
+	if f != null:
+		f.store_string(stringify(d))
+	return d
 
 static func delete_slot(i: int) -> void:
 	if FileAccess.file_exists(_path(i)):
@@ -163,7 +182,7 @@ static func origin_label(o: String) -> String:
 # ------------------------------------------------------------------ fichier complet
 
 static func export_text(cfg: Dictionary, save: Dictionary, origin: String) -> String:
-	return stringify({"format": "godot-1", "config": cfg, "save": save, "dungeonOrigin": origin}, "  ")
+	return stringify({"format": "godot-1", "config": cfg, "save": save, "schema": SaveMigrations.SCHEMA, "dungeonOrigin": origin}, "  ")
 
 ## Analyse un fichier/texte importé (`applyImportedData`). Renvoie {"config": Dictionary|{}, "save": Dictionary|{}, "origin": String,
 ## "cfg_extra": Dictionary} ou {} si rien n'est reconnu. Accepte : fichier Godot, configuration seule, sauvegarde du jeu HTML
@@ -193,6 +212,10 @@ static func parse_import(text: String) -> Dictionary:
 					cfg[k] = extra[k]
 	if cfg.is_empty() and save.is_empty():
 		return {}
+	if not save.is_empty() and not cfg.is_empty() and SaveMigrations.needs_migration(d):
+		var whole := {"config": cfg, "save": save, "dungeonOrigin": str(d.get("dungeonOrigin", "custom")), "schema": SaveMigrations.schema_of(d)}
+		SaveMigrations.migrate(whole, Data.original_config)
+		cfg = whole.config
 	return {"config": cfg, "save": save, "origin": str(d.get("dungeonOrigin", "custom")), "cfg_extra": extra if cfg.is_empty() else {}}
 
 ## Texte d'un journal du jeu HTML sans sa mise en forme (balises <span>…).
