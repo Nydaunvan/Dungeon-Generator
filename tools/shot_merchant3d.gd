@@ -58,4 +58,10 @@ func _init() -> void:
 	look.call(-12.0, 8.0, 3.6, Vector3(0, 1.2, 0.3))
 	await create_timer(0.3).timeout
 	shot.call("detail")
+	look.call(0.0, 2.0, 2.3, Vector3(0.1, 2.3, 0.0))
+	await create_timer(0.3).timeout
+	shot.call("visage")
+	look.call(-22.0, 6.0, 2.6, Vector3(0.3, 1.7, 0.4))
+	await create_timer(0.3).timeout
+	shot.call("mains")
 	quit()

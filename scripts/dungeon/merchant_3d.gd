@@ -514,70 +514,10 @@ func _build_lantern() -> void:
 	_sway.append([holder, randf() * TAU, 0.03, "z"])
 
 func _build_merchant() -> void:
-	var m := Node3D.new()
-	m.name = "Marchand"
-	m.position = Vector3(0.1, 0.0, -0.1)
-	add_child(m)
-	var skin := _mat(Color(0.9, 0.7, 0.58), 0.7)
-	var cloak := _mat(Color(0.34, 0.2, 0.22), 0.9, 0.0, "cloth_red.webp", "cloth_red_n.webp", 0.9)
-	var cloak_dark := _mat(Color(0.2, 0.12, 0.13), 0.95)
-	var tunic := _mat(Color(0.42, 0.4, 0.2), 0.9)
-	var strap := _mat(Color(0.45, 0.26, 0.12), 0.7)
-	var beard_m := _mat(Color(0.95, 0.94, 0.92), 0.9)
-	_torso = Node3D.new()
-	_torso.position = Vector3(0, 1.15, 0)
-	m.add_child(_torso)
-	# buste : tunique olive + cape qui retombe sur les épaules
-	_add(lathe([Vector2(0.0, 0.0), Vector2(0.4, 0.0), Vector2(0.44, 0.35), Vector2(0.42, 0.62), Vector2(0.3, 0.82), Vector2(0.13, 0.9), Vector2(0.0, 0.92)], 26), tunic, Vector3.ZERO, _torso)
-	var cape := lathe([Vector2(0.0, 0.62), Vector2(0.6, 0.55), Vector2(0.58, 0.72), Vector2(0.48, 0.86), Vector2(0.28, 0.94), Vector2(0.0, 0.96)], 28)
-	_add(cape, cloak, Vector3(0, 0.0, -0.03), _torso).scale = Vector3(1.12, 1.0, 0.78)
-	_add(lathe([Vector2(0.0, 0.0), Vector2(0.5, 0.0), Vector2(0.54, 0.22), Vector2(0.4, 0.5), Vector2(0.26, 0.62)], 26), cloak_dark, Vector3(0, 0.45, -0.18), _torso).scale = Vector3(1.0, 1.0, 0.7)
-	# bretelles, boutons, broche
-	for sx in [-1.0, 1.0]:
-		_box(Vector3(0.06, 0.72, 0.03), strap, Vector3(sx * 0.17, 0.46, 0.27), _torso, Vector3(-8, 0, sx * 4))
-		_sphere(0.032, _gold(), Vector3(sx * 0.17, 0.5, 0.31), _torso)
-	for sx in [-1.0, 1.0]:
-		_cyl(0.065, 0.065, 0.025, _gold(), Vector3(sx * 0.13, 0.84, 0.19), _torso, Vector3(90, 0, 0), 14)
-		_torus(0.05, 0.078, _gold(), Vector3(sx * 0.13, 0.84, 0.2), _torso, Vector3(90, 0, 0))
-	_box(Vector3(0.1, 0.1, 0.03), _gold(), Vector3(0, 0.6, 0.31), _torso, Vector3(0, 0, 45))
-	_sphere(0.028, _mat(Color(0.2, 0.5, 0.35), 0.2, 0.2), Vector3(0, 0.6, 0.335), _torso)
-	# bras posés sur le comptoir : manche + main
-	for sx in [-1.0, 1.0]:
-		var arm := _box(Vector3(0.2, 0.2, 0.62), tunic, Vector3(sx * 0.52, 0.2, 0.3), _torso, Vector3(18, sx * -12, 0))
-		_sphere(0.115, skin, Vector3(sx * 0.58, 0.02, 0.66), _torso, Vector3(1.0, 0.7, 1.15))
-		for f in 4:
-			_sphere(0.034, skin, Vector3(sx * (0.5 + f * 0.044), 0.0, 0.76), _torso, Vector3(1, 0.9, 1.3))
-	# tête
-	_head = Node3D.new()
-	_head.position = Vector3(0, 1.28, 0.03)
-	_torso.add_child(_head)
-	_sphere(0.215, skin, Vector3.ZERO, _head, Vector3(0.95, 1.12, 1.0))
-	_sphere(0.045, skin, Vector3(0, -0.02, 0.2), _head, Vector3(0.9, 1.0, 1.1))            # nez
-	for sx in [-1.0, 1.0]:
-		var eye_w := _sphere(0.034, _mat(Color(0.95, 0.94, 0.9), 0.4), Vector3(sx * 0.085, 0.045, 0.185), _head, Vector3(1.2, 0.75, 0.6))
-		_sphere(0.017, _mat(Color(0.12, 0.1, 0.1), 0.2), Vector3(sx * 0.085, 0.045, 0.2), _head, Vector3(1, 1, 0.6))
-		_box(Vector3(0.13, 0.026, 0.05), _mat(Color(0.85, 0.85, 0.85), 0.9), Vector3(sx * 0.09, 0.105, 0.19), _head, Vector3(0, 0, sx * -20))   # sourcils
-		_sphere(0.04, skin, Vector3(sx * 0.21, 0.0, 0.0), _head, Vector3(0.6, 1.2, 0.9))     # oreilles
-		_sphere(0.06, beard_m, Vector3(sx * 0.19, -0.04, 0.02), _head, Vector3(0.7, 1.4, 1.0))   # favoris
-		_sphere(0.05, beard_m, Vector3(sx * 0.05, -0.085, 0.215), _head, Vector3(1.5, 0.7, 0.8))  # moustache
-	# barbe : cône effilé
-	_add(lathe([Vector2(0.0, -0.46), Vector2(0.05, -0.38), Vector2(0.14, -0.22), Vector2(0.2, -0.09), Vector2(0.19, 0.0), Vector2(0.0, 0.0)], 22, func(v: Vector3) -> Vector3:
-		return Vector3(v.x * 1.0, v.y, v.z * 0.8 + 0.1 + (v.y + 0.1) * 0.0)), beard_m, Vector3(0, -0.07, 0.05), _head)
-	# chapeau de mage : bord large + calotte tordue + ruban + boucle
-	var brim_prof := [Vector2(0.0, 0.0), Vector2(0.25, 0.0), Vector2(0.42, -0.015), Vector2(0.62, -0.06), Vector2(0.66, -0.1), Vector2(0.64, -0.1), Vector2(0.42, -0.04), Vector2(0.0, 0.03)]
-	var hat_m := _mat(Color(0.34, 0.22, 0.14), 0.75, 0.0, "wood_dark.webp", "wood_dark_n.webp", 0.7)
-	var hat := Node3D.new()
-	hat.position = Vector3(0, 0.15, 0.0)
-	hat.rotation_degrees = Vector3(-6, 0, 0)
-	_head.add_child(hat)
-	_add(lathe(brim_prof, 36), hat_m, Vector3.ZERO, hat)
-	var crown := lathe([Vector2(0.24, 0.0), Vector2(0.23, 0.12), Vector2(0.2, 0.3), Vector2(0.15, 0.48), Vector2(0.09, 0.62), Vector2(0.04, 0.72), Vector2(0.0, 0.76)], 28, func(v: Vector3) -> Vector3:
-		var t := clampf(v.y / 0.76, 0.0, 1.0)
-		return Vector3(v.x, v.y, v.z - 0.34 * t * t - 0.0)).duplicate()
-	_add(crown, hat_m, Vector3(0, 0.0, 0.0), hat)
-	_torus(0.215, 0.268, strap, Vector3(0, 0.04, 0.0), hat)
-	_box(Vector3(0.1, 0.1, 0.03), _gold(), Vector3(0, 0.05, 0.27), hat)
-	_box(Vector3(0.05, 0.06, 0.035), strap, Vector3(0, 0.05, 0.275), hat)
+	var w := Wizard3D.new()
+	w.name = "Marchand"
+	w.position = Vector3(0.1, 0.0, -0.1)
+	add_child(w)
 
 # ------------------------------------------------------------------ animation
 
