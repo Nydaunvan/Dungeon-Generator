@@ -1,9 +1,9 @@
 [
  {
-  "version": "1.31.0",
+  "version": "1.31.2",
   "changes": [
    "## Mises à jour dans le jeu",
-   "Au lancement, un sablier s'affiche pendant que le jeu vérifie si une nouvelle version est publiée et propose, dans une fenêtre avec les notes de version, de la télécharger et de l'installer : « Mettre à jour », « Plus tard » ou « Ignorer cette version ». Le téléchargement est vérifié (somme SHA-256), puis le jeu se remplace et redémarre tout seul (Windows et Linux).",
+   "Au lancement, un sablier s'affiche pendant que le jeu vérifie si une nouvelle version est publiée et propose, dans une fenêtre avec les notes de version, de la télécharger et de l'installer : « Mettre à jour », « Plus tard » ou « Ignorer cette version ». Le téléchargement est vérifié (somme SHA-256), puis le jeu se remplace et redémarre tout seul (Windows et Linux), sans aucune fenêtre de commande.",
    "Nouvelle section « Mises à jour » dans les Paramètres : vérification au lancement, inclusion des préversions pour les testeurs, bouton « Vérifier maintenant ».",
    "## Sauvegardes",
    "Les sauvegardes portent désormais un numéro de schéma et sont mises à jour automatiquement à la lecture : une partie existante récupère les nouveaux objets, sorts, réglages et icônes du jeu. Une copie de secours (slot_N.v1.bak) est conservée avant toute migration.",
@@ -17,7 +17,9 @@
    "## Sorts et interface",
    "Nouvelle icône pour la Note Perçante du barde (plus lisible que l'ancienne).",
    "Sorts de soutien : effet visible immédiatement. Grille de fer et son d'ouverture refaits, icônes distinctes des escaliers sur la mini-carte.",
-   "Cibles de 90 et 120 images par seconde, limite jusqu'à 240."
+   "Cibles de 90 et 120 images par seconde, limite jusqu'à 240.",
+   "## Générique",
+   "Crédit du modèle 3D du marchand (« FREE Battlemage Wizard » par Axinovium, licence CC-BY 4.0) ajouté au générique."
   ]
  },
  {
