@@ -42,6 +42,18 @@ func _ready() -> void:
 	var cu := {"config": {"itemLibrary": [], "spells": []}, "save": {}, "dungeonOrigin": "custom"}
 	SaveMigrations.migrate(cu, Data.original_config)
 	checks["donjon custom intact"] = (cu.config.itemLibrary as Array).is_empty()
+	# configuration de l'appareil (donjons aléatoires)
+	var dev: Dictionary = Data.original_config.duplicate(true)
+	for sp in dev.spells:
+		if sp.id == "spell_bard2":
+			sp.icon = "🎶"
+	SaveMigrations.migrate_config(dev, Data.original_config)
+	var dev_icon := ""
+	for sp in dev.spells:
+		if sp.id == "spell_bard2":
+			dev_icon = sp.icon
+	checks["config appareil : icône du barde"] = dev_icon == "@icon:spell_sonicnote"
+	checks["config appareil : schéma"] = int(dev.get("configSchema", 0)) == SaveMigrations.SCHEMA
 	for k in checks:
 		if not checks[k]:
 			print("ÉCHEC : ", k)

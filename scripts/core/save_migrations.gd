@@ -32,6 +32,17 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 	d["schema"] = SCHEMA
 	return notes
 
+## Configuration enregistrée sur l'appareil (user://config.json, celle qui sert aux donjons aléatoires) : même mise à niveau que
+## pour une sauvegarde, repérée par « configSchema ». Renvoie la liste des changements (vide : rien à faire, ou déjà à jour).
+static func migrate_config(cfg: Dictionary, defaults: Dictionary) -> Array[String]:
+	var v := int(cfg.get("configSchema", 1))
+	if v >= SCHEMA:
+		return []
+	var whole := {"config": cfg, "dungeonOrigin": "random", "schema": v}
+	var notes := migrate(whole, defaults)
+	cfg["configSchema"] = SCHEMA
+	return notes
+
 ## v1 → v2 : la configuration enregistrée dans la partie reçoit les objets et sorts ajoutés depuis, les réglages manquants
 ## et les icônes remplacées. Un donjon « custom » (modifié par le joueur) garde sa bibliothèque et ses sorts tels quels.
 static func _v1_to_v2(d: Dictionary, defaults: Dictionary) -> Array[String]:

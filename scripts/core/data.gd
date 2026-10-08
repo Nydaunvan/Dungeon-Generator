@@ -62,7 +62,24 @@ func _ready() -> void:
 	config = _load_user_config()
 	if config.is_empty():
 		config = original_config.duplicate(true)
+	else:
+		_upgrade_user_config()
 	ensure_defaults(config)
+
+## La configuration enregistrée sur l'appareil reçoit les nouveautés du jeu (icônes, objets, sorts, réglages) : copie de secours
+## (config.v1.bak, une seule fois) puis réécriture.
+func _upgrade_user_config() -> void:
+	if int(config.get("configSchema", 1)) >= SaveMigrations.SCHEMA:
+		return
+	var bak := "user://config.v%d.bak" % int(config.get("configSchema", 1))
+	if not FileAccess.file_exists(bak) and FileAccess.file_exists(USER_CONFIG):
+		var bf := FileAccess.open(bak, FileAccess.WRITE)
+		if bf != null:
+			bf.store_string(FileAccess.get_file_as_string(USER_CONFIG))
+	SaveMigrations.migrate_config(config, original_config)
+	var f := FileAccess.open(USER_CONFIG, FileAccess.WRITE)
+	if f != null:
+		f.store_string(Saves.stringify(config))
 
 func _load_json(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
