@@ -464,12 +464,6 @@ func _build_lantern() -> void:
 	fill.omni_range = 7.0
 	fill.position = Vector3(0, 2.7, 2.4)
 	add_child(fill)
-	var under := OmniLight3D.new()
-	under.light_color = Color(1.0, 0.6, 0.4)
-	under.light_energy = 0.9
-	under.omni_range = 4.0
-	under.position = Vector3(0, 2.7, 0.2)
-	add_child(under)
 	var holder := Node3D.new()
 	holder.position = Vector3(1.95, 3.38, 0.75)
 	add_child(holder)
@@ -506,7 +500,7 @@ func _build_lantern() -> void:
 	_lantern_light.light_color = Color(1.0, 0.68, 0.34)
 	_lantern_light.light_energy = 2.4
 	_lantern_light.omni_range = 7.5
-	_lantern_light.shadow_enabled = true
+	_lantern_light.shadow_enabled = false
 	_lantern_light.shadow_bias = 0.08
 	_lantern_light.shadow_normal_bias = 1.5
 	_lantern_light.position = Vector3(0, -0.05, 0.1)

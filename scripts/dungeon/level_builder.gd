@@ -11,9 +11,8 @@ const NICHE_DEPTH := 1.9      # profondeur dans le mur
 ## Étal du marchand (assets/misc/merchant_stall.webp, 1421 × 983 px) logé dans un creux peu profond du mur.
 ## Grand format : l'étal fait toute la hauteur du mur (4 u) et ~5,75 u de large ; il déborde donc sur les cases voisines du mur
 ## (qui doivent être pleines derrière des cases libres). À défaut, petit format : 3,2 u de large, dans la seule case du mur.
-const MERCHANT_ASPECT := 1421.0 / 983.0
-const MERCHANT_DEPTH := 0.6     # creux peu profond : l'étal reste près de l'ouverture et paraît grand
-const MERCHANT_WIDE_HALF_W := 2.875
+const MERCHANT_STALL_DEPTH := 2.3      # profondeur du creux qui loge l'étal 3D (Merchant3D) à pleine échelle
+const MERCHANT_WIDE_HALF_W := 3.75     # demi-largeur à pleine échelle : bannières comprises (7,5 u)
 const MERCHANT_SMALL_HALF_W := 1.6
 const MERCHANT_SMALL_NICHE_H := 2.9    # plus haut que l'œil du joueur (2 u) : le linteau ne masque pas le haut de l'image
 
@@ -49,7 +48,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 			var mp := Vector2i(int(tm.x), int(tm.y))
 			var spec := merchant_niche_spec(grid, mp.x, mp.y)
 			if not spec.is_empty() and not niches.has(mp):
-				niches[mp] = {"d": spec.d, "w": spec.w, "h": spec.h, "t": 0.28, "dp": MERCHANT_DEPTH}
+				niches[mp] = {"d": spec.d, "w": spec.w, "h": spec.h, "t": 0.28, "dp": merchant_niche_depth(float(spec.w))}
 	# les creux plus larges qu'une case entament le mur des cases voisines : intervalle évidé (le long du mur) de chaque face concernée
 	var holes := {}       # "x,y,dx,dy" -> Vector3(s0, s1, haut du creux)
 	for cell in niches:
@@ -182,6 +181,13 @@ static func merchant_niche_spec(grid: DungeonGrid, x: int, y: int) -> Dictionary
 	if walls.is_empty():
 		return {}
 	return {"d": walls[absi(h) % walls.size()], "w": MERCHANT_SMALL_HALF_W, "h": MERCHANT_SMALL_NICHE_H}
+
+## Échelle de l'étal 3D dans un creux de demi-largeur `w` (1 = pleine échelle ; réduit si le mur est trop court).
+static func merchant_stall_scale(w: float) -> float:
+	return minf(1.0, w / MERCHANT_WIDE_HALF_W)
+
+static func merchant_niche_depth(w: float) -> float:
+	return MERCHANT_STALL_DEPTH * merchant_stall_scale(w)
 
 ## Direction du mur évidé pour l'étal du marchand, ou ZERO.
 static func merchant_niche_dir(grid: DungeonGrid, x: int, y: int) -> Vector2i:

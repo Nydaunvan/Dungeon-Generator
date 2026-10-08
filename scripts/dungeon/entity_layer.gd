@@ -25,7 +25,7 @@ static var _mats: Dictionary = {}
 
 var monsters: Dictionary = {}   # Vector2i -> Array[{node, def}]
 var items: Dictionary = {}      # Vector2i -> Array[{node, def}]
-var merchant_node: MeshInstance3D = null
+var merchant_node: Node3D = null
 var fountains: Dictionary = {}  # id -> Fountain3D
 ## Renvoie true si la fontaine `id` est utilisable (délai de recharge écoulé). Fournie par main.gd.
 var fountain_ready: Callable = Callable()
@@ -34,7 +34,6 @@ const FOUNTAIN_SCALE := 0.8
 const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
 
 var _grid: DungeonGrid = null
-const STALL_TEX := "res://assets/misc/merchant_stall.webp"
 
 func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false) -> void:
 	_grid = grid
@@ -143,32 +142,20 @@ func add_merchant(x: int, y: int, big: bool = false) -> void:
 	add_child(n)
 	merchant_node = n
 
-## Étal du marchand logé dans un décroché du mur (case (x, y), mur côté `d`) : image posée au fond de la niche.
-func _make_stall(x: int, y: int, d: Vector2i) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var q := QuadMesh.new()
+## Étal du marchand (Merchant3D, en vraie 3D) logé dans un décroché du mur : case (x, y), mur côté `d`.
+## Le repère de l'étal a son devant en +Z et son fond à ~1 u derrière l'origine : on l'avance au fond du creux, face au couloir.
+func _make_stall(x: int, y: int, d: Vector2i) -> Node3D:
 	var sp := LevelBuilder.merchant_niche_spec(_grid, x, y)
-	var sw: float = float(sp.w) * 2.0
-	var sh: float = minf(sw / LevelBuilder.MERCHANT_ASPECT, LevelBuilder.CELL)
-	q.size = Vector2(sw, sh)
-	mi.mesh = q
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	m.alpha_scissor_threshold = 0.4
-	m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.albedo_texture = load(STALL_TEX)
-	m.albedo_color = Color(0.92, 0.9, 0.88)
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	mi.material_override = m
+	var sc := LevelBuilder.merchant_stall_scale(float(sp.w))
+	var st := Merchant3D.new()
+	st.scale = Vector3.ONE * sc
 	var dv := Vector3(d.x, 0, d.y)
 	var c := Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL)
-	mi.position = c + dv * (LevelBuilder.CELL * 0.5 + LevelBuilder.MERCHANT_DEPTH - 0.03) + Vector3(0, sh * 0.5, 0)
-	mi.rotation.y = LevelBuilder._rot(d)
-	mi.name = "MerchantStall"
-	add_child(mi)
-	return mi
+	st.position = c + dv * (LevelBuilder.CELL * 0.5 + 1.22 * sc)
+	st.rotation.y = LevelBuilder._rot(d)
+	st.name = "MerchantStall"
+	add_child(st)
+	return st
 
 func move_merchant(x: int, y: int) -> void:
 	if merchant_node != null:
