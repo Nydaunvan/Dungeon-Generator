@@ -28,6 +28,8 @@ permissions:
 
 jobs:
   publish:
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[exe]') || contains(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
     steps:
@@ -118,3 +120,39 @@ jobs:
             gh release create "$TAG" --target "${{ github.sha }}" --title "Dungeon Generator $V" --notes-file notes.md --prerelease="$PRE"
           fi
           gh release upload "$TAG" dist/* --clobber
+
+  # Installateur Windows (Inno Setup) : construit à partir de l'installation complète déjà publiée, puis ajouté à la publication.
+  installer:
+    needs: publish
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Récupérer l'installation complète publiée
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $V = "${{ needs.publish.outputs.version }}"
+          gh release download "v$V" --pattern "Dungeon-Generator-$V-windows-full.zip" --dir dl
+          Expand-Archive -Path "dl/Dungeon-Generator-$V-windows-full.zip" -DestinationPath build/payload-windows
+          Get-ChildItem build/payload-windows -Recurse | Select-Object -First 20 FullName
+
+      - name: Installer Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Compiler l'installateur
+        shell: pwsh
+        run: |
+          $V = "${{ needs.publish.outputs.version }}"
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$V" installer/dungeon-generator.iss
+          Get-ChildItem dist
+
+      - name: Ajouter l'installateur à la publication
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $V = "${{ needs.publish.outputs.version }}"
+          gh release upload "v$V" "dist/Dungeon-Generator-$V-setup.exe" --clobber
