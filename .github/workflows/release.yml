@@ -76,21 +76,23 @@ jobs:
           cp /tmp/templates/templates/windows_* /tmp/templates/templates/linux_* /tmp/templates/templates/version.txt "$T/"
           rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot.zip
 
-      - name: Importer les ressources et exporter Windows et Linux
+      - name: Importer les ressources et exporter (exécutable + paquets .pck)
         run: |
           set -euo pipefail
           GODOT=~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64
           chmod +x "$GODOT"
           V="${{ steps.ver.outputs.version }}"
-          mkdir -p build/windows build/linux dist
+          mkdir -p build/windows build/linux build/packs dist
           "$GODOT" --headless --path . --import
           "$GODOT" --headless --path . --export-release "Windows" "build/windows/Dungeon Generator.exe"
           "$GODOT" --headless --path . --export-release "Linux" "build/linux/Dungeon Generator.x86_64"
-          (cd build/windows && zip -q -9 "../../dist/Dungeon-Generator-$V-windows.zip" "Dungeon Generator.exe")
-          chmod +x "build/linux/Dungeon Generator.x86_64"
-          tar -C build/linux -czf "dist/Dungeon-Generator-$V-linux.tar.gz" "Dungeon Generator.x86_64"
-          # sommes de contrôle : le jeu les vérifie avant d'installer une mise à jour
-          (cd dist && sha256sum "Dungeon-Generator-$V-windows.zip" "Dungeon-Generator-$V-linux.tar.gz" > SHA256SUMS.txt)
+          # paquets communs aux deux plateformes (thèmes, monstres, audio…) : définis dans tools/gen_export_presets.py
+          for P in themes monsters audio; do
+            "$GODOT" --headless --path . --export-pack "Pack $P" "build/packs/$P.pck"
+          done
+          # fichiers de publication : un par un (mises à jour partielles), manifestes, installations complètes
+          python3 tools/pack_manifest.py "$V"
+          sha256sum dist/* > /tmp/SHA256SUMS.txt && mv /tmp/SHA256SUMS.txt dist/SHA256SUMS.txt
           ls -la dist
 
       - name: Garder les fichiers en pièce jointe (14 jours)

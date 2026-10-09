@@ -22,6 +22,7 @@ boot_splash/use_filter=true
 
 [autoload]
 
+PackLoader="*res://scripts/core/pack_loader.gd"
 Data="*res://scripts/core/data.gd"
 Settings="*res://scripts/core/settings.gd"
 Sound="*res://scripts/core/sound.gd"
