@@ -15,6 +15,12 @@ func _ready() -> void:
 	screen.action.connect(_on_action)
 	screen.nav.connect(_on_nav)
 	Updater.cleanup()
+	# après une mise à jour : notes de la nouvelle version (pas au tout premier lancement)
+	var seen := str(Updater.pref("last_seen_version", ""))
+	if seen != AppVersion.number():
+		Updater.set_pref("last_seen_version", AppVersion.number())
+		if seen != "":
+			DocModal.whats_new.call_deferred(_modal_layer)
 
 func _on_nav(name: String) -> void:
 	match name:

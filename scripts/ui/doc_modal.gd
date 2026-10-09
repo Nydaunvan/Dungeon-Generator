@@ -81,3 +81,19 @@ static func changelog(host: Node) -> Modal:
 	m.content.add_child(_rich(out))
 	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m
+
+## Notes de la version courante, affichées une fois après une mise à jour.
+static func whats_new(host: Node) -> Modal:
+	var ver := AppVersion.number()
+	for e in _load("changelog"):
+		if str(e.version) != ver:
+			continue
+		var m := Modal.open(host, "%s %s" % [L.t("ui.doc_modal.nouveautes"), ver], 640.0)
+		var out := ""
+		for c in e.changes:
+			var s := str(c)
+			out += ("[b]%s[/b]\n" % s.substr(3)) if s.begins_with("## ") else ("  • %s\n" % s)
+		m.content.add_child(_rich(out))
+		m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
+		return m
+	return null

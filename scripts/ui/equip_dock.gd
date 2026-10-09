@@ -892,6 +892,43 @@ class SlotButton extends Button:
 	signal dropped(data: Dictionary)
 	var slot_id: String = ""
 	var accepts: Callable
+	var _glow: Panel = null
+	var _pulse: Tween = null
+	var _base_mod := Color.WHITE
+
+	## Pendant un glisser depuis la besace : l'emplacement compatible s'illumine, les autres s'estompent.
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_DRAG_BEGIN:
+			var d = get_viewport().gui_get_drag_data()
+			if not (d is Dictionary and d.get("kind") == "bag_item" and accepts.is_valid()):
+				return
+			_base_mod = modulate
+			if accepts.call(d):
+				_glow = Panel.new()
+				_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				var gsb := StyleBoxFlat.new()
+				gsb.bg_color = Color(1.0, 0.85, 0.5, 0.12)
+				gsb.border_color = Color("ffd88a")
+				gsb.set_border_width_all(3)
+				gsb.set_corner_radius_all(8)
+				gsb.shadow_color = Color(1.0, 0.85, 0.5, 0.8)
+				gsb.shadow_size = 10
+				_glow.add_theme_stylebox_override("panel", gsb)
+				add_child(_glow)
+				_pulse = create_tween().set_loops()
+				_pulse.tween_property(_glow, "modulate:a", 0.45, 0.45)
+				_pulse.tween_property(_glow, "modulate:a", 1.0, 0.45)
+			else:
+				modulate = Color(_base_mod.r, _base_mod.g, _base_mod.b, 0.35)
+		elif what == NOTIFICATION_DRAG_END:
+			if _pulse:
+				_pulse.kill()
+				_pulse = null
+			if _glow:
+				_glow.queue_free()
+				_glow = null
+			modulate = _base_mod
 
 	func _can_drop_data(_at: Vector2, data: Variant) -> bool:
 		return data is Dictionary and data.get("kind") == "bag_item" and accepts.is_valid() and accepts.call(data)
