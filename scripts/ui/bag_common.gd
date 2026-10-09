@@ -165,17 +165,29 @@ static func show_item_tip(host: Control, gs: GameState, it: Dictionary, char_id:
 	t.modulate.a = 0.0
 	_tip_node = t
 	_tip_layer.add_child(t)
-	await host.get_tree().process_frame
-	if _tip_node != t or not is_instance_valid(host) or not host.is_inside_tree():
-		return
+	# La mise en page se fait sur plusieurs images (libellés à retour à la ligne : leur hauteur dépend de leur largeur) et un
+	# contrôle ne rétrécit jamais tout seul : on le ramène à sa taille minimale réelle avant de l'afficher, puis on le replace
+	# à chaque changement de taille pour qu'il reste collé à la case.
+	t.resized.connect(func(): if is_instance_valid(host) and host.is_inside_tree(): _place_tip(host, t))
+	for _i in 2:
+		await host.get_tree().process_frame
+		if _tip_node != t or not is_instance_valid(host) or not host.is_inside_tree():
+			return
+		t.reset_size()
+	_place_tip(host, t)
+	t.modulate.a = 1.0
+
+static func _place_tip(host: Control, t: Control) -> void:
 	var r := host.get_global_rect()
 	var vs := host.get_viewport().get_visible_rect().size
-	var x := clampf(r.position.x + r.size.x * 0.5 - t.size.x * 0.5, 4.0, maxf(4.0, vs.x - t.size.x - 4.0))
-	var y := r.position.y - t.size.y - 8.0
+	var sz := t.get_combined_minimum_size()
+	if t.size != sz:
+		t.size = sz
+	var x := clampf(r.position.x + r.size.x * 0.5 - sz.x * 0.5, 4.0, maxf(4.0, vs.x - sz.x - 4.0))
+	var y := r.position.y - sz.y - 8.0
 	if y < 4.0:
-		y = minf(r.end.y + 8.0, vs.y - t.size.y - 4.0)
+		y = minf(r.end.y + 8.0, vs.y - sz.y - 4.0)
 	t.position = Vector2(x, y)
-	t.modulate.a = 1.0
 
 static func hide_item_tip() -> void:
 	if _tip_node != null and is_instance_valid(_tip_node):
@@ -274,6 +286,7 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 	box.add_child(v)
 	var name_l := _lbl(L.c(str(it.get("name", ""))), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_l.custom_minimum_size = Vector2(210, 0)     # largeur connue d'emblée : la hauteur du texte est juste dès la première image
 	v.add_child(name_l)
 	v.add_child(_lbl(EquipDock.type_label(it), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	var c := gs.char_by_id(char_id)
@@ -313,6 +326,7 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 		for line in Inventory.describe(it, gs.cfg):
 			var l := _lbl(line, 13, UiTheme.PARCH)
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.custom_minimum_size = Vector2(210, 0)
 			v.add_child(l)
 	return box
 
