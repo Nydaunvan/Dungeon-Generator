@@ -22,6 +22,21 @@ var _message_tween: Tween
 var _popup_layer: Control
 var _modal_layer: CanvasLayer
 
+## Temps de jeu d'un donjon aléatoire (départage les égalités du classement des défis).
+func _process(delta: float) -> void:
+	if gs != null and Data.play_origin == "random" and not gs.game_over and not gs.won and not gs.in_village:
+		Challenges.track_time(gs, delta)
+
+## Envoie la progression de la partie au classement des défis (compte connecté, donjon aléatoire, administration jamais ouverte).
+## `announce` : affiche un message de confirmation (fin de partie).
+func _submit_run(announce: bool = false) -> void:
+	var info := Challenges.run_info(gs, Data.play_origin)
+	if info.is_empty():
+		return
+	var r: Dictionary = await Challenges.submit_run(info)
+	if announce and bool(r.get("ok", false)) and int(r.get("sent", 0)) > 0 and is_instance_valid(self) and is_inside_tree():
+		show_message(L.fa(L.t("ui.challenges.score_sent"), int((info.metrics as Dictionary).get("levelsCleared", 0))), 3.0)
+
 func _exit_tree() -> void:
 	Data.game_scale_mode = false
 	Merchant3D.clear_pool()
@@ -589,6 +604,8 @@ func _victory_by_stairs() -> void:
 		gs.add_log(L.fa(L.t("main.cle_devenue_inutile_ont_ete"), (before - gs.inventory.size())))
 	gs.won = true
 	gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
+	Challenges.track_level_cleared(gs)
+	_submit_run(true)
 	_show_victory()
 
 ## Premier passage dans un niveau : le groupe reprend son souffle (PV et endurance en pourcentage du maximum).
@@ -597,6 +614,8 @@ func _transition_regen(target: Dictionary) -> void:
 	if tls.get("transitionRegenDone", false):
 		return
 	tls["transitionRegenDone"] = true
+	Challenges.track_level_cleared(gs)
+	_submit_run()
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	var hp_pct := int(sta.get("levelTransitionHpPct", 25))
 	var st_pct := int(sta.get("levelTransitionStaPct", 35))
@@ -633,6 +652,7 @@ func _on_menu(name: String) -> void:
 		"Journal": _open_full_log()
 		"Stats": StatsModal.open(_modals(), gs)
 		"Admin":
+			Challenges.mark_admin_used(gs)
 			Data.resume_game = snapshot()
 			Sound.stop_ambient()
 			Data.open_admin()
@@ -724,6 +744,7 @@ func _modal_button(text: String, cb: Callable, primary: bool = false) -> Button:
 
 ## « Quitter la partie en cours » (leaveGameOverlay de l'original).
 func _leave_game() -> void:
+	_submit_run()
 	if gs.game_over or gs.won:
 		Data.go_home()
 		return
@@ -844,6 +865,7 @@ func _show_combat_summary(s: Dictionary) -> void:
 	m.set_buttons([{"text": L.t("common.continuer"), "cb": func(): m.close()}])
 
 func _on_game_over() -> void:
+	_submit_run(true)
 	show_message(L.t("main.toute_l_equipe_a_peri"), 4.0)
 	await get_tree().create_timer(1.6).timeout
 	Dialogs.defeat(_modals(), gs, _restart, Data.go_home)

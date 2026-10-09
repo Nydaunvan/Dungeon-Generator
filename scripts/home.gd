@@ -43,7 +43,7 @@ func _on_action(name: String) -> void:
 			Dialogs.confirm(_modal_layer, L.t("common.le_donjon_origine"),
 				L.t("home.ce_donjon_sert_de_demonstration"),
 				_launch_original, "Commencer")
-		"random": GeneratorDialog.open(_modal_layer, _launch_generated)
+		"random": _open_random()
 		"create": Data.create_own_dungeon()
 		"saves": SlotsModal.open(_modal_layer, Callable(), func(d): Data.launch_save(d))
 		"load-code": _load_code()
@@ -51,6 +51,14 @@ func _on_action(name: String) -> void:
 		"tutorial": DocModal.tutorial(_modal_layer)
 		"changelog": DocModal.changelog(_modal_layer)
 		"credits": CreditsRoll.open(_modal_layer)
+
+## Donjon aléatoire : d'abord les défis en cours et leurs classements (si le service en ligne est configuré), puis les réglages habituels.
+func _open_random() -> void:
+	var settings := func(): GeneratorDialog.open(_modal_layer, _launch_generated)
+	if Cloud.is_configured():
+		ChallengesModal.open(_modal_layer, settings)
+	else:
+		settings.call()
 
 func _soon(what: String) -> void:
 	Dialogs.notice(_modal_layer, what, L.t("home.cette_partie_est_en_cours"))

@@ -40,6 +40,7 @@ const ERR_KEYS := {
 	"trop_de_donjons": "ui.cloud.err.trop_de_donjons",
 	"trop_de_parties_en_attente": "ui.cloud.err.trop_de_parties_en_attente",
 	"trop_de_soumissions": "ui.cloud.err.trop_de_soumissions",
+	"score_invraisemblable": "ui.cloud.err.score_invraisemblable",
 	"generic": "ui.cloud.err.generic",
 }
 
