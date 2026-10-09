@@ -1399,6 +1399,7 @@
   "ui.update.maj": "Mettre à jour",
   "ui.update.plus_tard": "Plus tard",
   "ui.update.ignorer": "Ignorer cette version",
+  "ui.update.taille": "Téléchargement : %d Mo (seuls les fichiers modifiés sont téléchargés).",
   "ui.update.telechargement": "Téléchargement…",
   "ui.update.mo": "Téléchargement : %d Mo / %d Mo",
   "ui.update.installation": "Installation, le jeu va redémarrer…",

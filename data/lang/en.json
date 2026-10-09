@@ -1399,6 +1399,7 @@
   "ui.update.maj": "Update now",
   "ui.update.plus_tard": "Later",
   "ui.update.ignorer": "Skip this version",
+  "ui.update.taille": "Download: %d MB (only the changed files are downloaded).",
   "ui.update.telechargement": "Downloading…",
   "ui.update.mo": "Downloading: %d MB / %d MB",
   "ui.update.installation": "Installing, the game will restart…",

@@ -23,6 +23,8 @@ static func open(host: Node, info: Dictionary) -> Modal:
 	m.esc_closes = true
 	var pre := " (" + L.t("ui.update.prerelease") + ")" if bool(info.get("prerelease", false)) else ""
 	m.add_text(L.fa(L.t("ui.update.texte"), [str(info.version) + pre, AppVersion.number()]), UiTheme.PARCH, 15, false)
+	if int(info.get("download_size", 0)) > 0:
+		m.add_text(L.fa(L.t("ui.update.taille"), maxi(1, int(info.download_size) / 1048576)), UiTheme.DIM, 13, true)
 	m.add_text(L.t("ui.update.sauvegardes"), UiTheme.DIM, 13, true)
 	var shown := 0
 	for line in str(info.get("notes", "")).split("\n"):
@@ -44,7 +46,7 @@ static func open(host: Node, info: Dictionary) -> Modal:
 	return m
 
 static func _start(host: Node, m: Modal, info: Dictionary) -> void:
-	if not Updater.can_self_update() or str(info.get("url", "")) == "":
+	if not Updater.can_self_update() or (info.get("plan", []) as Array).is_empty():
 		OS.shell_open(str(info.get("page", "")))     # éditeur, autre plateforme : page de la publication
 		m.close()
 		return

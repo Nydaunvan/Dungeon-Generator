@@ -2,17 +2,21 @@ class_name Updater
 extends Node
 ## Mises à jour du jeu (versions Windows et Linux). Source : les publications GitHub du dépôt (API publique, sans clé).
 ##  1. `check` : lit la liste des publications, retient la plus récente adaptée (préversions seulement si demandé, version
-##     ignorée écartée, archive de la plateforme présente) et la compare à `config/version`.
-##  2. `download` : télécharge l'archive, vérifie sa somme SHA-256 (fichier SHA256SUMS.txt de la publication, s'il existe).
-##  3. `install` : extrait le nouvel exécutable à côté de l'ancien, écrit un petit script qui le met en place après la
-##     fermeture du jeu puis le relance. Les sauvegardes (user://) ne sont jamais touchées ; elles sont migrées à la lecture.
+##     ignorée écartée, manifeste de la plateforme présent), puis lit son manifeste et le compare à ce qui est installé :
+##     seuls les fichiers modifiés (exécutable, paquet principal, paquets thèmes / monstres / audio) sont à télécharger.
+##  2. `download` : télécharge ces fichiers un par un (un fichier déjà téléchargé et valide est réutilisé), vérifie leur SHA-256.
+##  3. `install` : écrit un petit script qui, après la fermeture du jeu, recopie les fichiers dans le dossier d'installation puis
+##     relance le jeu. Les sauvegardes (user://) ne sont jamais touchées ; elles sont migrées à la lecture.
+## État installé : « install.json » (dans le dossier du jeu) = pour chaque fichier, l'empreinte de contenu et la taille. Il est mis à
+## jour au lancement qui suit une installation réussie (la version qui tourne prouve que le script a fait son travail).
 ## La version Web n'est pas concernée (elle se met à jour avec le site), ni l'éditeur Godot.
 
 const REPO := "Nydaunvan/Dungeon-Generator"
 const API := "https://api.github.com/repos/%s/releases?per_page=20"
 const PREFS := "user://update.cfg"
 const DIR := "user://update"
-const SUMS_NAME := "SHA256SUMS.txt"
+const PENDING := "user://update/pending.json"
+const STATE := "install.json"
 const SEMVER := "^\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.]+)?$"
 
 signal check_done(result: Dictionary)           ## {} = rien de nouveau ; {"error": …} ; sinon la publication retenue
@@ -20,9 +24,11 @@ signal progress(done: int, total: int)
 signal finished(ok: bool, message: String)      ## ok = installation prête : le jeu doit se fermer
 
 var _req: HTTPRequest
-var _total_hint := 0
-var _file := ""
 var _info: Dictionary = {}
+var _queue: Array = []          # fichiers restant à télécharger
+var _done_bytes := 0            # octets des fichiers déjà complets
+var _total_bytes := 0
+var _current: Dictionary = {}
 
 func _ready() -> void:
 	set_process(false)
@@ -87,9 +93,6 @@ static func platform() -> String:
 static func can_self_update() -> bool:
 	return platform() != "" and not OS.has_feature("editor") and not OS.has_feature("web")
 
-static func _asset_suffix(plat: String) -> String:
-	return "-windows.zip" if plat == "windows" else "-linux.tar.gz"
-
 ## Choisit, parmi les publications GitHub, la plus récente qui apporte du nouveau (voir l'en-tête).
 static func pick(releases: Array, current: String, include_pre: bool, plat: String, ignored: String = "") -> Dictionary:
 	var best: Dictionary = {}
@@ -106,28 +109,73 @@ static func pick(releases: Array, current: String, include_pre: bool, plat: Stri
 			continue
 		if not best.is_empty() and compare(v, str(best.version)) <= 0:
 			continue
-		var asset: Dictionary = {}
-		var sums := ""
+		var assets := {}
 		for a in r.get("assets", []):
-			var n := str(a.get("name", ""))
-			if n.ends_with(_asset_suffix(plat)):
-				asset = a
-			elif n == SUMS_NAME:
-				sums = str(a.get("browser_download_url", ""))
-		if asset.is_empty():
-			continue
+			assets[str(a.get("name", ""))] = str(a.get("browser_download_url", ""))
+		var manifest := "manifest-%s.json" % plat
+		if not assets.has(manifest):
+			continue        # publication d'un autre format (anciennes versions) : on ne la propose pas
 		best = {"version": v, "name": str(r.get("name", "")), "notes": str(r.get("body", "")), "page": str(r.get("html_url", "")),
-			"prerelease": bool(r.get("prerelease", false)), "asset": str(asset.get("name", "")),
-			"url": str(asset.get("browser_download_url", "")), "size": int(asset.get("size", 0)), "sums_url": sums}
+			"prerelease": bool(r.get("prerelease", false)), "manifest_url": str(assets[manifest]), "assets": assets}
 	return best
 
-## Somme attendue pour `name` dans un fichier « sha256  nom » (format de sha256sum).
-static func expected_sum(sums_text: String, name: String) -> String:
-	for line in sums_text.split("\n"):
-		var parts := line.strip_edges().split(" ", false)
-		if parts.size() >= 2 and parts[parts.size() - 1].trim_prefix("*") == name:
-			return parts[0].to_lower()
-	return ""
+## Un fichier du manifeste doit-il être (re)téléchargé ? `state` : entrées de install.json ; `local_size` : -1 si absent ;
+## `local_sha` : Callable calculant la somme du fichier local (seulement si l'état ne le connaît pas).
+static func needs_download(f: Dictionary, state: Dictionary, local_size: int, local_sha: Callable) -> bool:
+	if local_size < 0:
+		return true
+	var st = state.get(str(f.path))
+	if st is Dictionary:
+		return str(st.get("content", "")) != str(f.content) or int(st.get("size", -1)) != local_size
+	return str(local_sha.call()) != str(f.sha256)
+
+static func build_plan(files: Array, state: Dictionary, base: String) -> Array:
+	var plan: Array = []
+	for f in files:
+		var path := local_path(str(f.path)) if base == install_dir() else base.path_join(str(f.path))
+		var size := -1
+		if FileAccess.file_exists(path):
+			var fa := FileAccess.open(path, FileAccess.READ)
+			size = fa.get_length() if fa != null else -1
+		if needs_download(f, state, size, func(): return FileAccess.get_sha256(path)):
+			plan.append(f)
+	return plan
+
+## Chemin de l'exécutable (remplaçable par les tests : jamais le binaire de Godot).
+static var exe_override := ""
+
+static func exe_path() -> String:
+	return exe_override if exe_override != "" else OS.get_executable_path()
+
+static func install_dir() -> String:
+	return exe_path().get_base_dir()
+
+## Chemin local d'un fichier du manifeste. L'exécutable garde son nom actuel (même renommé) et le paquet principal doit porter
+## le même nom que lui (c'est ainsi que Godot le retrouve).
+static func local_path(rel: String) -> String:
+	var exe := exe_path()
+	if rel.ends_with(".exe") or rel.ends_with(".x86_64"):
+		return exe
+	if rel == "Dungeon Generator.pck":
+		return exe.get_basename() + ".pck"
+	return install_dir().path_join(rel)
+
+static func read_state() -> Dictionary:
+	var p := install_dir().path_join(STATE)
+	if not FileAccess.file_exists(p):
+		return {}
+	var d = JSON.parse_string(FileAccess.get_file_as_string(p))
+	return (d.get("files", {}) as Dictionary) if (d is Dictionary and d.get("files") is Dictionary) else {}
+
+## Le dossier d'installation accepte-t-il l'écriture (sans droits administrateur) ?
+static func install_dir_writable() -> bool:
+	var t := install_dir().path_join(".write_test")
+	var f := FileAccess.open(t, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.close()
+	DirAccess.remove_absolute(t)
+	return true
 
 # ------------------------------------------------------------------ 1. vérification
 
@@ -156,78 +204,143 @@ func _on_list(result: int, code: int, _h: PackedStringArray, body: PackedByteArr
 		check_done.emit({"error": "réponse"})
 		return
 	var ignored := "" if force else str(pref("ignored", ""))
-	check_done.emit(pick(data, AppVersion.number(), bool(pref("include_pre", false)), platform(), ignored))
+	var info := pick(data, AppVersion.number(), bool(pref("include_pre", false)), platform(), ignored)
+	if info.is_empty():
+		check_done.emit({})
+		return
+	load_manifest(info)
+
+## Lit le manifeste de la publication retenue et prépare la liste des fichiers à télécharger (émet `check_done`).
+func load_manifest(info: Dictionary) -> void:
+	_info = info
+	var r2 := HTTPRequest.new()
+	r2.timeout = 8.0
+	add_child(r2)
+	r2.request_completed.connect(_on_manifest)
+	if r2.request(str(info.manifest_url), PackedStringArray(["User-Agent: DungeonGenerator"])) != OK:
+		check_done.emit({"error": "manifeste"})
+
+func _on_manifest(result: int, code: int, _h: PackedStringArray, body: PackedByteArray) -> void:
+	var m = JSON.parse_string(body.get_string_from_utf8()) if (result == HTTPRequest.RESULT_SUCCESS and code == 200) else null
+	if not (m is Dictionary) or not (m.get("files") is Array):
+		check_done.emit({"error": "manifeste illisible"})
+		return
+	_info["manifest_files"] = m.files
+	var plan := build_plan(m.files, read_state(), install_dir())
+	var size := 0
+	for f in plan:
+		size += int(f.size)
+	_info["plan"] = plan
+	_info["download_size"] = size
+	for f in plan:
+		f["url"] = str(_info.assets.get(str(f.asset), ""))
+	check_done.emit(_info)
 
 # ------------------------------------------------------------------ 2. téléchargement
 
 func download(info: Dictionary) -> void:
 	_info = info
 	DirAccess.make_dir_recursive_absolute(DIR)
-	_file = ProjectSettings.globalize_path(DIR) + "/" + str(info.asset)
-	_total_hint = int(info.size)
+	_queue = (info.get("plan", []) as Array).duplicate()
+	_done_bytes = 0
+	_total_bytes = int(info.get("download_size", 0))
+	_next()
+
+func _local(f: Dictionary) -> String:
+	return ProjectSettings.globalize_path(DIR).path_join(str(f.asset))
+
+func _next() -> void:
+	if _queue.is_empty():
+		set_process(false)
+		_install()
+		return
+	_current = _queue.pop_front()
+	var path := _local(_current)
+	if FileAccess.file_exists(path) and FileAccess.get_sha256(path) == str(_current.sha256):
+		_done_bytes += int(_current.size)           # déjà téléchargé et valide (reprise)
+		_next()
+		return
 	_req = HTTPRequest.new()
-	_req.download_file = _file
+	_req.download_file = path
 	_req.use_threads = true
 	_req.timeout = 0.0
 	add_child(_req)
 	_req.request_completed.connect(_on_downloaded)
-	if _req.request(str(info.url), PackedStringArray(["User-Agent: DungeonGenerator"])) != OK:
+	if _req.request(str(_current.url), PackedStringArray(["User-Agent: DungeonGenerator"])) != OK:
 		finished.emit(false, "téléchargement")
 		return
 	set_process(true)
 
 func _process(_d: float) -> void:
 	if _req != null and is_instance_valid(_req) and _req.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
-		var total := _req.get_body_size()
-		progress.emit(_req.get_downloaded_bytes(), total if total > 0 else _total_hint)
+		progress.emit(_done_bytes + _req.get_downloaded_bytes(), _total_bytes)
 
 func cancel() -> void:
+	set_process(false)
+	_queue.clear()
 	if _req != null and is_instance_valid(_req):
 		_req.cancel_request()
-	set_process(false)
-	DirAccess.remove_absolute(_file)
+	if not _current.is_empty():
+		DirAccess.remove_absolute(_local(_current))     # fichier partiel ; les fichiers complets sont gardés pour une reprise
 
 func _on_downloaded(result: int, code: int, _h: PackedStringArray, _b: PackedByteArray) -> void:
 	set_process(false)
+	var path := _local(_current)
 	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+		DirAccess.remove_absolute(path)
 		finished.emit(false, "téléchargement (%d/%d)" % [result, code])
 		return
-	var sums_url := str(_info.get("sums_url", ""))
-	if sums_url == "":
-		_install()
+	if FileAccess.get_sha256(path) != str(_current.sha256):
+		DirAccess.remove_absolute(path)
+		finished.emit(false, "somme de contrôle incorrecte (%s)" % str(_current.path))
 		return
-	var r2 := HTTPRequest.new()
-	add_child(r2)
-	r2.request_completed.connect(func(res: int, c: int, _hh, body: PackedByteArray):
-		if res != HTTPRequest.RESULT_SUCCESS or c != 200:
-			finished.emit(false, "somme de contrôle")
-			return
-		var want := expected_sum(body.get_string_from_utf8(), str(_info.asset))
-		if want != "" and FileAccess.get_sha256(_file) != want:
-			DirAccess.remove_absolute(_file)
-			finished.emit(false, "somme de contrôle incorrecte")
-			return
-		_install())
-	r2.request(sums_url, PackedStringArray(["User-Agent: DungeonGenerator"]))
+	_done_bytes += int(_current.size)
+	_req.queue_free()
+	_next()
 
 # ------------------------------------------------------------------ 3. installation
 
 func _install() -> void:
-	var exe := OS.get_executable_path()
+	if not install_dir_writable():
+		finished.emit(false, "dossier d'installation protégé en écriture")
+		return
+	var pairs: Array = []     # [source téléchargée, destination], paquets d'abord, exécutable en dernier
+	var exe_changed := false
+	for f in _info.plan:
+		var dst := local_path(str(f.path))
+		if str(f.path).ends_with(".exe") or str(f.path).ends_with(".x86_64"):
+			exe_changed = true
+		pairs.append([_local(f), dst])
+	pairs.sort_custom(func(a, b): return _rank(str(a[1])) < _rank(str(b[1])))
+	var exe := exe_path()
 	var err := ""
 	match platform():
-		"windows": err = _install_windows(exe)
-		"linux": err = _install_linux(exe)
+		"windows": err = _install_windows(pairs, exe)
+		"linux": err = _install_linux(pairs, exe)
 		_: err = "plateforme"
 	if err != "":
 		finished.emit(false, err)
-	else:
-		finished.emit(true, "")
+		return
+	_write_pending(exe_changed)
+	finished.emit(true, "")
+
+static func _rank(dst: String) -> int:
+	if dst.ends_with(".exe") or dst.ends_with(".x86_64"):
+		return 2
+	return 1 if dst.ends_with("Dungeon Generator.pck") else 0
+
+## État à enregistrer une fois la mise à jour appliquée (promu au lancement suivant si la version qui tourne est la bonne).
+func _write_pending(_exe_changed: bool) -> void:
+	var state := read_state()
+	for f in _info.get("manifest_files", _info.get("plan", [])):
+		state[str(f.path)] = {"content": str(f.content), "size": int(f.size)}
+	var f2 := FileAccess.open(PENDING, FileAccess.WRITE)
+	if f2 != null:
+		f2.store_string(JSON.stringify({"version": str(_info.version), "files": state}))
 
 ## Script de remplacement Windows (VBScript lancé par wscript : aucune fenêtre, contrairement à cmd). Il attend que le jeu soit
-## fermé (la copie échoue tant que l'exécutable est verrouillé), recopie le nouvel exécutable, le relance et s'efface.
-static func windows_script(new_exe: String, exe: String) -> String:
-	var n := new_exe.replace("/", "\\")
+## fermé (la copie échoue tant qu'un fichier est verrouillé), recopie tous les fichiers, relance le jeu et s'efface.
+static func windows_script(pairs: Array, exe: String) -> String:
 	var e := exe.replace("/", "\\")
 	var lines := [
 		"Dim fso, sh, i, ok",
@@ -236,23 +349,23 @@ static func windows_script(new_exe: String, exe: String) -> String:
 		"ok = False",
 		"For i = 1 To 60",
 		"  WScript.Sleep 500",
-		"  On Error Resume Next",
-		"  fso.CopyFile \"%s\", \"%s\", True" % [n, e],
-		"  If Err.Number = 0 Then ok = True",
-		"  Err.Clear",
+		"  ok = True",
+		"  On Error Resume Next"]
+	for p in pairs:
+		lines.append("  fso.CopyFile \"%s\", \"%s\", True" % [str(p[0]).replace("/", "\\"), str(p[1]).replace("/", "\\")])
+		lines.append("  If Err.Number <> 0 Then ok = False")
+		lines.append("  Err.Clear")
+	lines.append_array([
 		"  On Error GoTo 0",
 		"  If ok Then Exit For",
 		"Next",
 		"If ok Then",
-		"  On Error Resume Next",
-		"  fso.DeleteFile \"%s\", True" % n,
-		"  On Error GoTo 0",
 		"  sh.CurrentDirectory = fso.GetParentFolderName(\"%s\")" % e,
 		"  sh.Run Chr(34) & \"%s\" & Chr(34), 1, False" % e,
 		"End If",
 		"On Error Resume Next",
 		"fso.DeleteFile WScript.ScriptFullName, True",
-		""]
+		""])
 	return "\r\n".join(lines)
 
 ## Octets d'un script VBS : UTF-16 avec marque d'ordre des octets (les chemins avec accents restent corrects).
@@ -261,79 +374,49 @@ static func vbs_bytes(text: String) -> PackedByteArray:
 	b.append_array(text.to_utf16_buffer())
 	return b
 
-static func linux_script(new_exe: String, exe: String) -> String:
-	return "#!/bin/sh\nsleep 1\ni=0\nwhile ! mv -f '%s' '%s' 2>/dev/null; do\n  i=$((i+1))\n  [ $i -ge 30 ] && exit 1\n  sleep 1\ndone\nchmod +x '%s'\nnohup '%s' >/dev/null 2>&1 &\nrm -- \"$0\"\n" % [new_exe, exe, exe, exe]
+static func linux_script(pairs: Array, exe: String) -> String:
+	var out := "#!/bin/sh\nsleep 1\ni=0\nwhile true; do\n  ok=1\n"
+	for p in pairs:
+		out += "  mkdir -p '%s' && cp -f '%s' '%s' || ok=0\n" % [str(p[1]).get_base_dir(), str(p[0]), str(p[1])]
+	out += "  [ $ok = 1 ] && break\n  i=$((i+1))\n  [ $i -ge 30 ] && exit 1\n  sleep 1\ndone\nchmod +x '%s'\nnohup '%s' >/dev/null 2>&1 &\nrm -- \"$0\"\n" % [exe, exe]
+	return out
 
-func _install_windows(exe: String) -> String:
-	var zr := ZIPReader.new()
-	if zr.open(_file) != OK:
-		return "archive illisible"
-	var entry := ""
-	for f in zr.get_files():
-		if f.to_lower().ends_with(".exe"):
-			entry = f
-			break
-	if entry == "":
-		zr.close()
-		return "exécutable absent de l'archive"
-	var bytes := zr.read_file(entry)
-	zr.close()
-	var new_exe := exe + ".new"
-	var f := FileAccess.open(new_exe, FileAccess.WRITE)
-	if f == null:
-		return "dossier d'installation protégé en écriture"
-	f.store_buffer(bytes)
-	f.close()
+func _install_windows(pairs: Array, exe: String) -> String:
 	var vbs := ProjectSettings.globalize_path(DIR) + "/apply.vbs"
 	var bf := FileAccess.open(vbs, FileAccess.WRITE)
 	if bf == null:
 		return "script"
-	bf.store_buffer(vbs_bytes(windows_script(new_exe, exe)))
+	bf.store_buffer(vbs_bytes(windows_script(pairs, exe)))
 	bf.close()
 	# wscript //B : pas de fenêtre ni de boîte de dialogue ; le script attend la fermeture du jeu
 	if OS.create_process("wscript.exe", ["//B", "//Nologo", vbs.replace("/", "\\")]) < 0:
 		return "lancement du script"
 	return ""
 
-func _install_linux(exe: String) -> String:
-	var out_dir := ProjectSettings.globalize_path(DIR) + "/x"
-	DirAccess.make_dir_recursive_absolute(out_dir)
-	var o := []
-	if OS.execute("tar", ["-xzf", _file, "-C", out_dir], o) != 0:
-		return "extraction"
-	var found := ""
-	for f in DirAccess.get_files_at(out_dir):
-		if f.ends_with(".x86_64"):
-			found = out_dir + "/" + f
-	if found == "":
-		return "exécutable absent de l'archive"
-	var new_exe := exe + ".new"
-	if DirAccess.copy_absolute(found, new_exe) != OK:
-		return "dossier d'installation protégé en écriture"
-	OS.execute("chmod", ["+x", new_exe])
+func _install_linux(pairs: Array, exe: String) -> String:
 	var sh := ProjectSettings.globalize_path(DIR) + "/apply.sh"
 	var sf := FileAccess.open(sh, FileAccess.WRITE)
 	if sf == null:
 		return "script"
-	sf.store_string(linux_script(new_exe, exe))
+	sf.store_string(linux_script(pairs, exe))
 	sf.close()
 	OS.execute("chmod", ["+x", sh])
 	OS.create_process("/bin/sh", [sh])
 	return ""
 
-## Nettoyage au lancement : archive téléchargée et fichiers temporaires de la mise à jour précédente.
+## Au lancement : si une mise à jour vient d'être appliquée (la version qui tourne est celle de « pending.json »), l'état installé
+## est mis à jour ; puis les fichiers téléchargés sont supprimés.
 static func cleanup() -> void:
-	var stale := OS.get_executable_path() + ".new"
-	if FileAccess.file_exists(stale):
-		DirAccess.remove_absolute(stale)
 	var dir := ProjectSettings.globalize_path(DIR)
+	if FileAccess.file_exists(PENDING):
+		var d = JSON.parse_string(FileAccess.get_file_as_string(PENDING))
+		if d is Dictionary and str(d.get("version", "")) == AppVersion.number():
+			var f := FileAccess.open(install_dir().path_join(STATE), FileAccess.WRITE)
+			if f != null:
+				f.store_string(JSON.stringify({"version": AppVersion.number(), "files": d.get("files", {})}, " "))
+		DirAccess.remove_absolute(PENDING)
 	if not DirAccess.dir_exists_absolute(dir):
 		return
-	var x := dir + "/x"
-	if DirAccess.dir_exists_absolute(x):
-		for f in DirAccess.get_files_at(x):
-			DirAccess.remove_absolute(x + "/" + f)
-		DirAccess.remove_absolute(x)
 	for f in DirAccess.get_files_at(dir):
-		if f.ends_with(".zip") or f.ends_with(".tar.gz"):
+		if f.ends_with(".pck") or f.ends_with(".exe") or f.ends_with(".x86_64") or f.ends_with(".zip") or f.ends_with(".tar.gz"):
 			DirAccess.remove_absolute(dir + "/" + f)
