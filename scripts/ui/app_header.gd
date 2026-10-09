@@ -8,6 +8,7 @@ signal nav(name: String)
 var title_label: Label
 var nav_row: HBoxContainer
 var btn_admin: Button
+var btn_account: Button
 var btn_home: Button
 var hang: HangChain
 var _lang: MenuButton
@@ -55,6 +56,11 @@ func _init() -> void:
 	cfg.tooltip_text = L.t("ui.app_header.parametres_tip")
 	cfg.pressed.connect(func(): nav.emit("Paramètres"))
 	nav_row.add_child(cfg)
+	btn_account = _button(_account_text())
+	btn_account.tooltip_text = L.t("ui.cloud.header_tip")
+	btn_account.pressed.connect(func(): nav.emit("Compte"))
+	nav_row.add_child(btn_account)
+	Cloud.session_changed.connect(_refresh_account)
 	btn_admin = _button("🛠 Admin")
 	btn_admin.pressed.connect(func(): nav.emit("Admin"))
 	btn_admin.visible = false
@@ -79,6 +85,15 @@ func _init() -> void:
 	add_child(hang)
 	UiMetrics.register(self)
 	rescale()
+
+func _account_text() -> String:
+	return "👤 " + (Cloud.pseudo() if Cloud.is_signed_in() and Cloud.pseudo() != "" else L.t("ui.cloud.header"))
+
+func _refresh_account() -> void:
+	if btn_account == null or not is_instance_valid(btn_account):
+		return
+	btn_account.set_meta("full", _account_text())
+	_style(btn_account, _short(_account_text()) if UiMetrics.portrait else _account_text())
 
 func _lang_text() -> String:
 	return "%s ▾" % ("🇬🇧 EN" if Data.lang == "en" else "🇫🇷 FR")

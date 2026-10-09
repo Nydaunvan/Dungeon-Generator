@@ -18,6 +18,7 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène princ
 
 ## Vérifications
 - Compilation : `godot --headless --path . res://tools/check_compile.tscn`
+- Fenêtre de compte (sans réseau) : `godot --headless --path . res://tools/check_account.tscn`
 - Textes : `python3 tools/check_lang.py`
 - Réglages graphiques : `godot --headless --path . res://tools/check_settings.tscn`
 - Mise en page mobile (aucun débordement à droite, carte masquée) : `godot --headless --path . res://tools/check_mobile.tscn`

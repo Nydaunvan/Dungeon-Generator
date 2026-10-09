@@ -625,6 +625,7 @@ func _on_menu(name: String) -> void:
 		"Quitter": Dialogs.confirm(_modals(), "", L.t("ui.app_header.quitter_confirm"), func(): get_tree().quit(), L.t("ui.app_header.quitter"))
 		"Son": SoundModal.open(_modals())
 		"Paramètres": SettingsModal.open(_modals())
+		"Compte": AccountModal.open(_modals())
 		"Lang":
 			Sound.stop_ambient()
 			Data.reload_game(snapshot())
