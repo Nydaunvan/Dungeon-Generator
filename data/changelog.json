@@ -1,5 +1,22 @@
 [
  {
+  "version": "1.32.0",
+  "changes": [
+   "## Mises à jour dans le jeu",
+   "Cette version change le format d'installation du jeu : les versions précédentes ne la proposent pas dans leur fenêtre de mise à jour. Pour la première fois, installez-la à la main (installateur Windows ou installation complète) ; les mises à jour suivantes seront automatiques et partielles.",
+   "Mises à jour partielles : chaque publication contient un manifeste qui donne l'empreinte de chaque fichier du jeu. Le jeu ne télécharge plus que les fichiers qui ont changé (le moteur, le paquet principal, ou seulement les thèmes, les monstres ou l'audio), vérifie chacun d'eux (somme SHA-256) et reprend un téléchargement interrompu là où il s'était arrêté.",
+   "La fenêtre de mise à jour indique la taille réelle du téléchargement. Le remplacement des fichiers et le redémarrage restent automatiques, sans aucune fenêtre de commande (Windows et Linux).",
+   "Après une mise à jour, une fenêtre « Nouveautés de la version » affiche une seule fois les notes de la nouvelle version (jamais au tout premier lancement).",
+   "## Installation",
+   "Le jeu est désormais livré en plusieurs fichiers : l'exécutable, un paquet principal (Dungeon Generator.pck) et des paquets thèmes, monstres et audio dans le dossier packs. Rien ne change à l'écran : c'est ce qui rend les mises à jour partielles possibles. La version Web reste en un seul bloc.",
+   "Installateur Windows (Dungeon-Generator-1.32.0-setup.exe), en français et en anglais : installation dans le profil de l'utilisateur sans droits d'administrateur, raccourci dans le menu Démarrer (et sur le bureau en option), désinstallation qui conserve les sauvegardes. Les installations complètes (zip Windows, tar.gz Linux) restent disponibles.",
+   "## Sauvegardes",
+   "La configuration enregistrée sur l'appareil (celle qui sert aux donjons aléatoires) reçoit elle aussi les nouveautés du jeu — icônes, objets, sorts, réglages — au premier lancement, après une copie de secours (config.v1.bak).",
+   "## Besace",
+   "Pendant qu'un objet est glissé hors de la besace, les emplacements d'équipement qui peuvent le recevoir s'illuminent d'un halo doré qui pulse, et les autres s'estompent."
+  ]
+ },
+ {
   "version": "1.31.3",
   "changes": [
    "## Mises à jour",
