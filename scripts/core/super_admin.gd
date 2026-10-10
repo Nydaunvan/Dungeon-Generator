@@ -50,3 +50,36 @@ static func runs(status: String = "", tests: String = "all", limit: int = 50, of
 ## Supprime toutes les parties de test ; renvoie leur nombre dans `data`.
 static func purge_tests() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/admin_purge_tests", {}, true)
+
+# ------------------------------------------------------------------ modération du tchat (chaque fonction revérifie le rôle côté serveur)
+
+static func _rpc(name: String, body: Dictionary = {}) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/" + name, body, true)
+
+static func chat_stats() -> Dictionary:
+	return await _rpc("admin_chat_stats")
+
+## Messages signalés non traités (ou tous avec `handled`), le plus récemment signalé d'abord.
+static func chat_reports(handled: bool = false, limit: int = 50) -> Dictionary:
+	return await _rpc("admin_chat_reports", {"p_include_handled": handled, "p_limit": limit})
+
+static func chat_delete(message_id: int) -> Dictionary:
+	return await _rpc("admin_chat_delete", {"p_message_id": message_id})
+
+static func chat_dismiss(message_id: int) -> Dictionary:
+	return await _rpc("admin_chat_dismiss", {"p_message_id": message_id})
+
+static func chat_mute(player_id: String, minutes: int, reason: String = "") -> Dictionary:
+	return await _rpc("admin_chat_mute", {"p_player": player_id, "p_minutes": minutes, "p_reason": reason})
+
+static func chat_unmute(player_id: String) -> Dictionary:
+	return await _rpc("admin_chat_unmute", {"p_player": player_id})
+
+static func chat_words() -> Dictionary:
+	return await _rpc("admin_chat_words")
+
+static func chat_word_add(word: String) -> Dictionary:
+	return await _rpc("admin_chat_word_add", {"p_word": word})
+
+static func chat_word_remove(word: String) -> Dictionary:
+	return await _rpc("admin_chat_word_remove", {"p_word": word})

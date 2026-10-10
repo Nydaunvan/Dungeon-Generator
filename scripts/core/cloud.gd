@@ -50,6 +50,17 @@ const ERR_KEYS := {
 	"partie_introuvable": "ui.cloud.err.generic",
 	"badge_non_possede": "ui.cloud.err.badge_non_possede",
 	"acces_refuse": "ui.cloud.err.acces_refuse",
+	"chat_mute": "ui.cloud.err.chat_mute",
+	"chat_trop_rapide": "ui.cloud.err.chat_trop_rapide",
+	"message_repete": "ui.cloud.err.message_repete",
+	"message_vide": "ui.cloud.err.message_vide",
+	"message_trop_long": "ui.cloud.err.message_trop_long",
+	"message_refuse": "ui.cloud.err.message_refuse",
+	"salon_inconnu": "ui.cloud.err.salon_inconnu",
+	"message_introuvable": "ui.cloud.err.message_introuvable",
+	"trop_de_signalements": "ui.cloud.err.trop_de_signalements",
+	"joueur_inconnu": "ui.cloud.err.joueur_inconnu",
+	"mot_invalide": "ui.cloud.err.mot_invalide",
 	"generic": "ui.cloud.err.generic",
 }
 

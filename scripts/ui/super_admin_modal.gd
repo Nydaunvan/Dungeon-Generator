@@ -38,7 +38,7 @@ func _build() -> void:
 	tabs.add_theme_constant_override("v_separation", 6)
 	tabs.alignment = FlowContainer.ALIGNMENT_CENTER
 	_modal.content.add_child(tabs)
-	for t in ["tests", "overview", "players", "runs"]:
+	for t in ["tests", "overview", "players", "runs", "chat"]:
 		var b := Button.new()
 		b.text = L.t("ui.sadmin.tab_" + t)
 		b.toggle_mode = true
@@ -65,6 +65,7 @@ func _show(tab: String) -> void:
 		"overview": _load_overview()
 		"players": _build_players()
 		"runs": _build_runs()
+		"chat": _build_chat()
 
 # ------------------------------------------------------------------ outils d'affichage
 
@@ -419,3 +420,145 @@ func _fill_runs() -> void:
 		if x.get("reject_reason") != null:
 			_note(box, "↳ %s" % str(x.get("reject_reason")), BAD, false)
 	_note(box, L.t("ui.sadmin.shown") % rows.size())
+
+# ------------------------------------------------------------------ onglet Tchat
+
+func _build_chat() -> void:
+	_begin()
+	_list = VBoxContainer.new()
+	_list.add_theme_constant_override("separation", 4)
+	_body.add_child(_list)
+	_fill_chat()
+
+func _fill_chat() -> void:
+	var box := _list
+	_gen += 1
+	var mine := _gen
+	_clear(box)
+	_wait(box)
+	var st: Dictionary = await SuperAdmin.chat_stats()
+	if mine != _gen or not _alive():
+		return
+	var rp: Dictionary = await SuperAdmin.chat_reports()
+	if mine != _gen or not _alive():
+		return
+	var wd: Dictionary = await SuperAdmin.chat_words()
+	if mine != _gen or not _alive():
+		return
+	_clear(box)
+	if not st.ok or not (st.data is Dictionary):
+		_error(box, st)
+		return
+	var d: Dictionary = st.data
+	_title(box, L.t("ui.sadmin.chat_stats"))
+	_kv(box, L.t("ui.sadmin.chat_msgs_24h"), "%s (%s)" % [num(d.get("messages_24h")), L.t("ui.sadmin.chat_authors") % num(d.get("authors_24h"))])
+	_kv(box, L.t("ui.sadmin.chat_msgs_total"), num(d.get("messages_total")))
+	_kv(box, L.t("ui.sadmin.chat_deleted"), num(d.get("deleted_total")))
+	_kv(box, L.t("ui.sadmin.chat_mutes"), num(d.get("mutes_active")))
+	_kv(box, L.t("ui.sadmin.chat_blocks"), num(d.get("blocks")))
+	_title(box, L.t("ui.sadmin.chat_reports") % num(d.get("reports_pending")))
+	_status = Form.status_label(box)
+	if not rp.ok or not (rp.data is Array):
+		_error(box, rp)
+	elif (rp.data as Array).is_empty():
+		_note(box, L.t("ui.sadmin.chat_no_reports"))
+	else:
+		for x in rp.data:
+			_report_card(box, x)
+	_title(box, L.t("ui.sadmin.chat_words") % (wd.data.size() if wd.ok and wd.data is Array else 0))
+	_note(box, L.t("ui.sadmin.chat_words_desc"))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	var e := LineEdit.new()
+	e.max_length = 30
+	e.placeholder_text = L.t("ui.sadmin.chat_word_hint")
+	e.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(e)
+	var add := Button.new()
+	add.text = L.t("ui.sadmin.chat_word_add")
+	add.focus_mode = Control.FOCUS_NONE
+	var do_add := func():
+		var r: Dictionary = await SuperAdmin.chat_word_add(e.text)
+		if mine != _gen or not _alive():
+			return
+		if r.ok:
+			_fill_chat()
+		else:
+			_flash(str(r.message), BAD)
+	add.pressed.connect(do_add)
+	e.text_submitted.connect(func(_t): do_add.call())
+	h.add_child(add)
+	box.add_child(h)
+	if wd.ok and wd.data is Array:
+		var fl := HFlowContainer.new()
+		fl.add_theme_constant_override("h_separation", 6)
+		fl.add_theme_constant_override("v_separation", 4)
+		for w in wd.data:
+			var b := Button.new()
+			b.text = "%s ✕" % str(w)
+			b.focus_mode = Control.FOCUS_NONE
+			b.tooltip_text = L.t("ui.sadmin.chat_word_remove")
+			var word := str(w)
+			b.pressed.connect(func():
+				var r: Dictionary = await SuperAdmin.chat_word_remove(word)
+				if mine == _gen and _alive():
+					if r.ok:
+						_fill_chat()
+					else:
+						_flash(str(r.message), BAD))
+			fl.add_child(b)
+		box.add_child(fl)
+	_fit()
+
+func _flash(text: String, color: Color = UiTheme.DIM) -> void:
+	if _status != null and is_instance_valid(_status):
+		_status.text = text
+		_status.add_theme_color_override("font_color", color)
+
+## Un message signalé : auteur, salon, texte, nombre de signalements et motifs, puis les trois décisions.
+func _report_card(box: Control, x: Dictionary) -> void:
+	var mine := _gen
+	var id := int(x.get("message_id", 0))
+	var pid := str(x.get("player_id", ""))
+	var pseudo := str(x.get("pseudo", "?"))
+	var card := VBoxContainer.new()
+	card.add_theme_constant_override("separation", 2)
+	var head := "%s · %s · %s · %s" % [pseudo, Chat.room_name(str(x.get("room", ""))), date(x.get("created_at")), L.t("ui.sadmin.chat_n_reports") % num(x.get("reports"))]
+	card.add_child(_label(head, GOLD, 13))
+	var body := _label(str(x.get("body", "")))
+	body.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	card.add_child(body)
+	var reasons: Variant = x.get("reasons")
+	if reasons is Array and not (reasons as Array).is_empty():
+		_note(card, "↳ " + " | ".join((reasons as Array).map(func(r): return str(r))), UiTheme.DIM, false)
+	if x.get("muted_until") != null:
+		_note(card, L.t("ui.sadmin.chat_muted_until") % date(x.get("muted_until")), BAD, false)
+	var act := HFlowContainer.new()
+	act.add_theme_constant_override("h_separation", 6)
+	var specs := [
+		[L.t("ui.sadmin.chat_delete"), func(): return await SuperAdmin.chat_delete(id), false],
+		[L.t("ui.sadmin.chat_mute_24h"), func(): return await SuperAdmin.chat_mute(pid, 1440, "signalement"), false],
+		[L.t("ui.sadmin.chat_dismiss"), func(): return await SuperAdmin.chat_dismiss(id), false],
+	]
+	if x.get("muted_until") != null:
+		specs.append([L.t("ui.sadmin.chat_unmute"), func(): return await SuperAdmin.chat_unmute(pid), false])
+	for sp in specs:
+		var b := Button.new()
+		b.text = str(sp[0])
+		b.focus_mode = Control.FOCUS_NONE
+		var fn: Callable = sp[1]
+		b.pressed.connect(func():
+			b.disabled = true
+			var r: Dictionary = await fn.call()
+			if mine != _gen or not _alive():
+				return
+			if r.ok:
+				_fill_chat()
+			else:
+				b.disabled = false
+				_flash(str(r.message), BAD))
+		act.add_child(b)
+	card.add_child(act)
+	var sep := HSeparator.new()
+	card.add_child(sep)
+	box.add_child(card)

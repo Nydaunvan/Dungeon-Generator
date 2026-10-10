@@ -93,6 +93,10 @@ def main():
                 api('POST', '/rest/v1/rpc/award_run', {'p_run_id': run['id']})     # XP et badges, une seule fois par partie
     if not a.dry_run:
         api('POST', '/rest/v1/rpc/close_due_periods', {})                        # clôture des mois terminés (badges de rang)
+        try:
+            api('POST', '/rest/v1/rpc/chat_purge_old', {})                      # tchat : messages de plus de 30 jours (au mieux)
+        except (Exception, SystemExit) as e:
+            print(f"purge du tchat ignorée : {e}")
 
 
 if __name__ == '__main__':

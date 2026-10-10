@@ -670,6 +670,7 @@ func _on_menu(name: String) -> void:
 		"Son": SoundModal.open(_modals())
 		"Paramètres": SettingsModal.open(_modals())
 		"Compte": AccountModal.open(_modals())
+		"Tchat": ChatModal.open(_modals())
 		"Lang":
 			Sound.stop_ambient()
 			Data.reload_game(snapshot())

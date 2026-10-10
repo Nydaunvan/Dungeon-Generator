@@ -94,6 +94,7 @@ func _nav(n: String) -> void:
 		"Guide": Dialogs.guide(_modal_layer)
 		"Paramètres": SettingsModal.open(_modal_layer)
 		"Compte": AccountModal.open(_modal_layer)
+		"Tchat": ChatModal.open(_modal_layer)
 		"Quitter": Dialogs.confirm(_modal_layer, "", L.t("ui.app_header.quitter_confirm"), func(): get_tree().quit(), L.t("ui.app_header.quitter"))
 		"Lang": get_tree().reload_current_scene()
 
