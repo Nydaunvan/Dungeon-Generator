@@ -788,65 +788,51 @@ func _leave_game() -> void:
 	if RunLog.ranked() and str(gs.cfg.get("runId", "")) != "":
 		_leave_ranked()
 		return
-	var m := Modal.open(_modals(), L.t("common.quitter_la_partie_en_cours"), 440.0)
-	m.add_text(L.t("common.voulez_vous_sauvegarder_votre"), UiTheme.PARCH, 14, true)
+	var header: Array = [[L.t("common.voulez_vous_sauvegarder_votre"), UiTheme.PARCH, 14]]
 	var sent: Dictionary = Challenges.run_info(gs, Data.play_origin) if Cloud.is_signed_in() else {}
 	if not sent.is_empty():
-		m.add_text(L.fa(L.t("ui.leave.free_sent"), int((sent.metrics as Dictionary).get("levelsCleared", 0))), Color("9cc79a"), 13, true)
+		header.append([L.fa(L.t("ui.leave.free_sent"), int((sent.metrics as Dictionary).get("levelsCleared", 0))), Color("9cc79a"), 13])
 	var origin: String = Data.play_origin
 	if origin == "custom":
-		m.add_text(L.t("main.cette_creation_repartira_une"), UiTheme.PARCH, 14, true)
-	var btns: Array = [
-		{"text": L.t("common.sauvegarder_et_quitter"), "primary": true, "cb": func():
-			m.close()
+		header.append([L.t("main.cette_creation_repartira_une"), UiTheme.PARCH, 13])
+	var opts: Array = [
+		{"icon": "💾", "title": L.t("ui.leave.opt_save_t"), "desc": L.t("ui.leave.opt_save_d"), "btn": L.t("ui.leave.opt_save_b"), "primary": true, "cb": func():
 			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
 	]
 	if origin != "original":
-		btns.append({"text": L.t("common.exporter_le_donjon_fichier_json"), "primary": false, "cb": func():
-			m.close()
+		opts.append({"icon": "📤", "title": L.t("ui.leave.opt_export_t"), "desc": L.t("ui.leave.opt_export_d"), "btn": L.t("ui.leave.opt_export_b"), "cb": func():
 			var snap := snapshot()
 			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin), func(_t): Data.go_home())})
-	btns.append({"text": L.t("common.quitter_sans_sauvegarder"), "primary": false, "cb": func():
-		m.close()
+	if origin == "custom":
+		opts.append({"icon": "📋", "title": L.t("ui.leave.opt_code_t"), "desc": L.t("ui.leave.opt_code_d"), "extra": func(card: VBoxContainer):
+			var out: TextEdit = null
+			var status: Label = null
+			card.add_child(_modal_button(L.t("common.generer_un_code_a_partager"), func():
+				Form.generate_code(gs.cfg, out, status)))
+			out = Form.code_area(card, "", true, 70.0, 6.0)
+			out.visible = false
+			status = Form.status_label(card)})
+	opts.append({"icon": "🚪", "title": L.t("ui.leave.opt_quit_t"), "desc": L.t("ui.leave.opt_quit_d"), "btn": L.t("ui.leave.opt_quit_b"), "danger": true, "cb": func():
 		_end_ranked_run()
 		Data.go_home()})
-	btns.append({"text": L.t("common.annuler_rester_dans_la_partie"), "primary": false, "cb": func(): m.close()})
-	m.set_buttons(btns)
-	if origin == "custom":
-		# section « 📋 Générer un code à partager » (donjons personnalisés), entre l'export et « Quitter sans sauvegarder »
-		var sec := VBoxContainer.new()
-		var out: TextEdit = null
-		var status: Label = null
-		var gen := _modal_button(L.t("common.generer_un_code_a_partager"), func():
-			Form.generate_code(gs.cfg, out, status))
-		sec.add_child(gen)
-		out = Form.code_area(sec, "", true, 70.0, 6.0)
-		out.visible = false
-		status = Form.status_label(sec)
-		var row: Node = m._buttons_row
-		row.add_child(sec)
-		row.move_child(sec, 2 if origin != "original" else 1)
+	LeaveModal.open(_modals(), L.t("common.quitter_la_partie_en_cours"), header, opts, L.t("common.annuler_rester_dans_la_partie"))
 
 ## « Quitter » pendant une partie classée : dit clairement ce que chaque choix entraîne (pause reprenable une fois, ou fin de partie envoyée en l'état).
 func _leave_ranked() -> void:
 	var cleared := int(gs.stats.get("levelsCleared", 0))
-	var m := Modal.open(_modals(), L.t("ui.leave.ranked_title"), 540.0)
-	m.add_text(L.fa(L.t("ui.leave.ranked_levels"), cleared), UiTheme.GOLD, 18)
-	m.add_text(L.t("ui.leave.ranked_intro"), UiTheme.PARCH, 14, true)
-	m.add_text(L.t("ui.leave.opt_pause"), UiTheme.DIM, 13)
-	m.add_text(L.t("ui.leave.opt_finish") if cleared > 0 else L.t("ui.leave.opt_finish_zero"), UiTheme.DIM, 13)
+	var header: Array = [[L.fa(L.t("ui.leave.ranked_levels"), cleared), UiTheme.GOLD, 18], [L.t("ui.leave.ranked_intro"), UiTheme.PARCH, 14]]
 	if str(gs.cfg.get("rankedKind", "")) == "hardcore_month":
-		m.add_text(L.t("ui.leave.hc_note"), Color("e0b87a"), 13, true)
-	m.set_buttons([
-		{"text": L.t("ui.leave.btn_pause"), "primary": true, "cb": func():
-			m.close()
+		header.append([L.t("ui.leave.hc_note"), Color("e0b87a"), 13])
+	var opts: Array = [
+		{"icon": "⏸", "title": L.t("ui.leave.opt_pause_t"), "desc": L.t("ui.leave.opt_pause_d"), "btn": L.t("ui.leave.opt_pause_b"), "primary": true, "cb": func():
 			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
-		{"text": (L.fa(L.t("ui.leave.btn_finish"), cleared) if cleared > 0 else L.t("ui.leave.btn_abandon")), "primary": false, "cb": func():
-			m.close()
+		{"icon": "📤" if cleared > 0 else "🏳", "title": L.t("ui.leave.opt_finish_t") if cleared > 0 else L.t("ui.leave.opt_abandon_t"),
+			"desc": L.t("ui.leave.opt_finish_d") if cleared > 0 else L.t("ui.leave.opt_abandon_d"),
+			"btn": L.fa(L.t("ui.leave.btn_finish"), cleared) if cleared > 0 else L.t("ui.leave.btn_abandon"), "danger": cleared == 0, "cb": func():
 			_end_ranked_run()
 			Data.go_home()},
-		{"text": L.t("common.annuler_rester_dans_la_partie"), "primary": false, "cb": func(): m.close()},
-	])
+	]
+	LeaveModal.open(_modals(), L.t("ui.leave.ranked_title"), header, opts, L.t("common.annuler_rester_dans_la_partie"))
 
 ## Instantané de la partie pour une sauvegarde.
 func snapshot() -> Dictionary:
