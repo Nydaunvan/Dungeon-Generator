@@ -93,7 +93,12 @@ static func open(host: Node, gs: GameState, on_change: Callable = Callable()) ->
 			ub.disabled = gs.gold < cost(it)
 			ub.focus_mode = Control.FOCUS_NONE
 			ub.pressed.connect(func():
-				upgrade(gs, it, owner)
+				var slot := ""
+				if not owner.is_empty():
+					for sl in Characters.SLOTS:
+						if owner.get("equipment", {}).get(sl) == it:
+							slot = sl
+				Actions.forge(str(owner.get("id", "")), slot if not owner.is_empty() else gs.inventory.find(it))
 				if on_change.is_valid():
 					on_change.call()
 				render.call())

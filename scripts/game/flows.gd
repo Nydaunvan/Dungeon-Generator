@@ -31,6 +31,20 @@ static func open(flow: String, modal: Node, handler: Callable, default: Variant 
 			if not e.is_empty() and e.modal == modal:
 				_open.erase(flow))
 
+## Rejeu : applique un choix journalisé selon la forme de la fenêtre (étapes → input, décision unique → choose).
+static func apply(flow: String, choice: Variant) -> bool:
+	var e: Dictionary = _open.get(flow, {})
+	if e.is_empty() or not is_open(flow):
+		return false
+	if (e.can as Callable).is_valid():
+		return input(flow, choice)
+	choose(flow, choice)
+	return true
+
+static func is_multi(flow: String) -> bool:
+	var e: Dictionary = _open.get(flow, {})
+	return not e.is_empty() and (e.can as Callable).is_valid()
+
 static func is_open(flow: String) -> bool:
 	var e: Dictionary = _open.get(flow, {})
 	return not e.is_empty() and is_instance_valid(e.modal) and not (e.modal as Node).is_queued_for_deletion()

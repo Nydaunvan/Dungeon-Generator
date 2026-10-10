@@ -86,8 +86,16 @@ static func pick_modifiers(host: Node, on_chosen: Callable) -> void:
 		buttons[id] = b
 		m.content.add_child(b)
 	var launch := func(mods: Array):
-		m.close()
-		on_chosen.call(mods)
+		Flows.choose("mods", mods)
+	# la liste reçue est assainie (journal falsifié) : au plus 2 modificateurs distincts et connus
+	Flows.open("mods", m, func(mods: Variant):
+		var valid: Array = DungeonGenerator.run_modifiers().map(func(x): return str(x.id))
+		var clean: Array = []
+		if mods is Array:
+			for id in mods:
+				if valid.has(str(id)) and not clean.has(str(id)) and clean.size() < 2:
+					clean.append(str(id))
+		on_chosen.call(clean))
 	m.set_buttons([
 		{"text": L.t("common.valider"), "cb": func(): launch.call(chosen.duplicate())},
 		{"text": L.t("ui.generator_dialog.aucun_modificateur"), "cb": func(): launch.call([])},

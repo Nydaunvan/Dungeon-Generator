@@ -24,6 +24,17 @@ static func confirm(host: Node, title: String, text: String, on_yes: Callable, y
 	m.set_buttons([{"text": yes_text, "cb": _then(m, on_yes)}, {"text": no_text, "cb": _then(m, Callable())}])
 	return m
 
+## Confirmation qui est une DÉCISION du journal (flux `flow`) : 1 = oui, 0 = non (Échap comprise).
+static func confirm_flow(host: Node, flow: String, title: String, text: String, on_yes: Callable, yes_text: String = "", no_text: String = "") -> Modal:
+	var m := Modal.open(host, title, 460.0)
+	m.add_text(text, UiTheme.PARCH, 15)
+	m.set_buttons([{"text": yes_text, "cb": func(): Flows.choose(flow, 1)}, {"text": no_text, "cb": func(): Flows.choose(flow, 0)}])
+	var handler := func(c: Variant):
+		if int(c) == 1 and on_yes.is_valid():
+			on_yes.call()
+	Flows.open(flow, m, handler, 0)
+	return m
+
 static func guide(host: Node) -> Modal:
 	return DocModal.guide(host)
 
@@ -45,12 +56,19 @@ static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Ca
 	_stats_lines(m, gs)
 	var btns: Array = []
 	if on_village.is_valid():
-		btns.append({"text": L.t("ui.dialogs.aller_au_village"), "cb": _then(m, on_village)})
+		btns.append({"text": L.t("ui.dialogs.aller_au_village"), "cb": func(): Flows.choose("victoire", "village")})
 	if on_next.is_valid():
-		btns.append({"text": L.t("ui.dialogs.continuer_dans_un_donjon_plus"), "primary": true, "cb": _then(m, on_next)})
+		btns.append({"text": L.t("ui.dialogs.continuer_dans_un_donjon_plus"), "primary": true, "cb": func(): Flows.choose("victoire", "next")})
 	btns.append({"text": L.t("ui.dialogs.repartir_de_zero"), "cb": _then(m, on_restart)})
 	btns.append({"text": L.t("ui.dialogs.retour_a_l_accueil"), "cb": _then(m, on_home)})
 	m.set_buttons(btns)
+	if on_village.is_valid() or on_next.is_valid():
+		# « repartir de zéro » / accueil ferment la fenêtre sans décision : la partie classée est déjà soumise à ce stade
+		Flows.open("victoire", m, func(c: Variant):
+			if str(c) == "village" and on_village.is_valid():
+				on_village.call()
+			elif str(c) == "next" and on_next.is_valid():
+				on_next.call())
 	return m
 
 static func defeat(host: Node, gs: GameState, on_restart: Callable, on_home: Callable) -> Modal:

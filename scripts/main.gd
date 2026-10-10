@@ -40,6 +40,10 @@ func _submit_run(announce: bool = false) -> void:
 		show_message(L.fa(L.t("ui.challenges.score_sent"), int((info.metrics as Dictionary).get("levelsCleared", 0))), 3.0)
 
 func _exit_tree() -> void:
+	if RunLog.gs == gs:
+		RunLog.attach(null)
+		Flows.reset()
+		Actions.setup(null, null)
 	Data.game_scale_mode = false
 	Merchant3D.clear_pool()
 
@@ -601,14 +605,14 @@ func _use_stairs(p: Vector2i) -> void:
 			gs.add_log(L.t("main.le_groupe_decouvre_l_escalier"))
 			_victory_by_stairs()
 		"villageExit":
-			Dialogs.confirm(_modals(), L.t("main.sortie_du_village"), L.t("main.voulez_vous_rester_au_village"),
+			Dialogs.confirm_flow(_modals(), "sortie_village", L.t("main.sortie_du_village"), L.t("main.voulez_vous_rester_au_village"),
 				_continue_next, L.t("main.aller_vers_un_donjon_plus"), L.t("main.rester_au_village"))
 		"villageReturn":
 			if gs.village_prev.is_empty():
 				gs.add_log(L.t("main.il_n_y_a_nulle"))
 				show_message(L.t("main.nulle_part_ou_revenir"))
 			else:
-				Dialogs.confirm(_modals(), L.t("main.retour_au_donjon"), L.t("main.voulez_vous_revenir_au_donjon"),
+				Dialogs.confirm_flow(_modals(), "retour_donjon", L.t("main.retour_au_donjon"), L.t("main.voulez_vous_revenir_au_donjon"),
 					_return_to_dungeon, L.t("main.revenir_au_donjon_precedent"), L.t("main.rester_au_village"))
 		_:
 			show_message(L.t("main.escalier"))
@@ -898,7 +902,6 @@ func _show_victory() -> void:
 # ------------------------------------------------------------------ village et expéditions successives
 
 func _enter_village() -> void:
-	RunLog.unrecorded("village")
 	gs.level_index = level_index
 	gs.px = rig.gx
 	gs.py = rig.gy
@@ -907,7 +910,6 @@ func _enter_village() -> void:
 	load_level(0)
 
 func _return_to_dungeon() -> void:
-	RunLog.unrecorded("village")
 	if gs.village_prev.is_empty():
 		return
 	var prev: Dictionary = gs.village_prev
@@ -920,7 +922,6 @@ func _return_to_dungeon() -> void:
 	load_level(int(prev.level_index), true)
 
 func _continue_next() -> void:
-	RunLog.unrecorded("village")
 	var go := func(mods: Array):
 		Village.next_dungeon(gs, mods)
 		# séparateur « Expédition n°N — titre » du journal complet, juste avant la ligne d'annonce

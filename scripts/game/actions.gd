@@ -84,3 +84,60 @@ static func drink(char_id: String, idx: int) -> int:
 	if healed >= 0:
 		ctrl.potion_drunk(char_id, healed)
 	return healed
+
+# ------------------------------------------------------------------ village
+
+## Améliore un objet à la forge (village seulement). `owner_id` = "" pour la besace (alors `ref` = n° dans la besace),
+## sinon `ref` = emplacement équipé du personnage.
+static func forge(owner_id: String, ref: Variant) -> String:
+	if not _allowed() or not gs.in_village:
+		return "refuse"
+	var owner: Dictionary = {}
+	var it: Variant = null
+	if owner_id == "":
+		var i := int(ref)
+		if i < 0 or i >= gs.inventory.size():
+			return "refuse"
+		it = gs.inventory[i]
+		if not ["weapon", "armor", "jewelry"].has(str((it as Dictionary).get("type", ""))):
+			return "refuse"
+	else:
+		owner = gs.char_by_id(owner_id)
+		if owner.is_empty() or not Characters.SLOTS.has(str(ref)):
+			return "refuse"
+		it = owner.get("equipment", {}).get(str(ref))
+		if it == null:
+			return "refuse"
+	RunLog.rec("forge", owner_id, ref)
+	RunLog.enter()
+	var r := ForgeModal.upgrade(gs, it, owner)
+	RunLog.leave()
+	return r
+
+## Maître des Talents : choisir (ou changer contre de l'or) le talent d'un palier. Village seulement.
+static func master_pick(char_id: String, level: int, talent_id: String) -> String:
+	if not _allowed() or not gs.in_village:
+		return "refuse"
+	var c := gs.char_by_id(char_id)
+	if c.is_empty() or int(c.level) < level:
+		return "refuse"
+	var track := Talents.track_at(gs.cfg, str(c.classId), level)
+	if track.is_empty() or not (track.options as Array).any(func(o): return str(o.id) == talent_id):
+		return "refuse"
+	var current := ""
+	for t in c.get("talents", []):
+		if int(t.level) == level:
+			current = str(t.id)
+	if current == talent_id:
+		return "refuse"
+	RunLog.rec("tm", char_id, [level, talent_id])
+	RunLog.enter()
+	var r := ""
+	if current == "":
+		Talents.choose(gs, c, level, talent_id)
+		if int(c.hp) > int(c.maxHp):
+			c["hp"] = c.maxHp
+	else:
+		r = Talents.respec(gs, c, level, talent_id)
+	RunLog.leave()
+	return r

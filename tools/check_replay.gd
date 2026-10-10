@@ -50,7 +50,33 @@ func _bfs(m: Node, goal_fn: Callable) -> Array:
 	return path
 
 ## Une action du bot ; renvoie un libellé (pour le suivi).
+func _bot_village(m: Node, rng: RandomNumberGenerator) -> String:
+	var A: GDScript = load("res://scripts/game/actions.gd")
+	var gs = m.gs
+	var r := rng.randf()
+	if r < 0.25 and not gs.party.is_empty():
+		var c: Dictionary = gs.party[rng.randi() % gs.party.size()]
+		var slots: Array = []
+		for sl in c.get("equipment", {}):
+			if c.equipment[sl] != null:
+				slots.append(sl)
+		if not slots.is_empty():
+			A.forge(str(c.id), slots[rng.randi() % slots.size()])
+			return "forge"
+	elif r < 0.45 and not gs.party.is_empty():
+		var c2: Dictionary = gs.party[rng.randi() % gs.party.size()]
+		for tr in load("res://scripts/rules/talents.gd").tracks(gs.cfg, str(c2.classId)):
+			if int(c2.level) >= int(tr.level):
+				var o: Dictionary = tr.options[rng.randi() % tr.options.size()]
+				A.master_pick(str(c2.id), int(tr.level), str(o.id))
+				return "maitre"
+	return ""
+
 func _bot_act(m: Node, rng: RandomNumberGenerator) -> String:
+	if m.gs.in_village:
+		var v := _bot_village(m, rng)
+		if v != "":
+			return v
 	if m.ctrl.in_combat():
 		var c: Dictionary = m.gs.char_by_id(m.gs.active_char_id)
 		var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
@@ -109,6 +135,22 @@ func _bot_flow(m: Node, flow: String, md: Node, rng: RandomNumberGenerator) -> S
 						F.choose("talent", str(track.options[rng.randi() % track.options.size()].id))
 						return "talent"
 			return ""
+		"victoire":
+			F.choose("victoire", "village" if (not m.gs.in_village and rng.randf() < 0.6) else "next")
+			return "victoire"
+		"mods":
+			var mods: Array = []
+			var ids: Array = load("res://scripts/rules/dungeon_generator.gd").run_modifiers().map(func(x): return str(x.id))
+			for i in rng.randi() % 3:
+				mods.append(ids[rng.randi() % ids.size()])
+			F.choose("mods", mods)
+			return "mods"
+		"sortie_village":
+			F.choose("sortie_village", 1 if rng.randf() < 0.7 else 0)
+			return "sortie"
+		"retour_donjon":
+			F.choose("retour_donjon", 1 if rng.randf() < 0.2 else 0)
+			return "retour"
 		"marchand":
 			F.choose("marchand", 1 if rng.randf() < 0.7 else 0)
 			return "marchand"
@@ -158,13 +200,16 @@ func _init() -> void:
 	GC = load("res://scripts/rules/game_clock.gd")
 	var seed_text := "graine-test-1"
 	var max_actions := 250
+	var n_levels := 3
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		seed_text = args[0]
 	if args.size() > 1:
 		max_actions = int(args[1])
+	if args.size() > 2:
+		n_levels = int(args[2])
 	var data = root.get_node("Data")
-	var cfg: Dictionary = load("res://scripts/rules/dungeon_generator.gd").build_config(data.original_config, 3, 13, 11, "normal", [], 1, load("res://scripts/rules/seeds.gd").from_text(seed_text))
+	var cfg: Dictionary = load("res://scripts/rules/dungeon_generator.gd").build_config(data.original_config, n_levels, 13, 11, "normal", [], 1, load("res://scripts/rules/seeds.gd").from_text(seed_text))
 	cfg["runSeed"] = seed_text
 	var m = await Rep.start(self, cfg)
 	check("la partie démarre", m != null)
@@ -178,7 +223,7 @@ func _init() -> void:
 	var done := 0
 	var kinds := {}
 	var t0 := Time.get_ticks_msec()
-	while done < max_actions and RL.is_clean() and not gs.game_over and not gs.won and (Time.get_ticks_msec() - t0) < 170000:
+	while done < max_actions and RL.is_clean() and not gs.game_over and (Time.get_ticks_msec() - t0) < 170000:
 		await process_frame
 		var modals: Array = get_nodes_in_group("modal")
 		if not modals.is_empty():
@@ -199,7 +244,7 @@ func _init() -> void:
 			for i in (30 if flows_seen else 10):
 				await process_frame
 			continue
-		if not m.settled():
+		if not m.settled() or (gs.won and not gs.in_village):
 			continue
 		var k := _bot_act(m, rng)
 		kinds[k] = int(kinds.get(k, 0)) + 1

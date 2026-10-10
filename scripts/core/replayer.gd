@@ -48,7 +48,7 @@ static func _flow_ready(flow: String, e: Array) -> bool:
 	if not Flows.is_open(flow):
 		return false
 	var ch: Variant = _norm(e[3]) if e.size() > 3 else 0
-	return Flows.can_input(flow, ch) if ch is Array else true
+	return Flows.can_input(flow, ch) if Flows.is_multi(flow) else true
 
 ## JSON rend tous les nombres flottants : on les ramène en entiers quand ils le sont.
 static func _norm(v: Variant) -> Variant:
@@ -87,16 +87,15 @@ static func apply(m: Node, e: Array) -> String:
 			if not Flows.is_open(str(e[2])):
 				return "decision_sans_fenetre:" + str(e[2])
 			var ch: Variant = _norm(e[3]) if e.size() > 3 else 0
-			if ch is Array:
-				if not Flows.input(str(e[2]), ch):
-					return "entree_refusee:" + str(e[2])
-			else:
-				Flows.choose(str(e[2]), ch)
+			if not Flows.apply(str(e[2]), ch):
+				return "entree_refusee:" + str(e[2])
 		"sel": m.ctrl.select_char(str(e[2]))
 		"eq": Actions.equip(str(e[2]), int(e[3]))
 		"un": Actions.unequip(str(e[2]), str(e[3]))
 		"drop": Actions.discard(int(e[2]))
 		"sort": Actions.sort(str(e[2]), str(e[3]))
+		"forge": Actions.forge(str(e[2]), _norm(e[3]))
+		"tm": Actions.master_pick(str(e[2]), int(_norm(e[3])[0]), str(e[3][1]))
 		"drink": Actions.drink(str(e[2]), int(e[3]))
 		"w": m.wand.replay_tick()
 		"e": m.wand.replay_engage()
