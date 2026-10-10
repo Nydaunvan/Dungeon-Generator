@@ -88,7 +88,14 @@ func _frames(n: int = 2) -> void:
 # ------------------------------------------------------------------ démarrage du programme
 
 func boot() -> void:
+	if not Crumbs.last_exit_clean():
+		Crumbs.mark("!!! la session précédente s'est arrêtée brutalement (voir les lignes au-dessus)")
 	Crumbs.mark("démarrage v%s | %s | %s %s | %s" % [AppVersion.number(), OS.get_name(), RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_api_version(), "%s/%s dyn=%.2f" % [Settings.preset, Settings.level, Settings.dyn_scale]])
+	var sampler := Timer.new()
+	sampler.wait_time = 10.0
+	sampler.autostart = true
+	sampler.timeout.connect(Crumbs.sample)
+	add_child(sampler)
 	Sound.menu_music(true, 2.0)   # bureau : dès le lancement ; Web : à l'entrée (premier clic)
 	_show(L.t("loading.sous_titre_jeu"))
 	await _frames(2)
@@ -306,3 +313,7 @@ func _list(dir: String, exts: Array) -> Array:
 		out.append(name)
 	out.sort()
 	return out
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		Crumbs.mark(Crumbs.CLEAN)
