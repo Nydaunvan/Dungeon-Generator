@@ -59,6 +59,7 @@ func to_save() -> Dictionary:
 	var d := {}
 	for f in SAVE_FIELDS:
 		d[f] = get(f)
+	d["clock"] = GameClock.ms                 # temps de jeu écoulé (recharges de sorts, fontaines)
 	d["rng"] = GameRng.export_state()      # position de chaque flux de hasard : la partie reprise continue à l'identique
 	return d.duplicate(true)
 
@@ -75,6 +76,16 @@ static func from_save(config: Dictionary, d: Dictionary) -> GameState:
 			s.full_log = (d[f] as Array).duplicate(true)
 		else:
 			s.set(f, d[f])
+	if d.has("clock"):
+		GameClock.reset(int(d.clock))
+	else:
+		GameClock.reset(0)         # ancienne sauvegarde : les recharges étaient mesurées sur l'horloge de la machine, on les remet à zéro
+		for c in s.party:
+			if c is Dictionary:
+				c["spellCooldowns"] = {}
+		for ls in s.level_states.values():
+			for st in (ls.get("items_state", {}) as Dictionary).values():
+				(st as Dictionary).erase("usedAt")
 	if d.get("rng") is Dictionary:
 		GameRng.import_state(d.rng)
 	else:
@@ -87,6 +98,7 @@ static func create(config: Dictionary) -> GameState:
 	var s := GameState.new()
 	s.cfg = config
 	s.run_seed = str(config.get("runSeed", ""))
+	GameClock.reset(0)
 	if s.run_seed != "":
 		GameRng.begin(Seeds.from_text(s.run_seed))         # partie classée : toute la partie découle de cette graine
 	else:

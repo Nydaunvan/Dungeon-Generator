@@ -279,7 +279,7 @@ func spell_needs_ally(spell: Dictionary) -> bool:
 ## Secondes restantes avant que le sort soit de nouveau lançable.
 func cooldown_left(caster: Dictionary, spell_id: String) -> float:
 	var ready_at := int((caster.get("spellCooldowns", {}) as Dictionary).get(spell_id, 0))
-	return maxf(0.0, (ready_at - Time.get_ticks_msec()) / 1000.0)
+	return maxf(0.0, (ready_at - GameClock.ms) / 1000.0)
 
 ## Lance un sort. `ally_id` = cible alliée pour les sorts ciblés. Renvoie true si le sort a été lancé.
 func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free: bool = false) -> bool:
@@ -329,7 +329,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	caster["stamina"] = int(caster.stamina) - cost
 	if not free:
 		var cds: Dictionary = caster.get("spellCooldowns", {})
-		cds[spell_id] = Time.get_ticks_msec() + int(float(spell.get("cooldownSec", 6)) * 1000.0)
+		cds[spell_id] = GameClock.ms + int(float(spell.get("cooldownSec", 6)) * 1000.0)
 		caster["spellCooldowns"] = cds
 	gs.bump(caster.id, "actions")
 	gs.bump(caster.id, "spellsCast")
@@ -422,7 +422,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			Characters.recompute(caster, gs.cfg)
 		"partyUtility":
 			var cut_ms := int(float(spell.get("cooldownReductionSec", 0)) * 1000.0)
-			var now := Time.get_ticks_msec()
+			var now := GameClock.ms
 			for c in gs.alive_party():
 				var cds: Dictionary = c.get("spellCooldowns", {})
 				for sid in cds.keys():

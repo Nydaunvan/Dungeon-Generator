@@ -24,6 +24,8 @@ var _modal_layer: CanvasLayer
 
 ## Temps de jeu d'un donjon aléatoire (départage les égalités du classement des défis).
 func _process(delta: float) -> void:
+	if gs != null:
+		GameClock.advance(delta)         # horloge de jeu : la seule référence de temps de la logique (recharges, fontaines)
 	if gs != null and Data.play_origin == "random" and not gs.game_over and not gs.won and not gs.in_village:
 		Challenges.track_time(gs, delta)
 
@@ -265,7 +267,7 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		if not fst.has("usedAt"):
 			return true
 		var cd := maxf(5.0, float(gs.cfg.get("fountainCooldownMinutes", 10))) * 60000.0
-		return Time.get_unix_time_from_system() * 1000.0 >= float(fst.usedAt) + cd
+		return float(GameClock.ms) >= float(fst.usedAt) + cd
 	level_node.entities.refresh_fountains(true)
 	for m in level.get("monsters", []):
 		var mst: Dictionary = ls.monsters.get(str(m.id), {})

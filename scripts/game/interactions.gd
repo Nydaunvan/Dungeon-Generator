@@ -233,8 +233,7 @@ func _freeze_world() -> Callable:
 	if _frozen:
 		return func(): pass
 	_frozen = true
-	var t0 := Time.get_ticks_msec()
-	var u0 := Time.get_unix_time_from_system() * 1000.0
+	GameClock.frozen += 1          # le temps de jeu (recharge des sorts, fontaines) s'arrête tant que le monde est figé
 	if view != null:
 		view.process_mode = Node.PROCESS_MODE_DISABLED
 	if rig != null:
@@ -245,18 +244,7 @@ func _freeze_world() -> Callable:
 			view.process_mode = Node.PROCESS_MODE_INHERIT
 		if rig != null and is_instance_valid(rig):
 			rig.process_mode = Node.PROCESS_MODE_INHERIT
-		var dt_t := Time.get_ticks_msec() - t0
-		var dt_u := Time.get_unix_time_from_system() * 1000.0 - u0
-		for c in gs.party:
-			var cds: Dictionary = c.get("spellCooldowns", {})
-			for sid in cds.keys():
-				cds[sid] = int(cds[sid]) + dt_t
-		for lid in gs.level_states:
-			var items: Dictionary = (gs.level_states[lid] as Dictionary).get("items_state", {})
-			for iid in items:
-				var st: Dictionary = items[iid]
-				if st.has("usedAt"):
-					st["usedAt"] = float(st.usedAt) + dt_u
+		GameClock.frozen = maxi(0, GameClock.frozen - 1)
 		ctrl.changed.emit()
 
 var _frozen := false
@@ -412,7 +400,7 @@ func _fountain_cooldown_ms() -> float:
 
 func _prompt_fountain(it: Dictionary) -> void:
 	var st := gs.item_state(_lid(), str(it.id))
-	var now := Time.get_unix_time_from_system() * 1000.0
+	var now := float(GameClock.ms)
 	var ready_at := float(st.get("usedAt", 0.0)) + _fountain_cooldown_ms()
 	if st.has("usedAt") and now < ready_at:
 		_log(L.fa(L.t("game.interactions.est_tarie_pour_l_instant"), [it.get("name", L.t("game.interactions.la_fontaine")), int(ceil((ready_at - now) / 60000.0))]))
@@ -428,7 +416,7 @@ func _prompt_fountain(it: Dictionary) -> void:
 
 func _use_fountain(it: Dictionary) -> void:
 	var st := gs.item_state(_lid(), str(it.id))
-	st["usedAt"] = Time.get_unix_time_from_system() * 1000.0
+	st["usedAt"] = float(GameClock.ms)
 	gs.stats["fountainsUsed"] = int(gs.stats.get("fountainsUsed", 0)) + 1
 	var revived: Array[String] = []
 	for c in gs.party:
