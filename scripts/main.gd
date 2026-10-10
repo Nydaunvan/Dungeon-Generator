@@ -247,6 +247,7 @@ var _loading: bool = false
 
 func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sliced: bool = false) -> void:
 	_loading = true
+	Crumbs.mark("niveau %d (%s)" % [index, str(gs.cfg.levels[index].get("theme", ""))])
 	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
 	if level_node:

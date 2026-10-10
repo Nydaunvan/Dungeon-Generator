@@ -266,6 +266,7 @@ func _run_turns() -> void:
 	if _busy:
 		return
 	_busy = true
+	Crumbs.mark("combat")
 	while model_in_combat():
 		var r := combat.advance()
 		await _drain()

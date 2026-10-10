@@ -135,6 +135,7 @@ var pending_transient: Dictionary = {}
 
 ## Lance une partie avec la configuration donnée (copie profonde) puis ouvre la scène de jeu.
 func launch(cfg: Dictionary, origin: String, admin_mode: int = ADMIN_AUTO) -> void:
+	Crumbs.mark("lancement %s %s niveaux=%d" % [origin, str(cfg.get("rankedKind", "")), (cfg.get("levels", []) as Array).size()])
 	match admin_mode:
 		ADMIN_AUTO:
 			if origin != "custom":

@@ -187,6 +187,7 @@ func _raw(method: int, path: String, body: Variant, token: String, extra: Packed
 	if token != "":
 		headers.append("Authorization: Bearer " + token)
 	headers.append_array(extra)
+	Crumbs.mark("serveur %s" % path.get_slice("?", 0))
 	var payload := "" if body == null else JSON.stringify(body)
 	var r: Dictionary = await _http(method, url + path, headers, payload)
 	if int(r.get("result", -1)) != HTTPRequest.RESULT_SUCCESS:
