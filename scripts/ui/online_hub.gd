@@ -42,7 +42,7 @@ static func open(host: Node, on_launch: Callable = Callable(), tab: String = "pl
 	var vp: Vector2 = host.get_viewport().get_visible_rect().size if host.is_inside_tree() else Vector2(1280, 720)
 	h._width = clampf(vp.x * 0.94, 340.0, 940.0)
 	h._modal = Modal.open(host, L.t("ui.hub.title"), h._width)
-	h._modal.fit_ratio = 0.8
+	h._modal.fit_ratio = 0.74
 	h._modal.closed.connect(h._on_closed)
 	Cloud.session_changed.connect(h._on_session)
 	h._build()
@@ -108,7 +108,16 @@ func _show(tab: String) -> void:
 		"boards": _show_boards()
 		"rewards": _show_rewards()
 		"runs": _show_runs()
+	_stabilize_height()
 	_modal.call_deferred("_fit")
+
+## Hauteur de la fenêtre FIXE d'un onglet à l'autre et pendant le chargement du contenu : le corps réserve la place restante jusqu'à la
+## hauteur maximale de la fenêtre (au-delà, il défile). Sans cela, la fenêtre rétrécissait sur « Chargement… » puis regrandissait.
+func _stabilize_height() -> void:
+	_body.custom_minimum_size.y = 0
+	var vp_h := _host.get_viewport().get_visible_rect().size.y if _host.is_inside_tree() else 720.0
+	var other := _modal.content.get_combined_minimum_size().y - _body.get_combined_minimum_size().y
+	_body.custom_minimum_size.y = maxf(0.0, vp_h * _modal.fit_ratio - other)
 
 func _wait(parent: Control) -> Label:
 	var l := HubKit.label(L.t("ui.hub.loading"), UiTheme.DIM, 13, false, true, HORIZONTAL_ALIGNMENT_CENTER)

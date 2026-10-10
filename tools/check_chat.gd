@@ -111,6 +111,9 @@ func find_button(n: Node, text: String) -> Button:
 			return r
 	return null
 
+func has_menu(n: Node) -> bool:
+	return n.get_children().any(func(x): return x is MenuButton)
+
 func settle(frames: int = 30) -> void:
 	for i in frames:
 		await process_frame
@@ -164,7 +167,7 @@ func _init() -> void:
 	check("messages affichés", has_text(c._modal, "Bonjour") and has_text(c._modal, "Bob :") and has_text(c._modal, "Nv.3") and not has_text(c._modal, "(3)"))
 	check("balisage non interprété (texte brut)", has_text(c._modal, "Salut [b]tout[/b] le monde"))
 	check("onglets des trois salons", has_text(c._modal, "Général") and has_text(c._modal, "Français") and has_text(c._modal, "English"))
-	check("pas de menu sur ses propres messages", c._list.get_child(1).get_child_count() == 4 and c._list.get_child(0).get_child_count() == 5)
+	check("pas de menu sur ses propres messages", not has_menu(c._list.get_child(1)) and has_menu(c._list.get_child(0)))
 
 	# --- envoi
 	calls.clear()
