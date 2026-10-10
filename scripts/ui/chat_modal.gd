@@ -298,6 +298,9 @@ func _scroll_down() -> void:
 	if is_instance_valid(_scroll):
 		_scroll.scroll_vertical = int(_scroll.get_v_scroll_bar().max_value)
 
+const WHO_W := 128.0         ## largeur de la colonne « pseudo + niveau »
+const MENU_W := 30.0         ## largeur de la colonne du menu « ⋯ »
+
 func _row(m: Dictionary) -> Control:
 	var mine := str(m.get("player_id", "")) == Cloud.user_id()
 	var h := HBoxContainer.new()
@@ -311,17 +314,32 @@ func _row(m: Dictionary) -> Control:
 	if cs != "" and Color.html_is_valid(cs):
 		col = Color.html(cs)
 	var lvl := int(m.get("level", 0))
+	# colonnes fixes (heure, auteur, texte, menu) : le texte commence au même endroit sur toutes les lignes, quelle que soit la longueur du pseudo
+	var who_box := HBoxContainer.new()
+	who_box.add_theme_constant_override("separation", 4)
+	who_box.custom_minimum_size.x = WHO_W
+	who_box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var who := _label("%s :" % str(m.get("pseudo", "?")), GOLD if mine else col)
+	who.clip_text = true
+	who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	who.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	h.add_child(who)
+	who_box.add_child(who)
 	if lvl >= 2:
 		var lv := _label(L.t("ui.party_hud.nv") % lvl, UiTheme.DIM, 11)
 		lv.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		h.add_child(lv)
+		who_box.add_child(lv)
+	h.add_child(who_box)
 	var txt := _label(str(m.get("body", "")))      # texte brut : jamais de balisage interprété
-	txt.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART      # coupe entre les mots ; un mot trop long est coupé seulement si besoin
+	txt.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	txt.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(txt)
+	if mine:
+		var sp := Control.new()
+		sp.custom_minimum_size = Vector2(MENU_W, 0)
+		h.add_child(sp)
 	if not mine:
 		var mb := MenuButton.new()
 		mb.text = "⋯"
@@ -329,6 +347,14 @@ func _row(m: Dictionary) -> Control:
 		mb.focus_mode = Control.FOCUS_NONE
 		mb.tooltip_text = L.t("ui.chat.menu_tip")
 		mb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		mb.custom_minimum_size = Vector2(MENU_W, 0)
+		var empty := StyleBoxEmpty.new()          # bouton compact : il ne doit pas rendre la ligne plus haute que son texte
+		empty.content_margin_top = 0
+		empty.content_margin_bottom = 0
+		empty.content_margin_left = 4
+		empty.content_margin_right = 4
+		for sn in ["normal", "hover", "pressed", "focus", "disabled"]:
+			mb.add_theme_stylebox_override(sn, empty)
 		var pm := mb.get_popup()
 		pm.add_item(L.t("ui.chat.report"), 0)
 		pm.add_item(L.t("ui.chat.block"), 1)
