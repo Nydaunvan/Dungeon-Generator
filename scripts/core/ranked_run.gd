@@ -32,7 +32,7 @@ static func ranking_of(res: Dictionary) -> Dictionary:
 # ------------------------------------------------------------------ côté jeu
 
 ## Demande une partie classée au serveur. Renvoie {ok, run_id, seed, params} ou {ok:false, error_code…}.
-## `kind` : "difficulty" (par difficulté) ou "hardcore_month" (Hardcore du mois : un essai par jour).
+## `kind` : "difficulty" (par difficulté), "hardcore_month" (Hardcore du mois : un essai par jour) ou "weekly" (Défi de la semaine : règle spéciale, essais illimités).
 ## `test` : partie de TEST réservée aux super admins (le serveur refuse les autres) : hors classements, sans essai consommé.
 static func start(difficulty: String, kind: String = "difficulty", test: bool = false) -> Dictionary:
 	if not Cloud.is_signed_in():
@@ -44,6 +44,10 @@ static func start(difficulty: String, kind: String = "difficulty", test: bool = 
 	var d: Dictionary = r.data if r.data is Dictionary else {}
 	return {"ok": true, "run_id": str(d.get("run_id", "")), "seed": str(d.get("seed", "")), "params": d.get("params", {}),
 		"kind": kind, "period": str(d.get("period", "")), "test": test}
+
+## Règle et période du Défi de la semaine en cours (lecture publique) : {period, starts_at, ends_at, rule{rule_id, icon, label_fr/en, desc_fr/en, mods}, next{…}, levels, width, height, difficulty}.
+static func weekly_current() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/weekly_current", {})
 
 const PENDING_PATH := "user://ranked_pending.json"
 

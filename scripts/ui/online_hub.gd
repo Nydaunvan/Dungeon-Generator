@@ -6,10 +6,10 @@ extends RefCounted
 ## Rien ne défile en usage normal : chaque onglet tient dans la fenêtre (les lignes des classements s'adaptent à la hauteur disponible).
 
 const TABS := [["play", "ui.hub.tab_play", "🎮"], ["boards", "ui.hub.tab_boards", "🏆"], ["rewards", "ui.hub.tab_rewards", "🏅"], ["runs", "ui.hub.tab_runs", "📜"]]
-const MODES := ["free", "ranked", "hardcore"]
-const MODE_ICON := {"free": "🎲", "ranked": "🏆", "hardcore": "🔥"}
-const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "hardcore": "ui.hub.mode_hardcore"}
-const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "hardcore": "ui.hub.tag_hardcore"}
+const MODES := ["free", "ranked", "weekly", "hardcore"]
+const MODE_ICON := {"free": "🎲", "ranked": "🏆", "weekly": "📅", "hardcore": "🔥"}
+const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "weekly": "ui.hub.mode_weekly", "hardcore": "ui.hub.mode_hardcore"}
+const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "weekly": "ui.hub.tag_weekly", "hardcore": "ui.hub.tag_hardcore"}
 const XP_MULT := {"easy": "×1", "normal": "×1,5", "hard": "×2", "hardcore": "×3"}
 const STATUS_KEYS := {"started": "ui.hub.st_started", "submitted": "ui.hub.st_submitted", "verified": "ui.hub.st_verified",
 	"rejected": "ui.hub.st_rejected", "expired": "ui.hub.st_expired"}
@@ -28,6 +28,7 @@ var _body: VBoxContainer
 var _strip_box: VBoxContainer
 var _tab_buttons: Dictionary = {}
 var _xp := -1
+var _weekly: Dictionary = {}     ## règle de la semaine (RankedRun.weekly_current), vide tant qu'elle n'est pas lue
 var _runs: Array = []
 var _runs_ok := false
 var _width := 760.0
@@ -188,8 +189,10 @@ func _load_xp() -> void:
 # ------------------------------------------------------------------ onglet Jouer
 
 func _show_play() -> void:
-	var tiles := (HBoxContainer.new() if not _narrow() else VBoxContainer.new()) as BoxContainer
-	tiles.add_theme_constant_override("separation", 8)
+	var tiles := GridContainer.new()
+	tiles.columns = 4 if _width >= 900.0 else (2 if not _narrow() else 1)
+	tiles.add_theme_constant_override("h_separation", 8)
+	tiles.add_theme_constant_override("v_separation", 8)
 	tiles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_child(tiles)
 	for m in MODES:
@@ -199,7 +202,7 @@ func _show_play() -> void:
 	var box := HubKit.vbox(8)
 	detail.add_child(box)
 	_fill_mode(box)
-	if (_mode == "hardcore" or _mode == "ranked") and _signed() and not _runs_ok:
+	if (_mode == "hardcore" or _mode == "ranked" or _mode == "weekly") and _signed() and not _runs_ok:
 		_load_runs_for_play()
 
 func _tile(m: String) -> Button:
@@ -276,6 +279,22 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.ranked_tries")],
 			], cols)
+		"weekly":
+			box.add_child(HubKit.label("📅  " + L.t("ui.hub.mode_weekly"), GOLD, 20, true, false))
+			box.add_child(HubKit.label(L.t("ui.hub.weekly_desc"), UiTheme.PARCH, 14))
+			var rule_box := HubKit.card(Color("7a5a2c"), Color(0.2, 0.14, 0.05, 0.45), 12)
+			rule_box.name = "RuleCard"
+			box.add_child(rule_box)
+			_cta(box, "weekly")
+			HubKit.facts(box, [
+				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.weekly_dungeon")],
+				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.weekly_tries")],
+				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
+				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.weekly_board")],
+				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.weekly_reward")],
+				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
+			], cols)
+			_load_weekly(rule_box, _gen)
 		"hardcore":
 			var key := _month_key()
 			box.add_child(HubKit.label("🔥  " + L.fa(L.t("ui.hub.hc_title"), key.substr(5) + "/" + key.substr(0, 4)), HubKit.FIRE, 20, true, false))
@@ -289,6 +308,49 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["🎖", L.t("ui.hub.f_reward"), L.t("ui.hub.hc_reward")],
 				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 			], cols)
+
+## Lit (une fois) la règle de la semaine et remplit sa carte.
+func _load_weekly(card: Control, mine: int) -> void:
+	var v := HubKit.vbox(4)
+	card.add_child(v)
+	if _weekly.is_empty():
+		var wait := _wait(v)
+		var r: Dictionary = await RankedRun.weekly_current()
+		if mine != _gen or not _alive():
+			return
+		wait.queue_free()
+		if not r.ok or not (r.data is Dictionary):
+			_error(v, r)
+			return
+		_weekly = r.data
+	var rule: Dictionary = _weekly.get("rule", {})
+	var en := TranslationServer.get_locale().begins_with("en")
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	v.add_child(head)
+	head.add_child(HubKit.label(str(rule.get("icon", "")), UiTheme.PARCH, 34, false, false, HORIZONTAL_ALIGNMENT_CENTER))
+	var t := HubKit.vbox(0)
+	head.add_child(t)
+	t.add_child(HubKit.label(L.t("ui.hub.weekly_rule") + " · " + L.fa(L.t("ui.hub.weekly_week"), str(_weekly.get("period", "")).get_slice("W", 1)), UiTheme.DIM, 12))
+	t.add_child(HubKit.label(str(rule.get("label_en" if en else "label_fr", "")), GOLD, 20, true))
+	v.add_child(HubKit.label(str(rule.get("desc_en" if en else "desc_fr", "")), UiTheme.PARCH, 14))
+	var foot := L.fa(L.t("ui.hub.weekly_ends"), _remaining(str(_weekly.get("ends_at", ""))))
+	var nx: Dictionary = _weekly.get("next", {})
+	if not nx.is_empty():
+		foot += "   ·   " + L.fa(L.t("ui.hub.weekly_next"), "%s %s" % [str(nx.get("icon", "")), str(nx.get("label_en" if en else "label_fr", ""))])
+	v.add_child(HubKit.label(foot, UiTheme.DIM, 12))
+	_modal.call_deferred("_fit")
+
+## Temps restant avant une date ISO (UTC) : « 3 jours », « 5 heures »…
+func _remaining(iso: String) -> String:
+	if iso.length() < 19:
+		return "—"
+	var left := int(Time.get_unix_time_from_datetime_string(iso.substr(0, 19)) - Time.get_unix_time_from_system())
+	if left <= 0:
+		return "—"
+	if left >= 86400:
+		return L.fa(L.t("ui.hub.weekly_days"), int(ceil(left / 86400.0)))
+	return L.fa(L.t("ui.hub.weekly_hours"), maxi(1, int(ceil(left / 3600.0))))
 
 func _month_key() -> String:
 	var d := Time.get_datetime_dict_from_system()
@@ -307,7 +369,7 @@ func _cta(box: VBoxContainer, mode: String) -> void:
 		status.add_theme_color_override("font_color", HubKit.WARN)
 		box.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 46))
 		return
-	var b := HubKit.button(L.t("ui.hub.ranked_play") if mode == "ranked" else L.t("ui.hub.hc_play"), func(): _ask(mode), true, 46)
+	var b := HubKit.button(L.t("ui.hub.ranked_play") if mode == "ranked" else (L.t("ui.hub.weekly_play") if mode == "weekly" else L.t("ui.hub.hc_play")), func(): _ask(mode), true, 46)
 	b.name = "CtaButton"
 	box.add_child(b)
 	_update_cta()
@@ -338,7 +400,7 @@ func _update_cta() -> void:
 			for r in _runs:
 				if str(r.get("status", "")) == "submitted":
 					pending += 1
-		status.text = L.fa(L.t("ui.hub.pending"), pending) if pending > 0 else ""
+		status.text = L.fa(L.t("ui.hub.pending"), pending) if pending > 0 else (L.t("ui.hub.weekly_status") if _mode == "weekly" else "")
 
 func _load_runs_for_play() -> void:
 	var mine := _gen
@@ -358,7 +420,11 @@ func _load_runs_for_play() -> void:
 	_update_cta()
 
 func _ask(mode: String) -> void:
-	if mode == "hardcore":
+	if mode == "weekly":
+		var rule: Dictionary = _weekly.get("rule", {})
+		var rname := str(rule.get("label_en" if TranslationServer.get_locale().begins_with("en") else "label_fr", ""))
+		Dialogs.confirm(_host, L.t("ui.hub.weekly_play"), L.fa(L.t("ui.hub.weekly_confirm"), rname), func(): _start("normal", "weekly"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
+	elif mode == "hardcore":
 		Dialogs.confirm(_host, L.t("ui.hub.hc_play"), L.t("ui.hub.hc_confirm"), func(): _start("hardcore", "hardcore_month"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 	else:
 		Dialogs.confirm(_host, L.t("ui.hub.ranked_play"), L.fa(L.t("ui.hub.ranked_confirm"), L.t(ChallengesModal.DIFF_KEYS[_diff])),
@@ -392,7 +458,7 @@ func _show_boards() -> void:
 	_body.add_child(card)
 	var box := HubKit.vbox(4)
 	card.add_child(box)
-	var intro: String = {"free": "ui.hub.bd_free", "ranked": "ui.hub.bd_ranked", "hardcore": "ui.hub.bd_hardcore"}[_src]
+	var intro: String = {"free": "ui.hub.bd_free", "ranked": "ui.hub.bd_ranked", "weekly": "ui.hub.bd_weekly", "hardcore": "ui.hub.bd_hardcore"}[_src]
 	box.add_child(HubKit.label(L.t(intro), UiTheme.DIM, 12))
 	var wait := _wait(box)
 	_load_board(box, wait, _gen)
@@ -435,6 +501,23 @@ func _load_board(box: VBoxContainer, wait: Label, mine: int) -> void:
 				rows = rr.data if rr.data is Array else []
 			else:
 				err = rr
+		"weekly":
+			if _weekly.is_empty():
+				var wr: Dictionary = await RankedRun.weekly_current()
+				if mine != _gen or not _alive():
+					return
+				if wr.ok and wr.data is Dictionary:
+					_weekly = wr.data
+			if _weekly.is_empty():
+				err = {"ok": false, "error_code": "generic", "message": L.t("ui.hub.weekly_unknown")}
+			else:
+				var kr: Dictionary = await RankedRun.period_board("weekly", str(_weekly.get("period", "")))
+				if mine != _gen or not _alive():
+					return
+				if kr.ok:
+					rows = kr.data if kr.data is Array else []
+				else:
+					err = kr
 		"hardcore":
 			var hr: Dictionary = await RankedRun.period_board("hardcore_month", _month_key())
 			if mine != _gen or not _alive():
@@ -448,7 +531,7 @@ func _load_board(box: VBoxContainer, wait: Label, mine: int) -> void:
 		_error(box, err)
 		return
 	if rows.is_empty():
-		box.add_child(HubKit.label(L.t("ui.challenges.empty_board") if _src == "free" else (L.t("ui.ranked.empty") if _src == "ranked" else L.t("ui.challenges.hc_empty")), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
+		box.add_child(HubKit.label(L.t("ui.challenges.empty_board") if _src == "free" else (L.t("ui.ranked.empty") if _src == "ranked" else (L.t("ui.hub.weekly_empty") if _src == "weekly" else L.t("ui.challenges.hc_empty"))), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
 		_modal.call_deferred("_fit")
 		return
 	_board_table(box, rows, unit)

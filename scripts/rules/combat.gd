@@ -285,6 +285,9 @@ func cooldown_left(caster: Dictionary, spell_id: String) -> float:
 func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free: bool = false) -> bool:
 	if gs.game_over or gs.won:
 		return false
+	if not free and bool(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).noSpells):
+		gs.add_log(L.t("rules.combat.sorts_interdits_defi"), true)       # règle « Armes seules » du Défi de la semaine
+		return false
 	var spell := spell_def(spell_id)
 	if spell.is_empty() or (not free and not (caster.get("spellsKnown", []) as Array).has(spell_id)):
 		gs.add_log(L.fa(L.t("rules.combat.ne_connait_pas_ce_sort"), caster.name))

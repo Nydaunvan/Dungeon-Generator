@@ -221,6 +221,47 @@
    "descEn": "Party critical hit chance +15%, but party max HP -20%.",
    "critChanceBonus": 15,
    "hpMult": 0.8
+  },
+  {
+   "id": "mod_glass",
+   "icon": "🥂",
+   "labelFr": "Verre brisé",
+   "labelEn": "Glass Cannon",
+   "descFr": "PV max du groupe -50 %. Un seul faux pas peut être fatal.",
+   "descEn": "Party max HP -50%. A single misstep can be fatal.",
+   "hpMult": 0.5,
+   "weeklyOnly": true
+  },
+  {
+   "id": "mod_frenzy",
+   "icon": "🌪️",
+   "labelFr": "Vitesse folle",
+   "labelEn": "Frenzy",
+   "descFr": "Les monstres attaquent deux fois plus vite.",
+   "descEn": "Monsters attack twice as fast.",
+   "attackSpeedMult": 0.5,
+   "weeklyOnly": true
+  },
+  {
+   "id": "mod_solo",
+   "icon": "🧍",
+   "labelFr": "Héros solitaire",
+   "labelEn": "Lone Hero",
+   "descFr": "Un seul héros part à l'aventure, avec deux fois plus de PV.",
+   "descEn": "A single hero ventures forth, with twice the HP.",
+   "soloParty": true,
+   "hpMult": 2.0,
+   "weeklyOnly": true
+  },
+  {
+   "id": "mod_nospells",
+   "icon": "🗡️",
+   "labelFr": "Armes seules",
+   "labelEn": "Steel Only",
+   "descFr": "Aucun sort ni capacité : seules les armes comptent.",
+   "descEn": "No spells or abilities: only weapons count.",
+   "noSpells": true,
+   "weeklyOnly": true
   }
  ],
  "MON_HEIGHTS": [

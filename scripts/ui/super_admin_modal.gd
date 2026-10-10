@@ -176,6 +176,8 @@ static func date(v: Variant) -> String:
 static func mode_name(difficulty: String, kind: String = "difficulty") -> String:
 	if kind == "hardcore_month":
 		return L.t("ui.sadmin.mode_month")
+	if kind == "weekly":
+		return L.t("ui.hub.mode_weekly")
 	if ChallengesModal.DIFF_KEYS.has(difficulty):
 		return L.t(ChallengesModal.DIFF_KEYS[difficulty])
 	return difficulty
@@ -197,6 +199,8 @@ func _build_tests() -> void:
 		_test_button(grid, L.t("ui.sadmin.test_start") % L.t(ChallengesModal.DIFF_KEYS[d]), d, "difficulty")
 	var hc := _test_button(grid, L.t("ui.sadmin.test_month"), "hardcore", "hardcore_month")
 	hc.tooltip_text = L.t("ui.sadmin.test_month_hint")
+	var wk := _test_button(grid, L.t("ui.sadmin.test_weekly"), "normal", "weekly")
+	wk.tooltip_text = L.t("ui.sadmin.test_weekly_hint")
 	_status = Form.status_label(_body)
 	_note(_body, L.t("ui.sadmin.test_month_hint"))
 	var purge := Button.new()

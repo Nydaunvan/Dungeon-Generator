@@ -823,6 +823,8 @@ func _leave_ranked() -> void:
 	var header: Array = [[L.fa(L.t("ui.leave.ranked_levels"), cleared), UiTheme.GOLD, 18], [L.t("ui.leave.ranked_intro"), UiTheme.PARCH, 14]]
 	if str(gs.cfg.get("rankedKind", "")) == "hardcore_month":
 		header.append([L.t("ui.leave.hc_note"), Color("e0b87a"), 13])
+	elif str(gs.cfg.get("rankedKind", "")) == "weekly":
+		header.append([L.t("ui.leave.weekly_note"), Color("9cc79a"), 13])
 	var opts: Array = [
 		{"icon": "⏸", "title": L.t("ui.leave.opt_pause_t"), "desc": L.t("ui.leave.opt_pause_d"), "btn": L.t("ui.leave.opt_pause_b"), "primary": true, "cb": func():
 			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},

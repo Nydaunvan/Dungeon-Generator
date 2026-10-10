@@ -68,15 +68,20 @@ static func rand_f1(a: float, b: float) -> float:
 static func title() -> String:
 	return L.t("rules.dungeon_generator.les").format({"noun": L.c(choice(TITLE_NOUNS)), "adj": L.c(choice(TITLE_ADJ)), "place": L.c(choice(TITLE_PLACES))})
 
+## Modificateurs proposés au joueur (les règles propres au Défi de la semaine, `weeklyOnly`, n'y figurent pas).
 static func run_modifiers() -> Array:
+	return all_modifiers().filter(func(m): return not bool(m.get("weeklyOnly", false)))
+
+## Tous les modificateurs connus du jeu (choisis par le joueur ou imposés par le serveur).
+static func all_modifiers() -> Array:
 	return Data.constants.get("RUN_MODIFIERS", [])
 
 ## Effets cumulés des modificateurs d'expédition choisis (ids).
 static func combine_mods(ids: Array) -> Dictionary:
 	var eff := {"attackSpeedMult": 1.0, "xpMult": 1.0, "goldMult": 1.0, "monsterCountMult": 1.0, "itemMult": 1.0, "staminaMult": 1.0,
-		"hpMult": 1.0, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "noFountains": false, "forceLegendary": false, "fogMinimap": false}
+		"hpMult": 1.0, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
 	for id in ids:
-		for m in run_modifiers():
+		for m in all_modifiers():
 			if m.id != id:
 				continue
 			for k in ["attackSpeedMult", "xpMult", "goldMult", "monsterCountMult", "itemMult", "staminaMult", "hpMult", "groupChanceMult"]:
@@ -84,7 +89,7 @@ static func combine_mods(ids: Array) -> Dictionary:
 					eff[k] = float(eff[k]) * float(m[k])
 			if m.has("critChanceBonus"):
 				eff["critChanceBonus"] = float(eff["critChanceBonus"]) + float(m.critChanceBonus)
-			for k in ["noFountains", "forceLegendary", "fogMinimap"]:
+			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells"]:
 				if m.get(k, false):
 					eff[k] = true
 	return eff
@@ -852,6 +857,8 @@ static func build_config(base: Dictionary, num_levels: int, width: int, height: 
 	var c: Dictionary = base.duplicate(true)
 	var gen := DungeonGenerator.new(c, diff, run, mods)
 	c["party"] = generate_party(c, diff)
+	if bool(gen.mod.soloParty) and (c["party"] as Array).size() > 1:
+		c["party"] = (c["party"] as Array).slice(0, 1)        # « Héros solitaire » : le tirage du groupe est le même, seul le premier part
 	c["levels"] = gen.levels(num_levels, width, height)
 	c["title"] = title()
 	c["genDifficulty"] = diff
