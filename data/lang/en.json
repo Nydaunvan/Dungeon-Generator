@@ -1866,7 +1866,8 @@
   "ui.pause.resume": "Resume (P)",
   "ui.pause.tip": "Freezes the game for a screenshot (temporary test tool).",
   "ui.pause.ranked": "Pause is unavailable in a ranked run: game time counts toward the ranking.",
-  "common.retour": "Back"
+  "common.retour": "Back",
+  "ui.pause.resume_hint": "Paused — click, P or Esc to resume"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
