@@ -215,6 +215,8 @@ func card_pressed(char_id: String) -> void:
 
 ## Choisit le personnage actif (hors combat) : journalisé quand il change.
 func select_char(char_id: String) -> void:
+	if gs.char_by_id(char_id).is_empty() or model_in_combat():
+		return
 	if gs.active_char_id != char_id:
 		RunLog.rec("sel", char_id)
 		gs.active_char_id = char_id

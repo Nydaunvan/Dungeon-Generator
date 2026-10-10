@@ -21,7 +21,7 @@ var _tok_on := false
 
 func begin() -> void:
 	_path = TrapRules.make_tiles(rows, COLS)
-	_mirror = twists and randf() < 0.5
+	_mirror = twists and GameRng.f("trap") < 0.5
 	_animated = true
 	set_process(true)
 	status.emit(L.t("ui.trap_puzzle.dalles_miroir") if _mirror else L.t("ui.trap_puzzle.dalles_observez"))
@@ -80,7 +80,7 @@ func _gui_input(ev: InputEvent) -> void:
 	elif ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and _input and not done:
 		var h2 := _at(ev.position)
 		if h2.x == _cur:
-			_step(h2.y)
+			submit(h2.y)
 
 func _at(p: Vector2) -> Vector2i:
 	for r in rows:
@@ -88,6 +88,13 @@ func _at(p: Vector2) -> Vector2i:
 			if _rc(r, c).has_point(p):
 				return Vector2i(r, c)
 	return Vector2i(-1, -1)
+
+func accepts() -> bool:
+	return _input and not done
+
+func inject(c: int) -> void:
+	if c >= 0 and c < COLS:
+		_step(c)
 
 func _step(c: int) -> void:
 	var r := _cur

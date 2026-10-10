@@ -23,6 +23,8 @@ var _puzzle := ""
 var _probe := 0.0
 var _res: Dictionary = {"disarm": false, "hits": [], "reward": {}, "sta": {}, "sac_idx": -1}
 var _busy := false
+var _stage := "choose"            # choose | sacrifice | roll | puzzle | after : étape en cours (sert à accepter ou refuser une entrée)
+var _pz: TrapPuzzle = null
 
 var _shaker: Control
 var _panel: PanelContainer
@@ -192,23 +194,15 @@ func _build() -> void:
 	var pen_txt := str(int(pen)) if is_equal_approx(pen, round(pen)) else str(snappedf(pen, 0.1))
 	_skip = _button(L.fa(L.t("ui.trap_modal.passer_penalite"), pen_txt), false)
 	_skip.tooltip_text = L.fa(L.t("ui.trap_modal.passer_tip"), pen_txt)
-	_skip.pressed.connect(func():
-		if _busy:
-			return
-		queue_free()
-		skipped.emit())
+	_skip.pressed.connect(func(): Flows.input("trap", ["skip"]))
 	_foot.add_child(_skip)
 	_back = _button(L.t("ui.trap_modal.retour"), false)
 	_back.visible = false
-	_back.pressed.connect(func(): _stage_choose())
+	_back.pressed.connect(func(): Flows.input("trap", ["back"]))
 	_foot.add_child(_back)
 	_cont = _button(L.t("common.continuer"), true)
 	_cont.visible = false
-	_cont.pressed.connect(func():
-		if _next.is_valid():
-			var cb := _next
-			_next = Callable()
-			cb.call())
+	_cont.pressed.connect(func(): Flows.input("trap", ["next"]))
 	_foot.add_child(_cont)
 	_sparks = Control.new()
 	_sparks.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -279,7 +273,60 @@ func _foot_show(skip: bool, back: bool, cont: bool) -> void:
 
 # ------------------------------------------------------------------ étape 1 : le choix
 
+## L'entrée du joueur est-elle acceptable à cet instant ? (sinon elle n'est ni journalisée ni appliquée)
+func can_input(a: Array) -> bool:
+	if a.is_empty():
+		return false
+	match str(a[0]):
+		"skip":
+			return _stage == "choose" and not _busy
+		"method":
+			return _stage == "choose" and not _busy and a.size() > 1 and _methods.has(str(a[1])) \
+				and not (str(a[1]) == "sacrifice" and TrapRules.sacrifice_candidates(_gs).is_empty())
+		"puzzle":
+			return _stage == "choose" and not _busy and _puzzle != ""
+		"sac":
+			return _stage == "sacrifice" and not _busy and a.size() > 1 and TrapRules.sacrifice_candidates(_gs).has(int(a[1]))
+		"back":
+			return _stage == "sacrifice" and not _busy
+		"next":
+			return _stage == "after" and _next.is_valid()
+		"pz":
+			return _stage == "puzzle" and _pz != null and a.size() > 1 and _pz.accepts()
+	return false
+
+## Applique une entrée acceptée (voir can_input) ; appelé par Flows, en direct comme au rejeu.
+func apply_input(a: Array) -> void:
+	match str(a[0]):
+		"skip":
+			Flows.close("trap")
+			queue_free()
+			skipped.emit()
+		"method": _pick_method(str(a[1]))
+		"puzzle": _stage_puzzle()
+		"sac":
+			var idx := int(a[1])
+			_do_sacrifice(idx, _gs.inventory[idx])
+		"back": _stage_choose()
+		"next":
+			var cb := _next
+			_next = Callable()
+			cb.call()
+		"pz": _pz.inject(int(a[1]))
+
+## Prêt à recevoir la prochaine entrée (le rejeu attend ce moment, comme un joueur qui attend que les boutons soient actifs).
+func ready_for_input() -> bool:
+	match _stage:
+		"choose", "sacrifice":
+			return not _busy
+		"after":
+			return _next.is_valid()
+		"puzzle":
+			return _pz != null and _pz.accepts()
+	return false
+
 func _stage_choose() -> void:
+	_stage = "choose"
 	_busy = false
 	_clear_body()
 	_set_glow(Color(0, 0, 0), 34, 0.65, 34, 0.65, false)
@@ -394,7 +441,7 @@ func _method_card(id: String, idx: int) -> Button:
 	elif id == "dispel":
 		tip += "\n" + L.fa(L.t("ui.trap_method.cout_endurance"), int(_s.dispelStaCost))
 	var b := _card(str(d.icon), L.t("ui.trap_method.name_%s" % str(id)), sub, "%d %%" % ch, L.t("ui.trap_modal.chance_court"), _chance_color(ch), tip, idx)
-	b.pressed.connect(func(): _pick_method(id))
+	b.pressed.connect(func(): Flows.input("trap", ["method", id]))
 	if id == "sacrifice" and TrapRules.sacrifice_candidates(_gs).is_empty():
 		b.disabled = true
 		b.modulate = Color(1, 1, 1, 0.5)
@@ -404,7 +451,7 @@ func _method_card(id: String, idx: int) -> Button:
 func _puzzle_card(idx: int) -> Button:
 	var b := _card(str(TrapRules.PUZZLE_ICONS[_puzzle]), L.t("ui.trap_puzzle.name_%s" % str(_puzzle)), L.t("ui.trap_puzzle.sub_%s" % str(_puzzle)),
 		L.t("ui.trap_modal.puzzle"), L.t("ui.trap_modal.recompense_plus"), Color("8fd0ff"), L.t("ui.trap_puzzle.tip_%s" % str(_puzzle)), idx)
-	b.pressed.connect(func(): _stage_puzzle())
+	b.pressed.connect(func(): Flows.input("trap", ["puzzle"]))
 	return b
 
 func _disarm_tip() -> String:
@@ -437,6 +484,7 @@ func _pick_method(id: String) -> void:
 # ------------------------------------------------------------------ étape : sacrifice
 
 func _stage_sacrifice() -> void:
+	_stage = "sacrifice"
 	_clear_body()
 	_body.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_body.add_child(_lbl(L.t("ui.trap_modal.sacrifice_choisir"), 15, GOLD_BRIGHT, UiTheme.F_BODY_BOLD))
@@ -452,7 +500,7 @@ func _stage_sacrifice() -> void:
 		var it: Dictionary = _gs.inventory[idx]
 		var b := _card(_item_icon(it), L.c(str(it.get("name", "?"))), L.t("ui.trap_modal.sacrifice_consomme"), "", "", GOLD_BRIGHT, "", 0)
 		b.custom_minimum_size = Vector2(0, 44)
-		b.pressed.connect(func(): _do_sacrifice(idx, it))
+		b.pressed.connect(func(): Flows.input("trap", ["sac", idx]))
 		lv.add_child(b)
 	_foot_show(false, true, false)
 
@@ -460,6 +508,7 @@ func _item_icon(it: Dictionary) -> String:
 	return "🧪" if str(it.get("type", "")) == "potion" else "📜"
 
 func _do_sacrifice(idx: int, it: Dictionary) -> void:
+	_stage = "roll"
 	_busy = true
 	_res.sac_idx = idx
 	_res.disarm = true
@@ -480,6 +529,7 @@ func _do_sacrifice(idx: int, it: Dictionary) -> void:
 # ------------------------------------------------------------------ étape : jet de dé
 
 func _stage_roll(id: String) -> void:
+	_stage = "roll"
 	_busy = true
 	_clear_body()
 	_body.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -500,7 +550,7 @@ func _stage_roll(id: String) -> void:
 	_result.custom_minimum_size.y = 32
 	_body.add_child(_result)
 	_foot_show(false, false, false)
-	var roll := randi_range(1, 20)
+	var roll := GameRng.range_i("trap", 1, 20)
 	var ok := roll == 20 or (roll != 1 and roll >= thr)
 	if ch >= 100:
 		ok = true
@@ -610,6 +660,7 @@ func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dicti
 	_die.queue_redraw()
 	if id == "probe":
 		_busy = false
+		_stage = "after"
 		_foot_show(false, false, true)
 		_next = func(): _stage_choose()
 		return
@@ -617,6 +668,8 @@ func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dicti
 
 ## Fin d'une méthode qui résout le piège : récompense éventuelle, puis « Continuer » → résultat renvoyé au jeu.
 func _end_with(msg: String, col: Color, reward_src: String, _kind: String, keep_text: bool = false) -> void:
+	_stage = "after"
+	_pz = null
 	if not keep_text:
 		_status.text = msg
 		_status.add_theme_color_override("font_color", col)
@@ -628,6 +681,7 @@ func _end_with(msg: String, col: Color, reward_src: String, _kind: String, keep_
 		_next = func(): _stage_reward()
 
 func _finish() -> void:
+	Flows.close("trap")
 	queue_free()
 	resolved.emit(_res)
 
@@ -659,11 +713,13 @@ func _show_hits() -> void:
 # ------------------------------------------------------------------ étape : puzzle
 
 func _stage_puzzle() -> void:
+	_stage = "puzzle"
 	_busy = true
 	_clear_body()
 	_body.alignment = BoxContainer.ALIGNMENT_CENTER
 	_body.add_child(_lbl("%s %s" % [TrapRules.PUZZLE_ICONS[_puzzle], L.t("ui.trap_puzzle.name_%s" % str(_puzzle))], 17, Color("8fd0ff"), UiTheme.F_BODY_BOLD))
 	var pz := TrapPuzzle.make(_puzzle, _s)
+	_pz = pz
 	var holder := CenterContainer.new()
 	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	holder.add_child(pz)

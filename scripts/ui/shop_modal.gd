@@ -170,7 +170,33 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 		_fill_detail(detail, gs, offers, st, cur, buy, village, done, refresh)
 		m.call_deferred("_fit")
 	refresh.call()
-	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
+	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): Flows.input("shop", ["close"])}])
+	Flows.open("shop", m, func(a: Variant):
+		var arr: Array = a
+		if str(arr[0]) == "close":
+			Flows.close("shop")
+			if is_instance_valid(m) and not m.is_queued_for_deletion():
+				m.close()
+			return
+		var buy_b := str(arr[0]) == "buy"
+		var res := transact(gs, offers, buy_b, arr[1])
+		if st.has("gk"):
+			st.qty.erase(st.gk)
+			st.erase("gk")
+		st.sel = ""
+		var ok_text := ""
+		if int(res.bought) > 0:
+			ok_text = L.fa(L.t("ui.shop_modal.achat_ok") if buy_b else L.t("ui.shop_modal.vente_ok"), [int(res.bought), L.c(str(res.name))])
+		done.call(str(res.err) if int(res.bought) == 0 else "", ok_text),
+		["close"],
+		func(a: Variant):
+			if not (a is Array) or (a as Array).is_empty():
+				return false
+			match str((a as Array)[0]):
+				"close": return true
+				"buy": return (a as Array).size() > 1 and valid_take(gs, offers, true, (a as Array)[1])
+				"sell": return (a as Array).size() > 1 and valid_take(gs, offers, false, (a as Array)[1])
+			return false)
 	# la largeur de la grille n'est connue qu'après la mise en page : on la recalcule une fois
 	m.call_deferred("_fit")
 	host.get_tree().create_timer(0.05).timeout.connect(func():
@@ -498,27 +524,9 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	act.disabled = reason != ""
 	var take: Array = idxs.slice(0, qty)
 	act.pressed.connect(func():
-		var err := ""
-		take.sort()
-		take.reverse()   # indices décroissants : les retraits ne décalent pas les suivants
-		var bought := 0
-		var paid := 0
-		var rep_name := str(offers[int(take[0])].get("name", "")) if buy else str(gs.inventory[int(take[0])].get("name", ""))
-		for ix in take:
-			var unit_p := int(offers[int(ix)].get("price", 0)) if buy else Shop.sell_price(gs.inventory[int(ix)])
-			err = Shop.buy(gs, offers, int(ix), true) if buy else Shop.sell(gs, int(ix), true)
-			if err != "":
-				if buy and err.contains("plein"):
-					gs.add_log(err.trim_suffix(".") + L.t("ui.shop_modal.impossible_acheter_davantage"))
-				break
-			bought += 1
-			paid += unit_p
-		if bought > 0:
-			gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [L.t("ui.shop_modal.le_groupe_achete") if buy else L.t("ui.shop_modal.le_groupe_vend"), "%d× " % bought if bought > 1 else "", rep_name, paid]))
-			Sound.coins()
-		st.qty.erase(gk)
-		st.sel = ""
-		done.call(err if bought == 0 else "", L.fa(L.t("ui.shop_modal.achat_ok") if buy else L.t("ui.shop_modal.vente_ok"), [bought, L.c(rep_name)]) if bought > 0 else ""))
+		st["gk"] = gk         # (présentation : quantité à remettre à zéro après la transaction)
+		if not Flows.input("shop", ["buy" if buy else "sell", take.duplicate()]):
+			st.erase("gk"))
 	box.add_child(act)
 	if reason != "":
 		var rl := AdminUtil.label(reason, 13, RED)
@@ -530,6 +538,45 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 		box.add_child(il)
 	if str(st.msg) != "":
 		_msg(box, st)
+
+## Transaction de la boutique (achat ou vente d'un lot d'objets) : toute la logique est ici, l'interface ne fait que l'afficher.
+## Renvoie {err, bought, paid, name}.
+static func transact(gs: GameState, offers: Array, buy: bool, take_in: Array) -> Dictionary:
+	var take: Array = take_in.duplicate()
+	take.sort()
+	take.reverse()   # indices décroissants : les retraits ne décalent pas les suivants
+	var err := ""
+	var bought := 0
+	var paid := 0
+	var rep_name := str(offers[int(take[0])].get("name", "")) if buy else str(gs.inventory[int(take[0])].get("name", ""))
+	for ix in take:
+		var unit_p := int(offers[int(ix)].get("price", 0)) if buy else Shop.sell_price(gs.inventory[int(ix)])
+		err = Shop.buy(gs, offers, int(ix), true) if buy else Shop.sell(gs, int(ix), true)
+		if err != "":
+			if buy and err.contains("plein"):
+				gs.add_log(err.trim_suffix(".") + L.t("ui.shop_modal.impossible_acheter_davantage"))
+			break
+		bought += 1
+		paid += unit_p
+	if bought > 0:
+		gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [L.t("ui.shop_modal.le_groupe_achete") if buy else L.t("ui.shop_modal.le_groupe_vend"), "%d× " % bought if bought > 1 else "", rep_name, paid]))
+		Sound.coins()
+	return {"err": err, "bought": bought, "paid": paid, "name": rep_name}
+
+## Une transaction est-elle bien formée ? (indices entiers, distincts, existants ; jamais une clé à la vente)
+static func valid_take(gs: GameState, offers: Array, buy: bool, take: Variant) -> bool:
+	if not (take is Array) or (take as Array).is_empty():
+		return false
+	var seen := {}
+	for ix in take:
+		if typeof(ix) != TYPE_INT or seen.has(ix) or ix < 0:
+			return false
+		seen[ix] = true
+		if buy and ix >= offers.size():
+			return false
+		if not buy and (ix >= gs.inventory.size() or str(gs.inventory[ix].get("type", "")) == "key"):
+			return false
+	return true
 
 static func _msg(box: Control, st: Dictionary) -> void:
 	var l := AdminUtil.label(str(st.msg), 13, UiTheme.HP_GREEN if st.ok else RED)

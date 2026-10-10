@@ -834,7 +834,7 @@ func _slot_clicked(slot: String) -> void:
 
 func _sort_clicked() -> void:
 	sort_mode = (sort_mode + 1) % Inventory.SORT_MODES.size()
-	Inventory.sort_tab(gs, tab, str(Inventory.SORT_MODES[sort_mode]))
+	Actions.sort(tab, str(Inventory.SORT_MODES[sort_mode]))
 	sel = {}
 	bag_changed.emit()
 	_render()
@@ -850,12 +850,12 @@ func _quick(idx: int) -> void:
 		_equip(idx)
 
 func _equip(idx: int) -> void:
-	if Inventory.equip(gs, gs.char_by_id(char_id), idx):
+	if Actions.equip(char_id, idx):
 		sel = {}
 		_after()
 
 func _unequip(slot: String) -> void:
-	if Inventory.unequip(gs, gs.char_by_id(char_id), slot):
+	if Actions.unequip(char_id, slot):
 		sel = {}
 		_after()
 
@@ -864,20 +864,19 @@ func _discard(idx: int) -> void:
 		return
 	var it: Dictionary = gs.inventory[idx]
 	if str(it.get("type", "")) == "key":
-		Inventory.discard(gs, idx)
+		Actions.discard(idx)
 		_after()
 		return
 	var scene := get_tree().current_scene
 	Dialogs.confirm(scene._modals() if scene.has_method("_modals") else scene, L.t("ui.equip_dock.jeter"), L.fa(L.t("ui.equip_dock.jeter_definitivement"), it.get("name", "")), func():
-		if Inventory.discard(gs, idx):
+		if Actions.discard(idx):
 			sel = {}
 			_after(), L.t("common.confirmer"), L.t("common.annuler"))
 
 func _use_potion(idx: int) -> void:
-	var healed := Inventory.use_potion(gs, gs.char_by_id(char_id), idx)
+	var healed := Actions.drink(char_id, idx)
 	if healed >= 0:
 		sel = {}
-		ctrl.potion_drunk(char_id, healed)
 		bag_changed.emit()
 		_render()
 

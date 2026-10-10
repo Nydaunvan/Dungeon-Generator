@@ -79,6 +79,7 @@ func _ready() -> void:
 	ctrl = CombatController.new()
 	add_child(ctrl)
 	ctrl.setup(gs, rig)
+	Actions.setup(gs, ctrl)
 	ctrl.popup.connect(_show_popup)
 	ctrl.game_over.connect(_on_game_over)
 	ctrl.combat_won.connect(_show_combat_summary)
@@ -462,7 +463,7 @@ func _interact() -> void:
 	var f := _front()
 	var ch := grid.cell(f.x, f.y)
 	if ch == "D":
-		if grid.opened.has(str(grid.door_at(f.x, f.y).get("id", ""))):
+		if grid.is_open(str(grid.door_at(f.x, f.y).get("id", ""))):
 			show_message(L.t("main.la_porte_est_deja_ouverte"))
 		else:
 			inter.try_door(f.x, f.y)
@@ -515,9 +516,8 @@ func _on_bag_quick(idx: int) -> void:
 	if str(it.get("type", "")) == "potion":
 		inter.use_potion_at(gs.active_char_id, idx)
 	elif Inventory.can_equip(it):
-		if Inventory.equip(gs, c, idx):
+		if Actions.equip(gs.active_char_id, idx):
 			layout.bag.refresh()
-			ctrl.changed.emit()
 	else:
 		_on_bag_item(idx)
 
@@ -545,10 +545,11 @@ func _refresh_when_free() -> void:
 	if _waiting_refresh:
 		return
 	_waiting_refresh = true
-	while not get_tree().get_nodes_in_group("modal").is_empty():
+	while is_inside_tree() and not get_tree().get_nodes_in_group("modal").is_empty():
 		await get_tree().process_frame
 	_waiting_refresh = false
-	ctrl.refresh()
+	if is_inside_tree():
+		ctrl.refresh()
 
 func _on_blocked(x: int, y: int) -> void:
 	var mon := ctrl.monster_at(x, y)

@@ -88,7 +88,7 @@ func _gui_input(ev: InputEvent) -> void:
 	elif ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 		var h2 := _hit(ev.position)
 		if h2 >= 0 and not _cut.has(h2):
-			_snip(h2)
+			submit(h2)
 
 func _hit(p: Vector2) -> int:
 	var best := -1
@@ -102,6 +102,13 @@ func _hit(p: Vector2) -> int:
 				bd = d
 				best = i
 	return best
+
+func accepts() -> bool:
+	return _open and not done
+
+func inject(i: int) -> void:
+	if i >= 0 and i < _data.colors.size() and not _cut.has(i):
+		_snip(i)
 
 func _snip(i: int) -> void:
 	_open = false

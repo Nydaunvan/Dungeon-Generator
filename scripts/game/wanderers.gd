@@ -142,6 +142,7 @@ func _wander_target(from: Vector2i, zone: Dictionary, except_id: String) -> Vect
 # ------------------------------------------------------------------ tick
 
 func _tick() -> void:
+	RunLog.trace.append("w t=%d p=%d,%d st=%s lvl=%s" % [GameClock.ms, rig.gx, rig.gy, GameRng.export_state().states.get("wander", "?"), str(level.id)])
 	var ls := gs.level_state(level)
 	var player := Vector2i(rig.gx, rig.gy)
 	var movers: Array = []

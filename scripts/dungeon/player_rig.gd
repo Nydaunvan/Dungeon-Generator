@@ -50,10 +50,12 @@ func _cell_pos(x: int, y: int) -> Vector3:
 	return Vector3(x * LevelBuilder.CELL, LevelBuilder.CELL * 0.5, y * LevelBuilder.CELL)
 
 ## rel : 0 avancer, 1 droite, 2 reculer, 3 gauche (relatif à la direction du regard)
-func step(rel: int) -> void:
+## `from_logic` : pas déclenché par le jeu lui-même (traverser le marchand…), donc pas une commande du joueur.
+func step(rel: int, from_logic: bool = false) -> void:
 	if _busy or grid == null:
 		return
-	RunLog.rec("m", rel)
+	if not from_logic:
+		RunLog.rec("m", rel)
 	var d := posmod(dir + rel, 4)
 	var v: Vector2i = DungeonGrid.DIRS[d]
 	var nx := gx + v.x

@@ -12,11 +12,12 @@ var _btns: Array = []
 var _pulse := 0.0
 var _locked := false
 var _right_text := ""
+var _oks: Array = []
 var _tablet_h := 104.0
 
 func begin() -> void:
 	_order = range(1, COUNT + 1)
-	_order.shuffle()
+	GameRng.shuffle("trap", _order)
 	_animated = true
 	set_process(true)
 	_next_round()
@@ -25,11 +26,12 @@ func _next_round() -> void:
 	for c in get_children():
 		c.queue_free()
 	_btns.clear()
+	_oks.clear()
 	_locked = false
 	var n: int = _order[_round]
 	var base := "ui.trap_puzzle.riddle_%d_" % n
 	var answers: Array = [[L.t(base + "a"), true], [L.t(base + "b"), false], [L.t(base + "c"), false], [L.t(base + "d"), false]]
-	answers.shuffle()
+	GameRng.shuffle("trap", answers)
 	_right_text = L.t(base + "a")
 	_q = Label.new()
 	_q.position = Vector2(26, 14)
@@ -58,7 +60,9 @@ func _next_round() -> void:
 			b.add_theme_stylebox_override(k, st[k])
 		b.modulate.a = 0.0
 		var ok: bool = answers[i][1]
-		b.pressed.connect(func(): _answer(b, ok))
+		_oks.append(ok)
+		var ib := i
+		b.pressed.connect(func(): submit(ib))
 		add_child(b)
 		TrapModal.fit_button(b, 14, 10)
 		_btns.append(b)
@@ -67,6 +71,13 @@ func _next_round() -> void:
 
 func _update(d: float) -> void:
 	_pulse += d
+
+func accepts() -> bool:
+	return not done and not _locked and not _btns.is_empty()
+
+func inject(i: int) -> void:
+	if i >= 0 and i < _btns.size() and not (_btns[i] as Button).disabled:
+		_answer(_btns[i], bool(_oks[i]))
 
 func _answer(b: Button, ok: bool) -> void:
 	if done or _locked:

@@ -13,6 +13,7 @@ const VERSION := 1
 const MAX_ENTRIES := 60000
 
 static var gs: GameState = null              ## partie en cours (renseignée par GameState)
+static var trace: Array = []                 ## (mise au point) trace des pas de monstres
 static var replaying: bool = false           ## vrai pendant un rejeu : on n'écrit plus rien
 
 static func attach(state: GameState) -> void:
@@ -37,8 +38,17 @@ static func rec(cmd: String, a: Variant = null, b: Variant = null) -> void:
 	gs.run_log.append(e)
 
 ## Action pas encore journalisée : la partie ne peut plus être classée (la première raison est conservée).
+static var _depth: int = 0                  ## > 0 : on est dans une action journalisée (façade Actions)
+
+static func enter() -> void:
+	_depth += 1
+
+static func leave() -> void:
+	_depth = maxi(0, _depth - 1)
+
 static func unrecorded(reason: String) -> void:
-	taint(reason)
+	if _depth == 0:
+		taint(reason)
 
 static func taint(reason: String) -> void:
 	if replaying or not ranked():

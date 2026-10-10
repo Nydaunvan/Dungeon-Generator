@@ -192,13 +192,14 @@ func _meet_merchant(mm: Dictionary) -> void:
 	var m := Modal.open(host, L.t("common.marchand_ambulant"), 380)
 	m.add_text(L.t("game.interactions.vous_croisez_le_marchand_ambulant"), UiTheme.DIM, 15, true)
 	m.set_buttons([
-		{"text": L.t("game.interactions.voir_son_etal"), "primary": true, "cb": func():
-			m.close()
-			open_merchant(mm)},
-		{"text": L.t("game.interactions.continuer_sans_arreter"), "cb": func():
-			m.close()
-			_walk_through(mm)},
+		{"text": L.t("game.interactions.voir_son_etal"), "primary": true, "cb": func(): Flows.choose("marchand", 1)},
+		{"text": L.t("game.interactions.continuer_sans_arreter"), "cb": func(): Flows.choose("marchand", 0)},
 	])
+	Flows.open("marchand", m, func(choice: Variant):
+		if int(choice) == 1:
+			open_merchant(mm)
+		else:
+			_walk_through(mm))
 
 ## « Continuer sans s'arrêter » : le groupe passe sur la case du marchand, puis poursuit d'une case si elle est libre.
 func _walk_through(mm: Dictionary) -> void:
@@ -210,7 +211,7 @@ func _walk_through(mm: Dictionary) -> void:
 	if rel < 0:
 		return
 	_pass_merchant = true
-	rig.step(rel)
+	rig.step(rel, true)
 	if rig.gx != int(mm.x) or rig.gy != int(mm.y):
 		_pass_merchant = false
 		return
@@ -220,11 +221,10 @@ func _walk_through(mm: Dictionary) -> void:
 	var nx := rig.gx + v2.x
 	var ny := rig.gy + v2.y
 	if rig.grid.is_walkable(nx, ny) and not (rig.extra_block.is_valid() and rig.extra_block.call(nx, ny)):
-		rig.step(rel)
+		rig.step(rel, true)
 
 ## Boutique : le jeu est en pause tant qu'elle est ouverte (monde 3D figé, délais de sorts et de fontaines gelés) ; seul le marchand est actif.
 func _open_shop(offers: Array, village: bool, on_change: Callable) -> void:
-	RunLog.unrecorded("boutique")
 	var resume := _freeze_world()
 	var m := ShopModal.open(host, gs, offers, village, on_change)
 	m.tree_exited.connect(resume)
@@ -251,7 +251,6 @@ func _freeze_world() -> Callable:
 var _frozen := false
 
 func open_merchant(mm: Dictionary) -> void:
-	RunLog.unrecorded("marchand")
 	if mm.get("offers") == null:
 		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), maxi(1, gs.run_number))
 	var on_change := func():
@@ -280,7 +279,7 @@ func _pickup(it: Dictionary) -> void:
 ## Le groupe se heurte à une porte fermée. Renvoie true si elle vient de s'ouvrir.
 func try_door(x: int, y: int) -> bool:
 	var d := grid.door_at(x, y)
-	if d.is_empty() or grid.opened.has(str(d.id)) or view.opening.has(str(d.id)):
+	if d.is_empty() or grid.is_open(str(d.id)) or grid.is_opening(str(d.id)):
 		return false
 	var ls := _lstate()
 	var unlocked: Dictionary = ls.get_or_add("door_unlocked", {})
@@ -309,7 +308,7 @@ func stairs_open(st: Dictionary) -> bool:
 	if not bool(st.get("locked", false)):
 		return true
 	var unlocked: Dictionary = _lstate().get_or_add("door_unlocked", {})
-	if view.opening.has(str(st.id)):
+	if grid.is_opening(str(st.id)):
 		return false      # la grille est en train de remonter
 	if unlocked.has(str(st.id)):
 		return true
@@ -401,7 +400,6 @@ func _fountain_cooldown_ms() -> float:
 	return maxf(5.0, float(gs.cfg.get("fountainCooldownMinutes", 10))) * 60000.0
 
 func _prompt_fountain(it: Dictionary) -> void:
-	RunLog.unrecorded("fontaine")
 	var st := gs.item_state(_lid(), str(it.id))
 	var now := float(GameClock.ms)
 	var ready_at := float(st.get("usedAt", 0.0)) + _fountain_cooldown_ms()
@@ -411,11 +409,12 @@ func _prompt_fountain(it: Dictionary) -> void:
 	var m := Modal.open(host, L.t("game.interactions.fontaine"), 400)
 	m.add_text(L.t("game.interactions.voulez_vous_utiliser_cette_fontaine"), UiTheme.PARCH, 14, true)
 	m.set_buttons([
-		{"text": L.t("game.interactions.utiliser_la_fontaine"), "primary": true, "cb": func():
-			m.close()
-			_use_fountain(it)},
-		{"text": L.t("game.interactions.passer_sans_l_utiliser"), "primary": false, "cb": func(): m.close()},
+		{"text": L.t("game.interactions.utiliser_la_fontaine"), "primary": true, "cb": func(): Flows.choose("fontaine", 1)},
+		{"text": L.t("game.interactions.passer_sans_l_utiliser"), "primary": false, "cb": func(): Flows.choose("fontaine", 0)},
 	])
+	Flows.open("fontaine", m, func(choice: Variant):
+		if int(choice) == 1:
+			_use_fountain(it), 0)
 
 func _use_fountain(it: Dictionary) -> void:
 	var st := gs.item_state(_lid(), str(it.id))
@@ -479,7 +478,6 @@ static func trap_threshold(chance: int) -> int:
 	return clampi(int(ceil(21.0 - chance / 5.0)), 2, 20)
 
 func _prompt_trap(it: Dictionary) -> void:
-	RunLog.unrecorded("piege")
 	var s := _trap_cfg()
 	var hit_random := func(mult: float): return _pick_victim(it, mult)
 	var hit_char := func(id: String, mult: float): return _hit_for(it, gs.char_by_id(id), mult)
@@ -491,6 +489,7 @@ func _prompt_trap(it: Dictionary) -> void:
 	var ctx := {"gs": gs, "s": s, "bd": trap_breakdown(), "offer": TrapRules.draw_offer(s, it, gs.item_state(_lid(), str(it.id))),
 		"hit_random": hit_random, "hit_char": hit_char, "hit_all": hit_all}
 	var m := TrapModal.open(host, it, ctx)
+	Flows.open("trap", m, func(a: Variant): m.apply_input(a as Array), null, func(a: Variant): return a is Array and m.can_input(a as Array))
 	m.skipped.connect(func():
 		_log(L.t("game.interactions.piege_passe_en_force"), true)
 		_apply_trap(it, float(s.skipDmgPct) / 100.0, {}))
@@ -587,17 +586,13 @@ func _apply_trap_hits(it: Dictionary, hits: Array) -> void:
 
 ## Barre rapide de combat : le personnage actif boit la potion.
 func use_potion_at(char_id: String, idx: int) -> void:
-	RunLog.unrecorded("potion")
 	if idx < 0 or idx >= gs.inventory.size():
 		return
-	var healed := Inventory.use_potion(gs, gs.char_by_id(char_id), idx)
-	if healed >= 0:
-		ctrl.potion_drunk(char_id, healed)
+	if Actions.drink(char_id, idx) >= 0:
 		bag_changed.emit()
 
 ## Barre rapide de combat : choix d'un parchemin à lire par le personnage actif.
 func open_scroll_picker(char_id: String) -> void:
-	RunLog.unrecorded("parchemin")
 	var groups: Array = []
 	for i in gs.inventory.size():
 		var it: Dictionary = gs.inventory[i]
@@ -628,7 +623,6 @@ func open_scroll_picker(char_id: String) -> void:
 			bag_changed.emit())
 
 func open_item_menu(idx: int) -> void:
-	RunLog.unrecorded("menu_objet")
 	if idx < 0 or idx >= gs.inventory.size():
 		return
 	var it: Dictionary = gs.inventory[idx]
@@ -645,10 +639,9 @@ func open_item_menu(idx: int) -> void:
 			var cid: String = str(c.id)
 			m.add_button("%s  (%d/%d PV · %d/%d End.)" % [c.name, int(c.hp), int(c.maxHp), int(c.get("stamina", 0)), int(c.get("maxStamina", 100))],
 				func():
-					var healed := Inventory.use_potion(gs, gs.char_by_id(cid), idx)
+					var healed := Actions.drink(cid, idx)
 					m.close()
 					if healed >= 0:
-						ctrl.potion_drunk(cid, healed)
 						bag_changed.emit())
 	elif type == "scroll":
 		m.add_text(L.t("game.interactions.faire_lire_a"), UiTheme.DIM, 14, true)
@@ -668,14 +661,13 @@ func open_item_menu(idx: int) -> void:
 				label += "  (remplace %s)" % cur.get("name", "")
 			m.add_button(label, func():
 				m.close()
-				Inventory.equip(gs, gs.char_by_id(cid3), idx)
-				ctrl.changed.emit()
+				Actions.equip(cid3, idx)
 				bag_changed.emit())
 	var buttons: Array = []
 	if type != "key" and not fighting:
 		buttons.append({"text": L.t("common.jeter"), "cb": func():
 			m.close()
-			Inventory.discard(gs, idx)
+			Actions.discard(idx)
 			bag_changed.emit()})
 	buttons.append({"text": L.t("common.fermer"), "cb": func(): m.close()})
 	m.set_buttons(buttons)

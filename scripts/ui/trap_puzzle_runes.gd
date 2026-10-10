@@ -20,17 +20,17 @@ var _ok := false
 
 func begin() -> void:
 	var idx := [0, 1, 2, 3, 4, 5]
-	idx.shuffle()
+	GameRng.shuffle("trap", idx)
 	_glyphs = idx.slice(0, 4)
 	for i in 4:
 		_slot[i] = float(i)
 	if twists:
-		_mode = ["forward", "reverse", "shuffle"][randi() % 3]
+		_mode = ["forward", "reverse", "shuffle"][GameRng.i("trap") % 3]
 	_seq.clear()
 	for i in length:
-		var nx := randi() % 4
-		if i > 0 and nx == _seq[i - 1] and randf() < 0.7:
-			nx = (nx + 1 + randi() % 3) % 4
+		var nx := GameRng.i("trap") % 4
+		if i > 0 and nx == _seq[i - 1] and GameRng.f("trap") < 0.7:
+			nx = (nx + 1 + GameRng.i("trap") % 3) % 4
 		_seq.append(nx)
 	_animated = true
 	set_process(true)
@@ -62,10 +62,10 @@ func _show_sequence(flash_t: float, gap: float) -> void:
 ## Mélange animé : chaque rune glisse vers une nouvelle case.
 func _shuffle() -> void:
 	var perm := [0, 1, 2, 3]
-	perm.shuffle()
+	GameRng.shuffle("trap", perm)
 	var tries := 0
 	while tries < 8 and (perm[0] == 0 and perm[1] == 1 and perm[2] == 2 and perm[3] == 3):
-		perm.shuffle()
+		GameRng.shuffle("trap", perm)
 		tries += 1
 	var from: Array = _slot.duplicate()
 	var t := create_tween()
@@ -111,8 +111,15 @@ func _gui_input(ev: InputEvent) -> void:
 	elif ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and _input and not done:
 		for i in 4:
 			if _pad_rect(i).has_point(ev.position):
-				_press(i)
+				submit(i)
 				return
+
+func accepts() -> bool:
+	return _input and not done
+
+func inject(i: int) -> void:
+	if i >= 0 and i < 4:
+		_press(i)
 
 func _expected() -> int:
 	return _seq[_seq.size() - 1 - _pos] if _mode == "reverse" else _seq[_pos]

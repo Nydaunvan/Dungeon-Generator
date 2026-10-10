@@ -17,12 +17,12 @@ const PASSABLE_AT := 0.55
 ## Ouvre une porte / grille : le cadenas disparaît, le vantail remonte toujours vers le haut
 ## (durée du son d'ouverture, hauteur CELL × 1,15).
 func open_door(id: String, instant: bool = false) -> void:
-	if (grid.opened.has(id) or opening.has(id)) and not instant:
+	if (grid.is_open(id) or grid.is_opening(id)) and not instant:
 		return
 	if instant:
 		grid.opened[id] = true
 	else:
-		opening[id] = true
+		grid.start_opening(id)
 	if locks.has(id) and is_instance_valid(locks[id]):
 		(locks[id] as Node3D).hide()
 	var dur := 0.75
@@ -40,8 +40,4 @@ func open_door(id: String, instant: bool = false) -> void:
 		t.tween_property(leaf, "position:y", y0 + LevelBuilder.CELL * 1.15, dur) \
 				.set_trans(Tween.TRANS_LINEAR)
 		t.finished.connect(leaf.hide)
-	if not instant:
-		# franchissable dès que le bas de la grille est au-dessus des têtes (≈ mi-course), sans attendre la fin du son
-		get_tree().create_timer(dur * PASSABLE_AT).timeout.connect(func():
-			opening.erase(id)
-			grid.opened[id] = true)
+	# franchissable dès que le bas de la grille est au-dessus des têtes (≈ mi-course) : voir DungeonGrid.OPEN_PASS_MS (temps de jeu)

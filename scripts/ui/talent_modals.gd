@@ -6,43 +6,47 @@ extends RefCounted
 static func process_queue(host: Node, gs: GameState, on_change: Callable) -> void:
 	if gs.choice_queue.is_empty():
 		return
+	if Flows.is_open("talent") or Flows.is_open("evolve"):
+		return
 	for n in host.get_tree().get_nodes_in_group("modal"):
 		if not n.is_queued_for_deletion():
 			return
-	var q: Dictionary = gs.choice_queue.pop_front()
-	var c := gs.char_by_id(str(q.char_id))
-	if c.is_empty():
-		process_queue(host, gs, on_change)
-		return
 	var done := func():
 		on_change.call()
 		process_queue(host, gs, on_change)
-	if q.kind == "evolve":
-		_evolution(host, gs, c, done)
-	else:
+	# premier choix en attente qui a encore un sens (un choix périmé reste dans la file : il ne change rien et ne bloque personne)
+	for q in gs.choice_queue:
+		var c := gs.char_by_id(str(q.char_id))
+		if c.is_empty():
+			continue
+		if q.kind == "evolve":
+			_evolution(host, gs, c, q, done)
+			return
 		var track := Talents.track_at(gs.cfg, str(c.classId), int(q.level))
 		if track.is_empty() or (c.get("talents", []) as Array).any(func(t): return int(t.level) == int(q.level)):
-			process_queue(host, gs, on_change)
-			return
-		_talent(host, gs, c, track, done)
+			continue
+		_talent(host, gs, c, track, q, done)
+		return
 
-static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary, done: Callable) -> void:
+static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary, q: Dictionary, done: Callable) -> void:
 	var m := Modal.open(host, L.t("ui.talent_modals.nouveau_talent"), 440.0)
 	m.esc_closes = false
 	m.add_text(L.fa(L.t("ui.talent_modals.atteint_le_niveau_choisissez"), [c.name, int(track.level)]))
 	for o in track.options:
 		var oid := str(o.id)
 		var b := m.add_button("%s %s\n%s" % [o.get("icon", ""), o.get("labelFr", ""), o.get("descFr", Talents.effect_label(o.get("effects", {})))], func():
-			m.close()
-			Talents.choose(gs, c, int(track.level), oid)
-			if int(c.hp) > int(c.maxHp):
-				c["hp"] = c.maxHp
-			done.call())
+			Flows.choose("talent", oid))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 56)
 	m.set_buttons([])
+	Flows.open("talent", m, func(oid: Variant):
+		gs.choice_queue.erase(q)
+		Talents.choose(gs, c, int(track.level), str(oid))
+		if int(c.hp) > int(c.maxHp):
+			c["hp"] = c.maxHp
+		done.call())
 
-static func _evolution(host: Node, gs: GameState, c: Dictionary, done: Callable) -> void:
+static func _evolution(host: Node, gs: GameState, c: Dictionary, q: Dictionary, done: Callable) -> void:
 	var cls := Characters.class_def(gs.cfg, str(c.classId))
 	var m := Modal.open(host, L.t("ui.talent_modals.evolution_de_classe"), 440.0)
 	m.esc_closes = false
@@ -53,12 +57,14 @@ static func _evolution(host: Node, gs: GameState, c: Dictionary, done: Callable)
 			continue
 		var id := str(cid)
 		var b := m.add_button("%s %s\n%s" % [oc.get("icon", ""), oc.get("name", ""), oc.get("descFr", "")], func():
-			m.close()
-			Talents.evolve(gs, c, id)
-			done.call())
+			Flows.choose("evolve", id))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 56)
 	m.set_buttons([])
+	Flows.open("evolve", m, func(cid_chosen: Variant):
+		gs.choice_queue.erase(q)
+		Talents.evolve(gs, c, str(cid_chosen))
+		done.call())
 
 # ------------------------------------------------------------------ Maître des Talents (village)
 

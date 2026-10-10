@@ -57,6 +57,19 @@ func _init() -> void:
 	_fonts_b = load(UiTheme.F_BODY_BOLD)
 	set_process(false)
 
+## À surcharger : le puzzle accepte-t-il une action maintenant ?
+func accepts() -> bool:
+	return false
+
+## À surcharger : applique l'action `i` du joueur (identifiant d'une rune, d'un fil, d'une dalle ou d'une réponse).
+func inject(_i: int) -> void:
+	pass
+
+## Point d'entrée UNIQUE des actions du joueur : journalisée par la fenêtre du piège (voir TrapModal.apply_input).
+func submit(i: int) -> void:
+	if not done and accepts():
+		Flows.input("trap", ["pz", i])
+
 ## À surcharger : démarre le puzzle (appelé quand la fenêtre est prête).
 func begin() -> void:
 	pass

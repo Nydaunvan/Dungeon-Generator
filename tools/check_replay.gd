@@ -83,6 +83,73 @@ func _bot_act(m: Node, rng: RandomNumberGenerator) -> String:
 func m2():
 	return Rep.main_of(self).gs
 
+## Répond à une fenêtre de décision comme le ferait un joueur. Renvoie un libellé (vide : rien fait cette fois).
+func _bot_flow(m: Node, flow: String, md: Node, rng: RandomNumberGenerator) -> String:
+	var F: GDScript = load("res://scripts/game/flows.gd")
+	match flow:
+		"fontaine":
+			F.choose("fontaine", 1 if rng.randf() < 0.8 else 0)
+			return "fontaine"
+		"talent", "evolve":
+			var gs = m.gs
+			for q in gs.choice_queue:
+				var c: Dictionary = gs.char_by_id(str(q.char_id))
+				if c.is_empty():
+					continue
+				var TL: GDScript = load("res://scripts/rules/talents.gd")
+				if q.kind == "evolve" and flow == "evolve":
+					var cls: Dictionary = load("res://scripts/rules/characters.gd").class_def(gs.cfg, str(c.classId))
+					var opts: Array = cls.get("evolvesTo", [])
+					if not opts.is_empty():
+						F.choose("evolve", str(opts[rng.randi() % opts.size()]))
+						return "evolve"
+				elif q.kind == "talent" and flow == "talent":
+					var track: Dictionary = TL.track_at(gs.cfg, str(c.classId), int(q.level))
+					if not track.is_empty():
+						F.choose("talent", str(track.options[rng.randi() % track.options.size()].id))
+						return "talent"
+			return ""
+		"marchand":
+			F.choose("marchand", 1 if rng.randf() < 0.7 else 0)
+			return "marchand"
+		"shop":
+			var mm: Dictionary = m.wand.merchant()
+			var offers: Array = mm.get("offers", []) if not mm.is_empty() else []
+			var r2 := rng.randf()
+			if r2 < 0.5:
+				for ix in offers.size():
+					if int(offers[ix].price) <= int(m.gs.gold):
+						if F.input("shop", ["buy", [ix]]):
+							return "achat"
+			elif r2 < 0.7:
+				for ix in m.gs.inventory.size():
+					if str(m.gs.inventory[ix].get("type", "")) != "key":
+						if F.input("shop", ["sell", [ix]]):
+							return "vente"
+			F.input("shop", ["close"])
+			return "boutique"
+		"trap":
+			if not md.ready_for_input():
+				return ""
+			var tries: Array = [["next"], ["pz", rng.randi() % 4], ["sac", 0]]
+			var meths: Array = md._methods
+			if md._stage == "choose":
+				var r := rng.randf()
+				if md._puzzle != "" and r < 0.25:
+					tries = [["puzzle"]]
+				elif r < 0.45:
+					tries = [["skip"]]
+				elif not meths.is_empty():
+					tries = [["method", str(meths[rng.randi() % meths.size()])]]
+			elif md._stage == "sacrifice":
+				var cands: Array = load("res://scripts/rules/trap_rules.gd").sacrifice_candidates(m.gs)
+				tries = [["sac", cands[0]]] if not cands.is_empty() else [["back"]]
+			for a in tries:
+				if F.input("trap", a):
+					return "trap"
+			return ""
+	return ""
+
 func _init() -> void:
 	root.size = Vector2i(1280, 720)
 	await process_frame
@@ -117,10 +184,19 @@ func _init() -> void:
 		if not modals.is_empty():
 			if not RL.is_clean():
 				break
-			for md in modals:      # fenêtre d'information (bilan de combat…) : sans effet sur la partie, on la ferme
-				if md.has_method("close"):
-					md.close()
-			for i in 10:
+			var flows_seen := false
+			for md in modals:
+				if md.is_queued_for_deletion():
+					continue
+				if md.has_meta("flow"):
+					flows_seen = true
+					var what := _bot_flow(m, str(md.get_meta("flow")), md, rng)
+					if what != "":
+						kinds[what] = int(kinds.get(what, 0)) + 1
+						done += 1
+				elif md.has_method("close"):
+					md.close()          # fenêtre d'information (bilan de combat…) : sans effet sur la partie
+			for i in (30 if flows_seen else 10):
 				await process_frame
 			continue
 		if not m.settled():
@@ -133,16 +209,26 @@ func _init() -> void:
 		await process_frame
 		if m.settled():
 			break
+	var f0 := FileAccess.open("/tmp/x/trace_live.txt", FileAccess.WRITE)
+	f0.store_string("\n".join(RL.trace))
+	f0.close()
+	RL.trace.clear()
 	var live_fp: String = Rep.fingerprint(gs)
 	var live_dump: String = Rep.dump(gs)
 	var live_log: Array = gs.run_log.duplicate(true)
 	print("direct : %d actions du bot, journal de %d entrées, taint=%s, niveaux=%d, mort=%s" % [done, live_log.size(), gs.run_taint, int(gs.stats.get("levelsCleared", 0)), gs.game_over])
 	print("types : ", kinds)
+	var f9 := FileAccess.open("/tmp/x/log_live.json", FileAccess.WRITE)
+	f9.store_string(JSON.stringify(live_log))
+	f9.close()
 	var live_summary: Dictionary = Rep.summary(gs)
 	# rejeu : le journal passe par JSON comme s'il avait voyagé jusqu'au serveur
 	var wire: Array = JSON.parse_string(JSON.stringify(live_log))
 	var cfg2 := cfg.duplicate(true)
 	var res: Dictionary = await Rep.run(self, cfg2, wire, {"time_scale": 4.0})
+	var f3 := FileAccess.open("/tmp/x/trace_replay.txt", FileAccess.WRITE)
+	f3.store_string("\n".join(RL.trace))
+	f3.close()
 	print("rejeu : ok=%s raison=%s appliquées=%d" % [res.ok, res.reason, res.applied])
 	check("le rejeu va au bout (%s)" % res.reason, bool(res.ok))
 	if res.ok:
