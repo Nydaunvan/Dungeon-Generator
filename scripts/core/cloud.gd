@@ -61,6 +61,8 @@ const ERR_KEYS := {
 	"trop_de_signalements": "ui.cloud.err.trop_de_signalements",
 	"joueur_inconnu": "ui.cloud.err.joueur_inconnu",
 	"mot_invalide": "ui.cloud.err.mot_invalide",
+	"charte_non_acceptee": "ui.cloud.err.charte_non_acceptee",
+	"charte_obsolete": "ui.cloud.err.charte_obsolete",
 	"generic": "ui.cloud.err.generic",
 }
 

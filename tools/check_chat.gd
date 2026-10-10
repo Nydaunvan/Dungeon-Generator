@@ -13,6 +13,8 @@ var blocked: Array = []
 var is_admin := true
 var reports: Array = [{"message_id": 7, "room": "fr", "body": "Un message limite", "created_at": "2026-10-10T15:00:00+00:00", "deleted": false,
 	"player_id": "u-9", "pseudo": "Troll", "reports": 2, "last_report": "2026-10-10T15:30:00+00:00", "reasons": ["insulte"], "muted_until": null}]
+var charter_version := 1
+var charter_accepted := 0
 var words := ["connard", "salaud"]
 
 func check(label: String, cond: bool) -> void:
@@ -34,6 +36,15 @@ func add_msg(room: String, pid: String, pseudo: String, body: String) -> void:
 func fake(_method: int, full_url: String, _headers: PackedStringArray, body: String) -> Dictionary:
 	calls.append({"url": full_url, "body": body})
 	var b: Variant = JSON.parse_string(body) if body != "" else {}
+	if full_url.ends_with("/rpc/chat_charte_etat"):
+		return resp(200, {"version": charter_version, "accepted": charter_accepted})
+	if full_url.ends_with("/rpc/chat_charte_accepter"):
+		if int(b.p_version) != charter_version:
+			return fail("charte_obsolete")
+		charter_accepted = charter_version
+		return resp(204)
+	if (full_url.ends_with("/rpc/chat_fetch") or full_url.ends_with("/rpc/chat_send")) and charter_accepted < charter_version:
+		return fail("charte_non_acceptee")
 	if full_url.ends_with("/rpc/chat_fetch"):
 		var after := int(b.get("p_after", 0))
 		var out: Array = rooms[b.p_room].filter(func(m): return int(m.id) > after and not blocked.any(func(x): return x.player_id == m.player_id))
@@ -143,6 +154,12 @@ func _init() -> void:
 	var c = CM.open(host)
 	await settle()
 	await wait(0.2)
+	check("charte affichée d'abord", has_text(c._modal, "Charte du tchat") and has_text(c._modal, "J'accepte la charte") and has_text(c._modal, "Refuser et fermer"))
+	check("charte : aucun message demandé avant acceptation", count("/rpc/chat_fetch") == 0 and not has_text(c._modal, "Bonjour"))
+	find_button(c._modal, "J'accepte la charte").pressed.emit()
+	await settle()
+	await wait(0.2)
+	check("charte acceptée côté serveur", charter_accepted == 1)
 	check("salon Français chargé", calls.any(func(x): return str(x.url).ends_with("/rpc/chat_fetch") and str(x.body).contains("\"p_room\":\"fr\"")))
 	check("messages affichés", has_text(c._modal, "Bonjour") and has_text(c._modal, "Bob (3) :"))
 	check("balisage non interprété (texte brut)", has_text(c._modal, "Salut [b]tout[/b] le monde"))
@@ -214,6 +231,16 @@ func _init() -> void:
 	find_button(c._modal, "Débloquer").pressed.emit()
 	await wait(0.3)
 	check("déblocage", blocked.is_empty() and has_text(c._modal, "Tu n'as bloqué personne."))
+	# --- la charte change pendant que la fenêtre est ouverte : elle est redemandée
+	c._show_room("fr")
+	await wait(0.3)
+	charter_version = 2
+	await wait(0.7)
+	check("charte modifiée : redemandée", has_text(c._modal, "a changé") and has_text(c._modal, "J'accepte la charte"))
+	find_button(c._modal, "J'accepte la charte").pressed.emit()
+	await settle()
+	await wait(0.3)
+	check("nouvelle charte acceptée, salon de retour", charter_accepted == 2 and has_text(c._modal, "Envoyer"))
 	c._modal.close()
 	await settle()
 	calls.clear()

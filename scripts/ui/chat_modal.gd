@@ -8,6 +8,8 @@ const GOLD := Color("ffd98a")
 const BAD := Color("e08a7a")
 const GOOD := Color("9cc79a")
 const TEXT_SIZE := 14
+const CHARTER_KEYS := ["ui.chat.charte_1", "ui.chat.charte_2", "ui.chat.charte_3", "ui.chat.charte_4",
+	"ui.chat.charte_5", "ui.chat.charte_6", "ui.chat.charte_7"]
 
 ## Délais d'interrogation du serveur (secondes) : rapide tant que ça bouge, de plus en plus lent quand le salon est calme.
 static var poll_fast := 3.0
@@ -69,7 +71,58 @@ func _build() -> void:
 		])
 		return
 	_room = Chat.default_room()
-	_show_room(_room)
+	_start()
+
+## Charte d'abord : tant que la version courante n'est pas acceptée, ni lecture ni écriture (le serveur refuse aussi).
+func _start() -> void:
+	_reset_body()
+	_note(_body, L.t("ui.chat.loading"))
+	_modal.set_buttons([{"text": L.t("common.fermer"), "cb": func(): _modal.close()}])
+	var mine := _gen
+	var r: Dictionary = await Chat.charter_state()
+	if mine != _gen or not _alive():
+		return
+	if not r.ok or not (r.data is Dictionary):
+		_reset_body()
+		_note(_body, str(r.get("message", L.t("ui.chat.unavailable"))), BAD)
+		return
+	var version := int(r.data.get("version", 1))
+	if int(r.data.get("accepted", 0)) >= version:
+		_show_room(_room)
+	else:
+		_show_charter(version, int(r.data.get("accepted", 0)) > 0)
+
+func _show_charter(version: int, renewed: bool) -> void:
+	_view = "charter"
+	_reset_body()
+	_body.add_child(_label(L.t("ui.chat.charte_title"), GOLD, 17))
+	_note(_body, L.t("ui.chat.charte_updated") if renewed else L.t("ui.chat.charte_intro"))
+	for k in CHARTER_KEYS:
+		var l := _label("•  " + L.t(k))
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 560
+		_body.add_child(l)
+	_note(_body, L.t("ui.chat.charte_footer"))
+	_status = _label("", BAD, 13)
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.add_child(_status)
+	_modal.set_buttons([
+		{"text": L.t("ui.chat.charte_accept"), "primary": true, "cb": func(): _accept(version)},
+		{"text": L.t("ui.chat.charte_refuse"), "cb": func(): _modal.close()},
+	])
+	_modal.call_deferred("_fit")
+
+func _accept(version: int) -> void:
+	var mine := _gen
+	var r: Dictionary = await Chat.accept_charter(version)
+	if mine != _gen or not _alive():
+		return
+	if r.ok:
+		_show_room(_room)
+	elif r.get("error_code", "") == "charte_obsolete":
+		_start()         # la charte a changé entre-temps : on la réaffiche
+	else:
+		_say(str(r.message), BAD)
 
 func _buttons() -> void:
 	_modal.set_buttons([
@@ -168,6 +221,9 @@ func _poll_loop(mine: int) -> void:
 				_status.add_theme_color_override("font_color", BAD)
 				_status.set_meta("poll_error", true)
 			if r.get("error_code", "") == "session_expired":
+				return
+			if r.get("error_code", "") == "charte_non_acceptee":
+				_start()         # la charte a changé : à relire avant de continuer
 				return
 			if is_instance_valid(_empty_note) and first:
 				_empty_note.text = L.t("ui.chat.unavailable")

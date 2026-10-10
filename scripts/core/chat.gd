@@ -52,6 +52,13 @@ static func mute_message(r: Dictionary) -> String:
 		return L.t("ui.cloud.err.chat_mute")
 	return L.t("ui.chat.muted_until") % until
 
+## Charte : {version, accepted} (accepted < version : le joueur doit l'accepter avant de lire ou d'écrire).
+static func charter_state() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_charte_etat", {}, true)
+
+static func accept_charter(version: int) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_charte_accepter", {"p_version": version}, true)
+
 static func report(message_id: int, reason: String = "") -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_report", {"p_message_id": message_id, "p_reason": reason.substr(0, 200)}, true)
 

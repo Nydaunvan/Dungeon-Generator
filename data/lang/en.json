@@ -1677,7 +1677,22 @@
   "ui.sadmin.chat_words_desc": "Whole words, ignoring case and accents.",
   "ui.sadmin.chat_word_hint": "Add a word…",
   "ui.sadmin.chat_word_add": "Add",
-  "ui.sadmin.chat_word_remove": "Remove this word"
+  "ui.sadmin.chat_word_remove": "Remove this word",
+  "ui.chat.charte_title": "Chat charter",
+  "ui.chat.charte_intro": "Before you come in, read and accept the chat rules. They apply to every room.",
+  "ui.chat.charte_updated": "The chat charter has changed. Please read it again and accept it to continue.",
+  "ui.chat.charte_1": "Respect: no insults, harassment, threats or discriminatory remarks towards a player or a group.",
+  "ui.chat.charte_2": "No shocking, sexual or illegal content, and no advertising, spam or dubious links.",
+  "ui.chat.charte_3": "Do not share any personal information (address, phone, e-mail…), neither yours nor anyone else's.",
+  "ui.chat.charte_4": "Do not pretend to be another player or the administration, and do not deliberately disrupt the rooms (repeated messages, flooding).",
+  "ui.chat.charte_5": "Your messages are visible to all signed-in players; they are kept for 30 days then deleted, and erased with your account if you delete it.",
+  "ui.chat.charte_6": "Messages can be reported. The administrator may delete a message or mute you, temporarily, in case of abuse. An automatic filter and a rate limit apply.",
+  "ui.chat.charte_7": "You can block a player at any time: their messages disappear for you.",
+  "ui.chat.charte_footer": "Accepting the charter is required to read and write in the chat. It may change: you will then see it again once.",
+  "ui.chat.charte_accept": "I accept the charter",
+  "ui.chat.charte_refuse": "Decline and close",
+  "ui.cloud.err.charte_non_acceptee": "You must accept the chat charter first.",
+  "ui.cloud.err.charte_obsolete": "The charter has changed: read it again before accepting."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -1677,7 +1677,22 @@
   "ui.sadmin.chat_words_desc": "Mots entiers, sans tenir compte des majuscules ni des accents.",
   "ui.sadmin.chat_word_hint": "Ajouter un mot…",
   "ui.sadmin.chat_word_add": "Ajouter",
-  "ui.sadmin.chat_word_remove": "Retirer ce mot"
+  "ui.sadmin.chat_word_remove": "Retirer ce mot",
+  "ui.chat.charte_title": "Charte du tchat",
+  "ui.chat.charte_intro": "Avant d'entrer, lis et accepte les règles du tchat. Elles valent pour tous les salons.",
+  "ui.chat.charte_updated": "La charte du tchat a changé. Merci de la relire et de l'accepter pour continuer.",
+  "ui.chat.charte_1": "Respect : pas d'insultes, de harcèlement, de menaces ni de propos discriminatoires envers un joueur ou un groupe.",
+  "ui.chat.charte_2": "Pas de contenu choquant, sexuel ou illégal, ni de publicité, de spam ou de liens douteux.",
+  "ui.chat.charte_3": "Ne donne aucune information personnelle (adresse, téléphone, e-mail…), ni les tiennes ni celles d'un autre.",
+  "ui.chat.charte_4": "Ne te fais pas passer pour un autre joueur ni pour l'administration, et ne perturbe pas volontairement les salons (messages répétés, flood).",
+  "ui.chat.charte_5": "Tes messages sont visibles de tous les joueurs connectés ; ils sont conservés 30 jours puis supprimés, et effacés avec ton compte si tu le supprimes.",
+  "ui.chat.charte_6": "Les messages peuvent être signalés. L'administrateur peut supprimer un message ou te réduire au silence, de façon temporaire, en cas d'abus. Un filtre automatique et une limite de débit s'appliquent.",
+  "ui.chat.charte_7": "Tu peux bloquer un joueur à tout moment : ses messages disparaissent pour toi.",
+  "ui.chat.charte_footer": "Accepter la charte est nécessaire pour lire et écrire dans le tchat. Elle peut évoluer : tu la reverras alors une fois.",
+  "ui.chat.charte_accept": "J'accepte la charte",
+  "ui.chat.charte_refuse": "Refuser et fermer",
+  "ui.cloud.err.charte_non_acceptee": "Tu dois d'abord accepter la charte du tchat.",
+  "ui.cloud.err.charte_obsolete": "La charte a changé : relis-la avant de l'accepter."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",
