@@ -17,6 +17,8 @@ var level: Dictionary = {}
 var grid: DungeonGrid
 var view: LevelView
 var paused_if: Callable = Callable()   # () -> bool : une fenêtre est ouverte, le volet est déployé…
+var settled_if: Callable = Callable()  # () -> bool : le jeu est au repos (partie classée : un pas de monstre ne tombe qu'à ce moment-là)
+var engage_pending: bool = false       # un monstre est arrivé au contact : le combat s'engage dans un instant
 var _acc: float = 0.0
 var _zones: Dictionary = {}            # id -> { Vector2i: true }
 
@@ -51,15 +53,27 @@ func merchant() -> Dictionary:
 	return gs.level_state(level).get("merchant", {})
 
 func _process(delta: float) -> void:
-	if grid == null or gs.game_over or gs.won:
-		return
+	if grid == null or gs.game_over or gs.won or RunLog.replaying:
+		return        # en rejeu, les pas des monstres viennent du journal (voir replay_tick)
 	_acc += delta
 	if _acc < TICK:
 		return
+	if RunLog.ranked() and settled_if.is_valid() and not settled_if.call():
+		return        # partie classée : on attend le repos du jeu (le pas n'est pas perdu, il tombe à la première image calme)
 	_acc = 0.0
 	if ctrl.in_combat() or (paused_if.is_valid() and paused_if.call()):
 		return
+	RunLog.rec("w")
 	_tick()
+
+## Rejeu : un pas de monstres enregistré.
+func replay_tick() -> void:
+	if grid != null and not gs.game_over and not gs.won:
+		_tick()
+
+## Rejeu : l'engagement du combat enregistré (le minuteur d'origine n'existe pas en rejeu).
+func replay_engage() -> void:
+	_fire_engage()
 
 # ------------------------------------------------------------------ helpers
 
@@ -172,9 +186,15 @@ func _tick() -> void:
 		monsters_moved.emit()
 	if engaged:
 		# le monstre arrive au contact : on attend la fin du glissement avant d'engager le combat
-		get_tree().create_timer(0.45).timeout.connect(func():
-			if not gs.game_over:
-				_engage_when_free())
+		engage_pending = true
+		if not RunLog.replaying:
+			get_tree().create_timer(0.45).timeout.connect(_fire_engage)
+
+func _fire_engage() -> void:
+	engage_pending = false
+	RunLog.rec("e")
+	if not gs.game_over:
+		_engage_when_free()
 
 ## Le combat ne s'engage jamais derrière une fenêtre ouverte (boutique…) : on attend qu'elle se ferme.
 func _engage_when_free() -> void:

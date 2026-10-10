@@ -25,6 +25,8 @@ var pdir: int = 0
 var choice_queue: Array = []        # talents et évolutions en attente : {kind, char_id, level}
 var run_number: int = 1
 var run_seed: String = ""         # graine (texte) de la partie classée, fournie par le serveur ("" = partie libre) : détermine tout le hasard
+var run_log: Array = []           # journal des actions d'une partie classée (voir RunLog)
+var run_taint: String = ""        # raison pour laquelle la partie classée n'est plus rejouable ("" = propre)
 var run_mods_chosen: bool = false
 var in_village: bool = false
 var village_prev: Dictionary = {}   # donjon quitté pour le village : {levels, level_index, x, y, dir}
@@ -45,7 +47,7 @@ func selected_member_idx(id: String, st: Dictionary) -> int:
 	return i
 
 const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
-	"bestiary", "log_lines", "full_log", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_seed", "run_mods_chosen", "in_village", "village_prev"]
+	"bestiary", "log_lines", "full_log", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_seed", "run_log", "run_taint", "run_mods_chosen", "in_village", "village_prev", "selected_member"]
 
 ## Compteur par personnage pour l'écran de statistiques (actions, dégâts, soins…).
 func bump(char_id, field: String, amount = 1) -> void:
@@ -76,6 +78,9 @@ static func from_save(config: Dictionary, d: Dictionary) -> GameState:
 			s.full_log = (d[f] as Array).duplicate(true)
 		else:
 			s.set(f, d[f])
+	RunLog.attach(s)
+	if s.run_seed != "" and not d.has("run_log"):
+		s.run_taint = "sauvegarde_sans_journal"
 	if d.has("clock"):
 		GameClock.reset(int(d.clock))
 	else:
@@ -99,6 +104,7 @@ static func create(config: Dictionary) -> GameState:
 	s.cfg = config
 	s.run_seed = str(config.get("runSeed", ""))
 	GameClock.reset(0)
+	RunLog.attach(s)
 	if s.run_seed != "":
 		GameRng.begin(Seeds.from_text(s.run_seed))         # partie classée : toute la partie découle de cette graine
 	else:

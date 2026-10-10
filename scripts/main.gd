@@ -133,6 +133,7 @@ func _ready() -> void:
 	wand.setup(gs, ctrl, rig)
 	await Loader.slice()
 	wand.paused_if = is_game_paused
+	wand.settled_if = settled
 	inter.wand = wand
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
@@ -232,7 +233,10 @@ func _has_merchant_level() -> bool:
 	return false
 
 ## `sliced` : chargement derrière l'écran de chargement, réparti sur plusieurs images (l'appelant `await`). Sans cela, tout est immédiat.
+var _loading: bool = false
+
 func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sliced: bool = false) -> void:
+	_loading = true
 	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
 	if level_node:
@@ -290,6 +294,7 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 	show_message(str(level.name))
 	_update_music()
 	_sync_stage()
+	_loading = false
 
 ## Salle de combat scellée : active pendant un combat (monstre ou groupe entier visible), sinon le couloir normal.
 func _sync_stage() -> void:
@@ -323,6 +328,7 @@ func _on_stage_input(ev: InputEvent) -> void:
 	if eng_now.is_empty():
 		return
 	var def: Dictionary = eng_now.monster
+	RunLog.rec("tgt", idx)
 	gs.selected_member[str(def.id)] = idx
 	ctrl.changed.emit()
 
@@ -406,12 +412,18 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Équivalent de isGamePaused() de l'original : volet d'inventaire déployé ou fenêtre bloquante ouverte
 ## (piège, fontaine, marchand, sauvegarde, évolution, fiche…). Plus rien n'avance pendant ce temps.
+## Jeu au repos (voir CombatController.is_settled) : plus de chargement de niveau, de pas de monstre ni d'animation en cours.
+func settled() -> bool:
+	return not _loading and ctrl != null and ctrl.is_settled() and (wand == null or not wand.engage_pending)
+
 func is_game_paused() -> bool:
 	return (dock != null and dock.is_open) or not get_tree().get_nodes_in_group("modal").is_empty()
 
 func _on_command(cmd: String) -> void:
 	if gs.game_over:
 		return
+	if RunLog.ranked() and not settled():
+		return          # partie classée : une commande n'est acceptée qu'au repos (voir RunLog)
 	if is_game_paused() and cmd in ["forward", "right", "back", "left", "turn_left", "turn_right"]:
 		return
 	match cmd:
@@ -446,6 +458,7 @@ func _front() -> Vector2i:
 	return Vector2i(rig.gx + v.x, rig.gy + v.y)
 
 func _interact() -> void:
+	RunLog.rec("i")
 	var f := _front()
 	var ch := grid.cell(f.x, f.y)
 	if ch == "D":
@@ -884,6 +897,7 @@ func _show_victory() -> void:
 # ------------------------------------------------------------------ village et expéditions successives
 
 func _enter_village() -> void:
+	RunLog.unrecorded("village")
 	gs.level_index = level_index
 	gs.px = rig.gx
 	gs.py = rig.gy
@@ -892,6 +906,7 @@ func _enter_village() -> void:
 	load_level(0)
 
 func _return_to_dungeon() -> void:
+	RunLog.unrecorded("village")
 	if gs.village_prev.is_empty():
 		return
 	var prev: Dictionary = gs.village_prev
@@ -904,6 +919,7 @@ func _return_to_dungeon() -> void:
 	load_level(int(prev.level_index), true)
 
 func _continue_next() -> void:
+	RunLog.unrecorded("village")
 	var go := func(mods: Array):
 		Village.next_dungeon(gs, mods)
 		# séparateur « Expédition n°N — titre » du journal complet, juste avant la ligne d'annonce

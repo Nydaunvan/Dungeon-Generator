@@ -34,6 +34,9 @@ func _init() -> void:
 	torch.position = Vector3(0, LevelBuilder.CELL * 0.05, 0)
 	add_child(torch)
 
+func is_busy() -> bool:
+	return _busy
+
 func place(g: DungeonGrid, x: int, y: int, d: int) -> void:
 	grid = g
 	gx = x
@@ -50,6 +53,7 @@ func _cell_pos(x: int, y: int) -> Vector3:
 func step(rel: int) -> void:
 	if _busy or grid == null:
 		return
+	RunLog.rec("m", rel)
 	var d := posmod(dir + rel, 4)
 	var v: Vector2i = DungeonGrid.DIRS[d]
 	var nx := gx + v.x
@@ -67,6 +71,7 @@ func step(rel: int) -> void:
 func turn(right: bool) -> void:
 	if _busy or grid == null:
 		return
+	RunLog.rec("t", 1 if right else 0)
 	dir = posmod(dir + (1 if right else -1), 4)
 	_yaw += -PI * 0.5 if right else PI * 0.5
 	_busy = true

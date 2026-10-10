@@ -75,6 +75,7 @@ static func track_at(cfg: Dictionary, class_id: String, level: int) -> Dictionar
 	return {}
 
 static func choose(gs: GameState, c: Dictionary, level: int, talent_id: String) -> void:
+	RunLog.unrecorded("talents.choose")
 	if not c.has("talents"):
 		c["talents"] = []
 	for t in c.talents:
@@ -87,6 +88,7 @@ static func choose(gs: GameState, c: Dictionary, level: int, talent_id: String) 
 
 ## Change un talent déjà choisi contre de l'or. Renvoie "" si réussi, sinon le motif.
 static func respec(gs: GameState, c: Dictionary, level: int, new_id: String) -> String:
+	RunLog.unrecorded("talents.respec")
 	var idx := -1
 	for i in c.get("talents", []).size():
 		if int(c.talents[i].level) == level:
@@ -106,6 +108,7 @@ static func respec(gs: GameState, c: Dictionary, level: int, new_id: String) -> 
 	return ""
 
 static func evolve(gs: GameState, c: Dictionary, class_id: String) -> void:
+	RunLog.unrecorded("talents.evolve")
 	var cls := Characters.class_def(gs.cfg, class_id)
 	c["classId"] = class_id
 	c["icon"] = cls.get("icon", c.get("icon", ""))

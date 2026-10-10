@@ -224,6 +224,7 @@ func _walk_through(mm: Dictionary) -> void:
 
 ## Boutique : le jeu est en pause tant qu'elle est ouverte (monde 3D figé, délais de sorts et de fontaines gelés) ; seul le marchand est actif.
 func _open_shop(offers: Array, village: bool, on_change: Callable) -> void:
+	RunLog.unrecorded("boutique")
 	var resume := _freeze_world()
 	var m := ShopModal.open(host, gs, offers, village, on_change)
 	m.tree_exited.connect(resume)
@@ -250,6 +251,7 @@ func _freeze_world() -> Callable:
 var _frozen := false
 
 func open_merchant(mm: Dictionary) -> void:
+	RunLog.unrecorded("marchand")
 	if mm.get("offers") == null:
 		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), maxi(1, gs.run_number))
 	var on_change := func():
@@ -399,6 +401,7 @@ func _fountain_cooldown_ms() -> float:
 	return maxf(5.0, float(gs.cfg.get("fountainCooldownMinutes", 10))) * 60000.0
 
 func _prompt_fountain(it: Dictionary) -> void:
+	RunLog.unrecorded("fontaine")
 	var st := gs.item_state(_lid(), str(it.id))
 	var now := float(GameClock.ms)
 	var ready_at := float(st.get("usedAt", 0.0)) + _fountain_cooldown_ms()
@@ -476,6 +479,7 @@ static func trap_threshold(chance: int) -> int:
 	return clampi(int(ceil(21.0 - chance / 5.0)), 2, 20)
 
 func _prompt_trap(it: Dictionary) -> void:
+	RunLog.unrecorded("piege")
 	var s := _trap_cfg()
 	var hit_random := func(mult: float): return _pick_victim(it, mult)
 	var hit_char := func(id: String, mult: float): return _hit_for(it, gs.char_by_id(id), mult)
@@ -583,6 +587,7 @@ func _apply_trap_hits(it: Dictionary, hits: Array) -> void:
 
 ## Barre rapide de combat : le personnage actif boit la potion.
 func use_potion_at(char_id: String, idx: int) -> void:
+	RunLog.unrecorded("potion")
 	if idx < 0 or idx >= gs.inventory.size():
 		return
 	var healed := Inventory.use_potion(gs, gs.char_by_id(char_id), idx)
@@ -592,6 +597,7 @@ func use_potion_at(char_id: String, idx: int) -> void:
 
 ## Barre rapide de combat : choix d'un parchemin à lire par le personnage actif.
 func open_scroll_picker(char_id: String) -> void:
+	RunLog.unrecorded("parchemin")
 	var groups: Array = []
 	for i in gs.inventory.size():
 		var it: Dictionary = gs.inventory[i]
@@ -622,6 +628,7 @@ func open_scroll_picker(char_id: String) -> void:
 			bag_changed.emit())
 
 func open_item_menu(idx: int) -> void:
+	RunLog.unrecorded("menu_objet")
 	if idx < 0 or idx >= gs.inventory.size():
 		return
 	var it: Dictionary = gs.inventory[idx]

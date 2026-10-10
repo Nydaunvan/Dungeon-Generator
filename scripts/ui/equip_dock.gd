@@ -104,7 +104,7 @@ func open_for(id: String, select_item: Dictionary = {}) -> void:
 	if c.is_empty() or int(c.hp) <= 0 or ctrl.in_combat():
 		return
 	char_id = id
-	gs.active_char_id = id
+	ctrl.select_char(id)
 	sel = {}
 	if not select_item.is_empty():
 		tab = Inventory.tab_of(select_item)
@@ -400,7 +400,7 @@ func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 		var mid: String = str(m.id)
 		b.gui_input.connect(func(ev: InputEvent):
 			if not dead and ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-				gs.active_char_id = mid
+				ctrl.select_char(mid)
 				char_id = mid
 				sel = {}
 				ctrl.changed.emit())

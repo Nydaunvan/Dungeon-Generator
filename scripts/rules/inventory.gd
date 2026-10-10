@@ -92,6 +92,7 @@ static func _rank(it: Dictionary) -> int:
 
 ## Range les objets d'un onglet (à leurs emplacements actuels) : par type, par puissance décroissante ou par nom. Stable.
 static func sort_tab(gs: GameState, tab: String, mode: String) -> void:
+	RunLog.unrecorded("inventaire.sort_tab")
 	var slots: Array = []
 	var entries: Array = []
 	for i in gs.inventory.size():
@@ -138,6 +139,7 @@ static func can_equip(it: Dictionary) -> bool:
 	return slot_of(it) != ""
 
 static func equip(gs: GameState, c: Dictionary, idx: int) -> bool:
+	RunLog.unrecorded("inventaire.equip")
 	if idx < 0 or idx >= gs.inventory.size():
 		return false
 	var it: Dictionary = gs.inventory[idx]
@@ -156,6 +158,7 @@ static func equip(gs: GameState, c: Dictionary, idx: int) -> bool:
 	return true
 
 static func unequip(gs: GameState, c: Dictionary, slot: String) -> bool:
+	RunLog.unrecorded("inventaire.unequip")
 	var eq: Dictionary = c.get("equipment", {})
 	var it = eq.get(slot)
 	if it == null:
@@ -170,6 +173,7 @@ static func unequip(gs: GameState, c: Dictionary, slot: String) -> bool:
 
 ## Boit une potion ; renvoie les PV rendus (-1 si impossible).
 static func use_potion(gs: GameState, c: Dictionary, idx: int) -> int:
+	RunLog.unrecorded("inventaire.use_potion")
 	if idx < 0 or idx >= gs.inventory.size():
 		return -1
 	var it: Dictionary = gs.inventory[idx]
@@ -199,6 +203,7 @@ static func use_potion(gs: GameState, c: Dictionary, idx: int) -> int:
 	return healed
 
 static func discard(gs: GameState, idx: int) -> bool:
+	RunLog.unrecorded("inventaire.discard")
 	if idx < 0 or idx >= gs.inventory.size():
 		return false
 	var it: Dictionary = gs.inventory[idx]

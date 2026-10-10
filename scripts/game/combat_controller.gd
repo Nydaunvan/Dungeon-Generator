@@ -43,6 +43,15 @@ func bind_level(level: Dictionary, grid: DungeonGrid, v: LevelView) -> void:
 		view.entities.remove_item(str(id))
 	changed.emit()
 
+## Le jeu est « au repos » : ni animation de déplacement, ni tour de monstre, ni effet visuel, ni combat en attente d'affichage.
+## Une partie classée n'accepte (et ne rejoue) une commande qu'à ce moment-là : l'ordre des événements est alors le même en direct et en rejeu.
+func is_settled() -> bool:
+	if combat == null or _busy or _draining or _gate_pending or rig.is_busy() or SpellFx3D.busy():
+		return false
+	if model_in_combat() and not _combat_live:
+		return false
+	return Time.get_ticks_msec() >= _hold_until
+
 func sync_position() -> void:
 	combat.pos = Vector2i(rig.gx, rig.gy)
 	combat.dir = rig.dir
@@ -113,10 +122,13 @@ func step_tick() -> void:
 func attack() -> void:
 	if combat == null or _busy:
 		return
+	if RunLog.ranked() and not RunLog.replaying and not is_settled():
+		return
 	sync_position()
 	var c := gs.char_by_id(gs.active_char_id)
 	if c.is_empty():
 		return
+	RunLog.rec("atk")
 	if combat.player_attack(c):
 		_after_action()
 	else:
@@ -127,6 +139,8 @@ var pending_spell: String = ""
 
 func cast(spell_id: String, ally_id: String = "") -> void:
 	if combat == null or _busy or gs.game_over:
+		return
+	if RunLog.ranked() and not RunLog.replaying and not is_settled():
 		return
 	sync_position()
 	var c := gs.char_by_id(gs.active_char_id)
@@ -141,6 +155,7 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 		changed.emit()
 		return
 	pending_spell = ""
+	RunLog.rec("cast", spell_id, ally_id if ally_id != "" else null)
 	if combat.cast_spell(c, spell_id, ally_id):
 		_after_action()
 	else:
@@ -149,6 +164,8 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 ## Lit un parchemin de la besace (sort gratuit, usage unique). Le lecteur est aussi la cible des sorts alliés.
 func read_scroll(char_id: String, inv_idx: int) -> void:
 	if combat == null or _busy or gs.game_over:
+		return
+	if RunLog.ranked() and not RunLog.replaying and not is_settled():
 		return
 	if inv_idx < 0 or inv_idx >= gs.inventory.size():
 		return
@@ -170,6 +187,7 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 		gs.add_log(L.fa(L.t("game.combat_controller.n_a_plus_assez_endurance"), c.name))
 		changed.emit()
 		return
+	RunLog.rec("scroll", char_id, inv_idx)
 	gs.active_char_id = char_id
 	gs.add_log(L.fa(L.t("game.combat_controller.lit_le_parchemin_et_invoque"), [c.name, spell.get("icon", ""), spell.name]), true)
 	if combat.cast_spell(c, str(spell.id), char_id, true):
@@ -192,8 +210,14 @@ func card_pressed(char_id: String) -> void:
 	if pending_spell != "":
 		cast(pending_spell, char_id)
 	elif not in_combat():
-		gs.active_char_id = char_id
+		select_char(char_id)
 		changed.emit()
+
+## Choisit le personnage actif (hors combat) : journalisé quand il change.
+func select_char(char_id: String) -> void:
+	if gs.active_char_id != char_id:
+		RunLog.rec("sel", char_id)
+		gs.active_char_id = char_id
 
 func flee() -> void:
 	if not model_in_combat() or _busy:
@@ -203,7 +227,10 @@ func flee() -> void:
 func do_flee() -> void:
 	if not model_in_combat() or _busy:
 		return
+	if RunLog.ranked() and not RunLog.replaying and not is_settled():
+		return
 	sync_position()
+	RunLog.rec("flee")
 	var dest := combat.flee()
 	if dest.x >= 0:
 		rig.teleport(dest)
@@ -215,6 +242,9 @@ func skip_active_turn(reason: String) -> void:
 	var c := gs.char_by_id(gs.active_char_id)
 	if c.is_empty():
 		return
+	if RunLog.ranked() and not RunLog.replaying and not is_settled():
+		return
+	RunLog.rec("skip")
 	gs.add_log(reason % c.name, true)
 	combat.skip_turn(c)
 	_after_action()
@@ -314,8 +344,8 @@ func _process(delta: float) -> void:
 	if _gate_pending and combat != null and not _gate_busy():
 		_gate_pending = false
 		refresh()
-	if combat == null or _busy or gs.game_over or not _timer_enabled() or not model_in_combat():
-		return
+	if combat == null or _busy or gs.game_over or not _timer_enabled() or not model_in_combat() or RunLog.replaying:
+		return        # (en rejeu, le chronomètre de tour n'existe pas : un tour passé vient du journal)
 	if not get_tree().get_nodes_in_group("modal").is_empty():
 		return   # fenêtre ouverte : le chronomètre de tour est en pause
 	var c := gs.char_by_id(gs.active_char_id)

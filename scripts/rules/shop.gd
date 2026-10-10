@@ -157,6 +157,7 @@ static func village_offers(cfg: Dictionary, run: int) -> Array:
 
 ## Achète l'offre `idx` (au rang courant de `offers`). Renvoie "" si réussi, sinon le motif de l'échec.
 static func buy(gs: GameState, offers: Array, idx: int, quiet: bool = false) -> String:
+	RunLog.unrecorded("boutique.buy")
 	if idx < 0 or idx >= offers.size():
 		return "Offre introuvable."
 	var o: Dictionary = offers[idx]
@@ -175,6 +176,7 @@ static func buy(gs: GameState, offers: Array, idx: int, quiet: bool = false) -> 
 	return ""
 
 static func sell(gs: GameState, idx: int, quiet: bool = false) -> String:
+	RunLog.unrecorded("boutique.sell")
 	if idx < 0 or idx >= gs.inventory.size():
 		return L.t("rules.shop.objet_introuvable")
 	var it: Dictionary = gs.inventory[idx]
