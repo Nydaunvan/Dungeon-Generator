@@ -108,8 +108,9 @@ func participant_speed(key: String) -> float:
 	if mi >= 0 and (not st.has("members") or mi >= st.members.size() or not st.members[mi].alive):
 		return 0.0
 	var base := float(def.get("speed", 8))
-	var count: int = st.members.size() if (mi >= 0 and st.has("members")) else 1
-	return maxf(1.0, round(base / count) + Statuses.speed_bonus(st))
+	# chaque membre d'un groupe agit à la vitesse du monstre (avant, la vitesse était divisée par le nombre de membres : le groupe entier agissait
+	# comme un seul monstre et les héros jouaient 2 à 3 fois de suite avant lui)
+	return maxf(1.0, round(base) + Statuses.speed_bonus(st))
 
 func ensure_gauges() -> void:
 	var wanted := {}
