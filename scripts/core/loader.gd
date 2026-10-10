@@ -5,6 +5,9 @@ extends CanvasLayer
 ## - `go(scène, genre)` : changement de scène derrière l'écran de chargement ; la partie (`main.gd`) rend compte de son avancement
 ##   avec `step()` puis termine par `finish()`.
 
+## Images gardées en mémoire pendant toute la session. « monsters » (sprites 3D) et « misc » (marchand 3D : étal, textures, magicien) n'y sont
+## PAS : ils pèsent à eux seuls plus de 150 Mo de mémoire graphique, et ne sont chargés que pour les niveaux qui les utilisent (l'écran de
+## chargement du niveau les prépare, puis ils sont libérés avec lui).
 const ASSET_DIRS := ["home", "ui", "themes", "icons", "monsters", "portraits", "sheets", "misc"]
 const IMAGE_EXT := ["png", "jpg", "jpeg", "webp"]
 const HOME_SCENE := "res://scenes/home.tscn"
