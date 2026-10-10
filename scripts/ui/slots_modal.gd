@@ -91,8 +91,12 @@ static func _row(i: int, can_save: bool, snapshot: Callable, on_load: Callable, 
 					Form.alert(m.get_parent(), L.t("ui.slots_modal.erreur_lors_du_chargement_de"))
 				return
 			m.close()
+			var ranked_save: bool = str((d.save as Dictionary).get("run_seed", "")) != ""
 			on_load.call({"config": d.get("config", {}), "save": d.save, "origin": str(d.get("dungeonOrigin", "random")),
-				"log": L.fa(L.t("ui.slots_modal.partie_chargee_depuis_l_emplacement"), (i + 1))}))
+				"log": L.fa(L.t("ui.slots_modal.partie_chargee_depuis_l_emplacement"), (i + 1))})
+			# partie classée : la sauvegarde est une pause à usage unique (pas de retour en arrière en rechargeant)
+			if ranked_save:
+				Saves.delete_slot(i))
 		row.add_child(lb)
 	if sm.is_empty() and not can_save:
 		row.add_child(_hint("—"))

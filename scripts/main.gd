@@ -672,6 +672,9 @@ func _on_menu(name: String) -> void:
 		"Journal": _open_full_log()
 		"Stats": StatsModal.open(_modals(), gs)
 		"Admin":
+			if RunLog.ranked():
+				show_message(L.t("main.ranked_no_admin"))
+				return
 			Challenges.mark_admin_used(gs)
 			Data.resume_game = snapshot()
 			Sound.stop_ambient()
@@ -682,9 +685,16 @@ func _on_menu(name: String) -> void:
 		"Nouveau":
 			Dialogs.confirm(_modals(), "", L.t("main.commencer_une_nouvelle_partie"), _restart)
 		"Exporter":
+			if RunLog.ranked():
+				show_message(L.t("main.ranked_no_export"))
+				return
 			var snap := snapshot()
 			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin))
-		"Importer": Files.pick_text(_modals(), _import_text)
+		"Importer":
+			if RunLog.ranked():
+				show_message(L.t("main.ranked_no_export"))
+				return
+			Files.pick_text(_modals(), _import_text)
 		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message(L.fa(L.t("main.a_venir"), name))

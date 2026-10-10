@@ -943,6 +943,8 @@
   "ui.trap_modal.subira_degats": "🎯 %s subira %d dégâts",
   "common.confirmer": "Confirmer",
   "main.save_now": "💾 Sauvegarder maintenant",
+  "main.ranked_no_admin": "🔒 Partie classée : l'administration est désactivée.",
+  "main.ranked_no_export": "🔒 Partie classée : export et import désactivés.",
   "main.continue_without_saving": "Continuer sans sauvegarder",
   "main.flee_btn": "🏃 Fuir (perdre 50% d'endurance)",
   "common.charger": "Charger",

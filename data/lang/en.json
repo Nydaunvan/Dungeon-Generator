@@ -943,6 +943,8 @@
   "ui.trap_modal.subira_degats": "🎯 %s will take %d damage",
   "common.confirmer": "Confirm",
   "main.save_now": "💾 Save now",
+  "main.ranked_no_admin": "🔒 Ranked run: administration is disabled.",
+  "main.ranked_no_export": "🔒 Ranked run: export and import are disabled.",
   "main.continue_without_saving": "Continue without saving",
   "main.flee_btn": "🏃 Flee (lose 50% stamina)",
   "common.charger": "Load",
