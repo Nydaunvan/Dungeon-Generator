@@ -109,6 +109,7 @@ func open_for(id: String, select_item: Dictionary = {}) -> void:
 	if not select_item.is_empty():
 		tab = Inventory.tab_of(select_item)
 		sel = {"src": "bag", "key": _key_of(select_item)}
+	Crumbs.mark("inventaire ouvert %s" % id)
 	var was_open := is_open
 	is_open = true
 	visible = true
@@ -126,6 +127,8 @@ func open_for(id: String, select_item: Dictionary = {}) -> void:
 func close() -> void:
 	if not is_open:
 		return
+	Crumbs.mark("inventaire fermé")
+	BagCommon.hide_item_tip()
 	is_open = false
 	sel = {}
 	details_open = false
@@ -850,11 +853,13 @@ func _quick(idx: int) -> void:
 		_equip(idx)
 
 func _equip(idx: int) -> void:
+	Crumbs.mark("équiper %d" % idx)
 	if Actions.equip(char_id, idx):
 		sel = {}
 		_after()
 
 func _unequip(slot: String) -> void:
+	Crumbs.mark("déséquiper %s" % slot)
 	if Actions.unequip(char_id, slot):
 		sel = {}
 		_after()

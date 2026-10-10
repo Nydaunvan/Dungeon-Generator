@@ -171,9 +171,11 @@ static func show_item_tip(host: Control, gs: GameState, it: Dictionary, char_id:
 	t.resized.connect(func(): if is_instance_valid(host) and host.is_inside_tree(): _place_tip(host, t))
 	for _i in 2:
 		await host.get_tree().process_frame
-		if _tip_node != t or not is_instance_valid(host) or not host.is_inside_tree():
+		if not is_instance_valid(t) or _tip_node != t or not is_instance_valid(host) or not host.is_inside_tree():
 			return
 		t.reset_size()
+	if not is_instance_valid(t):
+		return
 	_place_tip(host, t)
 	t.modulate.a = 1.0
 

@@ -548,6 +548,17 @@ func _clear_probe() -> void:
 	_since_change = 0.0
 	_reset_window()
 
+## Vrai pendant une émission de `changed` due à l'adaptation ou à la calibration automatiques : changer l'anticrénelage ou
+## le filtrage en pleine partie (pilotes NVIDIA, rendu Compatibilité) a fait fermer le jeu ; seule la résolution 3D suit alors,
+## le reste est appliqué au prochain chargement de niveau.
+var auto_change: bool = false
+
+func _emit_auto() -> void:
+	Crumbs.mark("qualité auto %s dyn=%.2f" % [level, dyn_scale])
+	auto_change = true
+	changed.emit()
+	auto_change = false
+
 func _adapted(new_level: String, reason: String) -> void:
 	_since_change = 0.0
 	_stable_t = 0.0
@@ -558,7 +569,7 @@ func _adapted(new_level: String, reason: String) -> void:
 	_resolve()
 	_save()
 	last_event = {"time": Time.get_time_string_from_system(), "reason": reason, "level": level, "dyn": dyn_scale}
-	changed.emit()
+	_emit_auto()
 	if new_level != "":
 		var key := "ui.settings.toast_down" if reason == "down" else ("ui.settings.toast_up" if reason == "up" else "ui.settings.toast_revert")
 		_show_toast(L.t(key) % level_name(new_level))
@@ -615,7 +626,7 @@ func _calib_begin() -> void:
 
 func _calib_next() -> void:
 	_resolve()
-	changed.emit()
+	_emit_auto()
 	_cw = CALIB_SETTLE
 	_ct = 0.0
 	_cn = 0
@@ -674,7 +685,7 @@ func _calib_finish(f: float) -> void:
 	_resolve()
 	_apply_display()                     # rétablit V-Sync et limite d'images choisis par le joueur
 	last_event = {"time": Time.get_time_string_from_system(), "reason": "calib", "level": level, "dyn": dyn_scale}
-	changed.emit()
+	_emit_auto()
 	if level != _baseline_level() or dyn_scale < 0.999:
 		_show_toast(L.t("ui.settings.toast_calib") % level_name(level))
 

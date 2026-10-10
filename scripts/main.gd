@@ -227,11 +227,19 @@ func _arrival(target: Dictionary, action: Dictionary) -> Dictionary:
 	return {"x": x, "y": y, "dir": d}
 
 ## Applique les réglages graphiques à la vue 3D : résolution, anticrénelage, filtrage des textures, distance d'affichage.
+var _quality_dirty: bool = false
+
 func _apply_quality() -> void:
 	if layout == null or not is_instance_valid(layout.sub_viewport) or rig == null:
 		return
 	var vp := layout.sub_viewport
 	vp.scaling_3d_scale = Settings.res_scale()
+	rig.camera.far = 100.0 * Settings.view_distance()
+	if Settings.auto_change:
+		_quality_dirty = true
+		return
+	_quality_dirty = false
+	Crumbs.mark("qualité msaa=%d aniso=%d échelle=%.2f" % [Settings.msaa_mode(), Settings.aniso_mode(), Settings.res_scale()])
 	vp.msaa_3d = Settings.msaa_mode() as Viewport.MSAA
 	vp.anisotropic_filtering_level = Settings.aniso_mode() as Viewport.AnisotropicFiltering
 	rig.camera.far = 100.0 * Settings.view_distance()
@@ -248,6 +256,8 @@ var _loading: bool = false
 func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sliced: bool = false) -> void:
 	_loading = true
 	Crumbs.mark("niveau %d (%s)" % [index, str(gs.cfg.levels[index].get("theme", ""))])
+	if _quality_dirty:
+		_apply_quality()
 	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
 	if level_node:
