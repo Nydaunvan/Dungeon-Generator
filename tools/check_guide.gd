@@ -93,5 +93,23 @@ func _ready() -> void:
 				j2.append(str(p.text))
 		check("tutoriel %s : pages fidèles" % tg.topics[ti].id, _plain("\n".join(j2)) == _plain(str(tg.topics[ti].text)))
 	tg.modal.close()
+	# journal des versions : une version = un sujet, regroupées par dizaines
+	var cg := GuideBook.open(host, "", "changelog")
+	for i in 900:
+		await get_tree().process_frame
+		if cg._ready_pages:
+			break
+	var nver: int = DocModal.load_data("changelog").size()
+	check("journal : une rubrique par version", cg._ready_pages and cg.topics.size() == nver and nver > 100)
+	check("journal : ouvert sur la version la plus récente", cg._ready_pages and cg.page_no == 0 and str(cg.topics[0].id) == AppVersion.number())
+	check("journal : plusieurs chapitres", cg.chapters.size() >= 5)
+	var all_pages := ""
+	for p in cg.pages:
+		all_pages += _plain(str(p.text)) + " "
+	var all_src := ""
+	for t in cg.topics:
+		all_src += _plain(str(t.text)) + " "
+	check("journal : aucune ligne perdue", _plain(all_pages) == _plain(all_src))
+	cg.modal.close()
 	print("check_guide : ", "OK" if fails == 0 else "%d échec(s)" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

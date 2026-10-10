@@ -1812,7 +1812,8 @@
   "ui.guide.page": "Page %d / %d",
   "ui.guide.none": "No result.",
   "ui.guide.tch1": "Dungeon basics",
-  "ui.guide.tch2": "Levels and testing"
+  "ui.guide.tch2": "Levels and testing",
+  "ui.guide.versions_range": "Versions %s"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

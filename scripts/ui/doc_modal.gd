@@ -71,20 +71,7 @@ static func tutorial(host: Node) -> Modal:
 	return GuideBook.open(host, "", "tutorial").modal
 
 static func changelog(host: Node) -> Modal:
-	var m := Modal.open(host, L.t("ui.doc_modal.journal_des_versions"), 720.0)
-	var out := ""
-	for e in _load("changelog"):
-		out += "[font_size=18][color=#e8b45c]Version %s[/color][/font_size]\n" % str(e.version)
-		for c in e.changes:
-			var s := str(c)
-			if s.begins_with("## "):
-				out += "\n[b]%s[/b]\n" % s.substr(3)
-			else:
-				out += "  • %s\n" % s
-		out += "\n"
-	m.content.add_child(_rich(out))
-	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
-	return m
+	return GuideBook.open(host, "", "changelog").modal
 
 ## Notes de la version courante, affichées une fois après une mise à jour.
 static func whats_new(host: Node) -> Modal:

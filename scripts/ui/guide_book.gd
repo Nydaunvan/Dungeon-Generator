@@ -25,6 +25,7 @@ var modal: Modal
 var data_name := "help"
 var chapters: Array = CHAPTERS
 var _memo := MEMO_PATH
+var _numbered := true         ## « Chapitre n » (faux pour le journal des versions)
 var topics: Array = []            ## [{id, label, text, chapter}]
 var pages: Array = []             ## [{topic, text}] dans l'ordre du livre
 var first_page: Dictionary = {}   ## id du sujet -> numéro de la première page
@@ -56,11 +57,15 @@ static func open(host: Node, start_id: String = "", kind: String = "help") -> Gu
 		g.data_name = "tutorial"
 		g.chapters = TUTORIAL_CHAPTERS
 		g._memo = "user://tutorial.cfg"
+	if kind == "changelog":
+		g.data_name = "changelog"
+		g._memo = "user://changelog.cfg"
+		g._numbered = false
 	g._host = host
 	var vp: Vector2 = host.get_viewport().get_visible_rect().size if host.is_inside_tree() else Vector2(1280, 720)
 	g._width = clampf(vp.x * 0.96, 320.0, 1040.0)
 	g._narrow = g._width < 700.0
-	g.modal = Modal.open_framed(host, L.t("common.tutoriel_de_creation") if kind == "tutorial" else L.t("ui.doc_modal.guide_de_l_aventurier"), g._width)
+	g.modal = Modal.open_framed(host, L.t("common.tutoriel_de_creation") if kind == "tutorial" else (L.t("ui.doc_modal.journal_des_versions") if kind == "changelog" else L.t("ui.doc_modal.guide_de_l_aventurier")), g._width)
 	g.modal.fit_ratio = 0.9
 	g.modal.add_child(g)
 	g._page_h = clampf(vp.y * 0.9 - 190.0, 190.0, 720.0)
@@ -94,8 +99,12 @@ func _build() -> void:
 	_toc_card.custom_minimum_size = Vector2(0 if _narrow else 252.0, 0)
 	_toc_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL if _narrow else Control.SIZE_SHRINK_BEGIN
 	body.add_child(_toc_card)
+	var toc_scroll := ScrollContainer.new()
+	toc_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	toc_scroll.custom_minimum_size = Vector2(0, _page_h + 34.0)
+	_toc_card.add_child(toc_scroll)
 	_toc_box = HubKit.vbox(2)
-	_toc_card.add_child(_toc_box)
+	toc_scroll.add_child(_toc_box)
 	# page
 	_page_card = HubKit.card(Color("7a5a2c"), Color(0.07, 0.05, 0.03, 0.55), 14)
 	_page_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -142,7 +151,36 @@ func _rich() -> RichTextLabel:
 
 # ------------------------------------------------------------------ données et pagination
 
+func _load_changelog() -> void:
+	topics.clear()
+	chapters = []
+	var buckets := {}
+	var re := RegEx.new()
+	re.compile("^(\\d+)\\.(\\d+)")
+	for e in DocModal.load_data("changelog"):
+		var ver := str(e.version)
+		var m := re.search(ver)
+		var key := ver
+		if m != null:
+			var lo: int = (int(m.get_string(2)) / 20) * 20
+			key = "%s.%02d – %s.%02d" % [m.get_string(1), lo, m.get_string(1), lo + 19]
+		if not buckets.has(key):
+			buckets[key] = chapters.size()
+			chapters.append({"title": L.fa(L.t("ui.guide.versions_range"), key)})
+		var out := "[font_size=20][color=#e8b45c]Version %s[/color][/font_size]\n\n" % ver
+		for c in e.changes:
+			var ln := str(c)
+			out += ("[b]%s[/b]\n" % ln.substr(3)) if ln.begins_with("## ") else ("  • %s\n" % ln)
+		topics.append({"id": ver, "label": "Version " + ver, "text": out, "chapter": int(buckets[key])})
+
+func _ch_title(ci: int) -> String:
+	var c: Dictionary = chapters[ci]
+	return str(c.title) if c.has("title") else L.t(str(c.key))
+
 func _load_topics() -> void:
+	if data_name == "changelog":
+		_load_changelog()
+		return
 	topics.clear()
 	var raw: Array = DocModal.load_data(data_name)
 	var seen := {}
@@ -235,7 +273,7 @@ func _start(start_id: String) -> void:
 	var target := 0
 	if start_id != "" and first_page.has(start_id):
 		target = int(first_page[start_id])
-	elif start_id == "":
+	elif start_id == "" and data_name != "changelog":
 		target = _recall()
 	go_page(target)
 	modal.call_deferred("_fit")
@@ -247,7 +285,7 @@ func go_page(n: int) -> void:
 	var p: Dictionary = pages[page_no]
 	var t: Dictionary = topics[int(p.topic)]
 	_open_chapter = int(t.chapter)
-	_page_head.text = "%s  ·  %s" % [L.fa(L.t("ui.guide.chapter"), int(t.chapter) + 1) + " — " + L.t(chapters[int(t.chapter)].key), str(t.label)]
+	_page_head.text = "%s  ·  %s" % [(L.fa(L.t("ui.guide.chapter"), int(t.chapter) + 1) + " — " if _numbered else "") + _ch_title(int(t.chapter)), str(t.label)]
 	_page_text.text = str(p.text)
 	_page_text.scroll_to_line(0)
 	_counter.text = L.fa(L.t("ui.guide.page"), [page_no + 1, pages.size()])
@@ -302,7 +340,7 @@ func _fill_toc() -> void:
 		return
 	for ci in chapters.size():
 		var open := ci == _open_chapter
-		var head := HubKit.toggle("%s  %s %d · %s" % ["▾" if open else "▸", L.t("ui.guide.chapter_short"), ci + 1, L.t(chapters[ci].key)], open, func():
+		var head := HubKit.toggle(("%s  %s %d · %s" % ["▾" if open else "▸", L.t("ui.guide.chapter_short"), ci + 1, _ch_title(ci)]) if _numbered else ("%s  %s" % ["▾" if open else "▸", _ch_title(ci)]), open, func():
 			_open_chapter = ci
 			_fill_toc(), 13, 8, 5)
 		head.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -377,7 +415,8 @@ func _remember() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("guide", "topic", str(topics[int(pages[page_no].topic)].id))
 	cf.set_value("guide", "offset", page_no - int(first_page[topics[int(pages[page_no].topic)].id]))
-	cf.save(_memo)
+	if data_name != "changelog":
+		cf.save(_memo)
 
 func _recall() -> int:
 	var cf := ConfigFile.new()
