@@ -79,6 +79,7 @@ jobs:
           rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot.zip
 
       - name: Installer Wine et rcedit (icône et informations de version de l'exécutable Windows)
+        continue-on-error: true      # l'icône est un plus : une panne ici ne doit jamais empêcher la publication
         run: |
           set -euo pipefail
           sudo apt-get update -qq

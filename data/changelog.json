@@ -1,5 +1,37 @@
 [
  {
+  "version": "1.32.2",
+  "changes": [
+   "## Parties classées",
+   "Nouvelle fenêtre « Parties classées » (depuis la fenêtre des défis, avant un donjon aléatoire) : un classement par difficulté — Facile, Normal, Difficile, Hardcore. C'est le serveur qui tire la graine du donjon et fixe ses réglages : tout le monde joue à armes égales.",
+   "Chaque partie classée est enregistrée action par action, puis rejouée à l'identique par un vérificateur qui recalcule le score. Seules les parties vérifiées figurent au classement ; il reste vide tant que rien n'a été vérifié. Départage : plus de niveaux franchis, puis temps de jeu le plus court, puis la partie la plus ancienne.",
+   "Une partie classée demande un compte et une connexion. Le jeu libre n'est pas modifié. Pendant une partie classée, l'administration, l'export et l'import sont indisponibles ; la sauvegarde sert une seule fois à reprendre la partie ; « Repartir de zéro » lance une partie libre. Hors ligne, le journal de la partie est gardé et envoyé à la prochaine connexion.",
+   "## Défis en ligne",
+   "Fenêtre des défis avant le donjon aléatoire, avec le classement « Le plus profond » (niveaux franchis, puis temps) et l'envoi automatique du score.",
+   "Nouveau : Hardcore du mois. Une seule graine pour tous, tirée par le serveur à la première partie du mois et donc inconnue d'avance : 5 niveaux en difficulté Hardcore. Un essai par jour (jour de Paris), consommé dès le lancement, même si la partie est abandonnée. Classement du mois sur les parties vérifiées.",
+   "## Compte : expérience et récompenses",
+   "Votre compte gagne de l'expérience à chaque partie classée vérifiée (davantage en difficulté élevée) et monte de niveau. Le niveau s'affiche à côté du pseudo dans les classements.",
+   "Nouvelle fenêtre « Mes récompenses » (dans le compte et dans la fenêtre des défis) : niveau et expérience, collection de badges et choix du titre, du cadre et de la couleur de votre pseudo, qui s'affichent dans les classements.",
+   "Neuf badges à gagner avec le Hardcore du mois : avoir joué, franchir 3, 5 ou 8 niveaux, puis les récompenses de fin de mois (10 % de tête, dix premiers, troisième, deuxième et champion du mois). Les récompenses sont purement cosmétiques et n'ont aucun effet sur la partie. Elles ne sont attribuées que pour des parties vérifiées.",
+   "## Vérification des parties",
+   "Le déroulement d'une partie est désormais reproductible : la graine du donjon, l'horloge de jeu et les différents flux de hasard (combats, butin, fontaines, pièges…) sont enregistrés, avec les sauvegardes, et toutes les décisions (fontaines, talents, évolutions, pièges, boutique, marchand, forge, Maître des Talents, village, victoire, modificateurs) sont consignées.",
+   "Le rejeu applique les règles de la version du jeu avec laquelle la partie a été jouée.",
+   "## Icône du jeu",
+   "Le jeu a maintenant sa propre icône (l'épée du jeu) à la place de celle du moteur : exécutable Windows, installateur, raccourcis du menu Démarrer et du bureau, désinstallation. Sous Linux, l'icône est fournie avec un script d'ajout au menu des applications (install-menu.sh, option --remove pour l'enlever).",
+   "## Administration du service en ligne",
+   "Pour l'administrateur du service : parties de test qui n'utilisent pas l'essai du jour et n'apparaissent dans aucun classement, et statistiques de toute la partie en ligne (comptes, parties, vérification, Hardcore du mois, récompenses). Réservé à un compte désigné sur le serveur ; invisible pour les autres joueurs."
+  ]
+ },
+ {
+  "version": "1.32.1",
+  "changes": [
+   "## Compte en ligne",
+   "Nouvelle fenêtre « Compte » (bouton dans l'en-tête) : création de compte, connexion, mot de passe oublié, déconnexion et suppression du compte. Le compte est facultatif : le jeu reste entièrement jouable sans lui, et hors ligne.",
+   "## Besace",
+   "Infobulle d'objet : plus de fiche trop haute au premier affichage."
+  ]
+ },
+ {
   "version": "1.32.0",
   "changes": [
    "## Mises à jour dans le jeu",
