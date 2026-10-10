@@ -49,6 +49,7 @@ const ERR_KEYS := {
 	"journal_trop_gros": "ui.cloud.err.journal_trop_gros",
 	"partie_introuvable": "ui.cloud.err.generic",
 	"badge_non_possede": "ui.cloud.err.badge_non_possede",
+	"acces_refuse": "ui.cloud.err.acces_refuse",
 	"generic": "ui.cloud.err.generic",
 }
 

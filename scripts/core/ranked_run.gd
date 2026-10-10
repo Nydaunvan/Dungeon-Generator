@@ -33,23 +33,24 @@ static func ranking_of(res: Dictionary) -> Dictionary:
 
 ## Demande une partie classée au serveur. Renvoie {ok, run_id, seed, params} ou {ok:false, error_code…}.
 ## `kind` : "difficulty" (par difficulté) ou "hardcore_month" (Hardcore du mois : un essai par jour).
-static func start(difficulty: String, kind: String = "difficulty") -> Dictionary:
+## `test` : partie de TEST réservée aux super admins (le serveur refuse les autres) : hors classements, sans essai consommé.
+static func start(difficulty: String, kind: String = "difficulty", test: bool = false) -> Dictionary:
 	if not Cloud.is_signed_in():
 		return Cloud._fail("session_expired", 401)
-	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/start_ranked_run",
+	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/" + ("admin_start_ranked_run" if test else "start_ranked_run"),
 		{"p_difficulty": difficulty, "p_game_version": AppVersion.number(), "p_kind": kind}, true)
 	if not r.ok:
 		return r
 	var d: Dictionary = r.data if r.data is Dictionary else {}
 	return {"ok": true, "run_id": str(d.get("run_id", "")), "seed": str(d.get("seed", "")), "params": d.get("params", {}),
-		"kind": kind, "period": str(d.get("period", ""))}
+		"kind": kind, "period": str(d.get("period", "")), "test": test}
 
 const PENDING_PATH := "user://ranked_pending.json"
 
 ## Lance une partie classée : le serveur donne la graine et les réglages, le donjon est celui de la configuration d'origine.
 ## Renvoie {ok:false, message…} en cas d'échec (hors ligne, essai du jour déjà utilisé…), sinon {ok:true} et la partie démarre.
-static func launch(difficulty: String, kind: String = "difficulty") -> Dictionary:
-	var r: Dictionary = await start(difficulty, kind)
+static func launch(difficulty: String, kind: String = "difficulty", test: bool = false) -> Dictionary:
+	var r: Dictionary = await start(difficulty, kind, test)
 	if not r.ok:
 		return r
 	var cfg := config_for(Data.original_config, str(r.seed), r.params)
@@ -57,6 +58,8 @@ static func launch(difficulty: String, kind: String = "difficulty") -> Dictionar
 		return Cloud._fail("generic")
 	cfg["runId"] = str(r.run_id)
 	cfg["rankedKind"] = kind
+	if test:
+		cfg["rankedTest"] = true
 	Data.launch(cfg, "random")
 	return r
 

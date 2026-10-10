@@ -841,7 +841,7 @@ func _restart() -> void:
 		# la partie classée est terminée : « repartir de zéro » donne une partie libre (la graine et l'essai du serveur sont consommés)
 		_end_ranked_run()
 		cfg = cfg.duplicate(true)
-		for k in ["runSeed", "runId", "rankedKind"]:
+		for k in ["runSeed", "runId", "rankedKind", "rankedTest"]:
 			cfg.erase(k)
 	Data.launch(cfg, Data.play_origin, Data.ADMIN_KEEP)
 
