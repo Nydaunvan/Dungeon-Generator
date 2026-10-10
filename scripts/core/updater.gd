@@ -360,6 +360,10 @@ static func windows_script(pairs: Array, exe: String) -> String:
 		"  If ok Then Exit For",
 		"Next",
 		"If ok Then",
+		"  On Error Resume Next"])
+	lines.append_array(icon_fix_lines(e))
+	lines.append_array([
+		"  On Error GoTo 0",
 		"  sh.CurrentDirectory = fso.GetParentFolderName(\"%s\")" % e,
 		"  sh.Run Chr(34) & \"%s\" & Chr(34), 1, False" % e,
 		"End If",
@@ -367,6 +371,66 @@ static func windows_script(pairs: Array, exe: String) -> String:
 		"fso.DeleteFile WScript.ScriptFullName, True",
 		""])
 	return "\r\n".join(lines)
+
+## Lignes VBScript qui rafraîchissent l'icône du jeu sur le bureau Windows : les raccourcis (bureau, menu Démarrer) qui visent
+## l'exécutable reçoivent l'icône de l'exécutable, puis le cache d'icônes de l'explorateur est vidé (sinon Windows garde l'ancienne image).
+static func icon_fix_lines(e: String) -> Array:
+	return [
+		"  Dim dirs, d, fl, fo, sc",
+		"  dirs = Array(sh.SpecialFolders(\"Desktop\"), sh.SpecialFolders(\"AllUsersDesktop\"), sh.SpecialFolders(\"Programs\"), sh.SpecialFolders(\"AllUsersPrograms\"))",
+		"  For Each d In dirs",
+		"    If d <> \"\" Then",
+		"      If fso.FolderExists(d) Then",
+		"        For Each fl In fso.GetFolder(d).Files",
+		"          If LCase(fso.GetExtensionName(fl.Name)) = \"lnk\" Then",
+		"            Set sc = sh.CreateShortcut(fl.Path)",
+		"            If LCase(sc.TargetPath) = LCase(\"%s\") Then" % e,
+		"              sc.IconLocation = \"%s,0\"" % e,
+		"              sc.Save",
+		"            End If",
+		"          End If",
+		"        Next",
+		"        For Each fo In fso.GetFolder(d).SubFolders",
+		"          For Each fl In fo.Files",
+		"            If LCase(fso.GetExtensionName(fl.Name)) = \"lnk\" Then",
+		"              Set sc = sh.CreateShortcut(fl.Path)",
+		"              If LCase(sc.TargetPath) = LCase(\"%s\") Then" % e,
+		"                sc.IconLocation = \"%s,0\"" % e,
+		"                sc.Save",
+		"              End If",
+		"            End If",
+		"          Next",
+		"        Next",
+		"      End If",
+		"    End If",
+		"  Next",
+		"  sh.Run \"ie4uinit.exe -ClearIconCache\", 0, True",
+		"  sh.Run \"ie4uinit.exe -show\", 0, True"]
+
+## Windows, une fois par version du jeu : même réparation de l'icône (raccourcis + cache), sans mise à jour. Corrige les installations
+## dont l'icône du bureau est restée celle de Godot ou l'ancienne image.
+static func fix_windows_icon_once() -> void:
+	if OS.get_name() != "Windows" or OS.has_feature("editor") or exe_override != "":
+		return
+	var ver := str(ProjectSettings.get_setting("application/config/version", ""))
+	var cf := ConfigFile.new()
+	var marker := "user://icon_fix.cfg"
+	cf.load(marker)
+	if str(cf.get_value("icon", "version", "")) == ver:
+		return
+	cf.set_value("icon", "version", ver)
+	cf.save(marker)
+	var exe := exe_path().replace("/", "\\")
+	var lines := ["Dim fso, sh", "Set fso = CreateObject(\"Scripting.FileSystemObject\")", "Set sh = CreateObject(\"WScript.Shell\")", "On Error Resume Next"]
+	lines.append_array(icon_fix_lines(exe))
+	lines.append_array(["fso.DeleteFile WScript.ScriptFullName, True", ""])
+	var vbs := ProjectSettings.globalize_path("user://") + "/icon_fix.vbs"
+	var bf := FileAccess.open(vbs, FileAccess.WRITE)
+	if bf == null:
+		return
+	bf.store_buffer(vbs_bytes("\r\n".join(lines)))
+	bf.close()
+	OS.create_process("wscript.exe", ["//B", "//Nologo", vbs.replace("/", "\\")])
 
 ## Octets d'un script VBS : UTF-16 avec marque d'ordre des octets (les chemins avec accents restent corrects).
 static func vbs_bytes(text: String) -> PackedByteArray:

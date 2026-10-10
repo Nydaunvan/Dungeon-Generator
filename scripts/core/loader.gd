@@ -139,6 +139,7 @@ func boot() -> void:
 ## Recherche de mise à jour au lancement (Windows et Linux) : sablier derrière lequel le jeu interroge GitHub ; s'il y a du
 ## nouveau, la fenêtre s'affiche au-dessus de l'écran de chargement et le jeu attend la réponse du joueur ; sinon on continue.
 func _check_updates() -> void:
+	Updater.fix_windows_icon_once()
 	if not Updater.can_self_update() or not bool(Updater.pref("auto_check", true)):
 		return
 	screen.show_hourglass(L.t("ui.update.recherche"))
