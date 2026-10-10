@@ -260,7 +260,10 @@ func _draw_framed() -> void:
 	var ar := pic.size.x * 0.5
 	var lit := active or targetable
 	var halo := Color("e8b45c") if active else Color("c98a4a")
-	var ring_col: Color = ring_override if ring_override.a > 0.0 else (halo if lit else Color("7a6242"))
+	var sk := Unlocks.skin_color()
+	if sk.a > 0.0:
+		halo = sk
+	var ring_col: Color = ring_override if ring_override.a > 0.0 else (halo if lit else (sk.darkened(0.45) if sk.a > 0.0 else Color("7a6242")))
 	draw_circle(c, ar + 4.0 * k, Color("070504"))
 	draw_circle(c, ar + 3.0 * k, ring_col)
 	draw_circle(c, ar + 1.2 * k, Color("070504"))
@@ -307,13 +310,16 @@ func _draw() -> void:
 	# avatar : anneau neutre, or si actif, teinté par un statut
 	var c := pic.position + pic.size * 0.5
 	var ar := pic.size.x * 0.5
+	var sk := Unlocks.skin_color()
 	var ring_col: Color = ring_override if ring_override.a > 0.0 else (Color("e8b45c") if active else Color("5a4630"))
+	if sk.a > 0.0 and ring_override.a <= 0.0:
+		ring_col = sk if active else sk.darkened(0.45)
 	draw_circle(c, ar + u(3.5), Color("070504"))
 	draw_circle(c, ar + u(2.5), ring_col)
 	draw_circle(c, ar + u(1.0), Color("070504"))
 	if active:
 		for g in [[7.0, 0.10], [5.0, 0.16], [3.0, 0.26]]:
-			draw_arc(c, ar + u(3.5) + u(g[0]) * 0.5, 0.0, TAU, 40, Color(0.91, 0.71, 0.36, g[1]), u(g[0]))
+			draw_arc(c, ar + u(3.5) + u(g[0]) * 0.5, 0.0, TAU, 40, Color(sk, g[1]) if sk.a > 0.0 else Color(0.91, 0.71, 0.36, g[1]), u(g[0]))
 	draw_circle(c, ar, Color("0c0906"))
 	if dead:
 		draw_colored_polygon(face, Color(0.55, 0.08, 0.08, 0.6))

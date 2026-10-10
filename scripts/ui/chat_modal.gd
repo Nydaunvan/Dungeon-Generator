@@ -31,6 +31,8 @@ var _input: LineEdit
 var _send_btn: Button
 var _sending := false
 var _empty_note: Label
+var _marked := 0               ## dernier message déjà signalé « lu » au serveur pour la vue courante
+var _peer := ""                 ## pseudo du correspondant (conversation privée)
 
 static func open(host: Node) -> ChatModal:
 	var c := ChatModal.new()
@@ -71,6 +73,7 @@ func _build() -> void:
 		])
 		return
 	_room = Chat.default_room()
+	_modal.closed.connect(func(): ChatAlerts.refresh())
 	_start()
 
 ## Charte d'abord : tant que la version courante n'est pas acceptée, ni lecture ni écriture (le serveur refuse aussi).
@@ -147,12 +150,8 @@ func _reset_body() -> void:
 
 # ------------------------------------------------------------------ salon
 
-func _show_room(room: String) -> void:
-	_view = "room"
-	_room = room
-	_reset_body()
-	_last_id = 0
-	_count = 0
+## Rangée d'onglets : les trois salons et « Privés » (avec leur bulle rouge s'il y a du nouveau).
+func _tabs(active: String) -> void:
 	var tabs := HFlowContainer.new()
 	tabs.add_theme_constant_override("h_separation", 6)
 	tabs.alignment = FlowContainer.ALIGNMENT_CENTER
@@ -162,10 +161,42 @@ func _show_room(room: String) -> void:
 		b.text = Chat.room_name(r)
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.button_pressed = r == room
+		b.button_pressed = r == active
 		b.pressed.connect(func(): _show_room(r))
 		tabs.add_child(b)
 		_tab_buttons[r] = b
+		NotifDot.attach(b, func(): return 0 if r == active else ChatAlerts.unread_room(r), true)
+	var pb := Button.new()
+	pb.text = "✉ " + L.t("ui.chat.privates")
+	pb.toggle_mode = true
+	pb.focus_mode = Control.FOCUS_NONE
+	pb.button_pressed = active == "dms" or Chat.is_dm(active)
+	pb.pressed.connect(func(): _show_dms())
+	tabs.add_child(pb)
+	_tab_buttons["dms"] = pb
+	NotifDot.attach(pb, func(): return ChatAlerts.dm, true)
+
+func _show_room(room: String) -> void:
+	_view = "room"
+	_room = room
+	_reset_body()
+	_last_id = 0
+	_count = 0
+	_marked = 0
+	_tabs(room)
+	if Chat.is_dm(room):
+		var hb := HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 8)
+		var back := Button.new()
+		back.text = "‹ " + L.t("ui.chat.back")
+		back.focus_mode = Control.FOCUS_NONE
+		back.pressed.connect(func(): _show_dms())
+		hb.add_child(back)
+		var who := _label(L.fa(L.t("ui.chat.dm_with"), _peer), GOLD, 15)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.clip_text = true
+		hb.add_child(who)
+		_body.add_child(hb)
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.custom_minimum_size = Vector2(0, clampf(_host.get_viewport().get_visible_rect().size.y * 0.38, 160.0, 360.0))
@@ -184,7 +215,7 @@ func _show_room(room: String) -> void:
 	h.add_theme_constant_override("separation", 8)
 	_input = LineEdit.new()
 	_input.max_length = Chat.MAX_LEN
-	_input.placeholder_text = L.t("ui.chat.placeholder")
+	_input.placeholder_text = L.t("ui.chat.dm_placeholder") if Chat.is_dm(room) else L.t("ui.chat.placeholder")
 	_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_input.text_submitted.connect(func(_t): _send())
 	h.add_child(_input)
@@ -211,6 +242,7 @@ func _poll_loop(mine: int) -> void:
 			if first and (r.data as Array).is_empty() and is_instance_valid(_empty_note):
 				_empty_note.text = L.t("ui.chat.empty")
 			_append(r.data)
+			_mark_read()
 			first = false
 			wait = poll_fast if not (r.data as Array).is_empty() else minf(wait + 2.0, poll_slow)
 			if is_instance_valid(_status) and _status.get_meta("poll_error", false):
@@ -300,14 +332,18 @@ func _row(m: Dictionary) -> Control:
 		var pm := mb.get_popup()
 		pm.add_item(L.t("ui.chat.report"), 0)
 		pm.add_item(L.t("ui.chat.block"), 1)
+		if not Chat.is_dm(_room):
+			pm.add_item("✉ " + L.t("ui.chat.write_private"), 2)
 		var mid := int(m.get("id", 0))
 		var pid := str(m.get("player_id", ""))
 		var pseudo := str(m.get("pseudo", ""))
 		pm.id_pressed.connect(func(i: int):
 			if i == 0:
 				_report(mid)
+			elif i == 1:
+				_ask_block(pid, pseudo)
 			else:
-				_ask_block(pid, pseudo))
+				_open_dm(pid, pseudo))
 		h.add_child(mb)
 	return h
 
@@ -340,6 +376,95 @@ func _send() -> void:
 	var r2: Dictionary = await Chat.fetch(_room, _last_id, 40)       # le message apparaît tout de suite, sans attendre le prochain tour
 	if mine == _gen and _alive() and r2.ok and r2.data is Array:
 		_append(r2.data)
+		_mark_read()
+
+## Signale au serveur que la vue courante est lue jusqu'au dernier message reçu (la bulle rouge s'efface).
+func _mark_read() -> void:
+	if _last_id <= _marked or _room == "":
+		return
+	_marked = _last_id
+	var scope := _room
+	var last := _last_id
+	var r: Dictionary = await Chat.mark_read(scope, last)
+	if r.ok:
+		ChatAlerts.refresh()
+
+func _open_dm(player_id: String, pseudo: String) -> void:
+	_peer = pseudo
+	_show_room(Chat.dm_room(player_id))
+
+# ------------------------------------------------------------------ messages privés
+
+func _show_dms() -> void:
+	_view = "dms"
+	_reset_body()
+	_tabs("dms")
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.custom_minimum_size = Vector2(0, clampf(_host.get_viewport().get_visible_rect().size.y * 0.34, 140.0, 320.0))
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(box)
+	_body.add_child(sc)
+	_status = _label("", BAD, 13)
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.add_child(_status)
+	var cb := CheckButton.new()
+	cb.text = L.t("ui.chat.dm_accept")
+	cb.focus_mode = Control.FOCUS_NONE
+	cb.button_pressed = true
+	cb.add_theme_font_size_override("font_size", 13)
+	_body.add_child(cb)
+	_note(_body, L.t("ui.chat.dm_hint"))
+	_buttons()
+	_modal.call_deferred("_fit")
+	_fill_dms(box, cb, _gen)
+
+func _fill_dms(box: VBoxContainer, cb: CheckButton, mine: int) -> void:
+	_note(box, L.t("ui.chat.loading"))
+	var r: Dictionary = await Chat.conversations()
+	var o: Dictionary = await Chat.dm_open()
+	if mine != _gen or not _alive():
+		return
+	for c in box.get_children():
+		box.remove_child(c)
+		c.queue_free()
+	if o.ok and o.data is bool:
+		cb.set_pressed_no_signal(bool(o.data))
+	cb.toggled.connect(func(on: bool):
+		var u: Dictionary = await Chat.set_dm_open(on)
+		if mine == _gen and _alive():
+			_say(L.t("ui.chat.dm_open_on") if on and u.ok else (L.t("ui.chat.dm_open_off") if u.ok else str(u.message)), GOOD if u.ok else BAD))
+	if not r.ok or not (r.data is Array):
+		_note(box, str(r.get("message", L.t("ui.chat.unavailable"))), BAD)
+		return
+	if (r.data as Array).is_empty():
+		_note(box, L.t("ui.chat.dm_none"))
+		return
+	for c in r.data:
+		box.add_child(_conversation_row(c))
+	_modal.call_deferred("_fit")
+
+func _conversation_row(c: Dictionary) -> Control:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.clip_text = true
+	b.custom_minimum_size = Vector2(0, 46)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var pseudo := str(c.get("pseudo", "?"))
+	var body := str(c.get("body", "")).substr(0, 60)
+	b.text = "%s\n%s%s" % [pseudo, L.t("ui.chat.dm_you") + " " if bool(c.get("mine", false)) else "", body]
+	b.tooltip_text = Chat.format_time(str(c.get("created_at", "")))
+	var pid := str(c.get("player_id", ""))
+	b.pressed.connect(func(): _open_dm(pid, pseudo))
+	var n := int(c.get("unread", 0))
+	if n > 0:
+		NotifDot.attach(b, func(): return n)
+	return b
 
 func _report(message_id: int) -> void:
 	var r: Dictionary = await Chat.report(message_id)

@@ -63,6 +63,8 @@ const ERR_KEYS := {
 	"mot_invalide": "ui.cloud.err.mot_invalide",
 	"charte_non_acceptee": "ui.cloud.err.charte_non_acceptee",
 	"charte_obsolete": "ui.cloud.err.charte_obsolete",
+	"destinataire_indisponible": "ui.cloud.err.destinataire_indisponible",
+	"trop_de_destinataires": "ui.cloud.err.trop_de_destinataires",
 	"generic": "ui.cloud.err.generic",
 }
 

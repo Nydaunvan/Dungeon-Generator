@@ -11,6 +11,28 @@ const MAX_LEN := 300
 const ROOM_KEYS := {"general": "ui.chat.room_general", "fr": "ui.chat.room_fr", "en": "ui.chat.room_en"}
 const KEEP := 150               ## messages gardés à l'écran par salon
 
+## Une conversation privée est identifiée « dm:<identifiant du correspondant> » ; un salon public par son nom (general, fr, en).
+static func is_dm(room: String) -> bool:
+	return room.begins_with("dm:")
+
+static func dm_room(player_id: String) -> String:
+	return "dm:" + player_id
+
+## Conversations privées : [{player_id, pseudo, body, created_at, mine, unread, last_id}], la plus récente d'abord.
+static func conversations() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_conversations", {}, true)
+
+## Marque un salon ou une conversation comme lu jusqu'au message `last_id`.
+static func mark_read(room: String, last_id: int) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_mark_read", {"p_scope": room, "p_last_id": last_id}, true)
+
+## Messages privés acceptés ? (true par défaut)
+static func dm_open() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_dm_open", {}, true)
+
+static func set_dm_open(open: bool) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_set_dm", {"p_open": open}, true)
+
 static func room_name(id: String) -> String:
 	return L.t(ROOM_KEYS[id]) if ROOM_KEYS.has(id) else id
 
@@ -34,10 +56,16 @@ static func clean(text: String) -> String:
 
 ## Derniers messages du salon (`after` = 0) ou ceux qui suivent le numéro `after`. `data` : tableau trié du plus ancien au plus récent.
 static func fetch(room: String, after: int = 0, limit: int = 60) -> Dictionary:
+	if is_dm(room):
+		return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_fetch_dm", {"p_with": room.substr(3), "p_after": after, "p_limit": limit}, true)
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_fetch", {"p_room": room, "p_after": after, "p_limit": limit}, true)
 
 static func send(room: String, body: String) -> Dictionary:
-	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_send", {"p_room": room, "p_body": body}, true)
+	var r: Dictionary
+	if is_dm(room):
+		r = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_send_dm", {"p_to": room.substr(3), "p_body": body}, true)
+	else:
+		r = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_send", {"p_room": room, "p_body": body}, true)
 	if not r.ok and r.get("error_code", "") == "chat_mute":
 		r["message"] = mute_message(r)
 	return r

@@ -160,7 +160,9 @@ func _fill_strip() -> void:
 	if _online() and not _signed():
 		right.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 34))
 	if _signed():
-		right.add_child(HubKit.button("💬 " + L.t("ui.chat.header"), func(): ChatModal.open(_host), false, 34))
+		var cbtn := HubKit.button("💬 " + L.t("ui.chat.header"), func(): ChatModal.open(_host), false, 34)
+		NotifDot.attach(cbtn)
+		right.add_child(cbtn)
 		right.add_child(HubKit.button("👤 " + L.t("ui.cloud.header"), func(): AccountModal.open(_host), false, 34))
 	right.add_child(HubKit.button(L.t("ui.help.how"), func(): DocModal.guide(_host, "defis"), false, 34))
 
@@ -257,6 +259,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.free_quit")],
 				["💾", L.t("ui.hub.f_save"), L.t("ui.hub.free_save")],
 				["🛠", L.t("ui.hub.f_editor"), L.t("ui.hub.free_editor")],
+				["🔓", L.t("ui.hub.f_unlock"), L.t("ui.hub.free_unlock")],
 			], cols)
 		"ranked":
 			box.add_child(HubKit.label("🏆  " + L.t("ui.hub.mode_ranked"), GOLD, 20, true, false))
@@ -339,6 +342,28 @@ func _load_weekly(card: Control, mine: int) -> void:
 	if not nx.is_empty():
 		foot += "   ·   " + L.fa(L.t("ui.hub.weekly_next"), "%s %s" % [str(nx.get("icon", "")), str(nx.get("label_en" if en else "label_fr", ""))])
 	v.add_child(HubKit.label(foot, UiTheme.DIM, 12))
+	if _signed():
+		_load_streak(v, mine)
+	_modal.call_deferred("_fit")
+
+## Série de semaines consécutives du joueur et prochain palier.
+func _load_streak(v: VBoxContainer, mine: int) -> void:
+	var r: Dictionary = await RankedRun.my_streak()
+	if mine != _gen or not _alive() or not r.ok or not (r.data is Dictionary):
+		return
+	var n := int(r.data.get("streak", 0))
+	var played := bool(r.data.get("played_this_week", false))
+	var goals := [3, 6, 12]
+	var nxt := 0
+	for g in goals:
+		if n < g:
+			nxt = g
+			break
+	var line := "🔗 " + L.fa(L.t("ui.hub.streak"), n)
+	if nxt > 0:
+		line += "   ·   " + L.fa(L.t("ui.hub.streak_next"), [nxt, nxt - n])
+	line += "   ·   " + (L.t("ui.hub.streak_done") if played else L.t("ui.hub.streak_todo"))
+	v.add_child(HubKit.label(line, HubKit.GOOD if played else UiTheme.PARCH, 13))
 	_modal.call_deferred("_fit")
 
 ## Temps restant avant une date ISO (UTC) : « 3 jours », « 5 heures »…
@@ -446,6 +471,9 @@ func _show_boards() -> void:
 		srcs.add_child(HubKit.toggle("%s %s" % [MODE_ICON[s], L.t(MODE_NAME[s])], s == _src, func():
 			_src = s
 			_show("boards"), 14, 12, 7))
+	srcs.add_child(HubKit.toggle("🏛 " + L.t("ui.hub.legends"), _src == "legends", func():
+		_src = "legends"
+		_show("boards"), 14, 12, 7))
 	if _src == "ranked":
 		var ds := HFlowContainer.new()
 		ds.add_theme_constant_override("h_separation", 6)
@@ -458,7 +486,7 @@ func _show_boards() -> void:
 	_body.add_child(card)
 	var box := HubKit.vbox(4)
 	card.add_child(box)
-	var intro: String = {"free": "ui.hub.bd_free", "ranked": "ui.hub.bd_ranked", "weekly": "ui.hub.bd_weekly", "hardcore": "ui.hub.bd_hardcore"}[_src]
+	var intro: String = {"free": "ui.hub.bd_free", "ranked": "ui.hub.bd_ranked", "weekly": "ui.hub.bd_weekly", "hardcore": "ui.hub.bd_hardcore", "legends": "ui.hub.bd_legends"}[_src]
 	box.add_child(HubKit.label(L.t(intro), UiTheme.DIM, 12))
 	var wait := _wait(box)
 	_load_board(box, wait, _gen)
@@ -473,6 +501,19 @@ func _load_board(box: VBoxContainer, wait: Label, mine: int) -> void:
 	var err: Dictionary = {}
 	var unit := L.t("ui.challenges.unit_niveaux")
 	match _src:
+		"legends":
+			var gr: Dictionary = await RankedRun.hall()
+			if mine != _gen or not _alive():
+				return
+			wait.queue_free()
+			if not gr.ok:
+				_error(box, gr)
+			elif (gr.data as Array).is_empty():
+				box.add_child(HubKit.label(L.t("ui.hub.legends_empty"), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
+			else:
+				_legends_table(box, gr.data)
+			_modal.call_deferred("_fit")
+			return
 		"free":
 			var lr: Dictionary = await Challenges.list(true)
 			if mine != _gen or not _alive():
@@ -536,6 +577,26 @@ func _load_board(box: VBoxContainer, wait: Label, mine: int) -> void:
 		return
 	_board_table(box, rows, unit)
 	_modal.call_deferred("_fit")
+
+## Hall des légendes : un champion par semaine ou par mois clos.
+func _legends_table(box: VBoxContainer, rows: Array) -> void:
+	var en := TranslationServer.get_locale().begins_with("en")
+	var g := GridContainer.new()
+	g.columns = 2 if _narrow() else 4
+	g.add_theme_constant_override("h_separation", 12)
+	g.add_theme_constant_override("v_separation", 6)
+	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(g)
+	var n := mini(rows.size(), _rows_fit() * 2)
+	for i in n:
+		var r: Dictionary = rows[i]
+		var weekly := str(r.get("kind", "")) == "weekly"
+		var when := L.fa(L.t("ui.hub.weekly_week"), str(r.get("period", "")).get_slice("W", 1)) + " " + str(r.get("period", "")).get_slice("-", 0) if weekly else str(r.get("period", ""))
+		g.add_child(HubKit.label(("📅 " if weekly else "🔥 ") + when, UiTheme.DIM, 13, false, false))
+		g.add_child(Cosmetics.name_plate(str(r.get("pseudo", "?")), "", str(r.get("frame", "")) if r.get("frame") != null else "", r.get("color"), 15))
+		g.add_child(HubKit.label("%d %s · %s" % [int(r.get("score", 0)), L.t("ui.challenges.unit_niveaux"), Challenges.format_time(int(r.get("seconds", 0)))], GOLD, 13, false, false))
+		var rule := (str(r.get("rule_en" if en else "rule_fr", "")) if r.get("rule_fr") != null else "")
+		g.add_child(HubKit.label(("%s %s" % [str(r.get("rule_icon", "")), rule]) if rule != "" else "", UiTheme.PARCH, 13, false, false))
 
 func _board_table(box: VBoxContainer, rows: Array, unit: String) -> void:
 	var me := Cloud.user_id() if _signed() else ""
@@ -644,6 +705,7 @@ func _load_rewards(wait: Label, mine: int) -> void:
 	if mb.ok:
 		for b in mb.data:
 			_owned[str(b.badge_id)] = true
+		Unlocks.set_owned(_owned.keys())
 	var total_xp := 0
 	if xp.ok and xp.data is Array and not (xp.data as Array).is_empty():
 		total_xp = int(xp.data[0].get("xp", 0))
@@ -682,6 +744,7 @@ func _build_rewards(total_xp: int) -> void:
 	_picker(v2, "title", L.t("ui.rewards.pick_title"), func(b: Dictionary): return b.get("title_fr") != null)
 	_picker(v2, "frame", L.t("ui.rewards.pick_frame"), func(b: Dictionary): return b.get("frame") != null)
 	_picker(v2, "color", L.t("ui.rewards.pick_color"), func(b: Dictionary): return b.get("color") != null)
+	_skin_picker(v2)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.add_child(HubKit.button(L.t("ui.rewards.equip"), _equip, true, 34))
@@ -721,6 +784,36 @@ func _picker(parent: Control, kind: String, label: String, offers: Callable) -> 
 	ob.item_selected.connect(func(i: int):
 		_sel[kind] = str(ob.get_item_metadata(i))
 		_refresh_preview())
+	row.add_child(ob)
+	parent.add_child(row)
+
+## Apparence des héros : couleur de l'anneau des portraits en partie (gardée sur cet appareil).
+func _skin_picker(parent: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var l := HubKit.label(L.t("ui.rewards.pick_skin"), UiTheme.DIM, 13, false, false)
+	l.custom_minimum_size.x = 100
+	row.add_child(l)
+	var ob := OptionButton.new()
+	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ob.add_item(L.t("ui.rewards.none"))
+	ob.set_item_metadata(0, "")
+	var cur := 0
+	var total := 0
+	for s in Unlocks.skins():
+		total += 1
+		if _owned.has(str(s.unlockBadge)):
+			ob.add_item("%s %s" % [str(s.icon), Cosmetics.loc(s, "label")])
+			ob.set_item_metadata(ob.item_count - 1, str(s.id))
+			if str(s.id) == Unlocks.skin_id():
+				cur = ob.item_count - 1
+	ob.select(cur)
+	ob.tooltip_text = L.fa(L.t("ui.rewards.skin_tip"), [ob.item_count - 1, total])
+	ob.item_selected.connect(func(i: int):
+		Unlocks.set_skin(str(ob.get_item_metadata(i)))
+		if _eq_status != null and is_instance_valid(_eq_status):
+			_eq_status.text = L.t("ui.rewards.skin_saved")
+			_eq_status.add_theme_color_override("font_color", HubKit.GOOD))
 	row.add_child(ob)
 	parent.add_child(row)
 

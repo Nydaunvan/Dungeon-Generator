@@ -49,6 +49,14 @@ static func start(difficulty: String, kind: String = "difficulty", test: bool = 
 static func weekly_current() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/weekly_current", {})
 
+## Série de semaines du Défi du joueur connecté : {streak, played_this_week}.
+static func my_streak() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/my_weekly_streak", {}, true)
+
+## Hall des légendes : le champion de chaque semaine et de chaque mois clos, le plus récent d'abord.
+static func hall() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/hall_legendes?order=closed_at.desc&limit=60&select=kind,period,score,seconds,pseudo,rule_icon,rule_fr,rule_en,frame,color")
+
 const PENDING_PATH := "user://ranked_pending.json"
 
 ## Lance une partie classée : le serveur donne la graine et les réglages, le donjon est celui de la configuration d'origine.

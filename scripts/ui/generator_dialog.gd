@@ -30,22 +30,26 @@ static func _spin(lo: int, hi: int, value: int) -> SpinBox:
 	return s
 
 ## Ouvre la fenêtre de réglages ; `on_launch(cfg)` reçoit la configuration générée.
-static func open(host: Node, on_launch: Callable) -> void:
+static func open(host: Node, on_launch: Callable, prev: Dictionary = {}) -> void:
 	var m := Modal.open(host, L.t("ui.generator_dialog.generation_aleatoire"), 500.0)
 	m.add_text(L.t("ui.generator_dialog.tout_est_genere_automatiquement"), UiTheme.DIM, 14, true)
-	var levels := _spin(1, 8, 3)
-	var width := _spin(7, 60, 13)
-	var height := _spin(7, 60, 11)
+	var levels := _spin(1, 8, int(prev.get("levels", 3)))
+	var width := _spin(7, 60, int(prev.get("width", 13)))
+	var height := _spin(7, 60, int(prev.get("height", 11)))
 	_row(m, L.t("ui.generator_dialog.nombre_de_niveaux_max_8"), levels)
 	_row(m, L.t("ui.generator_dialog.largeur_par_niveau_max_60"), width)
 	_row(m, L.t("ui.generator_dialog.hauteur_par_niveau_max_60"), height)
 	var diff := OptionButton.new()
 	for d in DIFFS:
 		diff.add_item(str(d[1]))
-	diff.select(1)
+	var di := 1
+	for i in DIFFS.size():
+		if str(DIFFS[i][0]) == str(prev.get("diff", "normal")):
+			di = i
+	diff.select(di)
 	diff.custom_minimum_size = Vector2(150, 0)
 	_row(m, L.t("ui.generator_dialog.difficulte"), diff)
-	var blurb := m.add_text(str(BLURBS["normal"]), UiTheme.DIM, 13, true)
+	var blurb := m.add_text(str(BLURBS[DIFFS[di][0]]), UiTheme.DIM, 13, true)
 	diff.item_selected.connect(func(i: int): blurb.text = str(BLURBS[DIFFS[i][0]]))
 	var go := func():
 		var params := {"levels": int(levels.value), "width": int(width.value), "height": int(height.value), "diff": str(DIFFS[diff.selected][0])}
@@ -54,10 +58,11 @@ static func open(host: Node, on_launch: Callable) -> void:
 	m.set_buttons([{"text": L.t("ui.generator_dialog.generer_et_jouer"), "cb": go}, {"text": L.t("common.annuler"), "cb": func(): m.close()}])
 
 static func _pick_modifiers(host: Node, params: Dictionary, on_launch: Callable) -> void:
-	pick_modifiers(host, func(mods: Array): _generate(host, params, mods, on_launch))
+	pick_modifiers(host, func(mods: Array): _generate(host, params, mods, on_launch), func(): open(host, on_launch, params))
 
 ## Choix de 0 à 2 modificateurs d'expédition ; `on_chosen(mods)` reçoit les ids.
-static func pick_modifiers(host: Node, on_chosen: Callable) -> void:
+## `on_back` (facultatif) : ajoute un bouton « Retour » qui ferme cette fenêtre sans rien choisir et rappelle cette fonction.
+static func pick_modifiers(host: Node, on_chosen: Callable, on_back: Callable = Callable()) -> void:
 	var m := Modal.open(host, L.t("ui.generator_dialog.modificateurs_expedition"), 500.0)
 	m.add_text(L.t("ui.generator_dialog.facultatif_jusqu_a_2_modificateurs"), UiTheme.DIM, 14, true)
 	var chosen: Array = []
@@ -69,10 +74,10 @@ static func pick_modifiers(host: Node, on_chosen: Callable) -> void:
 			b.disabled = not chosen.has(id) and chosen.size() >= 2
 			b.modulate = Color(1.25, 1.15, 0.85) if chosen.has(id) else Color.WHITE
 		(refs.validate as Button).disabled = chosen.is_empty()
-	for mod in DungeonGenerator.run_modifiers():
+	for mod in DungeonGenerator.run_modifiers() + Unlocks.unlocked_modifiers():
 		var id: String = str(mod.id)
 		var b := Button.new()
-		b.text = "%s %s\n%s" % [mod.icon, mod.labelFr, mod.descFr]
+		b.text = "%s %s%s\n%s" % [mod.icon, mod.labelFr, " 🔓" if bool(mod.get("weeklyOnly", false)) else "", mod.descFr]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.focus_mode = Control.FOCUS_NONE
@@ -89,17 +94,22 @@ static func pick_modifiers(host: Node, on_chosen: Callable) -> void:
 		Flows.choose("mods", mods)
 	# la liste reçue est assainie (journal falsifié) : au plus 2 modificateurs distincts et connus
 	Flows.open("mods", m, func(mods: Variant):
-		var valid: Array = DungeonGenerator.run_modifiers().map(func(x): return str(x.id))
+		var valid: Array = (DungeonGenerator.run_modifiers() + Unlocks.unlocked_modifiers()).map(func(x): return str(x.id))
 		var clean: Array = []
 		if mods is Array:
 			for id in mods:
 				if valid.has(str(id)) and not clean.has(str(id)) and clean.size() < 2:
 					clean.append(str(id))
 		on_chosen.call(clean))
-	m.set_buttons([
+	var specs: Array = [
 		{"text": L.t("common.valider"), "cb": func(): launch.call(chosen.duplicate())},
 		{"text": L.t("ui.generator_dialog.aucun_modificateur"), "cb": func(): launch.call([])},
-	])
+	]
+	if on_back.is_valid():
+		specs.append({"text": "‹ " + L.t("common.retour"), "cb": func():
+			m.close()
+			on_back.call()})
+	m.set_buttons(specs)
 	refs["validate"] = m._buttons_row.get_child(0)
 	refresh.call()
 

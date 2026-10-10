@@ -9,6 +9,11 @@ const TICK := 0.5
 const CHASE_CHANCE := 0.25
 const WANDER_CHANCE := 0.15
 const WANDER_CHANCE_BOSS := 0.10
+## Après un combat (victoire ou fuite) : nombre de pas de monstres (0,5 s chacun) pendant lesquels aucun ne poursuit le joueur ni ne
+## s'approche de lui ; et distance minimale que garde un monstre qui rôde avec les autres (pas de combat sur combat).
+const CALM_TICKS := 8
+const CALM_DIST := 6
+const PATROL_GAP := 5
 
 var gs: GameState
 var ctrl: CombatController
@@ -130,14 +135,23 @@ func _has_los(from: Vector2i, to: Vector2i) -> bool:
 		c += step
 	return true
 
-func _wander_target(from: Vector2i, zone: Dictionary, except_id: String) -> Vector2i:
+func _wander_target(from: Vector2i, zone: Dictionary, except_id: String, avoid: Vector2i = Vector2i(-1, -1)) -> Vector2i:
 	var dirs := DungeonGrid.DIRS.duplicate()
 	GameRng.shuffle("wander", dirs)
+	var others := _monster_cells(except_id)
 	for v in dirs:
 		var n: Vector2i = from + v
-		if zone.has(n) and _free(n, except_id):
+		if zone.has(n) and _free(n, except_id) and _apart(n, others, from) and (avoid.x < 0 or absi(n.x - avoid.x) + absi(n.y - avoid.y) >= CALM_DIST):
 			return n
 	return Vector2i(-1, -1)
+
+## Un monstre qui rôde ne s'approche pas d'un autre monstre (sauf s'il l'était déjà : il peut s'en éloigner).
+func _apart(n: Vector2i, others: Dictionary, from: Vector2i = Vector2i(-1, -1)) -> bool:
+	for c in others:
+		var d: int = absi(c.x - n.x) + absi(c.y - n.y)
+		if d < PATROL_GAP and (from.x < 0 or d <= absi(c.x - from.x) + absi(c.y - from.y)):
+			return false
+	return true
 
 # ------------------------------------------------------------------ tick
 
@@ -159,6 +173,9 @@ func _tick() -> void:
 		if d > 1 and d < best and _has_los(e.pos, player):
 			best = d
 			lead = str(e.def.id)
+	var calm := int(gs.stats.get("calmTicks", 0)) > 0
+	if calm:
+		gs.stats["calmTicks"] = int(gs.stats.calmTicks) - 1
 	var engaged := false
 	for e in movers:
 		var id := str(e.def.id)
@@ -166,7 +183,7 @@ func _tick() -> void:
 		if absi(p.x - player.x) + absi(p.y - player.y) <= 1:
 			continue
 		var target := Vector2i(-1, -1)
-		if id == lead:
+		if id == lead and not calm:
 			if GameRng.f("wander") < CHASE_CHANCE:
 				var step := Vector2i(signi(player.x - p.x), signi(player.y - p.y))
 				if _free(p + step, id):
@@ -174,7 +191,7 @@ func _tick() -> void:
 		elif int(e.def.get("patrolRadius", 0)) > 0:
 			if GameRng.f("wander") < (WANDER_CHANCE_BOSS if bool(e.def.get("isBoss", false)) else WANDER_CHANCE):
 				var zone := _zone(id, int(e.def.x), int(e.def.y), int(e.def.patrolRadius))
-				target = _wander_target(p, zone, id)
+				target = _wander_target(p, zone, id, player if calm else Vector2i(-1, -1))
 		if target.x < 0:
 			continue
 		e.st["x"] = target.x

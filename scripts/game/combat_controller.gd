@@ -234,6 +234,7 @@ func do_flee() -> void:
 	sync_position()
 	RunLog.rec("flee")
 	var dest := combat.flee()
+	gs.stats["calmTicks"] = Wanderers.CALM_TICKS
 	if dest.x >= 0:
 		rig.teleport(dest)
 	sync_position()
@@ -322,6 +323,8 @@ func _drain() -> void:
 				popup.emit(str(e.text), e.color)
 			"monster_died":
 				view.entities.remove_monster(str(e.id))
+				if not model_in_combat():
+					gs.stats["calmTicks"] = Wanderers.CALM_TICKS       # répit : aucun monstre ne s'approche juste après un combat
 				if not model_in_combat() and not combat.summary.is_empty():
 					combat_won.emit(combat.take_summary())
 			"door_open":

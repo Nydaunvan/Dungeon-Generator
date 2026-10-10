@@ -9,6 +9,8 @@ const FRAMES := {
 	"braise": {"color": "ff7a45", "width": 2, "glow": 6},
 	"givre": {"color": "7ef0e0", "width": 2, "glow": 6},
 	"royal": {"color": "ffd24a", "width": 3, "glow": 8},
+	"aurore": {"color": "c49cff", "width": 3, "glow": 10},
+	"legende": {"color": "fff0a0", "width": 3, "glow": 12},
 }
 const RARITY_COLORS := [Color("9a8c74"), Color("c9a46a"), Color("8fd3ff"), Color("c49cff"), Color("ffd24a")]
 

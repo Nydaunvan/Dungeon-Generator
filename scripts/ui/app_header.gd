@@ -52,6 +52,10 @@ func _init() -> void:
 	perf.tooltip_text = L.t("ui.app_header.perf_tip")
 	perf.pressed.connect(func(): PerfOverlay.toggle())
 	nav_row.add_child(perf)
+	var pause := _button("⏸ " + L.t("ui.pause.label"))      # outil de test (captures d'écran), à retirer ensuite
+	pause.tooltip_text = L.t("ui.pause.tip")
+	pause.pressed.connect(func(): PauseOverlay.toggle(get_tree()))
+	nav_row.add_child(pause)
 	var cfg := _button("⚙ " + L.t("ui.app_header.parametres"))
 	cfg.tooltip_text = L.t("ui.app_header.parametres_tip")
 	cfg.pressed.connect(func(): nav.emit("Paramètres"))
@@ -60,6 +64,7 @@ func _init() -> void:
 	chat.tooltip_text = L.t("ui.chat.header_tip")
 	chat.pressed.connect(func(): nav.emit("Tchat"))
 	nav_row.add_child(chat)
+	NotifDot.attach(chat)
 	btn_account = _button(_account_text())
 	btn_account.tooltip_text = L.t("ui.cloud.header_tip")
 	btn_account.pressed.connect(func(): nav.emit("Compte"))

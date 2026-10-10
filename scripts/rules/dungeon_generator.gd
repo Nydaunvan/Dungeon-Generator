@@ -393,18 +393,14 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	for mi in monster_count:
 		if pool.is_empty():
 			break
+		# les monstres sont espacés : jamais deux combats à la suite (écart de 8 cases au moins ; on réduit seulement si le niveau est trop étroit, jamais sous 3)
 		var room := {}
-		for t in pool.size():
-			if pool.is_empty():
-				break
-			var idx := randi_range(0, pool.size() - 1)
-			var cand: Dictionary = pool[idx]
-			if used.has(_key(cand.x, cand.y)):
-				pool.remove_at(idx)
-				continue
-			if _far_from_monsters(cand.x, cand.y, monsters):
-				room = cand
-				pool.remove_at(idx)
+		pool = pool.filter(func(c): return not used.has(_key(c.x, c.y)))
+		for gap in MONSTER_GAPS:
+			var ok: Array = pool.filter(func(c): return _far_from_monsters(c.x, c.y, monsters, gap))
+			if not ok.is_empty():
+				room = ok[randi_range(0, ok.size() - 1)]
+				pool.erase(room)
 				break
 		if room.is_empty():
 			break
@@ -447,13 +443,22 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			if not boss_cell.is_empty():
 				break
 	if boss_cell.is_empty():
-		for r in pool:
-			if _far_from_monsters(r.x, r.y, monsters):
+		# aucune salle assez loin des monstres : la salle (hors départ et escalier) la plus éloignée de tous
+		var best_d := -1
+		for r in rooms:
+			if used.has(_key(r.x, r.y)) or (r.x == sx and r.y == sy) or _near_stairs(grid, r.x, r.y, 3):
+				continue
+			var dmin := 99
+			for m in monsters:
+				dmin = mini(dmin, absi(int(m.x) - int(r.x)) + absi(int(m.y) - int(r.y)))
+			if dmin > best_d:
+				best_d = dmin
 				boss_cell = r
-				break
 	if boss_cell.is_empty():
 		boss_cell = pool[0] if not pool.is_empty() else {"x": far.x, "y": far.y}
 	used[_key(boss_cell.x, boss_cell.y)] = true
+	# jamais un monstre à moins de 3 cases du boss (pas de combat sur combat) : un monstre trop proche cède la place
+	monsters = monsters.filter(func(m): return absi(int(m.x) - int(boss_cell.x)) + absi(int(m.y) - int(boss_cell.y)) >= 3)
 	var bf: Array = choice(BOSSES)
 	var bbf := 22.0 + _depth_bonus(i, 6)
 	var bbd := 16.0 + _depth_bonus(i, 4)
@@ -613,7 +618,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 func _boss_spot_ok(r: Dictionary, sx: int, sy: int, used: Dictionary, monsters: Array, grid: Array, doors: Array, check_door: bool) -> bool:
 	if r.x == sx and r.y == sy:
 		return false
-	if used.has(_key(r.x, r.y)) or not _far_from_monsters(r.x, r.y, monsters) or _near_stairs(grid, r.x, r.y, 3):
+	if used.has(_key(r.x, r.y)) or not _far_from_monsters(r.x, r.y, monsters, BOSS_GAP) or _near_stairs(grid, r.x, r.y, 3):
 		return false
 	return not (check_door and _near_door(doors, r.x, r.y))
 
@@ -625,9 +630,13 @@ func _resist() -> Dictionary:
 		return {"resistPhys": randi_range(10, 35), "resistMagic": 0}
 	return {"resistPhys": 0, "resistMagic": randi_range(10, 35)}
 
-func _far_from_monsters(x: int, y: int, placed: Array) -> bool:
+## Écarts (en cases, à vol d'oiseau : le chemin réel est au moins aussi long) entre un nouveau monstre et ceux déjà placés, du plus souhaitable au minimum toléré.
+const MONSTER_GAPS := [8, 7, 6, 5, 4, 3]
+const BOSS_GAP := 5
+
+func _far_from_monsters(x: int, y: int, placed: Array, gap: int = 2) -> bool:
 	for m in placed:
-		if absi(int(m.x) - x) + absi(int(m.y) - y) <= 1:
+		if absi(int(m.x) - x) + absi(int(m.y) - y) < gap:
 			return false
 	return true
 

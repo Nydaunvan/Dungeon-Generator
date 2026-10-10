@@ -230,7 +230,8 @@
    "descFr": "PV max du groupe -50 %. Un seul faux pas peut être fatal.",
    "descEn": "Party max HP -50%. A single misstep can be fatal.",
    "hpMult": 0.5,
-   "weeklyOnly": true
+   "weeklyOnly": true,
+   "unlockBadge": "wk_r_glass"
   },
   {
    "id": "mod_frenzy",
@@ -240,7 +241,8 @@
    "descFr": "Les monstres attaquent deux fois plus vite.",
    "descEn": "Monsters attack twice as fast.",
    "attackSpeedMult": 0.5,
-   "weeklyOnly": true
+   "weeklyOnly": true,
+   "unlockBadge": "wk_r_frenzy"
   },
   {
    "id": "mod_solo",
@@ -251,7 +253,8 @@
    "descEn": "A single hero ventures forth, with twice the HP.",
    "soloParty": true,
    "hpMult": 2.0,
-   "weeklyOnly": true
+   "weeklyOnly": true,
+   "unlockBadge": "wk_r_solo"
   },
   {
    "id": "mod_nospells",
@@ -261,7 +264,8 @@
    "descFr": "Aucun sort ni capacité : seules les armes comptent.",
    "descEn": "No spells or abilities: only weapons count.",
    "noSpells": true,
-   "weeklyOnly": true
+   "weeklyOnly": true,
+   "unlockBadge": "wk_r_nospells"
   }
  ],
  "MON_HEIGHTS": [
@@ -2447,5 +2451,103 @@
     ]
    ]
   ]
+ ],
+ "HERO_SKINS": [
+  {
+   "id": "skin_norest",
+   "icon": "🏕️",
+   "labelFr": "Braise de camp",
+   "labelEn": "Campfire Ember",
+   "color": "ff9a4d",
+   "unlockBadge": "wk_r_norest"
+  },
+  {
+   "id": "skin_glass",
+   "icon": "🥂",
+   "labelFr": "Cristal",
+   "labelEn": "Crystal",
+   "color": "bfe3ff",
+   "unlockBadge": "wk_r_glass"
+  },
+  {
+   "id": "skin_solo",
+   "icon": "🧍",
+   "labelFr": "Spectre solitaire",
+   "labelEn": "Lone Spectre",
+   "color": "c8b6ff",
+   "unlockBadge": "wk_r_solo"
+  },
+  {
+   "id": "skin_nospells",
+   "icon": "🗡️",
+   "labelFr": "Acier nu",
+   "labelEn": "Bare Steel",
+   "color": "d8dde6",
+   "unlockBadge": "wk_r_nospells"
+  },
+  {
+   "id": "skin_den",
+   "icon": "👹",
+   "labelFr": "Sang de monstre",
+   "labelEn": "Monster Blood",
+   "color": "ff5a4a",
+   "unlockBadge": "wk_r_den"
+  },
+  {
+   "id": "skin_frenzy",
+   "icon": "🌪️",
+   "labelFr": "Tempête",
+   "labelEn": "Storm",
+   "color": "8fe3ff",
+   "unlockBadge": "wk_r_frenzy"
+  },
+  {
+   "id": "skin_fog",
+   "icon": "🌫️",
+   "labelFr": "Brume",
+   "labelEn": "Mist",
+   "color": "b7c4cf",
+   "unlockBadge": "wk_r_fog"
+  },
+  {
+   "id": "skin_lowsta",
+   "icon": "💀",
+   "labelFr": "Souffle court",
+   "labelEn": "Short Breath",
+   "color": "ff9ab8",
+   "unlockBadge": "wk_r_lowsta"
+  },
+  {
+   "id": "skin_streak6",
+   "icon": "🌠",
+   "labelFr": "Étoile fidèle",
+   "labelEn": "Loyal Star",
+   "color": "ffd24a",
+   "unlockBadge": "wk_streak_6"
+  },
+  {
+   "id": "skin_streak12",
+   "icon": "🌌",
+   "labelFr": "Aurore",
+   "labelEn": "Aurora",
+   "color": "c49cff",
+   "unlockBadge": "wk_streak_12"
+  },
+  {
+   "id": "skin_champion",
+   "icon": "👑",
+   "labelFr": "Couronne de champion",
+   "labelEn": "Champion's Crown",
+   "color": "fff0a0",
+   "unlockBadge": "wk_champion"
+  },
+  {
+   "id": "skin_hc_champion",
+   "icon": "🔥",
+   "labelFr": "Feu du champion",
+   "labelEn": "Champion's Fire",
+   "color": "ff7a45",
+   "unlockBadge": "hc_champion"
+  }
  ]
 }
