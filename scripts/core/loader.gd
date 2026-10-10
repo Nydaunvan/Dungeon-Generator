@@ -88,6 +88,7 @@ func _frames(n: int = 2) -> void:
 # ------------------------------------------------------------------ démarrage du programme
 
 func boot() -> void:
+	Crumbs.mark("démarrage v%s | %s | %s %s | %s" % [AppVersion.number(), OS.get_name(), RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_api_version(), "%s/%s dyn=%.2f" % [Settings.preset, Settings.level, Settings.dyn_scale]])
 	Sound.menu_music(true, 2.0)   # bureau : dès le lancement ; Web : à l'entrée (premier clic)
 	_show(L.t("loading.sous_titre_jeu"))
 	await _frames(2)

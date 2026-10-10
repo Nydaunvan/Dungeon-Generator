@@ -128,6 +128,7 @@ func attack() -> void:
 	var c := gs.char_by_id(gs.active_char_id)
 	if c.is_empty():
 		return
+	Crumbs.mark("attaque %s" % str(c.get("name", "")))
 	RunLog.rec("atk")
 	if combat.player_attack(c):
 		_after_action()
@@ -155,6 +156,7 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 		changed.emit()
 		return
 	pending_spell = ""
+	Crumbs.mark("sort %s par %s" % [spell_id, str(c.get("name", ""))])
 	RunLog.rec("cast", spell_id, ally_id if ally_id != "" else null)
 	if combat.cast_spell(c, spell_id, ally_id):
 		_after_action()
@@ -266,7 +268,7 @@ func _run_turns() -> void:
 	if _busy:
 		return
 	_busy = true
-	Crumbs.mark("combat")
+	Crumbs.mark("combat tour (%s)" % " ".join(combat.upcoming(6).map(func(k): return str(k).replace("char_", "h").replace("mon_", "m"))))
 	while model_in_combat():
 		var r := combat.advance()
 		await _drain()
@@ -276,6 +278,7 @@ func _run_turns() -> void:
 		await get_tree().create_timer(MONSTER_DELAY).timeout
 		if not model_in_combat():
 			break
+		Crumbs.mark("monstre agit %s" % str(r.key))
 		combat.monster_act(str(r.key))
 		await _drain()
 		changed.emit()
@@ -293,8 +296,10 @@ func _drain() -> void:
 	for e in evs:
 		match str(e.type):
 			"fx":
+				Crumbs.mark("effet %s" % str(e.fx))
 				fx.emit(str(e.fx))
 			"fx3d":
+				Crumbs.mark("effet3d %s" % str(e.spell))
 				fx3d.emit(str(e.spell), e.get("ctx", {}))
 			_:
 				rest.append(e)
@@ -323,6 +328,7 @@ func _drain() -> void:
 			"popup":
 				popup.emit(str(e.text), e.color)
 			"monster_died":
+				Crumbs.mark("monstre mort %s%s" % [str(e.id), "" if model_in_combat() else " (combat fini)"])
 				view.entities.remove_monster(str(e.id))
 				if not model_in_combat():
 					gs.stats["calmTicks"] = Wanderers.CALM_TICKS       # répit : aucun monstre ne s'approche juste après un combat
@@ -332,6 +338,7 @@ func _drain() -> void:
 				combat.lstate().get_or_add("opened_doors", {})[str(e.id)] = true
 				view.open_door(str(e.id))
 			"game_over":
+				Crumbs.mark("partie perdue")
 				game_over.emit()
 
 ## Part (0..1) du temps de réflexion restant pour le personnage dont c'est le tour.

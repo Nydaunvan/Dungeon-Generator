@@ -33,6 +33,7 @@ static func open_framed(host: Node, title: String, width: float = 560.0) -> Moda
 var _framed_title: String = ""
 
 func _build(title: String) -> void:
+	Crumbs.mark("fenêtre %s" % (title if title != "" else _framed_title))
 	add_to_group("modal")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
