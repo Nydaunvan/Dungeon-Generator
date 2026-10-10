@@ -106,7 +106,7 @@ static func apply(m: Node, e: Array) -> String:
 ## Rejoue `log` sur une nouvelle partie. Options : time_scale (accélération, 1 = temps réel).
 ## Résultat : {ok, reason, applied, clock_ms, fingerprint, summary}
 static func run(tree: SceneTree, cfg: Dictionary, log: Array, opts: Dictionary = {}) -> Dictionary:
-	var out := {"ok": false, "reason": "", "applied": 0, "clock_ms": 0, "fingerprint": "", "summary": {}}
+	var out := {"ok": false, "reason": "", "applied": 0, "clock_ms": 0, "fingerprint": "", "summary": {}, "taint": ""}
 	RunLog.replaying = true
 	GameClock.manual = true
 	var prev_scale := Engine.time_scale
@@ -161,6 +161,7 @@ static func run(tree: SceneTree, cfg: Dictionary, log: Array, opts: Dictionary =
 	out.clock_ms = last_ms
 	out.fingerprint = fingerprint(m.gs)
 	out.summary = summary(m.gs)
+	out.taint = m.gs.run_taint
 	return _finish(out, prev_scale)
 
 static func _finish(out: Dictionary, prev_scale: float) -> Dictionary:
