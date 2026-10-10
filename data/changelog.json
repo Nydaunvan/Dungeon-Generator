@@ -1,5 +1,31 @@
 [
  {
+  "version": "1.33.1",
+  "changes": [
+   "## Défi de la semaine",
+   "Une règle spéciale par semaine (8 règles en rotation), un donjon commun à tous, des essais illimités, un classement vérifié par rejeu, des badges et de l'expérience. La fenêtre des défis affiche la règle de la semaine, le temps restant et ta série.",
+   "## Fidélité et récompenses",
+   "Séries de semaines : trois badges à 3, 6 et 12 semaines consécutives de Défi (🔗 Assidu, 🌠 Fidèle au poste, 🌌 Inébranlable, avec deux nouveaux cadres, Aurore et Légende).",
+   "Hall des légendes : le champion de chaque semaine et de chaque mois est conservé à vie, consultable dans les classements (« 🏛 Légendes »).",
+   "Règles débloquées : réussir toutes les épreuves d'une règle hebdomadaire la débloque pour les parties libres (Verre, Frénésie, Solo, Sans sorts), marquée 🔓 dans le choix des modificateurs.",
+   "Anneau des héros : 12 couleurs d'anneau à gagner (règles réussies, séries, champions) et à choisir dans l'onglet Récompenses.",
+   "## Tchat",
+   "Messages privés entre joueurs : onglet « ✉ Privés », menu « ✉ Message privé » sur un message, réglage « Accepter les messages privés », blocage et signalement valables aussi en privé. Limite de 20 nouveaux correspondants par jour.",
+   "Bulle rouge de notification (avec le nombre de messages non lus) sur le bouton Tchat et sur les onglets concernés.",
+   "## Combat et donjons",
+   "File d'initiative corrigée : chaque monstre d'un groupe agit désormais à la vitesse du monstre (avant, la vitesse était divisée par le nombre de membres : un groupe de 3 jouait comme un seul monstre et les héros enchaînaient 2 à 3 tours de suite). Les groupes sont donc plus dangereux qu'avant.",
+   "Deux combats ne s'enchaînent plus : les monstres sont placés plus loin les uns des autres, les rôdeurs gardent leurs distances, et après un combat ou une fuite les monstres restent calmes quelques instants.",
+   "Au lancement d'une partie, le choix des modificateurs d'expédition a un bouton « ‹ Retour » qui revient à la fenêtre précédente, laquelle a un bouton « Annuler ».",
+   "## Windows",
+   "L'icône du jeu est maintenant réparée sur le bureau et dans le menu Démarrer (raccourcis et cache d'icônes de Windows), après une mise à jour et une fois par version.",
+   "## En coulisses",
+   "Mémoire : les sprites de monstres et le marchand 3D ne restent plus en mémoire toute la session (environ 80 Mo de textures en moins), sans aucun changement d'affichage.",
+   "Diagnostic : le jeu note ce qu'il fait (niveau chargé, combat, appel au serveur) dans trace.log, à côté du journal de Godot, pour identifier les plantages de l'exécutable.",
+   "Bouton « ⏸ Pause » temporaire dans la barre du haut, pour les captures d'écran de test (refusé dans les parties classées).",
+   "Correction du journal : le Hardcore du mois compte huit badges (le badge « 8 niveaux » a été retiré, il était inatteignable)."
+  ]
+ },
+ {
   "version": "1.33.0",
   "changes": [
    "## Tchat des joueurs",
@@ -29,7 +55,7 @@
    "## Compte : expérience et récompenses",
    "Votre compte gagne de l'expérience à chaque partie classée vérifiée (davantage en difficulté élevée) et monte de niveau. Le niveau s'affiche à côté du pseudo dans les classements.",
    "Nouvelle fenêtre « Mes récompenses » (dans le compte et dans la fenêtre des défis) : niveau et expérience, collection de badges et choix du titre, du cadre et de la couleur de votre pseudo, qui s'affichent dans les classements.",
-   "Neuf badges à gagner avec le Hardcore du mois : avoir joué, franchir 3, 5 ou 8 niveaux, puis les récompenses de fin de mois (10 % de tête, dix premiers, troisième, deuxième et champion du mois). Les récompenses sont purement cosmétiques et n'ont aucun effet sur la partie. Elles ne sont attribuées que pour des parties vérifiées.",
+   "Huit badges à gagner avec le Hardcore du mois : avoir joué, franchir 3 ou 5 niveaux, puis les récompenses de fin de mois (10 % de tête, dix premiers, troisième, deuxième et champion du mois). Les récompenses sont purement cosmétiques et n'ont aucun effet sur la partie. Elles ne sont attribuées que pour des parties vérifiées.",
    "## Vérification des parties",
    "Le déroulement d'une partie est désormais reproductible : la graine du donjon, l'horloge de jeu et les différents flux de hasard (combats, butin, fontaines, pièges…) sont enregistrés, avec les sauvegardes, et toutes les décisions (fontaines, talents, évolutions, pièges, boutique, marchand, forge, Maître des Talents, village, victoire, modificateurs) sont consignées.",
    "Le rejeu applique les règles de la version du jeu avec laquelle la partie a été jouée.",
