@@ -68,7 +68,7 @@ static func guide(host: Node, start_id: String = "") -> Modal:
 	return GuideBook.open(host, start_id).modal
 
 static func tutorial(host: Node) -> Modal:
-	return topics(host, L.t("common.tutoriel_de_creation"), "tutorial")
+	return GuideBook.open(host, "", "tutorial").modal
 
 static func changelog(host: Node) -> Modal:
 	var m := Modal.open(host, L.t("ui.doc_modal.journal_des_versions"), 720.0)

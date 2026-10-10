@@ -439,7 +439,7 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	link.add_theme_font_size_override("normal_font_size", _fs(0.74))
 	link.add_theme_color_override("default_color", GOLD_DIM)
 	link.text = "[center][url=tuto][u]%s[/u][/url][/center]" % L.t("admin.levels.besoin_aide_voir_l_etape").replace("[", "[lb]")
-	link.meta_clicked.connect(func(_m): DocModal.topics(admin.modals(), L.t("common.tutoriel_de_creation"), "tutorial", "levels"))
+	link.meta_clicked.connect(func(_m): GuideBook.open(admin.modals(), "levels", "tutorial"))
 	link.meta_hover_started.connect(func(_m): link.add_theme_color_override("default_color", GOLD_BRIGHT))
 	link.meta_hover_ended.connect(func(_m): link.add_theme_color_override("default_color", GOLD_DIM))
 	lp.body.add_child(link)

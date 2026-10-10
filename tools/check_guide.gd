@@ -78,5 +78,20 @@ func _ready() -> void:
 			break
 	check("reprise à la dernière page lue", g2._ready_pages)
 	g2.modal.close()
+	# tutoriel de création : même présentation en livre
+	var tg := GuideBook.open(host, "levels", "tutorial")
+	for i in 600:
+		await get_tree().process_frame
+		if tg._ready_pages:
+			break
+	check("tutoriel : pagination terminée", tg._ready_pages and tg.topics.size() == 8)
+	check("tutoriel : ouvert sur « Niveaux »", tg._ready_pages and tg.page_no == int(tg.first_page["levels"]))
+	for ti in tg.topics.size():
+		var j2 := []
+		for p in tg.pages:
+			if int(p.topic) == ti:
+				j2.append(str(p.text))
+		check("tutoriel %s : pages fidèles" % tg.topics[ti].id, _plain("\n".join(j2)) == _plain(str(tg.topics[ti].text)))
+	tg.modal.close()
 	print("check_guide : ", "OK" if fails == 0 else "%d échec(s)" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

@@ -13,11 +13,18 @@ const CHAPTERS := [
 	{"key": "ui.guide.ch6", "ids": ["compte", "defis", "recompenses", "tchat"]},
 	{"key": "ui.guide.ch7", "ids": ["editeur", "versions", "admin_en_ligne"]},
 ]
+const TUTORIAL_CHAPTERS := [
+	{"key": "ui.guide.tch1", "ids": ["intro", "general", "chars", "classes", "spells", "items"]},
+	{"key": "ui.guide.tch2", "ids": ["levels", "test"]},
+]
 const MEMO_PATH := "user://guide.cfg"
 const FONT_SIZE := 15
 const GOLD := Color("e8b45c")
 
 var modal: Modal
+var data_name := "help"
+var chapters: Array = CHAPTERS
+var _memo := MEMO_PATH
 var topics: Array = []            ## [{id, label, text, chapter}]
 var pages: Array = []             ## [{topic, text}] dans l'ordre du livre
 var first_page: Dictionary = {}   ## id du sujet -> numéro de la première page
@@ -42,13 +49,18 @@ var _counter: Label
 var _search: LineEdit
 var _ready_pages := false
 
-static func open(host: Node, start_id: String = "") -> GuideBook:
+## `kind` : "help" (guide de l'aventurier) ou "tutorial" (tutoriel de création de l'éditeur).
+static func open(host: Node, start_id: String = "", kind: String = "help") -> GuideBook:
 	var g := GuideBook.new()
+	if kind == "tutorial":
+		g.data_name = "tutorial"
+		g.chapters = TUTORIAL_CHAPTERS
+		g._memo = "user://tutorial.cfg"
 	g._host = host
 	var vp: Vector2 = host.get_viewport().get_visible_rect().size if host.is_inside_tree() else Vector2(1280, 720)
 	g._width = clampf(vp.x * 0.96, 320.0, 1040.0)
 	g._narrow = g._width < 700.0
-	g.modal = Modal.open_framed(host, L.t("ui.doc_modal.guide_de_l_aventurier"), g._width)
+	g.modal = Modal.open_framed(host, L.t("common.tutoriel_de_creation") if kind == "tutorial" else L.t("ui.doc_modal.guide_de_l_aventurier"), g._width)
 	g.modal.fit_ratio = 0.9
 	g.modal.add_child(g)
 	g._page_h = clampf(vp.y * 0.9 - 190.0, 190.0, 720.0)
@@ -132,17 +144,17 @@ func _rich() -> RichTextLabel:
 
 func _load_topics() -> void:
 	topics.clear()
-	var raw: Array = DocModal.load_data("help")
+	var raw: Array = DocModal.load_data(data_name)
 	var seen := {}
-	for ci in CHAPTERS.size():
-		for id in CHAPTERS[ci].ids:
+	for ci in chapters.size():
+		for id in chapters[ci].ids:
 			for t in raw:
 				if str(t.id) == id and not seen.has(id):
 					seen[id] = true
 					topics.append({"id": id, "label": str(t.label), "text": str(t.text), "chapter": ci})
 	for t in raw:                       # sujet absent des chapitres : rangé à la fin du dernier
 		if not seen.has(str(t.id)):
-			topics.append({"id": str(t.id), "label": str(t.label), "text": str(t.text), "chapter": CHAPTERS.size() - 1})
+			topics.append({"id": str(t.id), "label": str(t.label), "text": str(t.text), "chapter": chapters.size() - 1})
 
 ## Découpe tous les sujets en pages qui tiennent dans la hauteur disponible (mesure ligne par ligne avec le même rendu que la page).
 func _paginate() -> void:
@@ -235,7 +247,7 @@ func go_page(n: int) -> void:
 	var p: Dictionary = pages[page_no]
 	var t: Dictionary = topics[int(p.topic)]
 	_open_chapter = int(t.chapter)
-	_page_head.text = "%s  ·  %s" % [L.fa(L.t("ui.guide.chapter"), int(t.chapter) + 1) + " — " + L.t(CHAPTERS[int(t.chapter)].key), str(t.label)]
+	_page_head.text = "%s  ·  %s" % [L.fa(L.t("ui.guide.chapter"), int(t.chapter) + 1) + " — " + L.t(chapters[int(t.chapter)].key), str(t.label)]
 	_page_text.text = str(p.text)
 	_page_text.scroll_to_line(0)
 	_counter.text = L.fa(L.t("ui.guide.page"), [page_no + 1, pages.size()])
@@ -288,9 +300,9 @@ func _fill_toc() -> void:
 	if _query != "":
 		_fill_results()
 		return
-	for ci in CHAPTERS.size():
+	for ci in chapters.size():
 		var open := ci == _open_chapter
-		var head := HubKit.toggle("%s  %s %d · %s" % ["▾" if open else "▸", L.t("ui.guide.chapter_short"), ci + 1, L.t(CHAPTERS[ci].key)], open, func():
+		var head := HubKit.toggle("%s  %s %d · %s" % ["▾" if open else "▸", L.t("ui.guide.chapter_short"), ci + 1, L.t(chapters[ci].key)], open, func():
 			_open_chapter = ci
 			_fill_toc(), 13, 8, 5)
 		head.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -365,11 +377,11 @@ func _remember() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("guide", "topic", str(topics[int(pages[page_no].topic)].id))
 	cf.set_value("guide", "offset", page_no - int(first_page[topics[int(pages[page_no].topic)].id]))
-	cf.save(MEMO_PATH)
+	cf.save(_memo)
 
 func _recall() -> int:
 	var cf := ConfigFile.new()
-	if cf.load(MEMO_PATH) != OK:
+	if cf.load(_memo) != OK:
 		return 0
 	var id := str(cf.get_value("guide", "topic", ""))
 	if not first_page.has(id):
