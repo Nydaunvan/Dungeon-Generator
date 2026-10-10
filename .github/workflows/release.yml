@@ -78,6 +78,15 @@ jobs:
           cp /tmp/templates/templates/windows_* /tmp/templates/templates/linux_* /tmp/templates/templates/version.txt "$T/"
           rm -rf /tmp/templates /tmp/templates.tpz /tmp/godot.zip
 
+      - name: Installer Wine et rcedit (icône et informations de version de l'exécutable Windows)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wine64
+          mkdir -p ~/rcedit
+          curl -fsSL -o ~/rcedit/rcedit-x64.exe https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe
+          wine --version
+
       - name: Importer les ressources et exporter (exécutable + paquets .pck)
         run: |
           set -euo pipefail
@@ -88,6 +97,8 @@ jobs:
           "$GODOT" --headless --path . --import
           "$GODOT" --headless --path . --export-release "Windows" "build/windows/Dungeon Generator.exe"
           "$GODOT" --headless --path . --export-release "Linux" "build/linux/Dungeon Generator.x86_64"
+          # l'exécutable Windows reçoit l'icône du jeu (sinon : celle de Godot) AVANT d'être empaqueté et publié
+          sh tools/patch_windows_exe.sh "build/windows/Dungeon Generator.exe" "$V" || echo "::warning::Icône de l'exécutable Windows non appliquée (voir le journal)."
           # paquets communs aux deux plateformes (thèmes, monstres, audio…) : définis dans tools/gen_export_presets.py
           for P in themes monsters audio; do
             "$GODOT" --headless --path . --export-pack "Pack $P" "build/packs/$P.pck"

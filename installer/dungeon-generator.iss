@@ -28,7 +28,8 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-UninstallDisplayIcon={app}\Dungeon Generator.exe
+SetupIconFile=app.ico
+UninstallDisplayIcon={app}\app.ico
 UninstallDisplayName={#AppName}
 CloseApplications=yes
 RestartApplications=no
@@ -45,10 +46,12 @@ Source: "..\build\payload-windows\Dungeon Generator.exe"; DestDir: "{app}"; Flag
 Source: "..\build\payload-windows\Dungeon Generator.pck"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\payload-windows\packs\*"; DestDir: "{app}\packs"; Flags: ignoreversion recursesubdirs
 Source: "..\build\payload-windows\install.json"; DestDir: "{app}"; Flags: ignoreversion
+; icône des raccourcis et de la désinstallation (aussi présente dans l'exécutable ; ici, une copie qui ne dépend de rien)
+Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Dungeon Generator.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Dungeon Generator.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Dungeon Generator.exe"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Dungeon Generator.exe"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\Dungeon Generator.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent

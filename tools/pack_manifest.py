@@ -67,6 +67,12 @@ def main(version):
         for name in PACKS:
             shutil.copyfile(ROOT / "build" / "packs" / f"{name}.pck", payload / "packs" / f"{name}.pck")
         (payload / "install.json").write_text(json.dumps(install, ensure_ascii=False, indent=1), encoding="utf-8")
+        if plat == "linux":
+            # icône et entrée du menu des applications (l'exécutable ELF ne porte pas d'icône) : « ./install-menu.sh »
+            shutil.copyfile(ROOT / "installer" / "app_icon_256.png", payload / "Dungeon Generator.png")
+            sh = payload / "install-menu.sh"
+            shutil.copyfile(ROOT / "installer" / "install-menu.sh", sh)
+            sh.chmod(0o755)
         full = f"Dungeon-Generator-{version}-{plat}-full"
         if plat == "windows":
             with zipfile.ZipFile(dist / f"{full}.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
