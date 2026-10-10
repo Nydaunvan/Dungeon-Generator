@@ -550,17 +550,17 @@ func _give_trap_reward(rw: Dictionary) -> void:
 
 func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
 	var alive := gs.alive_party()
-	var victim: Dictionary = alive[randi() % alive.size()] if not alive.is_empty() else gs.char_by_id(gs.active_char_id)
+	var victim: Dictionary = alive[GameRng.i("trap") % alive.size()] if not alive.is_empty() else gs.char_by_id(gs.active_char_id)
 	return _hit_for(it, victim, mult)
 
 ## Dégâts du piège sur un personnage donné : le plus fort du pourcentage de PV max et du forfait de l'objet, × mult.
 func _hit_for(it: Dictionary, victim: Dictionary, mult: float) -> Dictionary:
 	var s := _trap_cfg()
-	var pct := randi_range(int(round(float(s.dmgPctMin))), int(round(float(s.dmgPctMax))))
+	var pct := GameRng.range_i("trap", int(round(float(s.dmgPctMin))), int(round(float(s.dmgPctMax))))
 	var pct_dmg := int(ceil(float(victim.get("maxHp", 1)) * pct / 100.0))
 	var dmin := int(it.get("trapDmgMin", 0)) if int(it.get("trapDmgMin", 0)) > 0 else 1
 	var dmax := int(it.get("trapDmgMax", 0)) if int(it.get("trapDmgMax", 0)) > 0 else 4
-	var flat := randi_range(dmin, maxi(dmin, dmax))
+	var flat := GameRng.range_i("trap", dmin, maxi(dmin, dmax))
 	return {"victim": victim, "dmg": maxi(1, int(round(maxi(pct_dmg, flat) * mult)))}
 
 func _apply_trap(it: Dictionary, mult: float, pre: Dictionary) -> void:

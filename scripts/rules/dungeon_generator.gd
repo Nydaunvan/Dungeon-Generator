@@ -283,7 +283,7 @@ func levels(num_levels: int, width: int, height: int, party_pow: float = 1.0) ->
 	count_mult *= run_escalation
 	var mw := maxi(3, (width - 1) / 2)
 	var mh := maxi(3, (height - 1) / 2)
-	var stamp := Time.get_ticks_msec()
+	var stamp := randi() % 1000000000           # identifiants uniques par expédition, reproductibles avec une graine
 	var ids: Array = []
 	for i in num_levels:
 		ids.append("gen_lvl_%d_%d" % [i, stamp])
@@ -810,7 +810,7 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 	names.shuffle()
 	var used_portraits := {}
 	var hard := diff == "hardcore"
-	var stamp := Time.get_ticks_msec()
+	var stamp := randi() % 1000000000
 	var out: Array = []
 	for idx in chosen.size():
 		var cls := Characters.class_def(cfg, str(chosen[idx]))
@@ -844,7 +844,11 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 	return out
 
 ## Configuration complète d'une expédition aléatoire à partir de la configuration de base.
-static func build_config(base: Dictionary, num_levels: int, width: int, height: int, diff: String, mods: Array, run: int = 1) -> Dictionary:
+## `seed_value` >= 0 : génération REPRODUCTIBLE (mêmes paramètres + même graine = même donjon, même groupe de héros, mêmes titres) ;
+## indispensable aux parties classées, que le serveur rejoue pour les vérifier. -1 : hasard libre.
+static func build_config(base: Dictionary, num_levels: int, width: int, height: int, diff: String, mods: Array, run: int = 1, seed_value: int = -1) -> Dictionary:
+	if seed_value >= 0:
+		return Seeds.with_global(Seeds.derive(seed_value, "expedition", run), func(): return build_config(base, num_levels, width, height, diff, mods, run, -1))
 	var c: Dictionary = base.duplicate(true)
 	var gen := DungeonGenerator.new(c, diff, run, mods)
 	c["party"] = generate_party(c, diff)

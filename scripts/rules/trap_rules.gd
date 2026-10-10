@@ -103,15 +103,15 @@ static func draw_offer(s: Dictionary, item: Dictionary, state: Dictionary) -> Di
 		return {"kind": kind_by_id(str(saved.kind)), "methods": (saved.methods as Array).duplicate(), "puzzle": str(saved.get("puzzle", ""))}
 	var kind := kind_of(item)
 	var pool: Array = kind.methods.duplicate()
-	pool.shuffle()
+	GameRng.shuffle("trap", pool)
 	var methods: Array = pool.slice(0, mini(int(s.methodCount), pool.size()))
 	var puzzle := ""
 	var pz: Array = []
 	for p in kind.puzzles:
 		if puzzle_enabled(s, p):
 			pz.append(p)
-	if not pz.is_empty() and randf() * 100.0 < float(s.puzzleChancePct):
-		puzzle = str(pz[randi() % pz.size()])
+	if not pz.is_empty() and GameRng.f("trap") * 100.0 < float(s.puzzleChancePct):
+		puzzle = str(pz[GameRng.i("trap") % pz.size()])
 	state["trapOffer"] = {"kind": kind.id, "methods": methods.duplicate(), "puzzle": puzzle}
 	return {"kind": kind, "methods": methods, "puzzle": puzzle}
 
@@ -172,12 +172,12 @@ static func roll_reward(s: Dictionary, source: String) -> Dictionary:
 		pct = float(s.rewardPerfectPct)
 	elif source == "puzzle":
 		pct = float(s.puzzleRewardPct)
-	if randf() * 100.0 >= pct:
+	if GameRng.f("trap") * 100.0 >= pct:
 		return {}
-	var k := randi() % 3
+	var k := GameRng.i("trap") % 3
 	if k == 0:
 		var lo := int(s.rewardGoldMin)
-		return {"kind": "gold", "amount": randi_range(lo, maxi(lo, int(s.rewardGoldMax)))}
+		return {"kind": "gold", "amount": GameRng.range_i("trap", lo, maxi(lo, int(s.rewardGoldMax)))}
 	if k == 1:
 		return {"kind": "xp", "amount": maxi(1, int(s.rewardXp))}
 	return {"kind": "heal", "amount": maxi(1, int(s.rewardHealPct))}
@@ -194,9 +194,9 @@ const COLD := ["blue", "green", "violet"]
 static func make_wires(n: int) -> Dictionary:
 	n = clampi(n, 3, 6)
 	var cols := WIRE_COLORS.duplicate()
-	cols.shuffle()
+	GameRng.shuffle("trap", cols)
 	cols = cols.slice(0, n)
-	var target := randi() % n
+	var target := GameRng.i("trap") % n
 	var tc: String = cols[target]
 	var preds: Array = []
 	# chaque prédicat : clé du texte, argument, test sur l'indice d'un fil
@@ -231,7 +231,7 @@ static func make_wires(n: int) -> Dictionary:
 	for p in preds:
 		if p.ok.call(target):
 			valid.append(p)
-	valid.shuffle()
+	GameRng.shuffle("trap", valid)
 	var clues: Array = []
 	var alive: Array = range(n)
 	var min_clues := 3 if n >= 5 else 2
@@ -253,12 +253,12 @@ static func make_wires(n: int) -> Dictionary:
 ## Dalles : un chemin de bas en haut, une dalle par rangée, de colonne voisine à colonne voisine (5 colonnes).
 static func make_tiles(rows: int, cols: int = 5) -> Array:
 	var path: Array = []
-	var c := randi() % cols
+	var c := GameRng.i("trap") % cols
 	for r in rows:
 		path.append(c)
 		var opts: Array = []
 		for d in [-1, 0, 1]:
 			if c + d >= 0 and c + d < cols:
 				opts.append(c + d)
-		c = opts[randi() % opts.size()]
+		c = opts[GameRng.i("trap") % opts.size()]
 	return path

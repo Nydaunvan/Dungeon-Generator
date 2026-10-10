@@ -118,7 +118,7 @@ func _has_los(from: Vector2i, to: Vector2i) -> bool:
 
 func _wander_target(from: Vector2i, zone: Dictionary, except_id: String) -> Vector2i:
 	var dirs := DungeonGrid.DIRS.duplicate()
-	dirs.shuffle()
+	GameRng.shuffle("wander", dirs)
 	for v in dirs:
 		var n: Vector2i = from + v
 		if zone.has(n) and _free(n, except_id):
@@ -152,12 +152,12 @@ func _tick() -> void:
 			continue
 		var target := Vector2i(-1, -1)
 		if id == lead:
-			if randf() < CHASE_CHANCE:
+			if GameRng.f("wander") < CHASE_CHANCE:
 				var step := Vector2i(signi(player.x - p.x), signi(player.y - p.y))
 				if _free(p + step, id):
 					target = p + step
 		elif int(e.def.get("patrolRadius", 0)) > 0:
-			if randf() < (WANDER_CHANCE_BOSS if bool(e.def.get("isBoss", false)) else WANDER_CHANCE):
+			if GameRng.f("wander") < (WANDER_CHANCE_BOSS if bool(e.def.get("isBoss", false)) else WANDER_CHANCE):
 				var zone := _zone(id, int(e.def.x), int(e.def.y), int(e.def.patrolRadius))
 				target = _wander_target(p, zone, id)
 		if target.x < 0:

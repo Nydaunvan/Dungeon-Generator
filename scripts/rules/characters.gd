@@ -22,7 +22,7 @@ static func instantiate_item(lib_id: String, cfg: Dictionary) -> Dictionary:
 	for def in cfg.get("itemLibrary", []):
 		if def.get("id") == lib_id:
 			var inst: Dictionary = def.duplicate(true)
-			inst["id"] = "%s_%d" % [lib_id, randi()]
+			inst["id"] = "%s_%d" % [lib_id, GameRng.i("ids")]
 			return inst
 	return {}
 

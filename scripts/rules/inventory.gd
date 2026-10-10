@@ -53,7 +53,7 @@ static func make_instance(def: Dictionary) -> Dictionary:
 	var inst: Dictionary = def.duplicate(true)
 	inst.erase("x")
 	inst.erase("y")
-	inst["uid"] = "%s_%d" % [str(def.get("id", "obj")), randi()]
+	inst["uid"] = "%s_%d" % [str(def.get("id", "obj")), GameRng.i("ids")]
 	return inst
 
 static func add(gs: GameState, it: Dictionary) -> bool:

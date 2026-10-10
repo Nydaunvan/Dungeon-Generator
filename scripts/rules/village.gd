@@ -8,7 +8,7 @@ static func build_level() -> Dictionary:
 	var sx := 5
 	var sy := 3
 	var row_pool := [1, 2, 3, 4, 5]
-	row_pool.shuffle()
+	GameRng.shuffle("village", row_pool)
 	var spots: Array = []
 	for k in 3:
 		var y: int = row_pool[k]
@@ -17,7 +17,7 @@ static func build_level() -> Dictionary:
 			if (x == sx and y == sy) or exclude.has("%d,%d" % [x, y]):
 				continue
 			xs.append(x)
-		spots.append(Vector2i(xs[randi() % xs.size()], y))
+		spots.append(Vector2i(xs[GameRng.i("village") % xs.size()], y))
 	var path := {}
 	for y in 7:
 		path["5,%d" % y] = true
@@ -30,16 +30,16 @@ static func build_level() -> Dictionary:
 	var npc := {}
 	for sp in spots:
 		npc["%d,%d" % [sp.x, sp.y]] = true
-	var chance := 0.28 + randf() * 0.22
+	var chance := 0.28 + GameRng.f("village") * 0.22
 	var trees: Array = []
 	for y in range(1, 6):
 		for x in range(1, 10):
 			var key := "%d,%d" % [x, y]
 			if (x == sx and y == sy) or exclude.has(key) or npc.has(key) or path.has(key):
 				continue
-			if randf() < chance:
+			if GameRng.f("village") < chance:
 				trees.append(key)
-	return {"id": "village_%d" % Time.get_ticks_msec(), "name": "Village", "theme": "stone", "mapRows": rows, "outdoor": true,
+	return {"id": "village_%d" % GameRng.i("ids"), "name": "Village", "theme": "stone", "mapRows": rows, "outdoor": true,
 		"startX": sx, "startY": sy, "startDir": 0, "doors": [], "monsters": [], "items": [],
 		"stairs": [{"id": "village_exit", "x": 5, "y": 0, "action": {"type": "villageExit"}},
 			{"id": "village_return", "x": 5, "y": 6, "action": {"type": "villageReturn"}}],
@@ -72,8 +72,14 @@ static func next_dungeon(gs: GameState, mods: Array) -> void:
 	var dims: Dictionary = cfg.get("genDims", {"numLevels": 3, "width": 13, "height": 11})
 	var diff := str(cfg.get("genDifficulty", "normal"))
 	var gen := DungeonGenerator.new(cfg, diff, gs.run_number, mods)
-	cfg["levels"] = gen.levels(int(dims.numLevels), int(dims.width), int(dims.height), party_power(gs))
-	cfg["title"] = DungeonGenerator.title()
+	var power := party_power(gs)
+	var make := func():
+		cfg["levels"] = gen.levels(int(dims.numLevels), int(dims.width), int(dims.height), power)
+		cfg["title"] = DungeonGenerator.title()
+	if gs.run_seed != "":      # partie classée : le donjon de l'expédition n°N est une fonction de la graine de la partie
+		Seeds.with_global(Seeds.derive(Seeds.from_text(gs.run_seed), "expedition", gs.run_number), make)
+	else:
+		make.call()
 	cfg["runModifierIds"] = mods.duplicate()
 	gs.run_mods_chosen = true
 	gs.level_states = {}

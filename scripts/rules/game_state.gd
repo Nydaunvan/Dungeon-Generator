@@ -24,6 +24,7 @@ var py: int = 0
 var pdir: int = 0
 var choice_queue: Array = []        # talents et évolutions en attente : {kind, char_id, level}
 var run_number: int = 1
+var run_seed: String = ""         # graine (texte) de la partie classée, fournie par le serveur ("" = partie libre) : détermine tout le hasard
 var run_mods_chosen: bool = false
 var in_village: bool = false
 var village_prev: Dictionary = {}   # donjon quitté pour le village : {levels, level_index, x, y, dir}
@@ -44,7 +45,7 @@ func selected_member_idx(id: String, st: Dictionary) -> int:
 	return i
 
 const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
-	"bestiary", "log_lines", "full_log", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_mods_chosen", "in_village", "village_prev"]
+	"bestiary", "log_lines", "full_log", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_seed", "run_mods_chosen", "in_village", "village_prev"]
 
 ## Compteur par personnage pour l'écran de statistiques (actions, dégâts, soins…).
 func bump(char_id, field: String, amount = 1) -> void:
@@ -58,6 +59,7 @@ func to_save() -> Dictionary:
 	var d := {}
 	for f in SAVE_FIELDS:
 		d[f] = get(f)
+	d["rng"] = GameRng.export_state()      # position de chaque flux de hasard : la partie reprise continue à l'identique
 	return d.duplicate(true)
 
 static func from_save(config: Dictionary, d: Dictionary) -> GameState:
@@ -73,11 +75,22 @@ static func from_save(config: Dictionary, d: Dictionary) -> GameState:
 			s.full_log = (d[f] as Array).duplicate(true)
 		else:
 			s.set(f, d[f])
+	if d.get("rng") is Dictionary:
+		GameRng.import_state(d.rng)
+	else:
+		GameRng.begin_random()
+		if s.run_seed != "":
+			GameRng.begin(Seeds.from_text(s.run_seed))
 	return s
 
 static func create(config: Dictionary) -> GameState:
 	var s := GameState.new()
 	s.cfg = config
+	s.run_seed = str(config.get("runSeed", ""))
+	if s.run_seed != "":
+		GameRng.begin(Seeds.from_text(s.run_seed))         # partie classée : toute la partie découle de cette graine
+	else:
+		GameRng.begin_random()
 	for t in config.get("party", []):
 		s.party.append(Characters.create(t, config))
 	if s.party.size() > 0:

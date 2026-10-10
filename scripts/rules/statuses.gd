@@ -75,7 +75,7 @@ static func apply_from_spell(gs: GameState, spell: Dictionary, holder: Dictionar
 	var sdef := def(type)
 	if type == "" or sdef.is_empty():
 		return false
-	if randf() * 100.0 > float(spell.get("statusChance", 0)):
+	if GameRng.f("combat") * 100.0 > float(spell.get("statusChance", 0)):
 		return false
 	var duration := maxi(1, int(spell.get("statusDuration", 3)))
 	var power := maxi(1, int(spell.get("statusPower", 3)))

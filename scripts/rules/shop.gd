@@ -25,17 +25,17 @@ static func sell_price(item: Dictionary) -> int:
 # ------------------------------------------------------------------ génération
 
 static func _flavor(list: Array, fallback: String) -> Dictionary:
-	var sprite: int = list[randi() % list.size()]
+	var sprite: int = list[GameRng.i("loot") % list.size()]
 	var label := str((Data.constants.get("ITEM_SPRITE_LABELS", {}) as Dictionary).get(str(sprite), ""))
 	return {"name": label if label != "" else fallback, "icon": ("@icon:spr_%d" % sprite) if label != "" else "@icon:potion_heal"}
 
 static func _secondary(base: Dictionary, pool: Array, run: int) -> Dictionary:
 	var order := pool.duplicate()
-	order.shuffle()
-	var count := randi_range(1, mini(2, order.size()))
+	GameRng.shuffle("loot", order)
+	var count := GameRng.range_i("loot", 1, mini(2, order.size()))
 	for k in count:
 		var field: String = order[k]
-		base[field] = int(base.get(field, 0)) + randi_range(1, 2) + int(floor(run / 2.0))
+		base[field] = int(base.get(field, 0)) + GameRng.range_i("loot", 1, 2) + int(floor(run / 2.0))
 	return base
 
 static func _weapon_bonus(weapon_type: String, run: int) -> Dictionary:
@@ -44,33 +44,33 @@ static func _weapon_bonus(weapon_type: String, run: int) -> Dictionary:
 	return _secondary({}, pool, run)
 
 static func _armor_stats(run: int) -> Dictionary:
-	var roll := randf()
+	var roll := GameRng.f("loot")
 	var base: Dictionary
 	if roll < 0.4:
 		base = {"bonusHp": maxi(2, int(round(6 + run * 2)))}
 		_secondary(base, ["bonusCon", "bonusForce"], run)
 	elif roll < 0.7:
 		var mn := maxi(2, int(round(2 + run * 1.2)))
-		base = {"bonusAtkMin": mn, "bonusAtkMax": mn + randi_range(2, 3)}
+		base = {"bonusAtkMin": mn, "bonusAtkMax": mn + GameRng.range_i("loot", 2, 3)}
 		_secondary(base, ["bonusForce", "bonusDex"], run)
 	else:
 		base = {"bonusSpellDmg": maxi(2, int(round(2 + run * 1.2)))}
 		_secondary(base, ["bonusInt"], run)
-	if randf() < 0.12:
+	if GameRng.f("loot") < 0.12:
 		base["bonusSpeed"] = 1
 	return base
 
 static func _weapon_offer(run: int, min_base: int, spread: Array) -> Dictionary:
-	var wt: String = DungeonGenerator.WEAPON_TYPES[randi() % DungeonGenerator.WEAPON_TYPES.size()]
+	var wt: String = DungeonGenerator.WEAPON_TYPES[GameRng.i("loot") % DungeonGenerator.WEAPON_TYPES.size()]
 	var fl := _flavor(DungeonGenerator.EQUIP_ICONS.get(wt, DungeonGenerator.EQUIP_ICONS.sword), L.t("rules.shop.arme_du_marchand"))
 	var mn := min_base
-	var it := {"name": fl.name, "icon": fl.icon, "type": "weapon", "weaponType": wt, "bonusAtkMin": mn, "bonusAtkMax": mn + randi_range(spread[0], spread[1])}
+	var it := {"name": fl.name, "icon": fl.icon, "type": "weapon", "weaponType": wt, "bonusAtkMin": mn, "bonusAtkMax": mn + GameRng.range_i("loot", spread[0], spread[1])}
 	it.merge(_weapon_bonus(wt, run), true)
 	return it
 
 static func _gear_offer(run: int) -> Dictionary:
 	var slots := ["head", "body", "hands", "feet", "accessory"]
-	var slot: String = slots[randi() % slots.size()]
+	var slot: String = slots[GameRng.i("loot") % slots.size()]
 	var jewelry := slot == "accessory"
 	var key: String = "jewelry" if jewelry else slot
 	var fl := _flavor(DungeonGenerator.EQUIP_ICONS.get(key, DungeonGenerator.EQUIP_ICONS.body), L.t("rules.shop.bijou_du_marchand") if jewelry else L.t("rules.shop.equipement_du_marchand"))
@@ -98,8 +98,8 @@ static func random_offers(cfg: Dictionary, run: int) -> Array:
 	for k in 2:
 		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 8 + run * 2})
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
-	spells.shuffle()
-	for i in mini(randi_range(2, 3), spells.size()):
+	GameRng.shuffle("loot", spells)
+	for i in mini(GameRng.range_i("loot", 2, 3), spells.size()):
 		offers.append({"name": L.t("common.parchemin_de") + str(spells[i].name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": spells[i].id})
 	return _finish(offers, "shop_offer", false)
 
@@ -140,15 +140,15 @@ static func village_offers(cfg: Dictionary, run: int) -> Array:
 		offers.append(_weapon_offer(boosted, 3 + int(floor(boosted / 2.0)), [2, 4]))
 	for k in 2:
 		offers.append(_gear_offer(boosted))
-	var heal := randi_range(8, 15)
-	var sta := randi_range(8, 15)
-	for k in randi_range(1, 10):
+	var heal := GameRng.range_i("loot", 8, 15)
+	var sta := GameRng.range_i("loot", 8, 15)
+	for k in GameRng.range_i("loot", 1, 10):
 		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": heal})
-	for k in randi_range(1, 10):
+	for k in GameRng.range_i("loot", 1, 10):
 		offers.append({"name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "type": "potion", "staminaRestore": sta})
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
-	spells.shuffle()
-	var n := mini(randi_range(1, 5), spells.size())
+	GameRng.shuffle("loot", spells)
+	var n := mini(GameRng.range_i("loot", 1, 5), spells.size())
 	for i in n:
 		offers.append({"name": L.t("common.parchemin_de") + str(spells[i].name), "icon": "@icon:misc_scroll", "type": "scroll", "spellId": spells[i].id})
 	return _finish(offers, "village_merchant_offer", true)
@@ -164,7 +164,7 @@ static func buy(gs: GameState, offers: Array, idx: int, quiet: bool = false) -> 
 		return L.t("common.pas_assez_or")
 	var inst: Dictionary = o.duplicate(true)
 	inst.erase("price")
-	inst["id"] = "bought_%d_%d" % [Time.get_ticks_msec(), randi() % 10000]
+	inst["id"] = "bought_%d" % GameRng.i("ids")
 	if not Inventory.add(gs, inst):
 		return L.fa(L.t("rules.shop.l_onglet_de_la_besace"), str(Inventory.TAB_LABELS.get(Inventory.tab_of(inst), "")))
 	gs.gold -= int(o.price)

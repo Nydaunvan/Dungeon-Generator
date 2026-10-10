@@ -236,7 +236,7 @@ func player_attack(attacker: Dictionary) -> bool:
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	var cost := mini(int(sta.get("attackCost", 0)), 2)
 	attacker["stamina"] = maxi(0, int(attacker.get("stamina", 0)) - cost)
-	var dmg := randi_range(int(attacker.atkMin), int(attacker.atkMax)) + Statuses.flat_damage_bonus(attacker)
+	var dmg := GameRng.range_i("combat", int(attacker.atkMin), int(attacker.atkMax)) + Statuses.flat_damage_bonus(attacker)
 	var wpn_v = (attacker.get("equipment", {}) as Dictionary).get("weapon")
 	var wtype := str(wpn_v.get("weaponType", "sword")) if wpn_v is Dictionary else "fist"
 	gs.bump(attacker.id, "actions")
@@ -355,11 +355,11 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	match mode:
 		"damage", "damageGroup":
 			var int_bonus := int(floor(int(caster.get("effInt", 10)) / 5.0)) + bonus
-			var dmg := randi_range(int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
+			var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
 			var magic: bool = str(spell.get("style", "")) != "physical"
 			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)), spell, mode == "damageGroup")
 		"healSingle":
-			var amt := randi_range(int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
+			var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
 			var before := int(ally.hp)
 			ally["hp"] = mini(int(ally.maxHp), before + maxi(0, amt))
 			var healed := int(ally.hp) - before
@@ -373,7 +373,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var details: Array[String] = []
 			var total := 0
 			for c in gs.alive_party():
-				var amt := randi_range(int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
+				var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
 				var before := int(c.hp)
 				c["hp"] = mini(int(c.maxHp), before + amt)
 				var healed := int(c.hp) - before
@@ -385,7 +385,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			_credit_heal(caster, total)
 			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "color": Color("7fd17f")})
 		"staminaRestoreSingle":
-			var amt := randi_range(int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0)))
+			var amt := GameRng.range_i("combat", int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0)))
 			var before := int(ally.get("stamina", 0))
 			ally["stamina"] = mini(int(ally.get("maxStamina", 100)), before + maxi(0, amt))
 			var got := int(ally.stamina) - before
@@ -394,7 +394,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			events.append({"type": "popup", "text": "+%d ⚡" % got, "color": Color("7fd1c9")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 		"shieldSingle":
-			var amt := randi_range(int(spell.get("shieldMin", 0)), int(spell.get("shieldMax", 0)))
+			var amt := GameRng.range_i("combat", int(spell.get("shieldMin", 0)), int(spell.get("shieldMax", 0)))
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_l_entoure"), [caster.name, spell.get("icon", ""), spell.name, ally.name, amt]), true)
 			events.append({"type": "popup", "text": "🛡️ %d" % amt, "color": Color("8fc8e8")})
@@ -462,7 +462,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	var crit := false
 	var crit_chance := int(attacker.get("talentCritChance", 0)) + _perk_value(attacker, "crit") \
 		+ int(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).critChanceBonus)
-	if crit_chance > 0 and randf() < crit_chance / 100.0:
+	if crit_chance > 0 and GameRng.f("combat") < crit_chance / 100.0:
 		dmg *= 2
 		crit = true
 
@@ -581,13 +581,13 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	var pool := alive.filter(func(c): return str(c.id) != gs.last_attacker_id)
 	if pool.is_empty():
 		pool = alive
-	if str(def.get("abilitySpellId", "")) != "" and randf() * 100.0 < float(def.get("abilityChance", 0)):
+	if str(def.get("abilitySpellId", "")) != "" and GameRng.f("combat") * 100.0 < float(def.get("abilityChance", 0)):
 		var ab := spell_def(str(def.abilitySpellId))
 		if not ab.is_empty():
 			_monster_use_ability(def, st, ab, pool)
 			return
-	var victim: Dictionary = pool[randi() % pool.size()]
-	var dmg := randi_range(int(st.atkMin), int(st.atkMax))
+	var victim: Dictionary = pool[GameRng.i("combat") % pool.size()]
+	var dmg := GameRng.range_i("combat", int(st.atkMin), int(st.atkMax))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
 	var reduction := Statuses.damage_reduction_pct(st)
@@ -629,8 +629,8 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 
 ## Capacité spéciale d'un monstre (sort de dégâts) lancée à la place de son attaque.
 func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, pool: Array) -> void:
-	var victim: Dictionary = pool[randi() % pool.size()]
-	var dmg := randi_range(int(spell.get("dmgMin", 3)), int(spell.get("dmgMax", 6)))
+	var victim: Dictionary = pool[GameRng.i("combat") % pool.size()]
+	var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 3)), int(spell.get("dmgMax", 6)))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
@@ -763,7 +763,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 		var item_id := str(def.get(k[0], ""))
 		if item_id == "":
 			continue
-		if randi_range(1, 100) <= int(def.get(k[1], 100)):
+		if GameRng.range_i("combat", 1, 100) <= int(def.get(k[1], 100)):
 			for it in level.get("items", []):
 				if str(it.id) == item_id:
 					var inst := Inventory.make_instance(it)
