@@ -837,7 +837,7 @@
   "ui.party_modal.ignore_toute_resistance": " (ignores all resistance)",
   "ui.party_modal.b_endurance_b_b_recharge": "\n[b]Stamina[/b]: %d — [b]Cooldown[/b]: %ds",
   "ui.party_modal.evolution": "%s (evolution)",
-  "ui.save_menu.3_emplacements_disponibles_pour": "3 slots available to keep several games in parallel. « Export » downloads a complete JSON file to keep or re-import later.",
+  "ui.save_menu.3_emplacements_disponibles_pour": "10 slots available to keep several games in parallel. « Export » downloads a complete JSON file to keep or re-import later.",
   "ui.save_menu.sauvegarde": "💾 Save",
   "common.emplacements_de_sauvegarde": "💾 Save slots",
   "ui.save_menu.nouveau": "🔄 New game",
