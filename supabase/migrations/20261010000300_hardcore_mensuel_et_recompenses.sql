@@ -301,3 +301,19 @@ left join public.player_cosmetics c on c.player_id = r.player_id
 where r.status = 'verified' and r.kind <> 'difficulty'
 order by r.kind, r.period, r.player_id, r.score desc, r.seconds asc, r.verified_at asc;
 grant select on public.classement_periode to anon, authenticated;
+
+-- Classement par difficulté (vue de l'étape 6a) : on y ajoute les cosmétiques et le niveau de compte (colonnes ajoutées à la fin).
+create or replace view public.classement_difficulte as
+select distinct on (r.difficulty, r.player_id)
+  r.difficulty, r.player_id, p.pseudo, r.score, r.seconds, r.metrics, r.verified_at as achieved_at,
+  (select title_fr from public.badges where id = c.title_badge) as title_fr,
+  (select title_en from public.badges where id = c.title_badge) as title_en,
+  (select frame from public.badges where id = c.frame_badge) as frame,
+  (select color from public.badges where id = c.color_badge) as color,
+  public.account_level(coalesce((select sum(amount) from public.xp_log x where x.player_id = r.player_id), 0)) as level
+from public.ranked_runs r
+join public.profiles p on p.id = r.player_id
+left join public.player_cosmetics c on c.player_id = r.player_id
+where r.status = 'verified' and r.kind = 'difficulty'
+order by r.difficulty, r.player_id, r.score desc, r.seconds asc, r.verified_at asc;
+grant select on public.classement_difficulte to anon, authenticated;

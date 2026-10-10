@@ -169,7 +169,8 @@ func _build_account() -> void:
 	_modal.add_text(L.t("ui.cloud.optional_note"), UiTheme.DIM, 13, true)
 	_status = Form.status_label(c)
 	_modal.set_buttons([
-		{"text": L.t("ui.cloud.btn_logout"), "primary": true, "cb": _logout},
+		{"text": L.t("ui.challenges.btn_rewards"), "primary": true, "cb": func(): RewardsModal.open(_modal.get_parent())},
+		{"text": L.t("ui.cloud.btn_logout"), "cb": _logout},
 		{"text": L.t("ui.cloud.btn_delete"), "cb": _ask_delete},
 		{"text": L.t("common.fermer"), "cb": func(): _modal.close()},
 	])

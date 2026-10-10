@@ -94,7 +94,7 @@ static func flush_pending() -> void:
 
 ## Classement vérifié d'une difficulté (vide tant que rien n'est vérifié).
 static func board(difficulty: String) -> Dictionary:
-	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/classement_difficulte?difficulty=eq.%s&order=score.desc,seconds.asc,achieved_at.asc&limit=100&select=pseudo,score,seconds,metrics" % difficulty.uri_encode())
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/classement_difficulte?difficulty=eq.%s&order=score.desc,seconds.asc,achieved_at.asc&limit=100&select=pseudo,score,seconds,metrics,title_fr,title_en,frame,color,level" % difficulty.uri_encode())
 
 ## Classement du mois (Hardcore) : pseudo, score, temps, titre, cadre, couleur et niveau de compte.
 static func period_board(kind: String, period: String) -> Dictionary:

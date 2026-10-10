@@ -41,6 +41,10 @@ func _buttons() -> void:
 		specs.append({"text": L.t("ui.challenges.login"), "cb": func(): AccountModal.open(_host)})
 	elif Cloud.is_configured():
 		specs.append({"text": L.t("ui.challenges.refresh"), "cb": _load})
+	if Cloud.is_configured():
+		specs.append({"text": L.t("ui.challenges.btn_ranked"), "cb": func(): RankedModal.open(_host)})
+	if Cloud.is_signed_in():
+		specs.append({"text": L.t("ui.challenges.btn_rewards"), "cb": func(): RewardsModal.open(_host)})
 	specs.append({"text": L.t("ui.challenges.back"), "cb": func(): _modal.close()})
 	_modal.set_buttons(specs)
 
@@ -285,11 +289,9 @@ func _fill_hardcore(box: VBoxContainer, rewards: HFlowContainer, wait: Label, ke
 		var row: Dictionary = rows[i]
 		var col := Color(str(row.color)) if row.get("color") != null else UiTheme.PARCH
 		var title := _loc(row, "title") if row.get("title_fr") != null else ""
-		var nm := str(row.get("pseudo", "?")) + (" · " + title if title != "" else "")
 		_cell(grid, str(i + 1), col, 15, false, 36, HORIZONTAL_ALIGNMENT_RIGHT)
-		var nc := _cell(grid, nm + " ✔", col, 15, true, 0, HORIZONTAL_ALIGNMENT_LEFT)
-		nc.tooltip_text = L.fa(L.t("ui.challenges.hc_level"), int(row.get("level", 1)))
-		nc.mouse_filter = Control.MOUSE_FILTER_PASS
+		var plate := Cosmetics.name_plate(str(row.get("pseudo", "?")) + " ✔", title, str(row.get("frame", "")) if row.get("frame") != null else "", row.get("color"), 15, int(row.get("level", 0)))
+		grid.add_child(plate)
 		_cell(grid, str(int(row.get("score", 0))), col, 15, false, 90, HORIZONTAL_ALIGNMENT_RIGHT)
 		_cell(grid, Challenges.format_time(int(row.get("seconds", -1))), col, 15, false, 70, HORIZONTAL_ALIGNMENT_RIGHT)
 	_text(box, L.t("ui.challenges.hc_verified_note"), UiTheme.DIM, 12, true)
