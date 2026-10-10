@@ -1,5 +1,22 @@
 [
  {
+  "version": "1.33.0",
+  "changes": [
+   "## Tchat des joueurs",
+   "Nouveau bouton « 💬 Tchat » dans la barre du haut : un tchat pour les joueurs connectés, avec trois salons — Général, Français et English (le salon de la langue du jeu s'ouvre par défaut). Les messages se mettent à jour tout seuls ; chaque message affiche l'heure, le pseudo (couleur cosmétique et niveau de compte) et le texte, toujours en texte brut.",
+   "La charte du tchat doit être acceptée avant de lire ou d'écrire (respect, rien d'illégal ni de publicitaire, aucune donnée personnelle, conservation 30 jours, modération). L'acceptation est enregistrée côté serveur ; si la charte évolue, elle est présentée à nouveau une fois.",
+   "Règles appliquées par le serveur : 300 caractères au plus, un message toutes les 3 secondes et 15 par minute, pas de message identique en 30 secondes, filtre de mots interdits, caractères invisibles retirés.",
+   "Chaque message d'un autre joueur propose « ⋯ » : signaler le message ou bloquer le joueur (ses messages disparaissent pour vous). Le bouton « Joueurs bloqués » permet de débloquer. Les messages sont conservés 30 jours, puis supprimés ; ils sont effacés avec le compte.",
+   "## Modération (super admin)",
+   "Nouvel onglet « Tchat » du menu Super admin : statistiques d'activité, messages signalés à examiner (supprimer, couper la parole 24 h, ignorer, rendre la parole) et gestion de la liste des mots interdits. Chaque action est revérifiée côté serveur : seul un compte super admin peut l'effectuer.",
+   "## Guide refondu",
+   "Le guide s'ouvre sur un nouveau sujet « Démarrage rapide » (modes de jeu, premiers pas, rôle de chaque bouton de la barre du haut). Huit sujets s'ajoutent : Paramètres, Compte en ligne, Défis et parties classées, Expérience badges et cosmétiques, Le tchat, L'éditeur et les tests, Versions et mises à jour, Administration en ligne. Les sujets existants sont conservés ; l'écran d'accueil renvoie aux nouveautés.",
+   "Les fenêtres des défis, des parties classées, des récompenses et du tchat ont un bouton « ❓ Comment ça marche ? » qui ouvre directement le bon sujet du guide (règles de vérification par rejeu, XP, badges, essai quotidien du Hardcore du mois…).",
+   "## En coulisses",
+   "Le vérificateur supprime désormais les vieux messages du tchat (au mieux, sans bloquer la vérification des parties)."
+  ]
+ },
+ {
   "version": "1.32.2",
   "changes": [
    "## Parties classées",

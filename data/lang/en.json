@@ -1692,7 +1692,8 @@
   "ui.chat.charte_accept": "I accept the charter",
   "ui.chat.charte_refuse": "Decline and close",
   "ui.cloud.err.charte_non_acceptee": "You must accept the chat charter first.",
-  "ui.cloud.err.charte_obsolete": "The charter has changed: read it again before accepting."
+  "ui.cloud.err.charte_obsolete": "The charter has changed: read it again before accepting.",
+  "ui.help.how": "❓ How does it work?"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

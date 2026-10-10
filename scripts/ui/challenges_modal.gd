@@ -45,6 +45,7 @@ func _buttons() -> void:
 		specs.append({"text": L.t("ui.challenges.btn_ranked"), "cb": func(): RankedModal.open(_host)})
 	if Cloud.is_signed_in():
 		specs.append({"text": L.t("ui.challenges.btn_rewards"), "cb": func(): RewardsModal.open(_host)})
+	specs.append({"text": L.t("ui.help.how"), "cb": func(): DocModal.guide(_host, "defis")})
 	specs.append({"text": L.t("ui.challenges.back"), "cb": func(): _modal.close()})
 	_modal.set_buttons(specs)
 

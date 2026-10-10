@@ -126,6 +126,7 @@ func _accept(version: int) -> void:
 
 func _buttons() -> void:
 	_modal.set_buttons([
+		{"text": L.t("ui.help.how"), "cb": func(): DocModal.guide(_host, "tchat")},
 		{"text": L.t("ui.chat.blocked_btn"), "cb": func(): _show_blocked()},
 		{"text": L.t("common.fermer"), "primary": true, "cb": func(): _modal.close()},
 	], true)

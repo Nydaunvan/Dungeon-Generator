@@ -48,6 +48,7 @@ func _build() -> void:
 		specs.append({"text": L.t("ui.ranked.play"), "primary": true, "cb": _ask})
 	else:
 		specs.append({"text": L.t("ui.challenges.login"), "primary": true, "cb": func(): AccountModal.open(_host)})
+	specs.append({"text": L.t("ui.help.how"), "cb": func(): DocModal.guide(_host, "defis")})
 	specs.append({"text": L.t("common.fermer"), "cb": func(): _modal.close()})
 	_modal.set_buttons(specs)
 	_load_board()

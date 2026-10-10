@@ -14,7 +14,7 @@ var _status: Label
 static func open(host: Node) -> RewardsModal:
 	var r := RewardsModal.new()
 	r._modal = Modal.open(host, L.t("ui.rewards.title"), 600.0)
-	r._modal.set_buttons([{"text": L.t("common.fermer"), "cb": func(): r._modal.close()}])
+	r._modal.set_buttons([{"text": L.t("ui.help.how"), "cb": func(): DocModal.guide(host, "recompenses")}, {"text": L.t("common.fermer"), "cb": func(): r._modal.close()}])
 	r._load()
 	return r
 

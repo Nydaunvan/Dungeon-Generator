@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Dungeon Generator"
-config/version="1.32.2"
+config/version="1.33.0"
 run/main_scene="res://scenes/boot.tscn"
 config/icon="res://assets/app_icon.png"
 config/features=PackedStringArray("4.7", "GL Compatibility")
