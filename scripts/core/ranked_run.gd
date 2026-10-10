@@ -95,6 +95,10 @@ static func flush_pending() -> void:
 	if d is Dictionary and d.get("log") is Array and str(d.get("run_id", "")) != "":
 		_send(str(d.run_id), d.log)
 
+## Les parties classées du joueur connecté (hors tests), les plus récentes d'abord : état, score, temps, jour de Paris.
+static func my_runs(limit: int = 30) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/ranked_runs?player_id=eq.%s&test=eq.false&order=started_at.desc&limit=%d&select=id,difficulty,kind,period,day,status,score,seconds,started_at,reject_reason" % [Cloud.user_id(), limit], null, true)
+
 ## Classement vérifié d'une difficulté (vide tant que rien n'est vérifié).
 static func board(difficulty: String) -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/classement_difficulte?difficulty=eq.%s&order=score.desc,seconds.asc,achieved_at.asc&limit=100&select=pseudo,score,seconds,metrics,title_fr,title_en,frame,color,level" % difficulty.uri_encode())

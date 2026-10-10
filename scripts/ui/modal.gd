@@ -11,6 +11,8 @@ var _buttons_row: BoxContainer
 var _width: float = 380.0
 ## Échap ferme la fenêtre (sauf choix obligatoire : talent, évolution, piège, victoire…).
 var esc_closes: bool = true
+## Part de la hauteur de l'écran que le corps de la fenêtre peut occuper avant de défiler.
+var fit_ratio: float = 0.66
 
 static func open(host: Node, title: String, width: float = 380.0) -> Modal:
 	var m := Modal.new()
@@ -80,7 +82,7 @@ func _animate_in() -> void:
 func _fit() -> void:
 	var vp := get_viewport_rect().size
 	var want := content.get_combined_minimum_size().y
-	_scroll.custom_minimum_size = Vector2(0, minf(want, vp.y * 0.66))
+	_scroll.custom_minimum_size = Vector2(0, minf(want, vp.y * fit_ratio))
 	panel.custom_minimum_size.x = minf(_width, vp.x - 24.0)
 
 func add_text(text: String, color: Color = UiTheme.PARCH, size: int = 16, italic: bool = false) -> Label:

@@ -785,8 +785,14 @@ func _leave_game() -> void:
 		_end_ranked_run()
 		Data.go_home()
 		return
+	if RunLog.ranked() and str(gs.cfg.get("runId", "")) != "":
+		_leave_ranked()
+		return
 	var m := Modal.open(_modals(), L.t("common.quitter_la_partie_en_cours"), 440.0)
 	m.add_text(L.t("common.voulez_vous_sauvegarder_votre"), UiTheme.PARCH, 14, true)
+	var sent: Dictionary = Challenges.run_info(gs, Data.play_origin) if Cloud.is_signed_in() else {}
+	if not sent.is_empty():
+		m.add_text(L.fa(L.t("ui.leave.free_sent"), int((sent.metrics as Dictionary).get("levelsCleared", 0))), Color("9cc79a"), 13, true)
 	var origin: String = Data.play_origin
 	if origin == "custom":
 		m.add_text(L.t("main.cette_creation_repartira_une"), UiTheme.PARCH, 14, true)
@@ -820,6 +826,27 @@ func _leave_game() -> void:
 		var row: Node = m._buttons_row
 		row.add_child(sec)
 		row.move_child(sec, 2 if origin != "original" else 1)
+
+## « Quitter » pendant une partie classée : dit clairement ce que chaque choix entraîne (pause reprenable une fois, ou fin de partie envoyée en l'état).
+func _leave_ranked() -> void:
+	var cleared := int(gs.stats.get("levelsCleared", 0))
+	var m := Modal.open(_modals(), L.t("ui.leave.ranked_title"), 540.0)
+	m.add_text(L.fa(L.t("ui.leave.ranked_levels"), cleared), UiTheme.GOLD, 18)
+	m.add_text(L.t("ui.leave.ranked_intro"), UiTheme.PARCH, 14, true)
+	m.add_text(L.t("ui.leave.opt_pause"), UiTheme.DIM, 13)
+	m.add_text(L.t("ui.leave.opt_finish") if cleared > 0 else L.t("ui.leave.opt_finish_zero"), UiTheme.DIM, 13)
+	if str(gs.cfg.get("rankedKind", "")) == "hardcore_month":
+		m.add_text(L.t("ui.leave.hc_note"), Color("e0b87a"), 13, true)
+	m.set_buttons([
+		{"text": L.t("ui.leave.btn_pause"), "primary": true, "cb": func():
+			m.close()
+			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
+		{"text": (L.fa(L.t("ui.leave.btn_finish"), cleared) if cleared > 0 else L.t("ui.leave.btn_abandon")), "primary": false, "cb": func():
+			m.close()
+			_end_ranked_run()
+			Data.go_home()},
+		{"text": L.t("common.annuler_rester_dans_la_partie"), "primary": false, "cb": func(): m.close()},
+	])
 
 ## Instantané de la partie pour une sauvegarde.
 func snapshot() -> Dictionary:

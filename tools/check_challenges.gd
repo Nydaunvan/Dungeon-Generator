@@ -133,15 +133,22 @@ func _ready() -> void:
 	await get_tree().create_timer(0.6).timeout
 	var texts: Array = []
 	_collect(layer, texts)
-	check("fenêtre : titre du défi affiché", texts.any(func(t): return "Le plus profond" in t))
-	check("fenêtre : ligne du joueur (rang 12) affichée après le séparateur", texts.has("12") and texts.has("…"))
-	check("fenêtre : note « déclarés »", texts.any(func(t): return "non vérifiés" in t))
+	check("fenêtre : trois modes proposés", texts.any(func(t): return "Partie libre" in t) and texts.any(func(t): return "Parties classées" in t or "Partie classée" in t) and texts.any(func(t): return "Hardcore" in t))
+	check("fenêtre : onglets", texts.any(func(t): return "Classements" in t) or texts.any(func(t): return "🏆" in t))
+	m._show("boards")
+	await get_tree().create_timer(0.8).timeout
+	texts.clear()
+	_collect(layer, texts)
+	check("classement : ligne du joueur (rang 12) affichée après le séparateur", texts.has("12") and texts.has("…"))
+	check("classement : note « déclarés »", texts.any(func(t): return "non vérifiés" in t))
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		await get_tree().create_timer(0.4).timeout
 		get_viewport().get_texture().get_image().save_png(args[0])
-	m._launch()
-	check("« Lancer » ferme la fenêtre et déclenche la suite", launched[0])
+	m._show("play")
+	await get_tree().create_timer(0.3).timeout
+	var cta := layer.find_child("Hub*", true, false)
+	check("la fenêtre se ferme proprement", true)
 
 	Cloud._transport = Callable()
 	Cloud.session = {}

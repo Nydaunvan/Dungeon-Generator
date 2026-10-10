@@ -35,7 +35,7 @@ var _empty_note: Label
 static func open(host: Node) -> ChatModal:
 	var c := ChatModal.new()
 	c._host = host
-	c._modal = Modal.open(host, L.t("ui.chat.title"), 680.0)
+	c._modal = Modal.open(host, L.t("ui.chat.title"), clampf((host.get_viewport().get_visible_rect().size.x if host.is_inside_tree() else 1280.0) * 0.94, 320.0, 680.0))
 	c._build()
 	return c
 
@@ -100,7 +100,8 @@ func _show_charter(version: int, renewed: bool) -> void:
 	for k in CHARTER_KEYS:
 		var l := _label("•  " + L.t(k))
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size.x = 560
+		l.custom_minimum_size.x = 0
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_body.add_child(l)
 	_note(_body, L.t("ui.chat.charte_footer"))
 	_status = _label("", BAD, 13)
@@ -167,7 +168,7 @@ func _show_room(room: String) -> void:
 		_tab_buttons[r] = b
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.custom_minimum_size = Vector2(0, 300)
+	_scroll.custom_minimum_size = Vector2(0, clampf(_host.get_viewport().get_visible_rect().size.y * 0.38, 160.0, 360.0))
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_body.add_child(_scroll)
 	_list = VBoxContainer.new()
@@ -278,9 +279,13 @@ func _row(m: Dictionary) -> Control:
 	if cs != "" and Color.html_is_valid(cs):
 		col = Color.html(cs)
 	var lvl := int(m.get("level", 0))
-	var who := _label("%s%s :" % [str(m.get("pseudo", "?")), (" (%d)" % lvl) if lvl > 0 else ""], GOLD if mine else col)
+	var who := _label("%s :" % str(m.get("pseudo", "?")), GOLD if mine else col)
 	who.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(who)
+	if lvl >= 2:
+		var lv := _label(L.t("ui.party_hud.nv") % lvl, UiTheme.DIM, 11)
+		lv.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		h.add_child(lv)
 	var txt := _label(str(m.get("body", "")))      # texte brut : jamais de balisage interprété
 	txt.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL

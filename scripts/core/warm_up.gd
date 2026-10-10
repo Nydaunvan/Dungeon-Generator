@@ -48,6 +48,65 @@ static func _mini_level(cfg: Dictionary, theme: String) -> Dictionary:
 		"startX": 3, "startY": 3, "startDir": 0,
 	}
 
+## Préchauffage des icônes : toutes les images d'icônes, de portraits et de planches, ainsi que tous les symboles et emojis du texte du jeu,
+## sont dessinés une fois hors écran pendant le chargement. Leur envoi à la carte graphique et la préparation des glyphes se font donc
+## maintenant, et non au premier affichage d'une fenêtre (c'est ce qui faisait scintiller les icônes).
+static func icons(host: Node) -> void:
+	var tree := host.get_tree()
+	var vp := SubViewport.new()
+	vp.size = Vector2i(800, 640)
+	vp.transparent_bg = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	host.add_child(vp)
+	var grid := GridContainer.new()
+	grid.columns = 25
+	grid.add_theme_constant_override("h_separation", 2)
+	grid.add_theme_constant_override("v_separation", 2)
+	vp.add_child(grid)
+	var paths: Array = [IconResolver.MONSTER_SHEET, IconResolver.ITEM_SHEET]
+	for d in ["icons", "portraits"]:
+		for n in ResourceLoader.list_directory("res://assets/" + d):
+			var name := String(n)
+			for suf in [".import", ".remap"]:
+				if name.ends_with(suf):
+					name = name.trim_suffix(suf)
+			var p := "res://assets/%s/%s" % [d, name]
+			if name.get_extension().to_lower() in ["webp", "png"] and not paths.has(p):
+				paths.append(p)
+	for p in paths:
+		var t := load(p) as Texture2D
+		if t == null:
+			continue
+		var r := TextureRect.new()
+		r.texture = t
+		r.custom_minimum_size = Vector2(28, 28)
+		r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		grid.add_child(r)
+	# symboles et emojis : tout ce qui est au-delà des lettres, dans les textes du jeu
+	var seen := {}
+	for f in ["res://data/lang/fr.json", "res://data/lang/en.json", "res://data/lang/help.fr.json", "res://data/lang/help.en.json"]:
+		var text := FileAccess.get_file_as_string(f)
+		for i in text.length():
+			var c := text.unicode_at(i)
+			if c >= 0x2190 and c != 0xFE0F and c != 0x200D:
+				seen[c] = true
+	var glyphs := ""
+	for c in seen:
+		glyphs += String.chr(int(c)) + " "
+	var lab := Label.new()
+	lab.theme = UiTheme.shared()
+	lab.text = glyphs
+	lab.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	lab.custom_minimum_size = Vector2(780, 0)
+	lab.add_theme_font_size_override("font_size", 20)
+	vp.add_child(lab)
+	lab.position = Vector2(0, 420)
+	for i in 3:
+		await tree.process_frame
+	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	vp.queue_free()
+
 static func run(host: Node, progress: Callable) -> void:
 	var tree := host.get_tree()
 	var cfg: Dictionary = Data.active()

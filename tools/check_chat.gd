@@ -161,10 +161,10 @@ func _init() -> void:
 	await wait(0.2)
 	check("charte acceptée côté serveur", charter_accepted == 1)
 	check("salon Français chargé", calls.any(func(x): return str(x.url).ends_with("/rpc/chat_fetch") and str(x.body).contains("\"p_room\":\"fr\"")))
-	check("messages affichés", has_text(c._modal, "Bonjour") and has_text(c._modal, "Bob (3) :"))
+	check("messages affichés", has_text(c._modal, "Bonjour") and has_text(c._modal, "Bob :") and has_text(c._modal, "Nv.3") and not has_text(c._modal, "(3)"))
 	check("balisage non interprété (texte brut)", has_text(c._modal, "Salut [b]tout[/b] le monde"))
 	check("onglets des trois salons", has_text(c._modal, "Général") and has_text(c._modal, "Français") and has_text(c._modal, "English"))
-	check("pas de menu sur ses propres messages", c._list.get_child(1).get_child_count() == 3 and c._list.get_child(0).get_child_count() == 4)
+	check("pas de menu sur ses propres messages", c._list.get_child(1).get_child_count() == 4 and c._list.get_child(0).get_child_count() == 5)
 
 	# --- envoi
 	calls.clear()

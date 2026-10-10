@@ -168,7 +168,7 @@ func _build_account() -> void:
 		_modal.add_text(_offline_note, Color("e0b87a"), 13, true)
 	_modal.add_text(L.t("ui.cloud.optional_note"), UiTheme.DIM, 13, true)
 	_status = Form.status_label(c)
-	var specs: Array = [{"text": L.t("ui.challenges.btn_rewards"), "primary": true, "cb": func(): RewardsModal.open(_modal.get_parent())}]
+	var specs: Array = [{"text": L.t("ui.hub.open"), "primary": true, "cb": func(): OnlineHub.open(_modal.get_parent())}]
 	# Menu « Super admin » : affiché seulement si le SERVEUR a confirmé le rôle (il le revérifie de toute façon à chaque appel).
 	if SuperAdmin.cached() == 1:
 		specs.append({"text": L.t("ui.sadmin.btn"), "cb": func(): SuperAdminModal.open(_modal.get_parent())})

@@ -117,6 +117,7 @@ func boot() -> void:
 	base += float(phases[3].w)
 	# 5. shaders : une mini-scène (murs, portes, torches, fontaine, monstres, sorts) est dessinée hors écran une fois
 	screen.set_progress(base, phases[4].label)
+	await WarmUp.icons(self)
 	await WarmUp.run(self, func(f: float): screen.set_progress(base + float(phases[4].w) * f))
 	base += float(phases[4].w)
 	# 6. sons et musiques

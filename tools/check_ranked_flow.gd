@@ -21,6 +21,17 @@ func fake(method: int, full_url: String, headers: PackedStringArray, body: Strin
 		return resp(500, {"error": "file vide"})
 	return queue.pop_front()
 
+func L_t(k: String) -> String:
+	return root.get_node("L").t(k)
+
+func _texts(n: Node, out: Array) -> void:
+	if n is Label:
+		out.append((n as Label).text)
+	elif n is Button:
+		out.append((n as Button).text)
+	for c in n.get_children():
+		_texts(c, out)
+
 func _init() -> void:
 	await process_frame
 	var Cloud = root.get_node("Cloud")
@@ -58,6 +69,19 @@ func _init() -> void:
 		for j in 20:
 			await process_frame
 	check("le journal se remplit", gs.run_log.size() >= 1)
+
+	# --- quitter une partie classée : explication des options
+	var was_over: bool = gs.game_over
+	gs.game_over = false
+	m._leave_game()
+	for j in 5:
+		await process_frame
+	var tx: Array = []
+	_texts(root, tx)
+	gs.game_over = was_over
+	check("quitter : l'explication des options s'affiche", tx.any(func(t): return "Terminer ici" in t or "Abandonner" in t) and tx.any(func(t): return "Pause" in t))
+	check("quitter : rappel de l'essai du jour (hardcore)", tx.any(func(t): return "essai" in t.to_lower()))
+	check("quitter : bouton annuler", tx.any(func(t): return "Annuler" in t or "Continuer" in t or "Reprendre" in t))
 
 	# --- envoi unique
 	queue = [resp(204)]
