@@ -30,8 +30,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # Le fichier du workflow doit être sur la branche par défaut (main) pour que GitHub le planifie ; le code de rejeu, lui, est pris
+      # sur la branche ci-dessous (variable de dépôt VERIFIER_REF pour la changer, par exemple « main » après la fusion).
       - uses: actions/checkout@v4
         with:
+          ref: ${{ vars.VERIFIER_REF || 'migration/donnees' }}
           fetch-depth: 0
           fetch-tags: true
 

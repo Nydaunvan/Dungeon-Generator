@@ -244,7 +244,7 @@ begin
     from (
       select distinct on (player_id) player_id, score, seconds, verified_at
       from public.ranked_runs
-      where kind = p_kind and period = p_period and status = 'verified'
+      where kind = p_kind and period = p_period and status = 'verified' and score > 0
       order by player_id, score desc, seconds asc, verified_at asc
     ) b;
   select count(*) into n from _rk;
@@ -298,7 +298,7 @@ select distinct on (r.kind, r.period, r.player_id)
 from public.ranked_runs r
 join public.profiles p on p.id = r.player_id
 left join public.player_cosmetics c on c.player_id = r.player_id
-where r.status = 'verified' and r.kind <> 'difficulty'
+where r.status = 'verified' and r.score > 0 and r.kind <> 'difficulty'
 order by r.kind, r.period, r.player_id, r.score desc, r.seconds asc, r.verified_at asc;
 grant select on public.classement_periode to anon, authenticated;
 
@@ -314,6 +314,6 @@ select distinct on (r.difficulty, r.player_id)
 from public.ranked_runs r
 join public.profiles p on p.id = r.player_id
 left join public.player_cosmetics c on c.player_id = r.player_id
-where r.status = 'verified' and r.kind = 'difficulty'
+where r.status = 'verified' and r.score > 0 and r.kind = 'difficulty'
 order by r.difficulty, r.player_id, r.score desc, r.seconds asc, r.verified_at asc;
 grant select on public.classement_difficulte to anon, authenticated;

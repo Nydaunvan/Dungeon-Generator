@@ -127,7 +127,7 @@ select distinct on (r.difficulty, r.player_id)
   r.difficulty, r.player_id, p.pseudo, r.score, r.seconds, r.metrics, r.verified_at as achieved_at
 from public.ranked_runs r
 join public.profiles p on p.id = r.player_id
-where r.status = 'verified'
+where r.status = 'verified' and r.score > 0
 order by r.difficulty, r.player_id, r.score desc, r.seconds asc, r.verified_at asc;
 
 grant select on public.classement_difficulte to anon, authenticated;
