@@ -1,0 +1,69 @@
+name: Vérification des parties classées
+
+# Rejoue les parties envoyées par les joueurs (table ranked_runs, statut « submitted ») et inscrit le score recalculé.
+# Secrets du dépôt requis : SUPABASE_URL et SUPABASE_SECRET_KEY (clé secrète : jamais dans le dépôt ni dans le jeu).
+# Se lance toutes les 15 minutes ou à la main (Actions > Vérification des parties classées > Run workflow).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simulation : ne rien écrire dans la base"
+        type: boolean
+        default: false
+
+concurrency:
+  group: verify-runs
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_BASE: https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # Le fichier du workflow doit être sur la branche par défaut (main) pour que GitHub le planifie ; le code de rejeu, lui, est pris
+      # sur la branche ci-dessous (variable de dépôt VERIFIER_REF pour la changer, par exemple « main » après la fusion).
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ vars.VERIFIER_REF || 'migration/donnees' }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Cache de Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-only
+
+      - name: Installer Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin
+          curl -fsSL -o /tmp/godot.zip "$GODOT_BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+
+      - name: Installer Xvfb
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+
+      - name: Vérifier les parties en attente
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          export GODOT=~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          chmod +x "$GODOT"
+          if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then echo "Secret SUPABASE_SECRET_KEY absent : rien à faire."; exit 0; fi
+          if [ "${DRY:-false}" = "true" ]; then python3 tools/verify_runs.py --dry-run; else python3 tools/verify_runs.py; fi
