@@ -16,6 +16,10 @@ static func _load(name: String) -> Array:
 		_cache[path] = parsed if parsed is Array else []
 	return _cache[path]
 
+## Données d'un fichier d'aide (accès public pour le guide en livre).
+static func load_data(name: String) -> Array:
+	return _load(name)
+
 static func _rich(text: String) -> RichTextLabel:
 	var r := RichTextLabel.new()
 	r.bbcode_enabled = true
@@ -61,7 +65,7 @@ static func topics(host: Node, title: String, data_name: String, start_id: Strin
 	return m
 
 static func guide(host: Node, start_id: String = "") -> Modal:
-	return topics(host, L.t("ui.doc_modal.guide_de_l_aventurier"), "help", start_id)
+	return GuideBook.open(host, start_id).modal
 
 static func tutorial(host: Node) -> Modal:
 	return topics(host, L.t("common.tutoriel_de_creation"), "tutorial")
