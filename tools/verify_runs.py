@@ -89,6 +89,10 @@ def main():
         if not a.dry_run:
             # « status=eq.submitted » : une partie déjà traitée n'est jamais réécrite
             api('PATCH', f"/rest/v1/ranked_runs?id=eq.{run['id']}&status=eq.submitted", upd)
+            if upd['status'] == 'verified':
+                api('POST', '/rest/v1/rpc/award_run', {'p_run_id': run['id']})     # XP et badges, une seule fois par partie
+    if not a.dry_run:
+        api('POST', '/rest/v1/rpc/close_due_periods', {})                        # clôture des mois terminés (badges de rang)
 
 
 if __name__ == '__main__':

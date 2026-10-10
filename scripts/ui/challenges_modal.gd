@@ -80,6 +80,9 @@ func _load() -> void:
 		_text(c, L.t("ui.challenges.need_account"), Color("e0b87a"), 14, true)
 	else:
 		_text(c, L.fa(L.t("ui.challenges.signed_as"), Cloud.pseudo()), UiTheme.DIM, 13, true)
+	if Cloud.is_signed_in():
+		RankedRun.flush_pending()
+	_hardcore_section(mine)
 	var wait := _text(c, L.t("ui.challenges.loading"), UiTheme.DIM, 14, true)
 	Challenges.flush_pending()
 	var r: Dictionary = await Challenges.list(true)
@@ -191,3 +194,103 @@ func _details(row: Dictionary) -> String:
 	if d.has("kills"):
 		parts.append(L.fa(L.t("ui.challenges.d_kills"), int(d.kills)))
 	return "\n".join(parts)
+
+# ------------------------------------------------------------------ Hardcore du mois
+
+func _month_key() -> String:
+	var d := Time.get_datetime_dict_from_system()
+	return "%04d-%02d" % [int(d.year), int(d.month)]
+
+## Texte d'un champ localisé d'une ligne du catalogue (« label », « desc », « title ») : français, ou anglais si la langue du jeu l'est.
+func _loc(row: Dictionary, field: String) -> String:
+	var en := str(row.get(field + "_en", ""))
+	return en if Data.lang == "en" and en != "" else str(row.get(field + "_fr", ""))
+
+func _hardcore_section(mine: int) -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_modal.content.add_child(box)
+	var key := _month_key()
+	_text(box, "🔥 " + L.fa(L.t("ui.challenges.hc_title"), key.substr(5) + "/" + key.substr(0, 4)), Color("ff9a52"), 19)
+	_text(box, L.t("ui.challenges.hc_desc"), UiTheme.DIM, 13, true)
+	if Cloud.is_signed_in():
+		var play := Button.new()
+		play.text = L.t("ui.challenges.hc_play")
+		play.focus_mode = Control.FOCUS_NONE
+		play.pressed.connect(_ask_hardcore)
+		box.add_child(play)
+	else:
+		_text(box, L.t("ui.challenges.hc_need_account"), Color("e0b87a"), 13, true)
+	var rewards := HFlowContainer.new()
+	rewards.add_theme_constant_override("h_separation", 8)
+	rewards.add_theme_constant_override("v_separation", 4)
+	rewards.alignment = FlowContainer.ALIGNMENT_CENTER
+	box.add_child(rewards)
+	var wait := _text(box, L.t("ui.challenges.loading_board"), UiTheme.DIM, 13, true)
+	_fill_hardcore(box, rewards, wait, key, mine)
+	_modal.call_deferred("_fit")
+
+func _ask_hardcore() -> void:
+	Dialogs.confirm(_host, L.t("ui.challenges.hc_play"), L.t("ui.challenges.hc_confirm"), _start_hardcore, L.t("ui.challenges.hc_go"), L.t("common.annuler"))
+
+func _start_hardcore() -> void:
+	var r: Dictionary = await RankedRun.launch("hardcore", "hardcore_month")
+	if not r.ok and is_instance_valid(_host):
+		Form.alert(_host, str(r.get("message", "")))
+
+func _fill_hardcore(box: VBoxContainer, rewards: HFlowContainer, wait: Label, key: String, mine: int) -> void:
+	var cat: Dictionary = await RankedRun.badges()
+	var owned := {}
+	if Cloud.is_signed_in():
+		var mb: Dictionary = await RankedRun.my_badges()
+		if mb.ok:
+			for b in mb.data:
+				owned[str(b.badge_id)] = true
+	var board: Dictionary = await RankedRun.period_board("hardcore_month", key)
+	if mine != _gen or not _alive() or not is_instance_valid(box):
+		return
+	wait.queue_free()
+	if cat.ok:
+		for b in cat.data:
+			var l := Label.new()
+			l.text = str(b.icon)
+			l.add_theme_font_size_override("font_size", 26)
+			l.mouse_filter = Control.MOUSE_FILTER_STOP
+			var tip := "%s\n%s" % [_loc(b, "label"), _loc(b, "desc")]
+			if b.get("title_fr") != null:
+				tip += "\n" + L.fa(L.t("ui.challenges.hc_title_reward"), _loc(b, "title"))
+			l.tooltip_text = tip
+			l.modulate = Color.WHITE if owned.has(str(b.id)) else Color(1, 1, 1, 0.3)
+			rewards.add_child(l)
+	if not board.ok:
+		_text(box, str(board.message), Color("e08a7a"), 13)
+		return
+	var rows: Array = board.data if board.data is Array else []
+	if rows.is_empty():
+		_text(box, L.t("ui.challenges.hc_empty"), UiTheme.DIM, 14, true)
+		_modal.call_deferred("_fit")
+		return
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 4)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(grid)
+	_cell(grid, "#", UiTheme.DIM, 12, false, 36, HORIZONTAL_ALIGNMENT_RIGHT)
+	_cell(grid, L.t("ui.challenges.col_player"), UiTheme.DIM, 12, true, 0, HORIZONTAL_ALIGNMENT_LEFT)
+	_cell(grid, L.t("ui.challenges.unit_niveaux"), UiTheme.DIM, 12, false, 90, HORIZONTAL_ALIGNMENT_RIGHT)
+	_cell(grid, L.t("ui.challenges.col_time"), UiTheme.DIM, 12, false, 70, HORIZONTAL_ALIGNMENT_RIGHT)
+	for i in mini(rows.size(), TOP):
+		var row: Dictionary = rows[i]
+		var col := Color(str(row.color)) if row.get("color") != null else UiTheme.PARCH
+		var title := _loc(row, "title") if row.get("title_fr") != null else ""
+		var nm := str(row.get("pseudo", "?")) + (" · " + title if title != "" else "")
+		_cell(grid, str(i + 1), col, 15, false, 36, HORIZONTAL_ALIGNMENT_RIGHT)
+		var nc := _cell(grid, nm + " ✔", col, 15, true, 0, HORIZONTAL_ALIGNMENT_LEFT)
+		nc.tooltip_text = L.fa(L.t("ui.challenges.hc_level"), int(row.get("level", 1)))
+		nc.mouse_filter = Control.MOUSE_FILTER_PASS
+		_cell(grid, str(int(row.get("score", 0))), col, 15, false, 90, HORIZONTAL_ALIGNMENT_RIGHT)
+		_cell(grid, Challenges.format_time(int(row.get("seconds", -1))), col, 15, false, 70, HORIZONTAL_ALIGNMENT_RIGHT)
+	_text(box, L.t("ui.challenges.hc_verified_note"), UiTheme.DIM, 12, true)
+	_modal.call_deferred("_fit")

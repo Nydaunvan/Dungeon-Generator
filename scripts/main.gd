@@ -39,6 +39,11 @@ func _submit_run(announce: bool = false) -> void:
 	if announce and bool(r.get("ok", false)) and int(r.get("sent", 0)) > 0 and is_instance_valid(self) and is_inside_tree():
 		show_message(L.fa(L.t("ui.challenges.score_sent"), int((info.metrics as Dictionary).get("levelsCleared", 0))), 3.0)
 
+## Fin d'une partie classée (défaite, abandon, retour à l'accueil, nouvelle partie) : le journal part au serveur, une seule fois.
+func _end_ranked_run() -> void:
+	if RunLog.ranked() and str(gs.cfg.get("runId", "")) != "":
+		RankedRun.submit(gs)
+
 func _exit_tree() -> void:
 	if RunLog.gs == gs:
 		RunLog.attach(null)
@@ -776,6 +781,7 @@ func _modal_button(text: String, cb: Callable, primary: bool = false) -> Button:
 func _leave_game() -> void:
 	_submit_run()
 	if gs.game_over or gs.won:
+		_end_ranked_run()
 		Data.go_home()
 		return
 	var m := Modal.open(_modals(), L.t("common.quitter_la_partie_en_cours"), 440.0)
@@ -795,6 +801,7 @@ func _leave_game() -> void:
 			Files.save_text(_modals(), Data.export_name(str(gs.cfg.get("title", "")), "_sauvegarde"), Saves.export_text(snap.config, snap.save, snap.origin), func(_t): Data.go_home())})
 	btns.append({"text": L.t("common.quitter_sans_sauvegarder"), "primary": false, "cb": func():
 		m.close()
+		_end_ranked_run()
 		Data.go_home()})
 	btns.append({"text": L.t("common.annuler_rester_dans_la_partie"), "primary": false, "cb": func(): m.close()})
 	m.set_buttons(btns)
@@ -824,8 +831,19 @@ func snapshot() -> Dictionary:
 func _modals() -> Node:
 	return _modal_layer
 
+func _home() -> void:
+	_end_ranked_run()
+	Data.go_home()
+
 func _restart() -> void:
-	Data.launch(Data.active(), Data.play_origin, Data.ADMIN_KEEP)
+	var cfg: Dictionary = Data.active()
+	if RunLog.ranked():
+		# la partie classée est terminée : « repartir de zéro » donne une partie libre (la graine et l'essai du serveur sont consommés)
+		_end_ranked_run()
+		cfg = cfg.duplicate(true)
+		for k in ["runSeed", "runId", "rankedKind"]:
+			cfg.erase(k)
+	Data.launch(cfg, Data.play_origin, Data.ADMIN_KEEP)
 
 static func _strip_tags(s: String) -> String:
 	var re := RegEx.new()
@@ -896,9 +914,10 @@ func _show_combat_summary(s: Dictionary) -> void:
 
 func _on_game_over() -> void:
 	_submit_run(true)
+	_end_ranked_run()
 	show_message(L.t("main.toute_l_equipe_a_peri"), 4.0)
 	await get_tree().create_timer(1.6).timeout
-	Dialogs.defeat(_modals(), gs, _restart, Data.go_home)
+	Dialogs.defeat(_modals(), gs, _restart, _home)
 
 func _show_victory() -> void:
 	Sound.sfx("victory")
@@ -906,7 +925,7 @@ func _show_victory() -> void:
 	await get_tree().create_timer(0.8).timeout
 	var maxed := gs.party.all(func(c): return int(c.level) >= Characters.MAX_LEVEL)
 	var random_run := Data.play_origin == "random" and not maxed
-	Dialogs.victory(_modals(), gs, _restart, Data.go_home,
+	Dialogs.victory(_modals(), gs, _restart, _home,
 		_continue_next if random_run else Callable(), _enter_village if random_run else Callable())
 
 # ------------------------------------------------------------------ village et expéditions successives

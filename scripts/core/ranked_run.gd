@@ -32,23 +32,85 @@ static func ranking_of(res: Dictionary) -> Dictionary:
 # ------------------------------------------------------------------ côté jeu
 
 ## Demande une partie classée au serveur. Renvoie {ok, run_id, seed, params} ou {ok:false, error_code…}.
-static func start(difficulty: String) -> Dictionary:
+## `kind` : "difficulty" (par difficulté) ou "hardcore_month" (Hardcore du mois : un essai par jour).
+static func start(difficulty: String, kind: String = "difficulty") -> Dictionary:
 	if not Cloud.is_signed_in():
 		return Cloud._fail("session_expired", 401)
 	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/start_ranked_run",
-		{"p_difficulty": difficulty, "p_game_version": AppVersion.number()}, true)
+		{"p_difficulty": difficulty, "p_game_version": AppVersion.number(), "p_kind": kind}, true)
 	if not r.ok:
 		return r
 	var d: Dictionary = r.data if r.data is Dictionary else {}
-	return {"ok": true, "run_id": str(d.get("run_id", "")), "seed": str(d.get("seed", "")), "params": d.get("params", {})}
+	return {"ok": true, "run_id": str(d.get("run_id", "")), "seed": str(d.get("seed", "")), "params": d.get("params", {}),
+		"kind": kind, "period": str(d.get("period", ""))}
+
+const PENDING_PATH := "user://ranked_pending.json"
+
+## Lance une partie classée : le serveur donne la graine et les réglages, le donjon est celui de la configuration d'origine.
+## Renvoie {ok:false, message…} en cas d'échec (hors ligne, essai du jour déjà utilisé…), sinon {ok:true} et la partie démarre.
+static func launch(difficulty: String, kind: String = "difficulty") -> Dictionary:
+	var r: Dictionary = await start(difficulty, kind)
+	if not r.ok:
+		return r
+	var cfg := config_for(Data.original_config, str(r.seed), r.params)
+	if cfg.is_empty():
+		return Cloud._fail("generic")
+	cfg["runId"] = str(r.run_id)
+	cfg["rankedKind"] = kind
+	Data.launch(cfg, "random")
+	return r
 
 ## Envoie le journal de la partie classée en cours (une seule fois par partie). Sans compte ou partie souillée : ne fait rien.
+## Hors ligne : le journal est gardé dans user://ranked_pending.json et renvoyé à la prochaine occasion (`flush_pending`).
 static func submit(gs: GameState) -> Dictionary:
-	if not RunLog.is_clean() or gs.run_log.is_empty() or str(gs.cfg.get("runId", "")) == "" or not Cloud.is_signed_in():
+	var run_id := str(gs.cfg.get("runId", ""))
+	if run_id == "" or not RunLog.is_clean() or gs.run_log.is_empty() or bool(gs.stats.get("rankedSent", false)):
 		return {"ok": false, "skipped": true}
-	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/submit_ranked_run",
-		{"p_run_id": str(gs.cfg.get("runId", "")), "p_log": gs.run_log}, true)
+	gs.stats["rankedSent"] = true
+	return await _send(run_id, gs.run_log.duplicate(true))
+
+static func _send(run_id: String, log: Array) -> Dictionary:
+	if not Cloud.is_signed_in():
+		_save_pending(run_id, log)
+		return {"ok": false, "skipped": true}
+	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/submit_ranked_run", {"p_run_id": run_id, "p_log": log}, true)
+	if not r.ok and (bool(r.get("offline", false)) or int(r.get("status", 0)) >= 500):
+		_save_pending(run_id, log)
+	return r
+
+static func _save_pending(run_id: String, log: Array) -> void:
+	var f := FileAccess.open(PENDING_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify({"run_id": run_id, "log": log}))
+
+## Renvoie le journal resté en attente (envoi échoué hors ligne), si un compte est connecté.
+static func flush_pending() -> void:
+	if not Cloud.is_signed_in() or not FileAccess.file_exists(PENDING_PATH):
+		return
+	var d = JSON.parse_string(FileAccess.get_file_as_string(PENDING_PATH))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PENDING_PATH))
+	if d is Dictionary and d.get("log") is Array and str(d.get("run_id", "")) != "":
+		_send(str(d.run_id), d.log)
 
 ## Classement vérifié d'une difficulté (vide tant que rien n'est vérifié).
 static func board(difficulty: String) -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/classement_difficulte?difficulty=eq.%s&order=score.desc,seconds.asc,achieved_at.asc&limit=100&select=pseudo,score,seconds,metrics" % difficulty.uri_encode())
+
+## Classement du mois (Hardcore) : pseudo, score, temps, titre, cadre, couleur et niveau de compte.
+static func period_board(kind: String, period: String) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/classement_periode?kind=eq.%s&period=eq.%s&order=score.desc,seconds.asc,achieved_at.asc&limit=100&select=pseudo,score,seconds,title_fr,title_en,frame,color,level" % [kind.uri_encode(), period.uri_encode()])
+
+## Badges du catalogue et badges obtenus par le joueur connecté.
+static func badges() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/badges?order=sort_order.asc&select=*")
+
+static func my_badges() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/player_badges?player_id=eq.%s&select=badge_id,period,earned_at" % Cloud.user_id(), null, true)
+
+static func my_xp() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/account_xp?player_id=eq.%s&select=xp,level" % Cloud.user_id())
+
+## Équipe titre, cadre et couleur (identifiants de badges possédés, "" = aucun).
+static func equip(title: String, frame: String, color: String) -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/equip_cosmetics",
+		{"p_title": title if title != "" else null, "p_frame": frame if frame != "" else null, "p_color": color if color != "" else null}, true)

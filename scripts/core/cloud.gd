@@ -41,6 +41,14 @@ const ERR_KEYS := {
 	"trop_de_parties_en_attente": "ui.cloud.err.trop_de_parties_en_attente",
 	"trop_de_soumissions": "ui.cloud.err.trop_de_soumissions",
 	"score_invraisemblable": "ui.cloud.err.score_invraisemblable",
+	"non_connecte": "ui.cloud.err.session_expired",
+	"essai_du_jour_utilise": "ui.cloud.err.essai_du_jour_utilise",
+	"trop_de_parties": "ui.cloud.err.trop_de_parties",
+	"mode_inconnu": "ui.cloud.err.generic",
+	"journal_invalide": "ui.cloud.err.generic",
+	"journal_trop_gros": "ui.cloud.err.journal_trop_gros",
+	"partie_introuvable": "ui.cloud.err.generic",
+	"badge_non_possede": "ui.cloud.err.badge_non_possede",
 	"generic": "ui.cloud.err.generic",
 }
 

@@ -1495,7 +1495,21 @@
   "ui.challenges.diff_normal": "Normal",
   "ui.challenges.diff_hard": "Hard",
   "ui.challenges.diff_hardcore": "Hardcore",
-  "ui.challenges.score_sent": "🏆 Score sent to the ranking: %d level(s) cleared"
+  "ui.challenges.score_sent": "🏆 Score sent to the ranking: %d level(s) cleared",
+  "ui.challenges.hc_title": "Monthly Hardcore — %s",
+  "ui.challenges.hc_desc": "The same dungeon for everyone, maximum difficulty, one attempt per day. The ranking only counts runs verified by replay. Titles, frames, name colours and experience to win (hover the badges).",
+  "ui.challenges.hc_play": "🔥 Play the Hardcore (1 attempt per day)",
+  "ui.challenges.hc_go": "Let's go",
+  "ui.challenges.hc_confirm": "Your daily attempt is used as soon as you start, even if you give up. The run is ranked: no administration, no export, no reloading an older save. Continue?",
+  "ui.challenges.hc_need_account": "Sign in (Account button) to play the monthly Hardcore.",
+  "ui.challenges.hc_empty": "No verified run this month yet. Submitted runs are verified within a few minutes.",
+  "ui.challenges.hc_title_reward": "Title: %s",
+  "ui.challenges.hc_level": "Account level: %d",
+  "ui.challenges.hc_verified_note": "✔ Every run in this ranking is verified by replay.",
+  "ui.cloud.err.essai_du_jour_utilise": "You have already used today's attempt. Come back tomorrow!",
+  "ui.cloud.err.trop_de_parties": "Too many runs started in 24 hours. Try again later.",
+  "ui.cloud.err.journal_trop_gros": "The run log is too large to be sent.",
+  "ui.cloud.err.badge_non_possede": "You do not own this badge."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
