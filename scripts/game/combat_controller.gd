@@ -24,6 +24,9 @@ var _combat_live: bool = false     # le combat est « affiché » (la porte est 
 var _gate_pending: bool = false    # un combat attend que la porte s'ouvre
 var _hold_until: int = 0           # petite respiration après la dernière fenêtre / le dernier effet
 var _draining: bool = false
+## Participant dont l'action est encore en cours de présentation (effet visuel, chiffres) : la file d'initiative le garde au centre
+## tant que l'animation n'est pas finie, même si le modèle a déjà donné la main au suivant.
+var queue_hold: String = ""
 
 func setup(state: GameState, r: PlayerRig) -> void:
 	gs = state
@@ -133,7 +136,7 @@ func attack() -> void:
 	Crumbs.mark("attaque %s" % str(c.get("name", "")))
 	RunLog.rec("atk")
 	if combat.player_attack(c):
-		_after_action()
+		_after_action("char_" + str(c.id))
 	else:
 		changed.emit()
 
@@ -161,7 +164,7 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 	Crumbs.mark("sort %s par %s" % [spell_id, str(c.get("name", ""))])
 	RunLog.rec("cast", spell_id, ally_id if ally_id != "" else null)
 	if combat.cast_spell(c, spell_id, ally_id):
-		_after_action()
+		_after_action("char_" + str(c.id))
 	else:
 		changed.emit()
 
@@ -196,7 +199,7 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 	gs.add_log(L.fa(L.t("game.combat_controller.lit_le_parchemin_et_invoque"), [c.name, spell.get("icon", ""), spell.name]), true)
 	if combat.cast_spell(c, str(spell.id), char_id, true):
 		gs.inventory.remove_at(inv_idx)
-		_after_action()
+		_after_action("char_" + str(c.id))
 	else:
 		changed.emit()
 
@@ -254,12 +257,14 @@ func skip_active_turn(reason: String) -> void:
 	RunLog.rec("skip")
 	gs.add_log(reason % c.name, true)
 	combat.skip_turn(c)
-	_after_action()
+	_after_action("char_" + str(c.id))
 
-func _after_action() -> void:
+func _after_action(hold: String = "") -> void:
 	var was_busy := _busy
 	_busy = true            # pas d'autre action tant que l'effet visuel n'est pas terminé
+	queue_hold = hold
 	await _drain()
+	queue_hold = ""
 	_busy = was_busy
 	_turn_elapsed = 0.0
 	changed.emit()
@@ -281,9 +286,12 @@ func _run_turns() -> void:
 		if not model_in_combat():
 			break
 		Crumbs.mark("monstre agit %s" % str(r.key))
+		queue_hold = str(r.key)
 		combat.monster_act(str(r.key))
 		await _drain()
+		queue_hold = ""
 		changed.emit()
+	queue_hold = ""
 	_busy = false
 	_turn_elapsed = 0.0
 	changed.emit()

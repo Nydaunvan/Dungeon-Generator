@@ -64,13 +64,20 @@ func _entries(n: int) -> Array:
 		return out
 	var keys: Array = ctrl.combat.upcoming(n)
 	var seq0: int = ctrl.combat.turn_seq
+	# l'action du participant précédent est encore présentée (effet, chiffres) : il reste au centre jusqu'à la fin
+	var hold: String = ctrl.queue_hold
+	if hold != "" and (keys.is_empty() or str(keys[0]) != hold):
+		keys.push_front(hold)
+		if keys.size() > n:
+			keys.resize(n)
+		seq0 -= 1
 	var occ := {}
 	for i in keys.size():
 		var key: String = keys[i]
 		var o: int = int(occ.get(key, 0))
 		occ[key] = o + 1
 		var suffix := "_occ%d" % o if o > 0 else ""
-		var e := {"turnSeq": seq0 + i, "current": i == 0}
+		var e := {"turnSeq": seq0 + i, "current": out.is_empty()}
 		if key.begins_with("char_"):
 			var c := gs.char_by_id(key.substr(5))
 			if c.is_empty() or int(c.hp) <= 0:

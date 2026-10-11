@@ -155,11 +155,16 @@ func upcoming(n: int) -> Array:
 	var g: Dictionary = gauges.duplicate()
 	var done: Dictionary = acted.duplicate()
 	var cur := str(_state.get("current", ""))
-	if cur != "" and float(gauges.get(cur, 0.0)) >= 100.0:
-		done.erase(cur)       # celui qui joue en ce moment figure en tête de la frise
 	var stt: Dictionary = _state.duplicate()
 	var out: Array = []
-	for i in n:
+	# celui qui joue en ce moment figure TOUJOURS en tête de la frise (sinon, à égalité, la règle d'alternance des camps pouvait
+	# placer au centre l'autre camp, par exemple le héros qui va être frappé pendant le tour du monstre)
+	if cur != "" and gauges.has(cur) and float(gauges.get(cur, 0.0)) >= 100.0 and participant_speed(cur) > 0.0:
+		out.append(cur)
+		g[cur] = 0.0
+		done[cur] = true
+		stt["last_side"] = _side(cur)
+	while out.size() < n:
 		var key := _advance(g, done, stt)
 		if key == "":
 			break
