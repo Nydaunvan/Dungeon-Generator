@@ -21,6 +21,22 @@ static func _tone(n: int) -> String:
 static func _row(k: String, v: String, tone: String = "") -> Dictionary:
 	return {"k": k, "v": v, "tone": tone}
 
+## Libellés des bonus quand un même objet ou talent en modifie plusieurs dans la même carte (ex. attaque min et attaque max).
+const FIELD_KEYS := {"bonusAtkMin": "ui.stat_explain.fld_atkmin", "bonusAtkMax": "ui.stat_explain.fld_atkmax", "bonusForce": "ui.stat_explain.fld_force",
+	"bonusDex": "ui.stat_explain.fld_dex", "bonusCon": "ui.stat_explain.fld_con", "bonusInt": "ui.stat_explain.fld_int", "bonusSpeed": "ui.stat_explain.fld_speed",
+	"bonusHp": "ui.stat_explain.fld_hp", "bonusSpellDmg": "ui.stat_explain.fld_spell", "bonusStamina": "ui.stat_explain.fld_stamina",
+	"critChance": "ui.stat_explain.fld_crit", "lifestealPct": "ui.stat_explain.fld_lifesteal"}
+
+## Une source = UN objet (ou talent) ; s'il modifie plusieurs valeurs de la carte, `parts` en donne le détail [{label, value, tone}]
+## et `value` reste vide (un seul bonus : `value` seul, comme avant).
+static func _source(icon: String, name: String, tag: String, parts: Array) -> Dictionary:
+	if parts.size() == 1:
+		return {"icon": icon, "name": name, "value": parts[0].value, "tone": parts[0].tone, "tag": tag, "parts": []}
+	return {"icon": icon, "name": name, "value": "", "tone": "", "tag": tag, "parts": parts}
+
+static func _part(field: String, v: int, unit: String) -> Dictionary:
+	return {"label": L.t(FIELD_KEYS[field]) if FIELD_KEYS.has(field) else field, "value": _sg(v) + unit, "tone": _tone(v)}
+
 ## Sources d'un bonus : objets équipés (champs `eq_fields`), talents (effets `tal_fields`), statuts de vitesse si demandé.
 static func _sources(c: Dictionary, cfg: Dictionary, eq_fields: Array, tal_fields: Array, unit: String = "", status_speed: bool = false) -> Array:
 	var out: Array = []
@@ -29,25 +45,30 @@ static func _sources(c: Dictionary, cfg: Dictionary, eq_fields: Array, tal_field
 		var it = eq.get(slot)
 		if not (it is Dictionary):
 			continue
+		var parts: Array = []
 		for f in eq_fields:
 			if slot == "weapon" and (f == "bonusHp" or f == "bonusSpellDmg"):
 				continue
 			var v := int(it.get(f, 0))
 			if v != 0:
-				out.append({"icon": str(it.get("icon", "")), "name": L.c(str(it.get("name", "?"))), "value": _sg(v) + unit, "tone": _tone(v),
-					"tag": L.c(str(Inventory.SLOT_LABELS.get(slot, slot)))})
+				parts.append(_part(f, v, unit))
+		if not parts.is_empty():
+			out.append(_source(str(it.get("icon", "")), L.c(str(it.get("name", "?"))), L.c(str(Inventory.SLOT_LABELS.get(slot, slot))), parts))
 	for t in c.get("talents", []):
 		var opt := Talents.find_option(cfg, str(t.get("id", "")))
+		var tparts: Array = []
 		for f in tal_fields:
 			var v := int(opt.get("effects", {}).get(f, 0))
 			if v != 0:
-				out.append({"icon": str(opt.get("icon", "")), "name": str(opt.get("labelFr", t.get("id", ""))), "value": _sg(v) + unit, "tone": _tone(v), "tag": L.t("ui.stat_explain.talent")})
+				tparts.append(_part(f, v, unit))
+		if not tparts.is_empty():
+			out.append(_source(str(opt.get("icon", "")), str(opt.get("labelFr", t.get("id", ""))), L.t("ui.stat_explain.talent"), tparts))
 	if status_speed:
 		for e in Statuses.active(c):
 			var sd := Statuses.def(str(e.type))
 			var sb := int(sd.get("speedBonus", 0))
 			if sb != 0:
-				out.append({"icon": str(sd.get("icon", "")), "name": L.c(str(sd.get("label", e.type))), "value": _sg(sb), "tone": _tone(sb), "tag": L.fa(L.t("ui.party_tip.tours"), int(e.remaining))})
+				out.append({"icon": str(sd.get("icon", "")), "name": L.c(str(sd.get("label", e.type))), "value": _sg(sb), "tone": _tone(sb), "tag": L.fa(L.t("ui.party_tip.tours"), int(e.remaining)), "parts": []})
 	return out
 
 ## Lignes Base / Équipement / Talents / Statuts / Total d'une caractéristique.
@@ -190,7 +211,10 @@ static func flatten(sections: Array) -> String:
 		for r in s.results:
 			t += "\n→ " + str(r)
 		for r in s.sources:
-			t += "\n• %s %s (%s)" % [r.name, r.value, r.tag]
+			if (r.get("parts", []) as Array).is_empty():
+				t += "\n• %s %s (%s)" % [r.name, r.value, r.tag]
+			else:
+				t += "\n• %s (%s) : %s" % [r.name, r.tag, ", ".join((r.parts as Array).map(func(pp): return "%s %s" % [pp.label, pp.value]))]
 		if str(s.note) != "":
 			t += "\n" + str(s.note)
 		parts.append(t)

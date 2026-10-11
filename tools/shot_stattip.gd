@@ -18,7 +18,7 @@ func _init() -> void:
 		mo.queue_free()
 	var c: Dictionary = gs.party[1]
 	var CH = load("res://scripts/rules/characters.gd")
-	c["equipment"]["weapon"] = {"name": "Épée de test", "type": "weapon", "slot": "weapon", "icon": "@icon:sword_holy", "bonusForce": 3, "bonusAtkMin": 1}
+	c["equipment"]["weapon"] = {"name": "Épée de test", "type": "weapon", "slot": "weapon", "icon": "@icon:sword_holy", "bonusForce": 3, "bonusAtkMin": 2, "bonusAtkMax": 4}
 	c["equipment"]["head"] = {"name": "Casque du Gardien", "type": "armor", "slot": "head", "icon": "@icon:helm_winged", "bonusCon": 2, "bonusHp": 6, "bonusSpellDmg": 1, "bonusDex": 1}
 	CH.recompute(c, gs.cfg)
 	var host := Control.new()

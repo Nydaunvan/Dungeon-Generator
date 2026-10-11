@@ -184,6 +184,20 @@ func _card(s: Dictionary, outer: float) -> Control:
 		if str(src.value) != "":
 			h.add_child(_lbl(str(src.value), 13, _tone_color(str(src.tone)), UiTheme.F_BODY_BOLD))
 		v.add_child(h)
+		# un objet qui modifie plusieurs valeurs : une seule entrée, le détail en dessous
+		for part in src.get("parts", []):
+			var ph := HBoxContainer.new()
+			ph.add_theme_constant_override("separation", 6)
+			ph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var sp := Control.new()
+			sp.custom_minimum_size = Vector2(26, 0)
+			sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			ph.add_child(sp)
+			var pl := _lbl("↳ " + str(part.label), 12, DIM)
+			pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			ph.add_child(pl)
+			ph.add_child(_lbl(str(part.value), 13, _tone_color(str(part.tone)), UiTheme.F_BODY_BOLD))
+			v.add_child(ph)
 	frame.add_child(v)
 	return frame
 

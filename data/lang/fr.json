@@ -1971,7 +1971,19 @@
   "ui.shop_modal.survol_detail": "Survolez une ligne : le calcul détaillé, avec cet objet équipé.",
   "ui.app_header.menu_tip": "Menu : passe la souris (ou clique) pour le déployer",
   "ui.hub.wait_tip": "La vérification démarre dès l'envoi : en général entre 1 et 3 minutes. Le statut se met à jour tout seul.",
-  "ui.hub.started_tip": "Partie lancée, pas encore envoyée. Temps écoulé depuis le lancement."
+  "ui.hub.started_tip": "Partie lancée, pas encore envoyée. Temps écoulé depuis le lancement.",
+  "ui.stat_explain.fld_atkmin": "Attaque min",
+  "ui.stat_explain.fld_atkmax": "Attaque max",
+  "ui.stat_explain.fld_force": "Force",
+  "ui.stat_explain.fld_dex": "Dextérité",
+  "ui.stat_explain.fld_con": "Constitution",
+  "ui.stat_explain.fld_int": "Intelligence",
+  "ui.stat_explain.fld_speed": "Vitesse",
+  "ui.stat_explain.fld_hp": "PV max",
+  "ui.stat_explain.fld_spell": "Dégâts des sorts",
+  "ui.stat_explain.fld_stamina": "Endurance max",
+  "ui.stat_explain.fld_crit": "Critique",
+  "ui.stat_explain.fld_lifesteal": "Vol de vie"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

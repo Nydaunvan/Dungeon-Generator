@@ -1971,7 +1971,19 @@
   "ui.shop_modal.survol_detail": "Hover a row: the detailed calculation, with this item equipped.",
   "ui.app_header.menu_tip": "Menu: hover (or click) to expand it",
   "ui.hub.wait_tip": "Verification starts as soon as the run is sent: usually 1 to 3 minutes. The status updates by itself.",
-  "ui.hub.started_tip": "Run started, not sent yet. Time elapsed since launch."
+  "ui.hub.started_tip": "Run started, not sent yet. Time elapsed since launch.",
+  "ui.stat_explain.fld_atkmin": "Min attack",
+  "ui.stat_explain.fld_atkmax": "Max attack",
+  "ui.stat_explain.fld_force": "Strength",
+  "ui.stat_explain.fld_dex": "Dexterity",
+  "ui.stat_explain.fld_con": "Constitution",
+  "ui.stat_explain.fld_int": "Intelligence",
+  "ui.stat_explain.fld_speed": "Speed",
+  "ui.stat_explain.fld_hp": "Max HP",
+  "ui.stat_explain.fld_spell": "Spell damage",
+  "ui.stat_explain.fld_stamina": "Max stamina",
+  "ui.stat_explain.fld_crit": "Critical",
+  "ui.stat_explain.fld_lifesteal": "Life steal"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
