@@ -21,6 +21,18 @@ func _ready() -> void:
 			for o in offers:
 				if str(o.type) == "scroll":
 					sc += 1
+			for lots in [offers, Shop.village_offers(cfg, 1)]:
+				var ph := 0
+				var ps := 0
+				for o in lots:
+					if str(o.type) == "potion":
+						if int(o.get("heal", 0)) > 0:
+							ph += 1
+						else:
+							ps += 1
+				if ph < 1 or ph > 6 or ps < 1 or ps > 6:
+					bad += 1
+					print("potions", ph, ps)
 			if sc < 2 and (cfg.get("spells", []) as Array).size() >= 2:
 				bad += 1
 				print("scrolls", sc, offers.size())

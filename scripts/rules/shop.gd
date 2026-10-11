@@ -88,6 +88,15 @@ static func _finish(offers: Array, prefix: String, village: bool) -> Array:
 		o["price"] = int(round(base * 1.7)) if (village and ["weapon", "armor", "jewelry"].has(str(o.type))) else base
 	return offers
 
+## Lots de potions toujours proposés par un marchand : de 1 à 6 potions de soin et de 1 à 6 potions d'endurance.
+static func potion_lots(heal: int, sta: int) -> Array:
+	var out: Array = []
+	for k in GameRng.range_i("loot", 1, 6):
+		out.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": heal})
+	for k in GameRng.range_i("loot", 1, 6):
+		out.append({"name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "type": "potion", "staminaRestore": sta})
+	return out
+
 ## Offres aléatoires du marchand ambulant (generateShopOffers).
 static func random_offers(cfg: Dictionary, run: int) -> Array:
 	var offers: Array = []
@@ -121,7 +130,7 @@ static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
 	# Le complément aléatoire garantit quelques parchemins : on réserve leurs places avant d'achever avec le reste.
 	var rnd := random_offers(cfg, run)
 	var scrolls: Array = rnd.filter(func(o): return str(o.type) == "scroll")
-	var others: Array = rnd.filter(func(o): return str(o.type) != "scroll")
+	var others: Array = rnd.filter(func(o): return str(o.type) != "scroll" and str(o.type) != "potion")
 	var free := slot_count - offers.size()
 	var n_scroll := mini(scrolls.size(), mini(maxi(2, free / 3), maxi(0, free)))
 	var pick: Array = others.slice(0, maxi(0, free - n_scroll))
@@ -130,6 +139,13 @@ static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
 		var c: Dictionary = (o as Dictionary).duplicate(true)
 		c["id"] = "merchant_offer_%d" % offers.size()
 		offers.append(c)
+	# potions de soin et d'endurance : toujours en vente, hors des emplacements d'objets (les lots se regroupent à l'écran)
+	var heal := 8 + run * 2
+	for pot in potion_lots(heal, mini(40, 8 + run * 2)):
+		var c2: Dictionary = pot
+		c2["id"] = "merchant_offer_%d" % offers.size()
+		c2["price"] = price(c2)
+		offers.append(c2)
 	return offers
 
 ## Offres du marchand du village (plus riches : run + 2, quantités de potions, plusieurs parchemins).
@@ -142,10 +158,7 @@ static func village_offers(cfg: Dictionary, run: int) -> Array:
 		offers.append(_gear_offer(boosted))
 	var heal := GameRng.range_i("loot", 8, 15)
 	var sta := GameRng.range_i("loot", 8, 15)
-	for k in GameRng.range_i("loot", 1, 10):
-		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": heal})
-	for k in GameRng.range_i("loot", 1, 10):
-		offers.append({"name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "type": "potion", "staminaRestore": sta})
+	offers.append_array(potion_lots(heal, sta))
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
 	GameRng.shuffle("loot", spells)
 	var n := mini(GameRng.range_i("loot", 1, 5), spells.size())
