@@ -57,6 +57,17 @@ static func my_streak() -> Dictionary:
 static func hall() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/hall_legendes?order=closed_at.desc&limit=60&select=kind,period,score,seconds,pseudo,rule_icon,rule_fr,rule_en,frame,color")
 
+## Nom du mode d'un donjon aléatoire d'après sa configuration : partie libre, partie classée, défi de la semaine ou hardcore du mois.
+static func mode_label(cfg: Dictionary) -> String:
+	var kind := str(cfg.get("rankedKind", ""))
+	if kind == "weekly":
+		return "📅 " + L.t("ui.hub.mode_weekly")
+	if kind == "hardcore_month":
+		return "🔥 " + L.t("ui.hub.mode_hardcore")
+	if kind == "difficulty" or str(cfg.get("runSeed", "")) != "":
+		return "🏆 " + L.t("ui.hub.mode_ranked")
+	return "🎲 " + L.t("ui.hub.mode_free")
+
 const PENDING_PATH := "user://ranked_pending.json"
 
 ## Lance une partie classée : le serveur donne la graine et les réglages, le donjon est celui de la configuration d'origine.

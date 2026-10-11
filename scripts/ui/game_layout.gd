@@ -791,7 +791,7 @@ func _size_overlays() -> void:
 func set_level_name(text: String) -> void:
 	level_label.text = text
 	if type_badge != null:
-		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, L.t("common.donjon_aleatoire"))
+		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, RankedRun.mode_label(gs.cfg))
 
 func _refresh_pouch(on: bool) -> void:
 	var potions: Array = []
