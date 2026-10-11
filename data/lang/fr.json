@@ -1758,7 +1758,7 @@
   "ui.hub.bd_hardcore": "Hardcore du mois — uniquement des parties vérifiées par rejeu.",
   "ui.hub.not_ranked": "Tu n'es pas encore dans ce classement.",
   "ui.hub.xp_how": "L'XP vient des parties classées vérifiées. Elle n'a aucun effet sur le jeu.",
-  "ui.hub.runs_intro": "Tes dernières parties classées et leur état. Une partie envoyée est vérifiée en quelques minutes.",
+  "ui.hub.runs_intro": "Tes dernières parties classées et leur état. Une partie envoyée est vérifiée en quelques minutes (le chrono indique l'attente).",
   "ui.hub.runs_need_account": "Connecte-toi pour voir tes parties classées.",
   "ui.hub.runs_none": "Aucune partie classée pour l'instant. Lance-en une depuis l'onglet « Jouer » !",
   "ui.hub.runs_legend": "En cours : partie lancée, pas encore envoyée · En attente : envoyée, vérification en cours · Vérifiée : score validé · Refusée : rejouée sans succès · Expirée : abandonnée.",
@@ -1969,7 +1969,9 @@
   "ui.shop_modal.col_after": "Après",
   "ui.shop_modal.aucun_changement": "Aucune statistique de %s ne change.",
   "ui.shop_modal.survol_detail": "Survolez une ligne : le calcul détaillé, avec cet objet équipé.",
-  "ui.app_header.menu_tip": "Menu : passe la souris (ou clique) pour le déployer"
+  "ui.app_header.menu_tip": "Menu : passe la souris (ou clique) pour le déployer",
+  "ui.hub.wait_tip": "La vérification démarre dès l'envoi : en général entre 1 et 3 minutes. Le statut se met à jour tout seul.",
+  "ui.hub.started_tip": "Partie lancée, pas encore envoyée. Temps écoulé depuis le lancement."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

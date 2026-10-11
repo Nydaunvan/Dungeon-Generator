@@ -1758,7 +1758,7 @@
   "ui.hub.bd_hardcore": "Monthly Hardcore — replay-verified runs only.",
   "ui.hub.not_ranked": "You are not in this ranking yet.",
   "ui.hub.xp_how": "XP comes from verified ranked runs. It has no effect on gameplay.",
-  "ui.hub.runs_intro": "Your latest ranked runs and their state. A sent run is verified within a few minutes.",
+  "ui.hub.runs_intro": "Your latest ranked runs and their status. A sent run is verified within a few minutes (the timer shows the wait).",
   "ui.hub.runs_need_account": "Sign in to see your ranked runs.",
   "ui.hub.runs_none": "No ranked run yet. Start one from the “Play” tab!",
   "ui.hub.runs_legend": "In progress: started, not sent yet · Pending: sent, being verified · Verified: score validated · Rejected: replay failed · Expired: abandoned.",
@@ -1969,7 +1969,9 @@
   "ui.shop_modal.col_after": "After",
   "ui.shop_modal.aucun_changement": "None of %s's statistics change.",
   "ui.shop_modal.survol_detail": "Hover a row: the detailed calculation, with this item equipped.",
-  "ui.app_header.menu_tip": "Menu: hover (or click) to expand it"
+  "ui.app_header.menu_tip": "Menu: hover (or click) to expand it",
+  "ui.hub.wait_tip": "Verification starts as soon as the run is sent: usually 1 to 3 minutes. The status updates by itself.",
+  "ui.hub.started_tip": "Run started, not sent yet. Time elapsed since launch."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -30,6 +30,10 @@ var _tab_buttons: Dictionary = {}
 var _xp := -1
 var _weekly: Dictionary = {}     ## règle de la semaine (RankedRun.weekly_current), vide tant qu'elle n'est pas lue
 var _runs: Array = []
+var _runs_holder: VBoxContainer
+var _run_clocks: Array = []
+var _run_poll := 0
+var _run_busy := false
 var _runs_ok := false
 var _width := 760.0
 
@@ -907,18 +911,33 @@ func _load_runs(box: VBoxContainer, wait: Label, mine: int) -> void:
 		return
 	_runs = r.data
 	_runs_ok = true
+	_runs_holder = HubKit.vbox(4)
+	box.add_child(_runs_holder)
+	_render_runs(mine)
+	# compte à rebours / temps écoulé à côté de « En cours » et « En attente » ; tant qu'une partie attend sa vérification, la liste se rafraîchit seule
+	var tm := Timer.new()
+	tm.wait_time = 1.0
+	tm.autostart = true
+	tm.timeout.connect(_tick_runs.bind(mine))
+	box.add_child(tm)
+
+## Dessine le tableau des parties (dans `_runs_holder`, reconstruit à chaque rafraîchissement).
+func _render_runs(mine: int) -> void:
+	for ch in _runs_holder.get_children():
+		ch.queue_free()
+	_run_clocks.clear()
 	if _runs.is_empty():
-		box.add_child(HubKit.label(L.t("ui.hub.runs_none"), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
+		_runs_holder.add_child(HubKit.label(L.t("ui.hub.runs_none"), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
 		return
 	var g := GridContainer.new()
 	g.columns = 5
 	g.add_theme_constant_override("h_separation", 12)
 	g.add_theme_constant_override("v_separation", 4)
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_child(g)
+	_runs_holder.add_child(g)
 	_cell(g, L.t("ui.sadmin.col_date"), UiTheme.DIM, 12, 82, HORIZONTAL_ALIGNMENT_LEFT)
 	_cell(g, L.t("ui.sadmin.col_mode"), UiTheme.DIM, 12, 0, HORIZONTAL_ALIGNMENT_LEFT)
-	_cell(g, L.t("ui.sadmin.col_status"), UiTheme.DIM, 12, 110, HORIZONTAL_ALIGNMENT_LEFT)
+	_cell(g, L.t("ui.sadmin.col_status"), UiTheme.DIM, 12, 150, HORIZONTAL_ALIGNMENT_LEFT)
 	_cell(g, L.t("ui.challenges.unit_niveaux"), UiTheme.DIM, 12, 60, HORIZONTAL_ALIGNMENT_RIGHT)
 	_cell(g, L.t("ui.challenges.col_time"), UiTheme.DIM, 12, 60, HORIZONTAL_ALIGNMENT_RIGHT)
 	var n := clampi(_rows_fit(), 5, 10)
@@ -928,11 +947,54 @@ func _load_runs(box: VBoxContainer, wait: Label, mine: int) -> void:
 		var col := HubKit.GOOD if st == "verified" else (HubKit.BAD if st == "rejected" else (HubKit.WARN if st == "submitted" or st == "started" else UiTheme.DIM))
 		_cell(g, SuperAdminModal.date(x.get("started_at")), UiTheme.PARCH, 13, 82, HORIZONTAL_ALIGNMENT_LEFT)
 		_cell(g, SuperAdminModal.mode_name(str(x.get("difficulty", "")), str(x.get("kind", ""))), UiTheme.PARCH, 13, 0, HORIZONTAL_ALIGNMENT_LEFT)
-		var sl := _cell(g, L.t(STATUS_KEYS[st]) if STATUS_KEYS.has(st) else st, col, 13, 110, HORIZONTAL_ALIGNMENT_LEFT)
+		var base := L.t(STATUS_KEYS[st]) if STATUS_KEYS.has(st) else st
+		var sl := _cell(g, base, col, 13, 150, HORIZONTAL_ALIGNMENT_LEFT)
+		var since: Variant = x.get("submitted_at") if st == "submitted" and x.get("submitted_at") != null else x.get("started_at")
+		if st == "submitted" or st == "started":
+			_run_clocks.append({"label": sl, "base": base, "t0": _utc(since)})
+			sl.text = "%s · %s" % [base, _elapsed(maxf(0.0, Time.get_unix_time_from_system() - _utc(since)))]
+			sl.tooltip_text = L.t("ui.hub.wait_tip") if st == "submitted" else L.t("ui.hub.started_tip")
+			sl.mouse_filter = Control.MOUSE_FILTER_STOP
 		if st == "rejected" and x.get("reject_reason") != null:
 			sl.tooltip_text = str(x.reject_reason)
 			sl.mouse_filter = Control.MOUSE_FILTER_STOP
 		_cell(g, str(int(x.score)) if x.get("score") != null else "–", UiTheme.PARCH, 13, 60, HORIZONTAL_ALIGNMENT_RIGHT)
 		_cell(g, Challenges.format_time(int(x.seconds)) if x.get("seconds") != null else "–", UiTheme.PARCH, 13, 60, HORIZONTAL_ALIGNMENT_RIGHT)
-	box.add_child(HubKit.label(L.t("ui.hub.runs_legend"), UiTheme.DIM, 11))
+	_runs_holder.add_child(HubKit.label(L.t("ui.hub.runs_legend"), UiTheme.DIM, 11))
 	_modal.call_deferred("_fit")
+
+## Secondes UNIX (UTC) d'un horodatage ISO renvoyé par la base.
+static func _utc(v: Variant) -> float:
+	var t := str(v)
+	return float(Time.get_unix_time_from_datetime_string(t.substr(0, 19))) if t.length() >= 19 else Time.get_unix_time_from_system()
+
+## Durée écoulée : m:ss, puis « 1 h 05 », puis « 2 j ».
+static func _elapsed(secs: float) -> String:
+	var s := int(secs)
+	if s < 3600:
+		return "%d:%02d" % [s / 60, s % 60]
+	if s < 86400:
+		return "%d h %02d" % [s / 3600, (s % 3600) / 60]
+	return "%d j" % (s / 86400)
+
+func _tick_runs(mine: int) -> void:
+	if mine != _gen or not _alive():
+		return
+	var now := Time.get_unix_time_from_system()
+	for c in _run_clocks:
+		if is_instance_valid(c.label):
+			(c.label as Label).text = "%s · %s" % [c.base, _elapsed(maxf(0.0, now - float(c.t0)))]
+	_run_poll += 1
+	if _run_poll < 6 or _run_busy or not _runs.any(func(x): return str(x.get("status", "")) == "submitted"):
+		return
+	_run_poll = 0
+	_run_busy = true
+	var r: Dictionary = await RankedRun.my_runs()
+	_run_busy = false
+	if mine != _gen or not _alive() or not r.ok or not (r.data is Array):
+		return
+	var sig := func(a: Array) -> String:
+		return ",".join(a.map(func(x): return "%s:%s" % [str(x.get("id", "")), str(x.get("status", ""))]))
+	if sig.call(r.data) != sig.call(_runs):
+		_runs = r.data
+		_render_runs(mine)
