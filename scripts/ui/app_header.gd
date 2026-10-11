@@ -14,6 +14,12 @@ var hang: HangChain
 var _lang: MenuButton
 var _home_mode: bool = false
 var _frame: FrameBox
+var _holder: Control
+var _box: PanelContainer
+var _grip: Button
+var _open := 0.0          # 0 = replié, 1 = déployé
+var _pinned := false      # déployé à la demande (clic sur la poignée : écrans tactiles)
+var _idle := 0.0
 
 func _init() -> void:
 	clip_contents = false
@@ -41,21 +47,19 @@ func _init() -> void:
 	nav_row = HBoxContainer.new()
 	nav_row.add_theme_constant_override("separation", 0)
 	box.add_child(nav_row)
-	hrow.add_child(box)
+	# le groupe de boutons se replie vers la droite (il ne reste que la poignée) et se déploie au survol
+	_holder = Control.new()
+	_holder.clip_contents = true
+	_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hrow.add_child(_holder)
+	_holder.add_child(box)
+	_box = box
 	btn_home = _button(L.t("ui.app_header.accueil"))
 	btn_home.pressed.connect(func(): nav.emit("Accueil"))
 	nav_row.add_child(btn_home)
 	var guide := _button("📖 Guide")
 	guide.pressed.connect(func(): nav.emit("Guide"))
 	nav_row.add_child(guide)
-	var perf := _button("📊 FPS")
-	perf.tooltip_text = L.t("ui.app_header.perf_tip")
-	perf.pressed.connect(func(): PerfOverlay.toggle())
-	nav_row.add_child(perf)
-	var pause := _button("⏸ " + L.t("ui.pause.label"))      # outil de test (captures d'écran), à retirer ensuite
-	pause.tooltip_text = L.t("ui.pause.tip")
-	pause.pressed.connect(func(): PauseOverlay.toggle(get_tree()))
-	nav_row.add_child(pause)
 	var cfg := _button("⚙ " + L.t("ui.app_header.parametres"))
 	cfg.tooltip_text = L.t("ui.app_header.parametres_tip")
 	cfg.pressed.connect(func(): nav.emit("Paramètres"))
@@ -90,6 +94,11 @@ func _init() -> void:
 		quit.tooltip_text = L.t("ui.app_header.quitter_tip")
 		quit.pressed.connect(func(): nav.emit("Quitter"))
 		nav_row.add_child(quit)
+	_grip = _button("◂")
+	_grip.tooltip_text = L.t("ui.app_header.menu_tip")
+	_grip.set_meta("keep", true)
+	_grip.pressed.connect(func(): _pinned = not _pinned)
+	nav_row.add_child(_grip)
 	hang = HangChain.new()
 	add_child(hang)
 	UiMetrics.register(self)
@@ -139,8 +148,29 @@ func rescale() -> void:
 			elif b is MenuButton:
 				_style(b, (b as MenuButton).text)
 
-func _process(_d: float) -> void:
+func _process(d: float) -> void:
 	btn_admin.visible = (Data.admin_unlocked or Data.play_origin == "random") and not _home_mode
+	_animate_menu(d)
+
+## Menu replié : seule la poignée reste visible à droite ; il se déploie dès que la souris est dessus (ou après un clic sur la poignée)
+## et se replie une fraction de seconde après qu'elle l'a quitté.
+func _animate_menu(d: float) -> void:
+	if _holder == null or _box == null:
+		return
+	var over := _holder.get_global_rect().has_point(get_global_mouse_position()) and get_viewport().get_visible_rect().has_point(get_viewport().get_mouse_position())
+	if over or _pinned or (_lang != null and _lang.get_popup().visible):
+		_idle = 0.0
+	else:
+		_idle += d
+	var want := 1.0 if (over or _pinned or _idle < 0.45) else 0.0
+	_open = move_toward(_open, want, d * 6.0)
+	_grip.text = "▸" if _open > 0.5 else "◂"
+	var full := _box.get_combined_minimum_size()
+	var closed_w := _grip.get_combined_minimum_size().x + UiMetrics.css(4.0)
+	var w := lerpf(closed_w, full.x, smoothstep(0.0, 1.0, _open))
+	_holder.custom_minimum_size = Vector2(w, full.y)
+	_box.size = full
+	_box.position = Vector2(w - full.x, 0.0)
 
 func _button(text: String) -> Button:
 	var b := Button.new()

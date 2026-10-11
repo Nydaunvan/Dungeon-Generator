@@ -140,6 +140,8 @@ func _build_view_controls() -> void:
 		var nn: String = n[0]
 		b.pressed.connect(func(): _view_btn(nn))
 		view_controls.add_child(b)
+	_pause_btn = _pause_button()
+	view_controls.add_child(_pause_btn)
 	# panneau Commandes
 	keys_panel = _drop_panel(190.0 if false else 310.0)
 	var kv := VBoxContainer.new()
@@ -183,7 +185,34 @@ func _build_view_controls() -> void:
 				Sound.set_music_volume(v))
 		sv.add_child(sl)
 
+## Bouton « pause » (symbole dessiné, sans police) : fige le jeu pour une capture d'écran ; un clic, P ou Échap reprend.
+func _pause_button() -> Button:
+	var b := Button.new()
+	b.tooltip_text = L.t("ui.pause.tip")
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = UiMetrics.design_size(Vector2(32, 32))
+	var ist := IronBox.button_styles()
+	for k in ist:
+		b.add_theme_stylebox_override(k, ist[k])
+	var c := CenterContainer.new()
+	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(c)
+	var bars := HBoxContainer.new()
+	bars.add_theme_constant_override("separation", int(UiMetrics.css(4.0)))
+	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(bars)
+	for i in 2:
+		var r := ColorRect.new()
+		r.color = Color("e2d2b0")
+		r.custom_minimum_size = Vector2(UiMetrics.css(4.0), UiMetrics.css(14.0))
+		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bars.add_child(r)
+	b.pressed.connect(func(): PauseOverlay.toggle(get_tree()))
+	return b
+
 var _keys_box: VBoxContainer
+var _pause_btn: Button
 
 ## Lignes du mémo des commandes, d'après les touches réglées dans Paramètres › Commandes.
 func _key_rows() -> Array:
@@ -856,7 +885,9 @@ func _process(_d: float) -> void:
 	pad.visible = not on
 	map_btn.visible = _compact and not on
 	_comp.visible = not on
-	view_controls.visible = not on
+	for vb in view_controls.get_children():      # la pause reste accessible en combat
+		if vb != _pause_btn:
+			vb.visible = not on
 	if on:
 		keys_panel.visible = false
 		sound_panel.visible = false
