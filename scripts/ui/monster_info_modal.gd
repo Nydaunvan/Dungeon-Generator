@@ -14,7 +14,8 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 	g.add_theme_constant_override("h_separation", 24)
 	for c in [[L.t("ui.monster_info_modal.force"), int(def.get("force", 8))], [L.t("ui.monster_info_modal.dexterite"), int(def.get("dex", 8))], ["🛡️ Constitution", int(def.get("con", 8))],
 			[L.t("ui.monster_info_modal.degats"), "%d–%d" % [int(st.atkMin), int(st.atkMax)]], [L.t("ui.monster_info_modal.resist_physique"), "%d%%" % int(def.get("resistPhys", 0))],
-			[L.t("ui.monster_info_modal.resist_magique"), "%d%%" % int(def.get("resistMagic", 0))]]:
+			[L.t("ui.monster_info_modal.resist_magique"), "%d%%" % int(def.get("resistMagic", 0))],
+			["⚡ " + L.t("common.vitesse"), str(int(Stats.monster_speed(def)))], ["❤️ " + L.t("common.pv"), "%d" % int(round(float(st.maxHp)))]]:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var l := AdminUtil.label(str(c[0]), 14, UiTheme.DIM)

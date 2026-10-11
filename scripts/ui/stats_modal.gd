@@ -179,7 +179,7 @@ static func _bestiary(p: Control, gs: GameState) -> void:
 		p.add_child(head)
 		var cells: Array = [["💪", L.t("common.for"), int(e.force)], ["🎯", "Dex", int(e.dex)], ["🛡️", "Con", int(e.con)], ["❤️", L.t("common.pv"), int(round(float(e.maxHp)))],
 			["⚔️", L.t("common.degats"), "%d – %d" % [int(e.atkMin), int(e.atkMax)]], ["🛡️", L.t("ui.stats_modal.res_phys"), "%d%%" % int(e.resistPhys)], ["✨", L.t("ui.stats_modal.res_mag"), "%d%%" % int(e.resistMagic)],
-			["⏱️", L.t("common.vitesse_attaque"), "%.1fs" % float(e.attackSpeed)], ["🚶", "Zone", int(e.patrolRadius)], ["⭐", "XP", int(e.xpReward)], ["💰", L.t("common.or"), int(e.goldReward)]]
+			["⚡", L.t("common.vitesse"), int(e.get("speed", 8))], ["🚶", "Zone", int(e.patrolRadius)], ["⭐", "XP", int(e.xpReward)], ["💰", L.t("common.or"), int(e.goldReward)]]
 		if int(e.get("enrageThreshold", 0)) > 0:
 			cells.append(["😡", L.t("ui.stats_modal.seuil_rage"), "%d%%" % int(e.enrageThreshold)])
 		_grid(p, cells)

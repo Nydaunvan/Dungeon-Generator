@@ -11,6 +11,9 @@ var grid: DungeonGrid
 var pos: Vector2i = Vector2i.ZERO
 var dir: int = 0
 var gauges: Dictionary = {}
+## Participants qui ont déjà joué dans la manche en cours (voir `_advance`) et dernier camp ayant joué.
+var acted: Dictionary = {}
+var _state: Dictionary = {}
 var turn_seq: int = 0
 var events: Array = []    # {"type": "popup"|"door_open"|"monster_died"|"game_over"|"loot", ...}
 
@@ -107,7 +110,7 @@ func participant_speed(key: String) -> float:
 		return 0.0
 	if mi >= 0 and (not st.has("members") or mi >= st.members.size() or not st.members[mi].alive):
 		return 0.0
-	var base := float(def.get("speed", 8))
+	var base := Stats.monster_speed(def)
 	# chaque membre d'un groupe agit à la vitesse du monstre (avant, la vitesse était divisée par le nombre de membres : le groupe entier agissait
 	# comme un seul monstre et les héros jouaient 2 à 3 fois de suite avant lui)
 	return maxf(1.0, round(base) + Statuses.speed_bonus(st))
@@ -133,41 +136,73 @@ func ensure_gauges() -> void:
 	for k in gauges.keys():
 		if not wanted.has(k):
 			gauges.erase(k)
+	for k in acted.keys():
+		if not wanted.has(k):
+			acted.erase(k)
 
 ## Fait avancer les jauges jusqu'au prochain participant prêt ; renvoie sa clé ("" si personne).
 func advance_gauges_once() -> String:
-	return _advance(gauges)
+	var key := _advance(gauges, acted, _state)
+	if key != "":
+		acted[key] = true
+		_state["last_side"] = _side(key)
+		_state["current"] = key
+	return key
 
 ## Prochains participants (clés) dans l'ordre, sans modifier l'état réel (frise d'initiative).
 func upcoming(n: int) -> Array:
 	ensure_gauges()
 	var g: Dictionary = gauges.duplicate()
+	var done: Dictionary = acted.duplicate()
+	var cur := str(_state.get("current", ""))
+	if cur != "" and float(gauges.get(cur, 0.0)) >= 100.0:
+		done.erase(cur)       # celui qui joue en ce moment figure en tête de la frise
+	var stt: Dictionary = _state.duplicate()
 	var out: Array = []
 	for i in n:
-		var key := _advance(g)
+		var key := _advance(g, done, stt)
 		if key == "":
 			break
 		out.append(key)
 		g[key] = 0.0
+		done[key] = true
+		stt["last_side"] = _side(key)
 	return out
 
-func _advance(g: Dictionary) -> String:
-	var min_time := INF
-	var ready := ""
+## Camp d'un participant : 0 = héros, 1 = monstres.
+func _side(key: String) -> int:
+	return 0 if key.begins_with("char_") else 1
+
+## Règle d'initiative : les jauges se remplissent selon la vitesse, mais personne ne rejoue avant que tous les autres participants
+## vivants aient joué une fois (la « manche » repart alors de zéro). À égalité (à 0,5 près), le camp qui n'a pas joué en dernier passe
+## d'abord : les héros et les monstres s'intercalent au lieu de s'enchaîner.
+const TIE_WINDOW := 0.5
+
+func _advance(g: Dictionary, done: Dictionary, stt: Dictionary) -> String:
+	var live: Array = []
 	for k in g:
-		var speed := participant_speed(k)
-		if speed <= 0.0:
-			continue
-		var t := maxf(0.0, 100.0 - float(g[k])) / speed
-		if t < min_time - 1e-9:
-			min_time = t
-			ready = k
-	if ready == "":
+		if participant_speed(k) > 0.0:
+			live.append(k)
+	if live.is_empty():
 		return ""
-	for k in g:
-		var speed := participant_speed(k)
-		if speed > 0.0:
-			g[k] = float(g[k]) + speed * min_time
+	var pool: Array = live.filter(func(k): return not done.has(k))
+	if pool.is_empty():
+		done.clear()
+		pool = live
+	var min_time := INF
+	for k in pool:
+		min_time = minf(min_time, maxf(0.0, 100.0 - float(g[k])) / participant_speed(k))
+	var ready := ""
+	var last_side := int(stt.get("last_side", -1))
+	for k in pool:
+		var t := maxf(0.0, 100.0 - float(g[k])) / participant_speed(k)
+		if t > min_time + TIE_WINDOW:
+			continue
+		if ready == "" or (_side(k) != last_side and _side(ready) == last_side):
+			ready = k
+	var elapsed := maxf(0.0, 100.0 - float(g[ready])) / participant_speed(ready)
+	for k in live:
+		g[k] = minf(100.0, float(g[k]) + participant_speed(k) * elapsed)
 	g[ready] = 100.0
 	return ready
 
@@ -355,15 +390,16 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	else:
 		Sound.sfx("spell", str(spell.get("style", "arcane")))
 	var bonus := int(caster.get("bonusSpellDmg", 0)) + int(floor((int(caster.level) - 1) * 0.75))
+	var power := int(caster.get("spellPower", Stats.spell_power(int(caster.get("effInt", 10)))))   # Intelligence : voir Stats.spell_power
 	var verb := L.fa(L.t("rules.combat.lance_sur"), [spell.get("icon", ""), spell.name])
 	match mode:
 		"damage", "damageGroup":
-			var int_bonus := int(floor(int(caster.get("effInt", 10)) / 5.0)) + bonus
+			var int_bonus := power + bonus
 			var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
 			var magic: bool = str(spell.get("style", "")) != "physical"
 			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)), spell, mode == "damageGroup")
 		"healSingle":
-			var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
+			var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus + power, int(spell.get("healMax", 0)) + bonus + power)
 			var before := int(ally.hp)
 			ally["hp"] = mini(int(ally.maxHp), before + maxi(0, amt))
 			var healed := int(ally.hp) - before
@@ -377,7 +413,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var details: Array[String] = []
 			var total := 0
 			for c in gs.alive_party():
-				var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus, int(spell.get("healMax", 0)) + bonus)
+				var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus + power, int(spell.get("healMax", 0)) + bonus + power)
 				var before := int(c.hp)
 				c["hp"] = mini(int(c.maxHp), before + amt)
 				var healed := int(c.hp) - before
@@ -389,7 +425,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			_credit_heal(caster, total)
 			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "color": Color("7fd17f")})
 		"staminaRestoreSingle":
-			var amt := GameRng.range_i("combat", int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0)))
+			var amt := GameRng.range_i("combat", int(spell.get("staminaMin", 0)) + power, int(spell.get("staminaMax", 0)) + power)
 			var before := int(ally.get("stamina", 0))
 			ally["stamina"] = mini(int(ally.get("maxStamina", 100)), before + maxi(0, amt))
 			var got := int(ally.stamina) - before
@@ -398,7 +434,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			events.append({"type": "popup", "text": "+%d ⚡" % got, "color": Color("7fd1c9")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 		"shieldSingle":
-			var amt := GameRng.range_i("combat", int(spell.get("shieldMin", 0)), int(spell.get("shieldMax", 0)))
+			var amt := GameRng.range_i("combat", int(spell.get("shieldMin", 0)) + power, int(spell.get("shieldMax", 0)) + power)
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_l_entoure"), [caster.name, spell.get("icon", ""), spell.name, ally.name, amt]), true)
 			events.append({"type": "popup", "text": "🛡️ %d" % amt, "color": Color("8fc8e8")})
@@ -464,7 +500,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	if resist > 0:
 		dmg = 0 if resist >= 100 else maxi(1, int(round(raw_dmg * (1.0 - resist / 100.0))))
 	var crit := false
-	var crit_chance := int(attacker.get("talentCritChance", 0)) + _perk_value(attacker, "crit") \
+	var crit_chance := int(attacker.get("talentCritChance", 0)) + int(attacker.get("critDexPct", 0)) + _perk_value(attacker, "crit") \
 		+ int(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).critChanceBonus)
 	if crit_chance > 0 and GameRng.f("combat") < crit_chance / 100.0:
 		dmg *= 2
@@ -578,6 +614,13 @@ func monster_act(key: String) -> void:
 	turn_seq += 1
 	ensure_gauges()
 
+## Dégâts après la réduction du héros (résistance des talents + garde de Constitution, plafonnée) ; un coup qui touche inflige toujours 1 au moins.
+func _hero_reduction(victim: Dictionary, dmg: int, magic: bool) -> int:
+	var red := Stats.reduction(victim, magic)
+	if red <= 0 or dmg <= 0:
+		return dmg
+	return maxi(1, int(round(dmg * (1.0 - red / 100.0))))
+
 func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	var alive := gs.alive_party()
 	if alive.is_empty():
@@ -591,12 +634,19 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 			_monster_use_ability(def, st, ab, pool)
 			return
 	var victim: Dictionary = pool[GameRng.i("combat") % pool.size()]
+	var dodge := int(victim.get("dodgePct", 0))
+	if dodge > 0 and GameRng.f("combat") * 100.0 < float(dodge):
+		gs.add_log(L.fa(L.t("rules.combat.esquive_attaque"), [victim.name, _mname(def), dodge]), true)
+		Sound.sfx("swing", "dagger")
+		events.append({"type": "popup", "text": L.t("rules.combat.esquive"), "color": Color("8fc8e8")})
+		return
 	var dmg := GameRng.range_i("combat", int(st.atkMin), int(st.atkMax))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
 	var reduction := Statuses.damage_reduction_pct(st)
 	if reduction > 0:
 		dmg = maxi(0, int(round(dmg * (1.0 - reduction / 100.0))))
+	dmg = _hero_reduction(victim, dmg, false)
 	if int(victim.get("shieldAmount", 0)) > 0 and dmg > 0:
 		var absorbed := mini(int(victim.shieldAmount), dmg)
 		victim["shieldAmount"] = int(victim.shieldAmount) - absorbed
@@ -637,6 +687,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 3)), int(spell.get("dmgMax", 6)))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
+	dmg = _hero_reduction(victim, dmg, str(spell.get("style", "")) != "physical")
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
@@ -799,7 +850,7 @@ func _record_bestiary(def: Dictionary) -> void:
 		"maxHp": d.maxHp, "atkMin": d.atkMin, "atkMax": d.atkMax,
 		"resistPhys": int(def.get("resistPhys", 0)), "resistMagic": int(def.get("resistMagic", 0)),
 		"xpReward": int(def.get("xpReward", 0)), "goldReward": int(def.get("goldReward", 0)),
-		"attackSpeed": float(def.get("attackSpeed", 2.0)), "patrolRadius": int(def.get("patrolRadius", 0)),
+		"speed": int(Stats.monster_speed(def)), "attackSpeed": float(def.get("attackSpeed", 2.0)), "patrolRadius": int(def.get("patrolRadius", 0)),
 		"abilitySpellId": str(def.get("abilitySpellId", "")), "abilityChance": int(def.get("abilityChance", 0)),
 		"enrageThreshold": int(def.get("enrageThreshold", 0))}, true)
 	e["killCount"] = int(e.killCount) + 1
@@ -846,6 +897,8 @@ func flee() -> Vector2i:
 		c["stamina"] = int(floor(int(c.get("stamina", 0)) * 0.5))
 	gs.add_log(L.t("rules.combat.le_groupe_prend_la_fuite"))
 	gauges.clear()
+	acted.clear()
+	_state.clear()
 	return dest
 
 func _alive_monster_cells() -> Array:

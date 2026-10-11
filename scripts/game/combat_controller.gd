@@ -93,6 +93,8 @@ func refresh() -> void:
 	sync_position()
 	if not model_in_combat():
 		combat.gauges.clear()
+		combat.acted.clear()
+		combat._state.clear()
 		changed.emit()
 		return
 	if not _combat_live and _gate_busy():

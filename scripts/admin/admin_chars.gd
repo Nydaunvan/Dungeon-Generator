@@ -337,8 +337,8 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	Form.hint(panel, L.t("admin.chars.les_pv_et_l_attaque"))
 	Form.hint(panel, L.t("admin.chars.ce_tableau_definit_la_configuration"))
 	var status := status_label()
-	var grid := AdminTable.create(panel, ["Portrait", L.t("common.icone"), L.t("common.nom"), L.t("admin.chars.classe"), L.t("common.for"), "Dex", "Con", "Int", L.t("admin.chars.end_max"), L.t("admin.chars.equipement_depart"), L.t("admin.chars.sorts_connus"), L.t("common.apercu")],
-		[46, 38, 100, 100, 42, 42, 42, 42, 44, 128, 290, 70])
+	var grid := AdminTable.create(panel, ["Portrait", L.t("common.icone"), L.t("common.nom"), L.t("admin.chars.classe"), L.t("common.for"), "Dex", "Con", "Int", L.t("admin.chars.vitesse"), L.t("admin.chars.end_max"), L.t("admin.chars.equipement_depart"), L.t("admin.chars.sorts_connus"), L.t("common.apercu")],
+		[46, 38, 100, 100, 42, 42, 42, 42, 46, 44, 128, 290, 70])
 	var party: Array = cfg.get("party", [])
 	for idx in party.size():
 		_row(grid, admin, cfg, party[idx], status)
@@ -393,7 +393,7 @@ static func _row(grid: GridContainer, admin: Node, cfg: Dictionary, c: Dictionar
 		var d := c.duplicate()
 		d["level"] = 1
 		var b := Stats.char_base(d)
-		preview.text = "PV%d·%d-%d" % [int(b.maxHp), int(b.baseAtkMin), int(b.baseAtkMax)]
+		preview.text = "PV%d·%d-%d·%s%d" % [int(b.maxHp), int(b.baseAtkMin), int(b.baseAtkMax), L.t("admin.chars.vit_court"), int(c.get("baseSpeed", cur.get("baseSpeed", 10)))]
 	for f in ["force", "dex", "con", "int"]:
 		var key: String = f
 		var on_stat := func(v):
@@ -402,6 +402,17 @@ static func _row(grid: GridContainer, admin: Node, cfg: Dictionary, c: Dictionar
 			upd.call()
 			return c[key]
 		AdminTable.cell(grid, num_edit(c.get(key, 10), 42.0, 0.74, on_stat))
+	# vitesse : celle de la classe par défaut (case vide), ou propre à ce personnage ; elle décide de l'ordre d'initiative
+	var on_speed := func(v):
+		var n = clampf(float(v), 0.0, 40.0)
+		if n < 1.0:
+			c.erase("baseSpeed")
+			return null
+		c["baseSpeed"] = int(roundf(n))
+		return c["baseSpeed"]
+	var sp_edit := num_edit(c.get("baseSpeed", 0), 42.0, 0.74, on_speed, 5.0, 5.0, true, L.fa(L.t("admin.chars.vitesse_aide"), int(cur.get("baseSpeed", 10))))
+	sp_edit.placeholder_text = str(int(cur.get("baseSpeed", 10)))
+	AdminTable.cell(grid, sp_edit)
 	var on_sta := func(v):
 		var n = clampf(float(v), 1.0, 205.0)
 		c["maxStamina"] = int(n) if is_equal_approx(n, roundf(n)) else n

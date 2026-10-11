@@ -143,6 +143,16 @@ static func _card(parent: Control, admin: Node, cfg: Dictionary, cls: Dictionary
 		e.text_changed.connect(func(t: String): cls["name"] = t)
 		AdminChars.on_commit(e, func(_t: String): admin.refresh_tab())
 		hdr.add_child(e)
+	# vitesse de base de la classe (ordre d'initiative en combat)
+	var spl := AdminUtil.label(L.t("admin.classes.vitesse"), AdminChars.fpx(0.78), AdminChars.PDIM)
+	spl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hdr.add_child(spl)
+	var on_speed := func(v):
+		cls["baseSpeed"] = int(clampf(roundf(float(v)), 1.0, 40.0))
+		return cls["baseSpeed"]
+	var spe := AdminChars.num_edit(cls.get("baseSpeed", 10), 42.0, 0.85, on_speed, 5.0, 5.0, false, L.t("admin.classes.vitesse_aide"))
+	spe.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hdr.add_child(spe)
 	var rm := AdminChars.small_btn("🗑", 0.8, 6.0, 10.0)
 	rm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	rm.pressed.connect(func(): _remove(admin, cfg, cls))

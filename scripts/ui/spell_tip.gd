@@ -7,8 +7,10 @@ static var _layer: CanvasLayer
 
 var _label: RichTextLabel
 
-static func lines(spell: Dictionary) -> Array[String]:
+static func lines(spell: Dictionary, caster: Dictionary = {}) -> Array[String]:
 	var mode := str(spell.get("mode", "damage"))
+	var sb: Dictionary = Stats.spell_bonus(caster, mode) if not caster.is_empty() else {"total": 0}
+	var add := int(sb.total)
 	var mode_label := L.t("common.degats")
 	match mode:
 		"healSingle": mode_label = L.t("common.soin_sur_un_allie")
@@ -19,11 +21,11 @@ static func lines(spell: Dictionary) -> Array[String]:
 		"dispelSingle": mode_label = L.t("common.purification_un_allie")
 	var value := ""
 	if mode == "healSingle" or mode == "healParty":
-		value = L.fa(L.t("ui.spell_tip.soin_pv"), [int(spell.get("healMin", 0)), int(spell.get("healMax", 0))])
+		value = L.fa(L.t("ui.spell_tip.soin_pv"), [int(spell.get("healMin", 0)) + add, int(spell.get("healMax", 0)) + add])
 	elif mode == "staminaRestoreSingle":
-		value = L.fa(L.t("ui.spell_tip.endurance_restauree"), [int(spell.get("staminaMin", 0)), int(spell.get("staminaMax", 0))])
+		value = L.fa(L.t("ui.spell_tip.endurance_restauree"), [int(spell.get("staminaMin", 0)) + add, int(spell.get("staminaMax", 0)) + add])
 	elif mode == "damage" or mode == "damageGroup":
-		value = L.fa(L.t("ui.spell_tip.degats"), [int(spell.get("dmgMin", 0)), int(spell.get("dmgMax", 0))])
+		value = L.fa(L.t("ui.spell_tip.degats"), [int(spell.get("dmgMin", 0)) + add, int(spell.get("dmgMax", 0)) + add])
 		if mode == "damageGroup":
 			value += L.t("ui.spell_tip.par_cible_touchee")
 		if bool(spell.get("ignoreAllResist", false)):
@@ -31,6 +33,10 @@ static func lines(spell: Dictionary) -> Array[String]:
 	var out: Array[String] = ["Type : " + mode_label]
 	if value != "":
 		out.append(value)
+	if mode == "shieldSingle":
+		out.append(L.fa(L.t("ui.spell_tip.bouclier_points"), [int(spell.get("shieldMin", 0)) + add, int(spell.get("shieldMax", 0)) + add]))
+	if not caster.is_empty() and add > 0:
+		out.append(L.fa(L.t("ui.spell_tip.puissance_lanceur"), [str(caster.get("name", "")), add, int(sb.power), int(sb.gear), int(sb.level)]))
 	if int(spell.get("spellLifestealPct", 0)) > 0:
 		out.append(L.fa(L.t("ui.spell_tip.vol_de_vie_des_degats"), int(spell.spellLifestealPct)))
 	var se := str(spell.get("statusEffect", ""))
@@ -69,9 +75,9 @@ static func _inst_for(host: Control) -> SpellTip:
 		host.get_tree().root.add_child(_layer)
 	return _inst
 
-static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0) -> void:
+static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0, caster: Dictionary = {}) -> void:
 	var t := _inst_for(host)
-	var txt := "[b][color=#e8b45c]%s[/color][/b]\n%s" % [str(spell.get("name", "")), "\n".join(lines(spell))]
+	var txt := "[b][color=#e8b45c]%s[/color][/b]\n%s" % [str(spell.get("name", "")), "\n".join(lines(spell, caster))]
 	if remaining_sec > 0:
 		txt += L.fa(L.t("ui.spell_tip.pret_dans_ds"), remaining_sec)
 	t._label.text = txt

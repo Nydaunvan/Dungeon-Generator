@@ -111,6 +111,7 @@ static func evolve(gs: GameState, c: Dictionary, class_id: String) -> void:
 	RunLog.unrecorded("talents.evolve")
 	var cls := Characters.class_def(gs.cfg, class_id)
 	c["classId"] = class_id
+	c.erase("baseSpeed")      # la vitesse suit la nouvelle classe
 	c["icon"] = cls.get("icon", c.get("icon", ""))
 	c["_evolutionPending"] = false
 	Characters.recompute(c, gs.cfg)

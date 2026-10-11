@@ -196,19 +196,12 @@ func _stats(p: Control, c: Dictionary) -> void:
 	t.add_child(cl)
 	head.add_child(t)
 	p.add_child(head)
-	_section(p, "Statistiques principales")
-	var g := _grid(p)
-	for row in [["💪", L.t("common.force"), "force", "effForce"], ["🎯", L.t("common.dexterite"), "dex", "effDex"], ["🛡️", L.t("common.constitution"), "con", "effCon"], ["✨", L.t("common.intelligence"), "int", "effInt"]]:
-		var base := int(c.get(row[2], 0))
-		var eff := int(c.get(row[3], base))
-		g.add_child(_stat_cell(row[0], row[1], str(base), str(eff) if eff != base else ""))
-	_section(p, "Combat")
+	_section(p, L.t("ui.party_modal.caracteristiques"))
+	_attr_table(p, c)
+	_section(p, L.t("ui.party_modal.combat"))
 	_bar_row(p, L.t("ui.party_modal.points_de_vie"), float(c.hp), float(c.maxHp), "%d/%d" % [int(c.hp), int(c.maxHp)], HP_GREEN)
 	_bar_row(p, L.t("ui.party_modal.endurance"), float(c.get("stamina", 0)), float(c.get("maxStamina", 100)), "%d/%d" % [roundi(float(c.get("stamina", 0))), int(c.get("maxStamina", 100))], Color("5fbfa8"))
-	var g2 := _grid(p)
-	g2.add_child(_stat_cell("⚔️", L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)]))
-	if int(c.get("bonusSpellDmg", 0)) > 0:
-		g2.add_child(_stat_cell("🔮", L.t("ui.party_modal.bonus_sort"), "+%d" % int(c.bonusSpellDmg)))
+	_combat_grid(p, c)
 	_section(p, "Progression")
 	_bar_row(p, L.t("ui.party_modal.experience"), float(c.get("xp", 0)), float(c.get("xpToNext", 1)), "%d/%d" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))], Color("4a8fc0"))
 
@@ -254,7 +247,7 @@ func _spell_card(p: Control, sid: String, known: bool) -> void:
 	sb.content_margin_top = 10
 	sb.content_margin_bottom = 10
 	card.add_theme_stylebox_override("panel", sb)
-	card.mouse_entered.connect(func(): SpellTip.show_for(card, sp))
+	card.mouse_entered.connect(func(): SpellTip.show_for(card, sp, 0, gs.char_by_id(char_id)))
 	card.mouse_exited.connect(SpellTip.hide_tip)
 	card.tree_exiting.connect(SpellTip.hide_tip)
 	if not known:
@@ -380,3 +373,75 @@ func _spells(p: Control, c: Dictionary) -> void:
 			p.add_child(none)
 		for sid in ids:
 			_spell_card(p, str(sid), known.has(sid))
+
+
+# ------------------------------------------------------------------ caractéristiques détaillées
+
+func _cell(text: String, color: Color = UiTheme.PARCH, bold: bool = false, align: int = HORIZONTAL_ALIGNMENT_CENTER) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.horizontal_alignment = align as HorizontalAlignment
+	l.add_theme_color_override("font_color", color)
+	if bold:
+		l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	return l
+
+func _signed(v: int) -> String:
+	return "—" if v == 0 else ("+%d" % v if v > 0 else "%d" % v)
+
+## Tableau : caractéristique | base | équipement | talents | statuts | total | ce que cela donne en combat.
+func _attr_table(p: Control, c: Dictionary) -> void:
+	var g := GridContainer.new()
+	g.columns = 7
+	g.add_theme_constant_override("h_separation", 12)
+	g.add_theme_constant_override("v_separation", 6)
+	p.add_child(g)
+	for h in ["", L.t("ui.party_modal.col_base"), L.t("ui.party_modal.col_equip"), L.t("ui.party_modal.col_talents"), L.t("ui.party_modal.col_statuts"), L.t("ui.party_modal.col_total"), ""]:
+		g.add_child(_cell(h, UiTheme.DIM))
+	var rows := [
+		["💪", L.t("common.force"), "force", L.fa(L.t("ui.party_modal.eff_force"), int(c.get("baseAtkMin", 0)))],
+		["🎯", L.t("common.dexterite"), "dex", L.fa(L.t("ui.party_modal.eff_dex"), [int(floor(int(c.get("effDex", 10)) / 4.0)), int(c.get("critDexPct", 0)), int(c.get("dodgePct", 0))])],
+		["🛡️", L.t("common.constitution"), "con", L.fa(L.t("ui.party_modal.eff_con"), [int(c.maxHp), int(c.get("guardPct", 0))])],
+		["✨", L.t("common.intelligence"), "int", L.fa(L.t("ui.party_modal.eff_int"), int(c.get("spellPower", 0)))],
+		["⚡", L.t("common.vitesse"), "speed", L.t("ui.party_modal.eff_vitesse")]]
+	for r in rows:
+		var bd := Stats.breakdown(c, gs.cfg, str(r[2]))
+		var name_cell := _cell("%s  %s" % [r[0], r[1]], UiTheme.PARCH, true, HORIZONTAL_ALIGNMENT_LEFT)
+		name_cell.mouse_filter = Control.MOUSE_FILTER_PASS
+		name_cell.tooltip_text = L.t("ui.party_modal.tip_%s" % str(r[2]))
+		g.add_child(name_cell)
+		g.add_child(_cell(str(bd.base)))
+		g.add_child(_cell(_signed(int(bd.gear)), Color("8fd18f") if int(bd.gear) > 0 else UiTheme.DIM))
+		g.add_child(_cell(_signed(int(bd.talent)), Color("8fd18f") if int(bd.talent) > 0 else UiTheme.DIM))
+		g.add_child(_cell(_signed(int(bd.status)), Color("8fd18f") if int(bd.status) > 0 else (Color("e07a6a") if int(bd.status) < 0 else UiTheme.DIM)))
+		g.add_child(_cell(str(bd.total), UiTheme.GOLD, true))
+		var eff := _cell(str(r[3]), UiTheme.DIM, false, HORIZONTAL_ALIGNMENT_LEFT)
+		eff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		eff.custom_minimum_size = Vector2(240, 0)
+		eff.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		g.add_child(eff)
+
+## Valeurs dérivées, chacune avec une infobulle qui donne le détail du calcul.
+func _combat_grid(p: Control, c: Dictionary) -> void:
+	var eq := Characters.equipped_bonus(c)
+	var tal := Talents.bonus(c, gs.cfg)
+	var crit_tot := int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0))
+	var g := _grid(p)
+	var cells := [
+		["⚔️", L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)],
+			L.fa(L.t("ui.party_modal.tip_attaque"), [int(c.baseAtkMin), int(c.baseAtkMax), int(eq["bonusAtkMin"]), int(eq["bonusAtkMax"]), int(tal.bonusAtkMin), int(tal.bonusAtkMax)])],
+		["💥", L.t("ui.party_modal.critique"), "%d %%" % crit_tot,
+			L.fa(L.t("ui.party_modal.tip_critique"), [int(c.get("critDexPct", 0)), int(c.get("talentCritChance", 0))])],
+		["💨", L.t("ui.party_modal.esquive"), "%d %%" % int(c.get("dodgePct", 0)), L.t("ui.party_modal.tip_esquive")],
+		["🛡️", L.t("ui.party_modal.garde"), "%d %%" % int(c.get("guardPct", 0)), L.t("ui.party_modal.tip_garde")],
+		["⚔️", L.t("ui.party_modal.reduc_phys"), "%d %%" % Stats.reduction(c, false),
+			L.fa(L.t("ui.party_modal.tip_reduc"), [int(c.get("resistPhys", 0)), int(c.get("guardPct", 0)), Stats.CAP_REDUCTION])],
+		["🔮", L.t("ui.party_modal.reduc_mag"), "%d %%" % Stats.reduction(c, true),
+			L.fa(L.t("ui.party_modal.tip_reduc"), [int(c.get("resistMagic", 0)), int(c.get("guardPct", 0)), Stats.CAP_REDUCTION])],
+		["✨", L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))),
+			L.fa(L.t("ui.party_modal.tip_puissance"), [int(c.get("spellPower", 0)), int(eq["bonusSpellDmg"]) + int(tal.bonusSpellDmg), int(floor((int(c.level) - 1) * 0.75))])],
+		["🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % int(c.get("talentLifestealPct", 0)), L.t("ui.party_modal.tip_vol_vie")]]
+	for cl in cells:
+		var cell := _stat_cell(cl[0], cl[1], cl[2])
+		cell.tooltip_text = cl[3]
+		g.add_child(cell)

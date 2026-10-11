@@ -59,7 +59,7 @@ func _show_tip(i: int) -> void:
 		return
 	var c := gs.char_by_id(gs.active_char_id)
 	var sid := str(_ids[i])
-	SpellTip.show_for(_slots[i], ctrl.combat.spell_def(sid), ceili(ctrl.combat.cooldown_left(c, sid)))
+	SpellTip.show_for(_slots[i], ctrl.combat.spell_def(sid), ceili(ctrl.combat.cooldown_left(c, sid)), c)
 
 var _last_w := -1.0
 

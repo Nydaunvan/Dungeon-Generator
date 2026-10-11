@@ -6,7 +6,7 @@ extends Node
 
 const CHAPTERS := [
 	{"key": "ui.guide.ch1", "ids": ["demarrage", "accueil", "deplacement", "commandes"]},
-	{"key": "ui.guide.ch2", "ids": ["combat", "vitesse", "sorts", "statuts"]},
+	{"key": "ui.guide.ch2", "ids": ["combat", "vitesse", "stats", "sorts", "statuts"]},
 	{"key": "ui.guide.ch3", "ids": ["equipement", "progression", "formules"]},
 	{"key": "ui.guide.ch4", "ids": ["boutique", "village", "monstres", "bestiaire", "fontaines", "pieges"]},
 	{"key": "ui.guide.ch5", "ids": ["sauvegarde", "son", "parametres"]},

@@ -954,8 +954,8 @@ static func _loot_button(lvl: Dictionary, m: Dictionary, key: String, tip: Strin
 	return b
 
 static func _monsters_sub(host: VBoxContainer, lvl: Dictionary) -> void:
-	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.seuil_rage"), "Zone", L.t("common.vitesse_attaque"), L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
-	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 42, 90, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
+	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.seuil_rage"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
+	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 42, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
 	var g := AdminTable.create(host, headers, widths)
 	var spells: Array = [["", L.t("admin.levels.attaque_simple")]]
 	for s in _cfg().get("spells", []):
@@ -983,7 +983,7 @@ static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spell
 	var set_speed := func(v: float, _f: bool):
 		m["speed"] = _store(v)
 		return m["speed"]
-	AdminTable.cell(g, _num(m.get("speed", 8), 36, set_speed, L.t("admin.levels.vitesse_determine_l_ordre_de")))
+	AdminTable.cell(g, _num(Stats.monster_speed(m), 36, set_speed, L.t("admin.levels.vitesse_determine_l_ordre_de")))
 	AdminTable.cell(g, prev)
 	AdminTable.cell(g, _num(_or(m.get("resistPhys"), 0.0), 38, _set_clamped(m, "resistPhys", 0, 100), L.t("admin.levels.resistance_physique")))
 	AdminTable.cell(g, _num(_or(m.get("resistMagic"), 0.0), 38, _set_clamped(m, "resistMagic", 0, 100), L.t("admin.levels.resistance_magique")))
@@ -1015,25 +1015,6 @@ static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spell
 		m["patrolRadius"] = _store(maxf(0.0, v))
 		return m["patrolRadius"]
 	AdminTable.cell(g, _num(_or(m.get("patrolRadius"), 0.0), 38, set_zone, L.t("admin.levels.rayon_de_deplacement_automatique")))
-	# cadence d'attaque : curseur 1–3 s
-	var sp := HBoxContainer.new()
-	sp.add_theme_constant_override("separation", 3)
-	var asv := float(m.get("attackSpeed", 2))
-	var slider := HSlider.new()
-	slider.min_value = 1.0
-	slider.max_value = 3.0
-	slider.step = 0.1
-	slider.value = asv
-	slider.custom_minimum_size = Vector2(_px(64), 0)
-	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	slider.tooltip_text = L.t("admin.levels.rapidite_attaque_automatique")
-	var sl := _lbl("%.1fs" % asv, 0.65)
-	slider.value_changed.connect(func(v: float):
-		m["attackSpeed"] = _store(clampf(v if v != 0.0 else 2.0, 1.0, 3.0))
-		sl.text = "%.1fs" % v)
-	sp.add_child(slider)
-	sp.add_child(sl)
-	AdminTable.cell(g, sp)
 	AdminTable.cell(g, _dd(_door_options(lvl), m.get("opensDoorId", ""), func(v): m["opensDoorId"] = v, 0.74, 100))
 	AdminTable.cell(g, _loot_button(lvl, m, "lootItemId", L.t("admin.levels.objet_cree_dans_la_liste")))
 	AdminTable.cell(g, _num(m.get("lootChance", 100), 44, func(v: float, _f: bool):

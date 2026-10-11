@@ -186,7 +186,8 @@ func _transient() -> Dictionary:
 	if ctrl != null and ctrl.combat != null:
 		g = ctrl.combat.gauges.duplicate()
 		seq = ctrl.combat.turn_seq
-	return {"gauges": g, "turn_seq": seq, "selected_member": gs.selected_member.duplicate(), "level_id": str(level.get("id", ""))}
+	var ac: Dictionary = ctrl.combat.acted.duplicate() if (ctrl != null and ctrl.combat != null) else {}
+	return {"gauges": g, "acted": ac, "last_side": int(ctrl.combat._state.get("last_side", -1)) if (ctrl != null and ctrl.combat != null) else -1, "turn_seq": seq, "selected_member": gs.selected_member.duplicate(), "level_id": str(level.get("id", ""))}
 
 func _restore_transient(tr: Dictionary) -> void:
 	gs.selected_member = (tr.get("selected_member", {}) as Dictionary).duplicate()
@@ -195,6 +196,9 @@ func _restore_transient(tr: Dictionary) -> void:
 		var g: Dictionary = tr.get("gauges", {})
 		for k in g:
 			ctrl.combat.gauges[k] = float(g[k])
+		for k in (tr.get("acted", {}) as Dictionary):
+			ctrl.combat.acted[k] = true
+		ctrl.combat._state["last_side"] = int(tr.get("last_side", -1))
 		ctrl.combat.ensure_gauges()
 
 ## Case d'arrivée d'un escalier (resolveStairs de l'original) : coordonnées de l'action si elles existent, sinon départ du niveau ;

@@ -172,7 +172,7 @@ func monster_state(m: Dictionary) -> Dictionary:
 
 # ------------------------------------------------------------------ répercussion de la configuration sur la partie
 
-const DEF_FIELDS := ["classId", "name", "icon", "portrait", "force", "dex", "con", "int", "inventorySlots"]
+const DEF_FIELDS := ["classId", "name", "icon", "portrait", "force", "dex", "con", "int", "inventorySlots", "baseSpeed"]
 
 ## `syncStatePartyDefinitionsFromConfig` : les définitions des personnages modifiées dans l'administration (classe, nom, icône,
 ## portrait, caractéristiques, emplacements de besace, endurance de base, sorts de départ) s'appliquent à la partie en cours.

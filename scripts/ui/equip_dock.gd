@@ -549,6 +549,8 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 		[L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)]],
 		[L.t("ui.equip_dock.for_dex_con_int"), "%d / %d / %d / %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]],
 		[L.t("common.vitesse"), str(int(c.get("effSpeed", 10)))],
+		[L.t("ui.equip_dock.crit_esq_garde"), "%d %% / %d %% / %d %%" % [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0))]],
+		[L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0)))],
 	]
 	for r in rows:
 		var h := HBoxContainer.new()
@@ -783,7 +785,7 @@ func _build_drawer(c: Dictionary) -> Control:
 				l.custom_minimum_size = Vector2(200, 0)
 				l.mouse_filter = Control.MOUSE_FILTER_STOP
 				var spell_def: Dictionary = sp
-				l.mouse_entered.connect(func(): SpellTip.show_for(l, spell_def))
+				l.mouse_entered.connect(func(): SpellTip.show_for(l, spell_def, 0, gs.char_by_id(char_id)))
 				l.mouse_exited.connect(SpellTip.hide_tip)
 				l.tree_exiting.connect(SpellTip.hide_tip)
 				_drawer_inner.add_child(l)

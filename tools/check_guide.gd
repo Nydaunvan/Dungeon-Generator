@@ -23,7 +23,7 @@ func _ready() -> void:
 	add_child(host)
 	for lang in ["fr", "en"]:
 		var data = JSON.parse_string(FileAccess.get_file_as_string("res://data/lang/help.%s.json" % lang))
-		check("%s : tableau de sujets" % lang, data is Array and data.size() == 27)
+		check("%s : tableau de sujets" % lang, data is Array and data.size() == 28)
 		var ids := []
 		for x in data:
 			ids.append(x.id)
