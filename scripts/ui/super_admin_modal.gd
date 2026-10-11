@@ -469,19 +469,118 @@ func _fill_chat() -> void:
 	else:
 		for x in rp.data:
 			_report_card(box, x)
-	_title(box, L.t("ui.sadmin.chat_words") % (wd.data.size() if wd.ok and wd.data is Array else 0))
+	_words_section(box, wd, mine)
+
+## Retire les accents et les majuscules : sert au tri et à la recherche.
+static func _fold(t: String) -> String:
+	var r := t.to_lower()
+	for pair in [["àâä", "a"], ["éèêë", "e"], ["îï", "i"], ["ôö", "o"], ["ùûü", "u"], ["ç", "c"], ["ÿ", "y"], ["œ", "oe"]]:
+		for ch in pair[0]:
+			r = r.replace(ch, pair[1])
+	return r
+
+## Liste des mots interdits : une seule zone de saisie qui sert à chercher ET à ajouter, mots classés par lettre
+## (les expressions de plusieurs mots à part) dans une zone défilante de hauteur fixe.
+func _words_section(box: Control, wd: Dictionary, mine: int) -> void:
+	var words: Array = []
+	if wd.ok and wd.data is Array:
+		for w in wd.data:
+			words.append(str(w))
+	words.sort_custom(func(x: String, y: String) -> bool: return _fold(x) < _fold(y))
+	_title(box, L.t("ui.sadmin.chat_words") % words.size())
 	_note(box, L.t("ui.sadmin.chat_words_desc"))
+	if not (wd.ok and wd.data is Array):
+		_error(box, wd)
+		return
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	var e := LineEdit.new()
 	e.max_length = 30
-	e.placeholder_text = L.t("ui.sadmin.chat_word_hint")
+	e.clear_button_enabled = true
+	e.placeholder_text = L.t("ui.sadmin.chat_word_search")
 	e.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(e)
 	var add := Button.new()
 	add.text = L.t("ui.sadmin.chat_word_add")
 	add.focus_mode = Control.FOCUS_NONE
+	h.add_child(add)
+	box.add_child(h)
+	var count := _label("", UiTheme.DIM, 12)
+	box.add_child(count)
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(0, 250)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var inner := VBoxContainer.new()
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.add_theme_constant_override("separation", 6)
+	sc.add_child(inner)
+	box.add_child(sc)
+	var remove := func(word: String):
+		var r: Dictionary = await SuperAdmin.chat_word_remove(word)
+		if mine == _gen and _alive():
+			if r.ok:
+				_fill_chat()
+			else:
+				_flash(str(r.message), BAD)
+	var render := func():
+		_clear(inner)
+		var q := _fold(e.text.strip_edges())
+		var groups: Dictionary = {}
+		var shown := 0
+		for w in words:
+			if q != "" and not _fold(w).contains(q):
+				continue
+			shown += 1
+			var key := "…" if w.contains(" ") else _fold(w).left(1).to_upper()
+			if not groups.has(key):
+				groups[key] = []
+			groups[key].append(w)
+		count.text = L.t("ui.sadmin.chat_word_count") % [shown, words.size()]
+		var exact := false
+		for w in words:
+			if _fold(w) == q:
+				exact = true
+		add.disabled = q == "" or exact
+		if shown == 0:
+			inner.add_child(_note_free(L.t("ui.sadmin.chat_word_none")))
+			return
+		var keys := groups.keys()
+		keys.sort_custom(func(x: String, y: String) -> bool:
+			if x == "…" or y == "…":
+				return y == "…" and x != "…"
+			return x < y)
+		for k in keys:
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			var head := _label(L.t("ui.sadmin.chat_word_phrases") if k == "…" else k, GOLD, 15)
+			head.custom_minimum_size = Vector2(26 if k != "…" else 0, 0)
+			head.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+			if k == "…":
+				inner.add_child(head)
+				row = null
+			else:
+				row.add_child(head)
+			var fl := HFlowContainer.new()
+			fl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			fl.add_theme_constant_override("h_separation", 5)
+			fl.add_theme_constant_override("v_separation", 4)
+			for w in groups[k]:
+				var b := Button.new()
+				b.text = "%s ✕" % w
+				b.focus_mode = Control.FOCUS_NONE
+				b.add_theme_font_size_override("font_size", 12)
+				b.tooltip_text = L.t("ui.sadmin.chat_word_remove")
+				var word: String = w
+				b.pressed.connect(func(): remove.call(word))
+				fl.add_child(b)
+			if row == null:
+				inner.add_child(fl)
+			else:
+				row.add_child(fl)
+				inner.add_child(row)
 	var do_add := func():
+		if add.disabled:
+			return
 		var r: Dictionary = await SuperAdmin.chat_word_add(e.text)
 		if mine != _gen or not _alive():
 			return
@@ -491,28 +590,15 @@ func _fill_chat() -> void:
 			_flash(str(r.message), BAD)
 	add.pressed.connect(do_add)
 	e.text_submitted.connect(func(_t): do_add.call())
-	h.add_child(add)
-	box.add_child(h)
-	if wd.ok and wd.data is Array:
-		var fl := HFlowContainer.new()
-		fl.add_theme_constant_override("h_separation", 6)
-		fl.add_theme_constant_override("v_separation", 4)
-		for w in wd.data:
-			var b := Button.new()
-			b.text = "%s ✕" % str(w)
-			b.focus_mode = Control.FOCUS_NONE
-			b.tooltip_text = L.t("ui.sadmin.chat_word_remove")
-			var word := str(w)
-			b.pressed.connect(func():
-				var r: Dictionary = await SuperAdmin.chat_word_remove(word)
-				if mine == _gen and _alive():
-					if r.ok:
-						_fill_chat()
-					else:
-						_flash(str(r.message), BAD))
-			fl.add_child(b)
-		box.add_child(fl)
+	e.text_changed.connect(func(_t): render.call())
+	render.call()
 	_fit()
+
+func _note_free(text: String) -> Label:
+	var l := _label(text, UiTheme.DIM, 13)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return l
 
 func _flash(text: String, color: Color = UiTheme.DIM) -> void:
 	if _status != null and is_instance_valid(_status):

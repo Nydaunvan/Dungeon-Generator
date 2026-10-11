@@ -1992,7 +1992,11 @@
   "ui.hub.when_fmt": "%02d/%02d at %02d:%02d",
   "ui.hub.weekly_next_label": "Next week: %s  ⓘ",
   "ui.hub.weekly_next_tip_wait": "Next week: %s (loading details…)",
-  "ui.hub.weekly_next_tip": "%s %s\n%s\nStarts: %s (in %s)\nSame dungeon and same rule for everyone, unlimited tries: only your best score counts. Rank rewards are handed out when the week closes."
+  "ui.hub.weekly_next_tip": "%s %s\n%s\nStarts: %s (in %s)\nSame dungeon and same rule for everyone, unlimited tries: only your best score counts. Rank rewards are handed out when the week closes.",
+  "ui.sadmin.chat_word_search": "Search or add a word…",
+  "ui.sadmin.chat_word_count": "%s shown of %s",
+  "ui.sadmin.chat_word_none": "No word matches. Use “Add” to ban it.",
+  "ui.sadmin.chat_word_phrases": "Phrases"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
