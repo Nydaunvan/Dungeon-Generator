@@ -437,7 +437,7 @@ func _leave_game_overlay() -> void:
 ## `creationLeaveOverlay` : quitter la création d'un donjon (revenir repart d'une base neuve). Une seule colonne de cartes : chaque
 ## choix dit ce qu'il fait, le plus sûr en haut, l'abandon en bas.
 func _creation_leave_overlay() -> void:
-	var header: Array = [[L.t("admin.main.revenir_ici_repartira_toujours"), UiTheme.PARCH, 14]]
+	var header: Array = [[L.t("ui.creation_leave.autosaved"), HubKit.GOOD, 14]]
 	var opts: Array = [
 		{"icon": "⬇", "title": L.t("ui.creation_leave.export_t"), "desc": L.t("ui.creation_leave.export_d"), "btn": L.t("ui.creation_leave.export_b"), "primary": true, "keep": true, "cb": func(): AdminGeneral.export_config(self)},
 		{"icon": "📋", "title": L.t("ui.creation_leave.code_t"), "desc": L.t("ui.creation_leave.code_d"), "extra": func(card: VBoxContainer):
@@ -448,6 +448,6 @@ func _creation_leave_overlay() -> void:
 			out = Form.code_area(card, "", true, 70.0, 6.0)
 			out.visible = false
 			status = Form.status_label(card)},
-		{"icon": "🚪", "title": L.t("ui.creation_leave.quit_t"), "desc": L.t("ui.creation_leave.quit_d"), "btn": L.t("ui.creation_leave.quit_b"), "danger": true, "cb": func(): Data.go_home()},
+		{"icon": "🚪", "title": L.t("ui.creation_leave.quit_t"), "desc": L.t("ui.creation_leave.quit_d"), "btn": L.t("ui.creation_leave.quit_b"), "primary": true, "cb": func(): Data.go_home()},
 	]
 	LeaveModal.open(_modal_layer, L.t("admin.main.quitter_la_creation_du_donjon"), header, opts, L.t("admin.main.rester_dans_l_interface_de"), true, 540.0)

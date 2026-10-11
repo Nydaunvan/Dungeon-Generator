@@ -45,7 +45,7 @@ func _on_action(name: String) -> void:
 				L.t("home.ce_donjon_sert_de_demonstration"),
 				_launch_original, "Commencer")
 		"random": _open_random()
-		"create": Data.create_own_dungeon()
+		"create": CreateChoiceModal.open(_modal_layer)
 		"saves": SlotsModal.open(_modal_layer, Callable(), func(d): Data.launch_save(d))
 		"load-code": _load_code()
 		"import-json": _import_json()

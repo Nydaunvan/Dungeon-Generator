@@ -304,6 +304,7 @@ func save_config() -> bool:
 	f.store_string(Saves.stringify(cfg))
 	if not is_same(cfg, config):
 		config = cfg.duplicate(true)     # CONFIG est unique dans l'original : la config par défaut devient celle-ci
+	MyDungeons.autosave(cfg)             # « Mes donjons » : sauvegarde automatique du donjon en cours d'édition
 	return true
 
 ## « Réinitialiser aux valeurs par défaut » : configuration d'origine, enregistrée.
@@ -479,16 +480,42 @@ func _update_scale() -> void:
 
 ## « Créer votre propre donjon » : part d'un donjon aléatoire modifiable dans l'administration (`startCreateOwnDungeon`).
 func create_own_dungeon() -> void:
+	_start_creation(DungeonGenerator.build_config(original_config, 3, 13, 11, "normal", []))
+
+## « Créer votre propre donjon » → « Partir d'un donjon vide » : un seul niveau sans rien dedans.
+func create_empty_dungeon() -> void:
+	_start_creation(MyDungeons.empty_config())
+
+func _start_creation(cfg: Dictionary) -> void:
+	MyDungeons.end_editing()
 	resume_game = {}
-	config = DungeonGenerator.build_config(original_config, 3, 13, 11, "normal", [])
+	config = cfg
 	config.erase("runModifierIds")
 	config.erase("genDims")
 	ensure_defaults(config)
 	save_config()
+	MyDungeons.begin_new(config)       # enregistré dans « Mes donjons » dès la première modification
 	admin_unlocked = true
 	play_origin = "custom"
 	own_dungeon_launched = false
 	Loader.go("res://scenes/admin.tscn", "admin")
+
+## « Mes donjons » → Ouvrir : édite un de ses donjons dans l'administration.
+func open_my_dungeon(id: String) -> bool:
+	var cfg := MyDungeons.load_config(id)
+	if cfg.is_empty():
+		return false
+	MyDungeons.end_editing()
+	resume_game = {}
+	config = cfg
+	ensure_defaults(config)
+	save_config()
+	MyDungeons.begin_existing(id)
+	admin_unlocked = true
+	play_origin = "custom"
+	own_dungeon_launched = false
+	Loader.go("res://scenes/admin.tscn", "admin")
+	return true
 
 ## Partie en cours mise de côté pendant qu'on ouvre l'administration depuis le jeu : {"config", "save", "origin", "transient"}.
 var resume_game: Dictionary = {}
@@ -498,6 +525,9 @@ func open_admin() -> void:
 
 ## Retour à l'accueil (`switchView('home')`) : verrouille l'administration et oublie la partie suspendue.
 func go_home() -> void:
+	if play_origin == "custom" and (MyDungeons.current_id != "" or MyDungeons._pending_new):
+		MyDungeons.autosave(admin_config())
+	MyDungeons.end_editing()
 	resume_game = {}
 	admin_unlocked = false
 	play_origin = "original"
