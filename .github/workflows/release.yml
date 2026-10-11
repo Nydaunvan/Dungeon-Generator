@@ -116,6 +116,28 @@ jobs:
           path: dist/*
           retention-days: 14
 
+      # Analyse VirusTotal des fichiers que les joueurs lancent (l'installateur est analysé plus bas, dans son propre job).
+      # Cette étape ne bloque jamais la publication : sans clé ou en cas d'échec, les fichiers sont marqués « non analysés ».
+      - name: Analyse VirusTotal
+        timeout-minutes: 40
+        continue-on-error: true
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          python3 tools/virustotal.py scan --out vt.json \
+            dist/exe-windows.exe dist/exe-linux.x86_64 \
+            "dist/Dungeon-Generator-$V-windows-full.zip" "dist/Dungeon-Generator-$V-linux-full.tar.gz"
+
+      - name: Garder le résultat VirusTotal pour l'installateur
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: virustotal
+          path: vt.json
+          if-no-files-found: ignore
+          retention-days: 1
+
       - name: Créer ou mettre à jour la publication GitHub
         env:
           GH_TOKEN: ${{ github.token }}
@@ -123,7 +145,7 @@ jobs:
           set -euo pipefail
           V="${{ steps.ver.outputs.version }}"
           TAG="v$V"
-          python3 tools/release_notes.py "$V" > notes.md
+          python3 tools/release_notes.py "$V" --vt vt.json --out notes.md
           PRE=true
           if [ "${{ steps.ver.outputs.final }}" = "true" ]; then PRE=false; fi
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -168,3 +190,27 @@ jobs:
         run: |
           $V = "${{ needs.publish.outputs.version }}"
           gh release upload "v$V" "dist/Dungeon-Generator-$V-setup.exe" --clobber
+
+      # Analyse VirusTotal de l'installateur, puis mise à jour du bandeau en tête des notes (ne bloque jamais).
+      - name: Récupérer le résultat VirusTotal de la publication
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: virustotal
+
+      - name: Analyse VirusTotal de l'installateur et mise à jour des notes
+        shell: bash
+        timeout-minutes: 40
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -eu
+          V="${{ needs.publish.outputs.version }}"
+          MERGE=""
+          if [ -f vt.json ]; then MERGE="--merge vt.json"; fi
+          python tools/virustotal.py scan --out vt.json $MERGE "dist/Dungeon-Generator-$V-setup.exe"
+          python tools/release_notes.py "$V" --vt vt.json --out notes.md
+          gh release edit "v$V" --notes-file notes.md
