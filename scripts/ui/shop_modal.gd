@@ -539,7 +539,8 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 		var wg := ButtonGroup.new()
 		for c in gs.party:
 			var b := Button.new()
-			b.text = str(c.name)
+			var cn := str(Characters.class_def(gs.cfg, str(c.get("classId", ""))).get("name", ""))
+			b.text = str(c.name) + (" (%s)" % L.c(cn) if cn != "" else "")
 			b.toggle_mode = true
 			b.button_group = wg
 			b.button_pressed = str(c.id) == str(st.who)
