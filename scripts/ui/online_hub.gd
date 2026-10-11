@@ -34,6 +34,7 @@ var _runs_holder: VBoxContainer
 var _run_clocks: Array = []
 var _run_poll := 0
 var _run_busy := false
+var _wk_clocks: Array = []
 var _runs_ok := false
 var _width := 760.0
 
@@ -350,11 +351,32 @@ func _load_weekly(card: Control, mine: int) -> void:
 	t.add_child(HubKit.label(L.t("ui.hub.weekly_rule") + " · " + L.fa(L.t("ui.hub.weekly_week"), str(_weekly.get("period", "")).get_slice("W", 1)), UiTheme.DIM, 12))
 	t.add_child(HubKit.label(str(rule.get("label_en" if en else "label_fr", "")), GOLD, 20, true))
 	v.add_child(HubKit.label(str(rule.get("desc_en" if en else "desc_fr", "")), UiTheme.PARCH, 14))
-	var foot := L.fa(L.t("ui.hub.weekly_ends"), _remaining(str(_weekly.get("ends_at", ""))))
+	# comptes à rebours en direct : fin du défi, puis distribution des récompenses (la clôture a lieu REWARD_DELAY après la fin)
+	var ends := _utc(_weekly.get("ends_at", ""))
+	var rewards_at := ends + RankedRun.REWARD_DELAY_SEC
+	_wk_clocks.clear()
+	var l_end := HubKit.label("", UiTheme.PARCH, 13)
+	v.add_child(l_end)
+	_wk_clocks.append({"label": l_end, "kind": "end", "t": ends})
+	var l_rew := HubKit.label("", UiTheme.GOLD, 13)
+	l_rew.tooltip_text = L.fa(L.t("ui.hub.weekly_rewards_tip"), _when(rewards_at))
+	l_rew.mouse_filter = Control.MOUSE_FILTER_STOP
+	v.add_child(l_rew)
+	_wk_clocks.append({"label": l_rew, "kind": "rew", "t": rewards_at})
 	var nx: Dictionary = _weekly.get("next", {})
 	if not nx.is_empty():
-		foot += "   ·   " + L.fa(L.t("ui.hub.weekly_next"), "%s %s" % [str(nx.get("icon", "")), str(nx.get("label_en" if en else "label_fr", ""))])
-	v.add_child(HubKit.label(foot, UiTheme.DIM, 12))
+		var l_nx := HubKit.label(L.fa(L.t("ui.hub.weekly_next_label"), "%s %s" % [str(nx.get("icon", "")), str(nx.get("label_en" if en else "label_fr", ""))]), UiTheme.PARCH, 13)
+		l_nx.mouse_filter = Control.MOUSE_FILTER_STOP
+		l_nx.mouse_default_cursor_shape = Control.CURSOR_HELP
+		l_nx.tooltip_text = L.fa(L.t("ui.hub.weekly_next_tip_wait"), str(nx.get("label_en" if en else "label_fr", "")))
+		v.add_child(l_nx)
+		_load_next_tip(l_nx, nx, ends, en, mine)
+	var tm := Timer.new()
+	tm.wait_time = 1.0
+	tm.autostart = true
+	tm.timeout.connect(_tick_weekly.bind(mine))
+	v.add_child(tm)
+	_tick_weekly(mine)
 	if _signed():
 		_load_streak(v, mine)
 	_modal.call_deferred("_fit")
@@ -389,6 +411,40 @@ func _remaining(iso: String) -> String:
 	if left >= 86400:
 		return L.fa(L.t("ui.hub.weekly_days"), int(ceil(left / 86400.0)))
 	return L.fa(L.t("ui.hub.weekly_hours"), maxi(1, int(ceil(left / 3600.0))))
+
+## Compte à rebours « 2 j 03:12:45 » / « 03:12:45 ».
+static func _countdown(secs: int) -> String:
+	if secs >= 86400:
+		return "%d j %02d:%02d:%02d" % [secs / 86400, (secs % 86400) / 3600, (secs % 3600) / 60, secs % 60]
+	return "%02d:%02d:%02d" % [secs / 3600, (secs % 3600) / 60, secs % 60]
+
+## Date locale courte d'un instant UNIX : « 13/10 à 00:00 ».
+static func _when(t: float) -> String:
+	var bias := int(Time.get_time_zone_from_system().get("bias", 0))
+	var d := Time.get_datetime_dict_from_unix_time(int(t) + bias * 60)
+	return L.fa(L.t("ui.hub.when_fmt"), [int(d.day), int(d.month), int(d.hour), int(d.minute)])
+
+func _tick_weekly(mine: int) -> void:
+	if mine != _gen or not _alive():
+		return
+	var now := Time.get_unix_time_from_system()
+	for c in _wk_clocks:
+		if not is_instance_valid(c.label):
+			continue
+		var left := int(float(c.t) - now)
+		if c.kind == "end":
+			(c.label as Label).text = L.fa(L.t("ui.hub.weekly_ends_in"), _countdown(left)) if left > 0 else L.t("ui.hub.weekly_ended")
+		else:
+			(c.label as Label).text = L.fa(L.t("ui.hub.weekly_rewards_in"), [_countdown(left), _when(float(c.t))]) if left > 0 else L.t("ui.hub.weekly_rewards_now")
+
+## Lit la règle de la semaine suivante (description) pour l'infobulle explicative.
+func _load_next_tip(lbl: Label, nx: Dictionary, starts: float, en: bool, mine: int) -> void:
+	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/weekly_rules?rule_id=eq.%s&select=icon,label_fr,label_en,desc_fr,desc_en" % str(nx.get("rule_id", "")).uri_encode(), null, false)
+	if mine != _gen or not _alive() or not is_instance_valid(lbl) or not r.ok or not (r.data is Array) or (r.data as Array).is_empty():
+		return
+	var row: Dictionary = r.data[0]
+	lbl.tooltip_text = L.fa(L.t("ui.hub.weekly_next_tip"), [str(row.get("icon", "")), str(row.get("label_en" if en else "label_fr", "")),
+		str(row.get("desc_en" if en else "desc_fr", "")), _when(starts), _countdown(maxi(0, int(starts - Time.get_unix_time_from_system())))])
 
 func _month_key() -> String:
 	var d := Time.get_datetime_dict_from_system()

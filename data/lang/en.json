@@ -1983,7 +1983,16 @@
   "ui.stat_explain.fld_spell": "Spell damage",
   "ui.stat_explain.fld_stamina": "Max stamina",
   "ui.stat_explain.fld_crit": "Critical",
-  "ui.stat_explain.fld_lifesteal": "Life steal"
+  "ui.stat_explain.fld_lifesteal": "Life steal",
+  "ui.hub.weekly_ends_in": "⏳ Challenge ends in %s",
+  "ui.hub.weekly_ended": "⏳ Challenge over: the last runs still count until the close.",
+  "ui.hub.weekly_rewards_in": "🎁 Rewards handed out in %s (on %s)",
+  "ui.hub.weekly_rewards_now": "🎁 Rewards: being handed out now (a few minutes).",
+  "ui.hub.weekly_rewards_tip": "Ranking rewards (rank badges and XP) are handed out when the week closes, on %s. Only your best verified score counts. A two-day margin leaves the last runs time to be sent and verified.",
+  "ui.hub.when_fmt": "%02d/%02d at %02d:%02d",
+  "ui.hub.weekly_next_label": "Next week: %s  ⓘ",
+  "ui.hub.weekly_next_tip_wait": "Next week: %s (loading details…)",
+  "ui.hub.weekly_next_tip": "%s %s\n%s\nStarts: %s (in %s)\nSame dungeon and same rule for everyone, unlimited tries: only your best score counts. Rank rewards are handed out when the week closes."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -68,6 +68,10 @@ static func mode_label(cfg: Dictionary) -> String:
 		return "🏆 " + L.t("ui.hub.mode_ranked")
 	return "🎲 " + L.t("ui.hub.mode_free")
 
+## Délai entre la fin d'une période (semaine, mois) et la distribution des récompenses : miroir de `close_due_periods` côté base (2 jours,
+## pour laisser arriver les parties encore à envoyer).
+const REWARD_DELAY_SEC := 172800
+
 const PENDING_PATH := "user://ranked_pending.json"
 
 ## Lance une partie classée : le serveur donne la graine et les réglages, le donjon est celui de la configuration d'origine.
