@@ -434,27 +434,20 @@ func _leave_game_overlay() -> void:
 	]
 	m.set_buttons(btns)
 
-## `creationLeaveOverlay` : quitter la création d'un donjon (revenir repart d'une base neuve).
+## `creationLeaveOverlay` : quitter la création d'un donjon (revenir repart d'une base neuve). Une seule colonne de cartes : chaque
+## choix dit ce qu'il fait, le plus sûr en haut, l'abandon en bas.
 func _creation_leave_overlay() -> void:
-	var m := Modal.open(_modal_layer, L.t("admin.main.quitter_la_creation_du_donjon"), 440.0)
-	m.add_text(L.t("admin.main.revenir_ici_repartira_toujours"), UiTheme.PARCH, 14, true)
-	m.set_buttons([
-		{"text": L.t("admin.main.exporter_en_json_fichier"), "primary": false, "cb": func(): AdminGeneral.export_config(self)},
-		{"text": L.t("common.generer_un_code_a_partager"), "primary": false, "cb": func(): Form.generate_code(Data.admin_config(), out_ref[0], status_ref[0])},
-		{"text": L.t("admin.main.quitter_et_abandonner_cette_creation"), "primary": true, "cb": func():
-			m.close()
-			Data.go_home()},
-		{"text": L.t("admin.main.rester_dans_l_interface_de"), "primary": false, "cb": func(): m.close()},
-	])
-	# zone du code, sous « Générer un code »
-	var row: Node = m._buttons_row
-	var out := Form.code_area(row, "", true, 70.0, 6.0)
-	out.visible = false
-	var status := Form.status_label(row)
-	out_ref[0] = out
-	status_ref[0] = status
-	row.move_child(out, 2)
-	row.move_child(status, 3)
-
-var out_ref: Array = [null]
-var status_ref: Array = [null]
+	var header: Array = [[L.t("admin.main.revenir_ici_repartira_toujours"), UiTheme.PARCH, 14]]
+	var opts: Array = [
+		{"icon": "⬇", "title": L.t("ui.creation_leave.export_t"), "desc": L.t("ui.creation_leave.export_d"), "btn": L.t("ui.creation_leave.export_b"), "primary": true, "keep": true, "cb": func(): AdminGeneral.export_config(self)},
+		{"icon": "📋", "title": L.t("ui.creation_leave.code_t"), "desc": L.t("ui.creation_leave.code_d"), "extra": func(card: VBoxContainer):
+			var out: TextEdit = null
+			var status: Label = null
+			var b := HubKit.button(L.t("common.generer_un_code_a_partager"), func(): Form.generate_code(Data.admin_config(), out, status), false, 38)
+			card.add_child(b)
+			out = Form.code_area(card, "", true, 70.0, 6.0)
+			out.visible = false
+			status = Form.status_label(card)},
+		{"icon": "🚪", "title": L.t("ui.creation_leave.quit_t"), "desc": L.t("ui.creation_leave.quit_d"), "btn": L.t("ui.creation_leave.quit_b"), "danger": true, "cb": func(): Data.go_home()},
+	]
+	LeaveModal.open(_modal_layer, L.t("admin.main.quitter_la_creation_du_donjon"), header, opts, L.t("admin.main.rester_dans_l_interface_de"), true, 540.0)

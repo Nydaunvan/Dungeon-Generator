@@ -4,10 +4,10 @@ extends RefCounted
 ## icône, ce qu'elle entraîne et son bouton. Sert à la partie libre comme à la partie classée.
 
 ## `header` : [[texte, couleur, taille], …]. `options` : [{"icon", "title", "desc", "btn", "primary", "danger", "cb", "extra"}] ;
-## `extra` (Callable(VBoxContainer)) ajoute du contenu à la carte (ex. code à partager) ; sans `btn`, pas de bouton.
-static func open(host: Node, title: String, header: Array, options: Array, stay_text: String) -> Modal:
+## `keep` : la fenêtre reste ouverte après le clic ; `extra` (Callable(VBoxContainer)) ajoute du contenu à la carte (ex. code à partager) ; sans `btn`, pas de bouton.
+static func open(host: Node, title: String, header: Array, options: Array, stay_text: String, one_column: bool = false, max_width: float = 780.0) -> Modal:
 	var vp: Vector2 = host.get_viewport().get_visible_rect().size if host.is_inside_tree() else Vector2(1280, 720)
-	var width := clampf(vp.x * 0.94, 320.0, 780.0)
+	var width := clampf(vp.x * 0.94, 320.0, max_width)
 	var m := Modal.open(host, title, width)
 	m.fit_ratio = 0.84
 	for h in header:
@@ -15,7 +15,7 @@ static func open(host: Node, title: String, header: Array, options: Array, stay_
 		l.custom_minimum_size.x = 0
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cols := 1
-	if width >= 600.0:
+	if width >= 600.0 and not one_column:
 		cols = mini(options.size(), 3) if options.size() != 4 else 2
 	var grid := GridContainer.new()
 	grid.columns = maxi(cols, 1)
@@ -48,7 +48,8 @@ static func _card(o: Dictionary, m: Modal, compact: bool) -> Control:
 	if o.has("btn"):
 		var cb: Callable = o.get("cb", Callable())
 		v.add_child(HubKit.button(str(o.btn), func():
-			m.close()
+			if not bool(o.get("keep", false)):
+				m.close()
 			if cb.is_valid():
 				cb.call(), bool(o.get("primary", false)), 38))
 	return card

@@ -2005,7 +2005,15 @@
   "ui.ranked.time_up_title": "Temps écoulé",
   "ui.ranked.time_up_text": "Les 2 heures sont écoulées : ta partie est envoyée en l'état et sera vérifiée (seuls les niveaux franchis comptent).",
   "ui.ranked.no_save": "🔒 Partie classée : pas de sauvegarde, la partie se joue en une seule fois.",
-  "ui.ranked.timer_label": "Temps restant : %s"
+  "ui.ranked.timer_label": "Temps restant : %s",
+  "ui.creation_leave.export_t": "Exporter en fichier",
+  "ui.creation_leave.export_d": "Enregistre votre création dans un fichier JSON que vous pourrez recharger plus tard.",
+  "ui.creation_leave.export_b": "⬇ Exporter en JSON (fichier)",
+  "ui.creation_leave.code_t": "Code à partager",
+  "ui.creation_leave.code_d": "Génère un code court à copier et à envoyer à vos amis.",
+  "ui.creation_leave.quit_t": "Quitter et abandonner",
+  "ui.creation_leave.quit_d": "Retour à l'accueil. La création en cours est perdue.",
+  "ui.creation_leave.quit_b": "🚪 Quitter et abandonner cette création"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

@@ -2005,7 +2005,15 @@
   "ui.ranked.time_up_title": "Time's up",
   "ui.ranked.time_up_text": "The 2 hours are up: your run is sent as it stands and will be verified (only cleared levels count).",
   "ui.ranked.no_save": "🔒 Ranked run: no saving, it is played in one sitting.",
-  "ui.ranked.timer_label": "Time left: %s"
+  "ui.ranked.timer_label": "Time left: %s",
+  "ui.creation_leave.export_t": "Export to a file",
+  "ui.creation_leave.export_d": "Saves your creation to a JSON file you can load again later.",
+  "ui.creation_leave.export_b": "⬇ Export to JSON (file)",
+  "ui.creation_leave.code_t": "Shareable code",
+  "ui.creation_leave.code_d": "Generates a short code to copy and send to your friends.",
+  "ui.creation_leave.quit_t": "Leave and discard",
+  "ui.creation_leave.quit_d": "Back to the home screen. The creation in progress is lost.",
+  "ui.creation_leave.quit_b": "🚪 Leave and discard this creation"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
