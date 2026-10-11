@@ -50,6 +50,9 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			continue
 		var p := Vector2i(int(m.x), int(m.y))
 		_place_on_floor(n, p, str(m.get("icon", "")))
+		n.set_meta("by", n.position.y)                       # animations : hauteur de repos, phase propre, amplitude (boss plus lents)
+		n.set_meta("ph", randf() * TAU)
+		n.set_meta("boss", bool(m.get("isBoss", false)))
 		n.visible = not bool(m.get("startHidden", false))
 		add_child(n)
 		_register(monsters, p, n, m)
@@ -116,6 +119,117 @@ func _process(delta: float) -> void:
 	if _poll <= 0.0 and not fountains.is_empty():
 		_poll = 1.0
 		refresh_fountains()
+	_animate_monsters(delta)
+
+# ------------------------------------------------------------------ animations des monstres (option « Animations des monstres »)
+# Purement visuelles : aucune règle du jeu n'en dépend. Respiration + flottement au repos (coupés par « Mouvements réduits »),
+# réactions courtes en combat : touché (écrasement, recul, éclair rouge), attaque (bond vers l'avant), étourdi (tremblement).
+
+var _clock := 0.0
+var _react: Dictionary = {}          # Node3D -> {kind, t, dur}
+var _anim_dirty := false             # des sprites portent une déformation à remettre à zéro si l'option est coupée
+
+const REACT_DUR := {"hit": 0.32, "attack": 0.42, "stun": 0.6}
+
+## Joue une réaction courte sur le sprite du monstre `id`.
+func play(id: String, kind: String) -> void:
+	if not Settings.monster_anim:
+		return
+	for p in monsters.keys():
+		for e in monsters[p]:
+			if str(e.def.id) == id and is_instance_valid(e.node) and e.node.visible:
+				_end_react(e.node)
+				_react[e.node] = {"kind": kind, "t": 0.0, "dur": float(REACT_DUR.get(kind, 0.4))}
+				if kind == "hit":
+					var base: Material = e.node.material_override
+					e.node.set_meta("mat0", base)
+					var flash: StandardMaterial3D = base.duplicate()
+					flash.albedo_color = Color(1.0, 0.35, 0.35)
+					e.node.material_override = flash
+				return
+
+func _end_react(n: Node3D) -> void:
+	if n.has_meta("mat0"):
+		(n as MeshInstance3D).material_override = n.get_meta("mat0")
+		n.remove_meta("mat0")
+	_react.erase(n)
+
+func _reset_pose(n: Node3D) -> void:
+	if not n.has_meta("by"):
+		return
+	var off: Vector3 = n.get_meta("off", Vector3.ZERO)
+	n.position.x -= off.x
+	n.position.z -= off.z
+	n.set_meta("off", Vector3.ZERO)
+	n.scale = Vector3.ONE
+	n.position.y = float(n.get_meta("by"))
+
+func _animate_monsters(delta: float) -> void:
+	if not Settings.monster_anim:
+		if _anim_dirty:
+			_anim_dirty = false
+			for k in _react.keys():
+				if is_instance_valid(k):
+					_end_react(k)
+			for p in monsters.keys():
+				for e in monsters[p]:
+					if is_instance_valid(e.node):
+						_reset_pose(e.node)
+		return
+	_clock += delta
+	var cam := get_viewport().get_camera_3d()
+	var cb: Basis = cam.global_transform.basis if cam != null else Basis.IDENTITY
+	var idle: bool = not Settings.reduced_motion
+	for p in monsters.keys():
+		for e in monsters[p]:
+			if not is_instance_valid(e.node):
+				continue
+			var n: Node3D = e.node
+			if not n.visible or not n.has_meta("by"):
+				continue
+			_anim_dirty = true
+			var ph: float = n.get_meta("ph", 0.0)
+			var h: float = n.get_meta("h", 1.0)
+			var sy := 1.0
+			var sx := 1.0
+			var dy := 0.0
+			var off := Vector3.ZERO
+			if idle:
+				var boss: bool = n.get_meta("boss", false)
+				sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
+				dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
+			var r: Variant = _react.get(n)
+			if r != null:
+				r["t"] = float(r.t) + delta
+				var k: float = float(r.t) / float(r.dur)
+				if k >= 1.0:
+					_end_react(n)
+				else:
+					var env := 1.0 - k
+					var arc := sin(k * PI)
+					match str(r.kind):
+						"hit":
+							sy -= 0.16 * env
+							sx += 0.12 * env
+							off -= cb.z * 0.14 * env                     # recul (s'éloigne de la caméra)
+							var m := (n as MeshInstance3D).material_override as StandardMaterial3D
+							if m != null:
+								m.albedo_color = Color(1.0, 0.35 + 0.65 * k, 0.35 + 0.65 * k)
+						"attack":
+							sy += 0.16 * arc
+							sx += 0.16 * arc
+							dy += 0.06 * arc
+							off += cb.z * 0.28 * arc                     # bond vers la caméra
+						"stun":
+							off += cb.x * 0.045 * sin(_clock * 46.0) * env
+							sy -= 0.03 * env
+			sx *= 1.0 - (sy - 1.0) * 0.5                                  # volume à peu près conservé
+			n.scale = Vector3(sx, sy, 1.0)
+			n.position.y = float(n.get_meta("by")) + h * 0.5 * (sy - 1.0) + dy
+			var prev: Vector3 = n.get_meta("off", Vector3.ZERO)
+			n.position.x += off.x - prev.x
+			n.position.z += off.z - prev.z
+			n.set_meta("off", off)
 
 ## PNJ fixe (forgeron, maître des talents) : grand sprite posé au sol.
 func add_npc(icon: String, x: int, y: int) -> void:
@@ -189,7 +303,10 @@ func _slide(n: Node3D, p: Vector2i, instant: bool = false) -> void:
 	if instant:
 		n.position = target
 		return
-	create_tween().tween_property(n, "position", target, 0.4).set_trans(Tween.TRANS_SINE)
+	# x et z séparément : la hauteur (y) reste libre pour les animations des monstres
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(n, "position:x", target.x, 0.4).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(n, "position:z", target.z, 0.4).set_trans(Tween.TRANS_SINE)
 
 func _register(dict: Dictionary, p: Vector2i, node: Node3D, def: Dictionary) -> void:
 	if not dict.has(p):
@@ -223,15 +340,31 @@ func set_monster_visible(id: String, on: bool) -> void:
 			if str(e.def.id) == id and is_instance_valid(e.node):
 				e.node.visible = on
 
-func remove_monster(id: String) -> void:
+func remove_monster(id: String, animate: bool = false) -> void:
 	for p in monsters.keys():
 		var keep: Array = []
 		for e in monsters[p]:
 			if str(e.def.id) == id:
-				e.node.queue_free()
+				if animate and Settings.monster_anim and is_instance_valid(e.node) and e.node.visible:
+					_die(e.node)
+				else:
+					e.node.queue_free()
 			else:
 				keep.append(e)
 		monsters[p] = keep
+
+## Mort d'un monstre : il s'affaisse et s'efface (0,5 s), puis le sprite est libéré.
+func _die(n: MeshInstance3D) -> void:
+	_end_react(n)
+	_reset_pose(n)
+	var m: StandardMaterial3D = (n.material_override as StandardMaterial3D).duplicate()
+	n.material_override = m
+	var h: float = n.get_meta("h", 1.0)
+	var tw := n.create_tween().set_parallel(true)
+	tw.tween_property(n, "scale:y", 0.25, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(n, "position:y", n.position.y - h * 0.375, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(m, "albedo_color:a", 0.0, 0.5)
+	tw.chain().tween_callback(n.queue_free)
 
 func remove_item(id: String) -> void:
 	for p in items.keys():

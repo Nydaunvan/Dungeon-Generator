@@ -461,6 +461,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			if not Statuses.apply_from_spell(gs, eff_spell, tst, _mname(target), str(caster.id), false):
 				gs.add_log(L.fa(L.t("rules.combat.resiste_a_la_berceuse"), _mname(target)))
 			events.append({"type": "popup", "text": "💤", "color": Color("b9a0ff")})
+			events.append({"type": "mon_stun", "id": str(target.id)})
 		"selfBuff":
 			gs.add_log(L.fa(L.t("rules.combat.lance"), [caster.name, spell.get("icon", ""), spell.name]), true)
 			Statuses.apply_from_spell(gs, spell, caster, str(caster.name), str(caster.id), true)
@@ -542,6 +543,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	else:
 		gs.add_log(L.fa(L.t("rules.combat.pour_degats"), [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""]), true)
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
+	events.append({"type": "mon_hit", "id": str(target.id), "crit": crit})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
 	if lifesteal > 0 and dmg > 0 and not aoe:
@@ -671,6 +673,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	gs.add_log(L.fa(L.t("rules.combat.attaque_et_blesse_degats"), [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""]), true)
 	Sound.sfx("monster_attack")
 	events.append({"type": "fx", "fx": "hit"})
+	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
@@ -699,6 +702,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	gs.add_log(L.fa(L.t("rules.combat.utilise_sur_degats"), [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""]), true)
 	Sound.sfx("monster_attack")
 	events.append({"type": "fx", "fx": "hit"})
+	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")

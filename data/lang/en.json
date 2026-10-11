@@ -2160,7 +2160,9 @@
   "ui.shop_modal.scr_crit": "crit %d %% (up to %d)",
   "ui.shop_modal.scr_ignore_resist": "Ignores all of the target's resistance.",
   "ui.shop_modal.scr_conditions": "Read during combat. The hero needs at least %d stamina, but it is not spent. No cooldown; the scroll is consumed.",
-  "ui.shop_modal.scr_base": "Spell base: %d – %d, plus the caster's power (Intelligence ÷ 3 − 1, gear, level). Result depending on who reads it:"
+  "ui.shop_modal.scr_base": "Spell base: %d – %d, plus the caster's power (Intelligence ÷ 3 − 1, gear, level). Result depending on who reads it:",
+  "ui.settings.monster_anim": "Monster animations",
+  "ui.settings.monster_anim_hint": "Monsters breathe while idle and react in combat (hit, attack, stun, death). « Reduced motion » turns the breathing off."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

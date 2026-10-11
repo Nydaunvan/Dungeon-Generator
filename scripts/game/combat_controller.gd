@@ -337,9 +337,16 @@ func _drain() -> void:
 		match str(e.type):
 			"popup":
 				popup.emit(str(e.text), e.color)
+			"mon_hit":
+				var mst: Dictionary = combat.lstate().monsters.get(str(e.id), {})
+				view.entities.play(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
+			"mon_attack":
+				view.entities.play(str(e.id), "attack")
+			"mon_stun":
+				view.entities.play(str(e.id), "stun")
 			"monster_died":
 				Crumbs.mark("monstre mort %s%s" % [str(e.id), "" if model_in_combat() else " (combat fini)"])
-				view.entities.remove_monster(str(e.id))
+				view.entities.remove_monster(str(e.id), true)
 				if not model_in_combat():
 					gs.stats["calmTicks"] = Wanderers.CALM_TICKS       # répit : aucun monstre ne s'approche juste après un combat
 				if not model_in_combat() and not combat.summary.is_empty():

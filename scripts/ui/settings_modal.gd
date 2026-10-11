@@ -223,6 +223,8 @@ func _graphics() -> void:
 	for v in FLAME_VALUES:
 		flame_opts.append([v, L.t("ui.settings.fps_unit") % v])
 	_row(L.t("ui.settings.opt_flame_fps"), _opt("flame_fps", flame_opts))
+	_check(L.t("ui.settings.monster_anim"), Settings.monster_anim, func(v: bool): Settings.set_monster_anim(v))
+	_hint(L.t("ui.settings.monster_anim_hint"))
 
 func _opt(key: String, options: Array) -> OptionButton:
 	return _drop(options, Settings.opt(key), func(v):
