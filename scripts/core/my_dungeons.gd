@@ -349,7 +349,9 @@ const GALLERY_PAGE := 20
 
 ## Donjons publics. `sort` : "recent" ou "popular". `query` : mot du titre. Renvoie {ok, data:[{id,title,description,downloads,created_at,owner_id,pseudo,game_version}]}.
 static func gallery(query: String, sort: String, offset: int) -> Dictionary:
-	var q := "/rest/v1/dungeons?is_public=eq.true&select=id,title,description,downloads,created_at,owner_id,game_version,profiles(pseudo)"
+	# Lien explicite vers l'auteur : dungeon_reports, dungeon_downloads et gallery_clears créent d'autres chemins vers profiles,
+	# et « profiles(pseudo) » seul serait refusé par le serveur comme ambigu (PGRST201).
+	var q := "/rest/v1/dungeons?is_public=eq.true&select=id,title,description,downloads,created_at,owner_id,game_version,profiles!dungeons_owner_id_fkey(pseudo)"
 	var term := query.strip_edges().replace("*", "").replace(",", " ").replace("(", " ").replace(")", " ").uri_encode()
 	if term != "":
 		q += "&title=ilike.*%s*" % term
