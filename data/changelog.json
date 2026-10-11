@@ -1,5 +1,30 @@
 [
  {
+  "version": "1.33.2",
+  "changes": [
+   "## Statistiques précises et visibles",
+   "Barème unique, affiché tel quel : Force = dégâts minimum, Dextérité = dégâts maximum, critique (+1 % par point au-dessus de 10) et esquive (+0,8 % par point au-dessus de 10), Constitution = PV et garde (réduit tous les dégâts, +1 % par point au-dessus de 10), Intelligence = puissance de tous les sorts (dégâts, soins, boucliers, restauration d'endurance), Vitesse = fréquence des tours. Les résistances des héros s'appliquent désormais vraiment.",
+   "Infobulles partout : en survolant une statistique (fiche de personnage, panneau d'équipement, fiche d'un monstre), la règle, le calcul chiffré, chaque source de modification (objets équipés, talents, statuts) et le résultat s'affichent. Les objets montrent leur effet réel sur le personnage (« → PV max +6 · garde +2 % »), les sorts leur base, leur puissance et le total.",
+   "La fiche du personnage détaille base, équipement, talents et statuts pour chaque caractéristique. La carte du survol indique la base et les modificateurs (vert si augmenté, rouge si réduit).",
+   "La vitesse devient une vraie caractéristique : champ « Vitesse » des personnages de base et des classes dans l'administration, vitesse d'un monstre calculée par sa fiche ou sa Dextérité.",
+   "Le guide explique toutes ces règles dans un nouveau sujet « Statistiques ».",
+   "## Combat",
+   "Nouvelle file d'initiative par manches (jauges + plafond) : personne n'agit deux fois avant que tous les autres combattants vivants aient joué, ce qui met fin aux enchaînements de deux tours d'un même camp. En cas d'égalité, le camp qui n'a pas joué en dernier passe en premier.",
+   "Équilibrage : les soigneurs soignent davantage et les héros subissent moins de dégâts avec ces règles ; la difficulté des groupes de monstres a évolué. Les parties classées enregistrées avant cette version ne se rejouent plus à l'identique.",
+   "## Évolution de classe et personnages",
+   "La fenêtre d'évolution (et celle des talents) s'ouvre immédiatement à la sortie du combat, sans attendre une action, et affiche les icônes des classes au lieu d'un texte.",
+   "Après l'évolution, la classe (nom, icône, couleur) est mise à jour sur la carte du personnage.",
+   "## Sorts",
+   "Les touches de sorts (2, 3…) fonctionnent aussi en exploration pour lancer les sorts du personnage sélectionné (soins, protections…).",
+   "Nouvelles icônes claires pour tous les sorts du Barde, du Skalde et du Ménestrel ; les sauvegardes et la configuration de l'appareil sont mises à jour automatiquement.",
+   "## En coulisses",
+   "Son : marge de lecture ajoutée après les échantillons synthétisés (correction d'une lecture hors tampon du mixeur audio).",
+   "Diagnostic : l'état du moteur est relevé toutes les 10 secondes dans trace.log et un arrêt brutal est détecté à la session suivante ; l'adaptation automatique de la qualité ne modifie plus le lissage ni le filtrage en pleine partie.",
+   "Tchat : colonnes fixes (heure, pseudo, texte, menu) et retours à la ligne entre les mots ; la fenêtre en ligne garde la même hauteur d'un onglet à l'autre.",
+   "Pause : grand symbole ⏸ au centre, reprise par clic, P, Échap, Espace ou Entrée."
+  ]
+ },
+ {
   "version": "1.33.1",
   "changes": [
    "## Défi de la semaine",
