@@ -429,6 +429,68 @@ static func _row(parent: Control, label: String, value: String, delta: float, sh
 		h.add_child(dl)
 	parent.add_child(h)
 
+static func _wrap(box: Control, text: String, size: int, col: Color) -> void:
+	var l := AdminUtil.label(text, size, col)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(l)
+
+## Détail d'un parchemin : ce que fait le sort lu (le lecteur est le lanceur : ses statistiques comptent) et, pour chaque héros
+## vivant, la fourchette exacte obtenue avec sa puissance de sort (Intelligence), son équipement et son niveau. Mêmes formules que Combat.cast_spell.
+static func _scroll_section(box: VBoxContainer, gs: GameState, sp: Dictionary) -> void:
+	var mode := str(sp.get("mode", "damage"))
+	var phys: bool = str(sp.get("style", "")) == "physical"
+	box.add_child(HSeparator.new())
+	var ic := str(sp.get("icon", ""))
+	_wrap(box, L.fa(L.t("ui.shop_modal.scr_titre"), ["" if ic.begins_with("@") else ic, L.c(str(sp.name))]).strip_edges(), 14, UiTheme.GOLD)
+	var dur := int(sp.get("statusDuration", 3))
+	match mode:
+		"damage":
+			_wrap(box, L.t("ui.shop_modal.scr_mode_damage_phys" if phys else "ui.shop_modal.scr_mode_damage"), 13, UiTheme.PARCH)
+		"damageGroup":
+			_wrap(box, L.t("ui.shop_modal.scr_mode_damageGroup"), 13, UiTheme.PARCH)
+		"sleepGroup":
+			_wrap(box, L.fa(L.t("ui.shop_modal.scr_mode_sleepGroup"), [maxi(1, int(round(dur / 2.0))), dur]), 13, UiTheme.PARCH)
+		"partyUtility":
+			_wrap(box, L.fa(L.t("ui.shop_modal.scr_mode_partyUtility"), [_num(float(sp.get("cooldownReductionSec", 0))), dur]), 13, UiTheme.PARCH)
+		_:
+			_wrap(box, L.t("ui.shop_modal.scr_mode_" + mode), 13, UiTheme.PARCH)
+	# valeurs chiffrées, héros par héros
+	var base := {}
+	var unit := ""
+	match mode:
+		"damage", "damageGroup": base = {"lo": sp.get("dmgMin", 0), "hi": sp.get("dmgMax", 0)}; unit = "ui.shop_modal.scr_u_degats"
+		"healSingle", "healParty": base = {"lo": sp.get("healMin", 0), "hi": sp.get("healMax", 0)}; unit = "ui.shop_modal.scr_u_pv"
+		"staminaRestoreSingle": base = {"lo": sp.get("staminaMin", 0), "hi": sp.get("staminaMax", 0)}; unit = "ui.shop_modal.scr_u_endurance"
+		"shieldSingle": base = {"lo": sp.get("shieldMin", 0), "hi": sp.get("shieldMax", 0)}; unit = "ui.shop_modal.scr_u_bouclier"
+	if not base.is_empty():
+		var run_crit := int(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).critChanceBonus)
+		_wrap(box, L.fa(L.t("ui.shop_modal.scr_base"), [int(base.lo), int(base.hi)]), 12, UiTheme.DIM)
+		for c in gs.party:
+			if int(c.hp) <= 0:
+				continue
+			var sb: Dictionary = Stats.spell_bonus(c, mode)
+			var lo := int(base.lo) + int(sb.total)
+			var hi := int(base.hi) + int(sb.total)
+			_row(box, str(c.name), L.fa(L.t(unit), [lo, hi]), 0.0, false)
+			var calc := L.fa(L.t("ui.shop_modal.scr_calcul"), [int(sb.total), int(sb.power), int(sb.gear), int(sb.level)])
+			if mode == "damage" or mode == "damageGroup":
+				var cc := clampi(int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + run_crit, 0, 100)
+				if cc > 0:
+					calc += " · " + L.fa(L.t("ui.shop_modal.scr_crit"), [cc, hi * 2])
+			_wrap(box, calc, 11, UiTheme.DIM)
+		if mode == "shieldSingle" or mode == "staminaRestoreSingle":
+			_wrap(box, L.t("ui.spell_tip.int_seule"), 11, UiTheme.DIM)
+		if mode == "damage" or mode == "damageGroup":
+			_wrap(box, L.t("ui.shop_modal.scr_ignore_resist" if bool(sp.get("ignoreAllResist", false)) else "ui.spell_tip.reduit_par_cible"), 11, UiTheme.DIM)
+	if int(sp.get("spellLifestealPct", 0)) > 0:
+		_wrap(box, L.fa(L.t("ui.spell_tip.vol_de_vie_des_degats"), int(sp.spellLifestealPct)), 12, UiTheme.PARCH)
+	var se := str(sp.get("statusEffect", ""))
+	if se != "" and mode != "sleepGroup" and not Statuses.def(se).is_empty():
+		var sd := Statuses.def(se)
+		var extra := " · %d/tour" % int(sp.statusPower) if int(sp.get("statusPower", 0)) > 0 else ""
+		_wrap(box, L.fa(L.t("ui.spell_tip.effet_de_statut_tour"), [sd.get("icon", ""), L.c(str(sd.get("label", se))), int(sp.get("statusChance", 0)), dur, extra]), 12, UiTheme.PARCH)
+	_wrap(box, L.fa(L.t("ui.shop_modal.scr_conditions"), int(sp.get("staminaCost", 15))), 11, UiTheme.DIM)
+
 static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: Dictionary, g: Dictionary, buy: bool, village: bool, done: Callable, refresh: Callable) -> void:
 	if g.is_empty():
 		var l := AdminUtil.label(L.t("ui.shop_modal.choisir_objet"), 14, UiTheme.DIM)
@@ -516,6 +578,7 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 				var sl := AdminUtil.label(L.fa(L.t("rules.inventory.lance_usage_unique_sans_cout"), sp.name), 14, UiTheme.PARCH)
 				sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				box.add_child(sl)
+				_scroll_section(box, gs, sp)
 				shown += 1
 	if str(rep.get("type", "")) == "key":
 		var kl := AdminUtil.label(L.t("rules.inventory.ouvre_une_porte_verrouillee"), 14, UiTheme.PARCH)
