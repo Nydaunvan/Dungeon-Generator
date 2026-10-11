@@ -179,6 +179,8 @@ static func mode_name(difficulty: String, kind: String = "difficulty") -> String
 		return L.t("ui.sadmin.mode_month")
 	if kind == "weekly":
 		return L.t("ui.hub.mode_weekly")
+	if kind == "daily":
+		return L.t("ui.hub.mode_daily")
 	if ChallengesModal.DIFF_KEYS.has(difficulty):
 		return L.t(ChallengesModal.DIFF_KEYS[difficulty])
 	return difficulty

@@ -903,6 +903,8 @@ func _leave_ranked() -> void:
 		header.append([L.t("ui.leave.hc_note"), Color("e0b87a"), 13])
 	elif str(gs.cfg.get("rankedKind", "")) == "weekly":
 		header.append([L.t("ui.leave.weekly_note"), Color("9cc79a"), 13])
+	elif str(gs.cfg.get("rankedKind", "")) == "daily":
+		header.append([L.t("ui.leave.daily_note"), Color("9cc79a"), 13])
 	var opts: Array = [
 		{"icon": "📤" if cleared > 0 else "🏳", "title": L.t("ui.leave.opt_finish_t") if cleared > 0 else L.t("ui.leave.opt_abandon_t"),
 			"desc": L.t("ui.leave.opt_finish_d") if cleared > 0 else L.t("ui.leave.opt_abandon_d"),

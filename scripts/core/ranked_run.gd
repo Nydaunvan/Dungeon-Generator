@@ -58,7 +58,7 @@ static func unit_key(metric: String) -> String:
 # ------------------------------------------------------------------ côté jeu
 
 ## Demande une partie classée au serveur. Renvoie {ok, run_id, seed, params} ou {ok:false, error_code…}.
-## `kind` : "difficulty" (par difficulté), "hardcore_month" (Hardcore du mois : un essai par jour) ou "weekly" (Défi de la semaine : règle spéciale, essais illimités).
+## `kind` : "difficulty" (par difficulté), "hardcore_month" (Hardcore du mois : un essai par jour) ou "weekly" (Défi de la semaine : règle spéciale, essais illimités) ou "daily" (Défi du jour : petit défi quotidien, essais illimités).
 ## `test` : partie de TEST réservée aux super admins (le serveur refuse les autres) : hors classements, sans essai consommé.
 static func start(difficulty: String, kind: String = "difficulty", test: bool = false) -> Dictionary:
 	if not Cloud.is_signed_in():
@@ -75,6 +75,14 @@ static func start(difficulty: String, kind: String = "difficulty", test: bool = 
 static func weekly_current() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/weekly_current", {})
 
+## Défi du jour en cours (lecture publique) : {period, starts_at, ends_at, rule{rule_id, icon, label_fr/en, desc_fr/en, mods}, levels, width, height, difficulty}.
+static func daily_current() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/daily_current", {})
+
+## État du Défi du jour du joueur connecté : {done (réussi aujourd'hui), tries (parties lancées aujourd'hui), total (jours réussis)}.
+static func daily_status() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/my_daily_status", {}, true)
+
 ## Série de semaines du Défi du joueur connecté : {streak, played_this_week}.
 static func my_streak() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/my_weekly_streak", {}, true)
@@ -88,6 +96,8 @@ static func mode_label(cfg: Dictionary) -> String:
 	var kind := str(cfg.get("rankedKind", ""))
 	if kind == "weekly":
 		return "📅 " + L.t("ui.hub.mode_weekly")
+	if kind == "daily":
+		return "🌅 " + L.t("ui.hub.mode_daily")
 	if kind == "hardcore_month":
 		return "🔥 " + L.t("ui.hub.mode_hardcore")
 	if kind == "difficulty" or str(cfg.get("runSeed", "")) != "":

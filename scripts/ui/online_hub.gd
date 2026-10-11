@@ -9,9 +9,11 @@ const TABS := [["play", "ui.hub.tab_play", "🎮"], ["boards", "ui.hub.tab_board
 const MODES := ["free", "ranked", "weekly", "hardcore"]
 ## Ce que mesure le classement de certaines règles du Défi de la semaine (les autres comptent des niveaux).
 const RULE_METRIC := {"richest": "gold", "bossrush": "bosses"}
-const MODE_ICON := {"free": "🎲", "ranked": "🏆", "weekly": "📅", "hardcore": "🔥"}
-const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "weekly": "ui.hub.mode_weekly", "hardcore": "ui.hub.mode_hardcore"}
-const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "weekly": "ui.hub.tag_weekly", "hardcore": "ui.hub.tag_hardcore"}
+## Modes de l'onglet « Jouer » : les classements (MODES) n'incluent pas le Défi du jour, qui n'a pas de classement.
+const PLAY_MODES := ["free", "ranked", "weekly", "daily", "hardcore"]
+const MODE_ICON := {"free": "🎲", "ranked": "🏆", "weekly": "📅", "daily": "🌅", "hardcore": "🔥"}
+const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "weekly": "ui.hub.mode_weekly", "daily": "ui.hub.mode_daily", "hardcore": "ui.hub.mode_hardcore"}
+const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "weekly": "ui.hub.tag_weekly", "daily": "ui.hub.tag_daily", "hardcore": "ui.hub.tag_hardcore"}
 const XP_MULT := {"easy": "×1", "normal": "×1,5", "hard": "×2", "hardcore": "×3"}
 const STATUS_KEYS := {"started": "ui.hub.st_started", "submitted": "ui.hub.st_submitted", "verified": "ui.hub.st_verified",
 	"rejected": "ui.hub.st_rejected", "expired": "ui.hub.st_expired"}
@@ -31,6 +33,7 @@ var _strip_box: VBoxContainer
 var _tab_buttons: Dictionary = {}
 var _xp := -1
 var _weekly: Dictionary = {}     ## règle de la semaine (RankedRun.weekly_current), vide tant qu'elle n'est pas lue
+var _daily: Dictionary = {}      ## Défi du jour (RankedRun.daily_current), vide tant qu'il n'est pas lu
 var _runs: Array = []
 var _runs_holder: VBoxContainer
 var _run_clocks: Array = []
@@ -210,19 +213,19 @@ func _load_xp() -> void:
 
 func _show_play() -> void:
 	var tiles := GridContainer.new()
-	tiles.columns = 4 if _width >= 900.0 else (2 if not _narrow() else 1)
+	tiles.columns = 5 if _width >= 1000.0 else (3 if not _narrow() else 1)
 	tiles.add_theme_constant_override("h_separation", 8)
 	tiles.add_theme_constant_override("v_separation", 8)
 	tiles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_child(tiles)
-	for m in MODES:
+	for m in PLAY_MODES:
 		tiles.add_child(_tile(m))
 	var detail := HubKit.card(UiTheme.BRONZE_DARK, HubKit.CARD_BG, 14)
 	_body.add_child(detail)
 	var box := HubKit.vbox(8)
 	detail.add_child(box)
 	_fill_mode(box)
-	if (_mode == "hardcore" or _mode == "ranked" or _mode == "weekly") and _signed() and not _runs_ok:
+	if (_mode == "hardcore" or _mode == "ranked" or _mode == "weekly" or _mode == "daily") and _signed() and not _runs_ok:
 		_load_runs_for_play()
 
 func _tile(m: String) -> Button:
@@ -318,6 +321,21 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 			], cols)
 			_load_weekly(rule_box, _gen)
+		"daily":
+			box.add_child(HubKit.label("🌅  " + L.t("ui.hub.mode_daily"), GOLD, 20, true, false))
+			box.add_child(HubKit.label(L.t("ui.hub.daily_desc"), UiTheme.PARCH, 14))
+			var day_box := HubKit.card(Color("7a5a2c"), Color(0.2, 0.14, 0.05, 0.45), 12)
+			day_box.name = "DailyCard"
+			box.add_child(day_box)
+			_cta(box, "daily")
+			HubKit.facts(box, [
+				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.daily_dungeon")],
+				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.daily_tries")],
+				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
+				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.daily_reward")],
+				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
+			], cols)
+			_load_daily(day_box, _gen)
 		"hardcore":
 			var key := _month_key()
 			box.add_child(HubKit.label("🔥  " + L.fa(L.t("ui.hub.hc_title"), key.substr(5) + "/" + key.substr(0, 4)), HubKit.FIRE, 20, true, false))
@@ -332,6 +350,50 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["🎖", L.t("ui.hub.f_reward"), L.t("ui.hub.hc_reward")],
 				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 			], cols)
+
+## Lit (une fois) le Défi du jour et remplit sa carte : règle, temps restant, état du joueur.
+func _load_daily(card: Control, mine: int) -> void:
+	var v := HubKit.vbox(4)
+	card.add_child(v)
+	if _daily.is_empty() or _utc(_daily.get("ends_at", "")) < Time.get_unix_time_from_system():
+		var wait := _wait(v)
+		var r: Dictionary = await RankedRun.daily_current()
+		if mine != _gen or not _alive():
+			return
+		wait.queue_free()
+		if not r.ok or not (r.data is Dictionary):
+			_error(v, r)
+			return
+		_daily = r.data
+	var rule: Dictionary = _daily.get("rule", {})
+	var en := TranslationServer.get_locale().begins_with("en")
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	v.add_child(head)
+	head.add_child(HubKit.label(str(rule.get("icon", "")), UiTheme.PARCH, 34, false, false, HORIZONTAL_ALIGNMENT_CENTER))
+	var t := HubKit.vbox(0)
+	head.add_child(t)
+	t.add_child(HubKit.label(L.t("ui.hub.daily_rule"), UiTheme.DIM, 12))
+	t.add_child(HubKit.label(str(rule.get("label_en" if en else "label_fr", "")), GOLD, 20, true))
+	v.add_child(HubKit.label(str(rule.get("desc_en" if en else "desc_fr", "")), UiTheme.PARCH, 14))
+	var l_end := HubKit.label("", UiTheme.PARCH, 13)
+	v.add_child(l_end)
+	_wk_clocks.clear()
+	_wk_clocks.append({"label": l_end, "kind": "end", "t": _utc(_daily.get("ends_at", ""))})
+	var tm := Timer.new()
+	tm.wait_time = 1.0
+	tm.autostart = true
+	tm.timeout.connect(_tick_weekly.bind(mine))
+	v.add_child(tm)
+	_tick_weekly(mine)
+	if _signed():
+		var st: Dictionary = await RankedRun.daily_status()
+		if mine != _gen or not _alive() or not st.ok or not (st.data is Dictionary):
+			return
+		var done := bool(st.data.get("done", false))
+		var line := (L.t("ui.hub.daily_done") if done else L.t("ui.hub.daily_todo")) + "   ·   " + L.fa(L.t("ui.hub.daily_total"), int(st.data.get("total", 0)))
+		v.add_child(HubKit.label(line, HubKit.GOOD if done else UiTheme.PARCH, 13))
+	_modal.call_deferred("_fit")
 
 ## Lit (une fois) la règle de la semaine et remplit sa carte.
 func _load_weekly(card: Control, mine: int) -> void:
@@ -470,7 +532,7 @@ func _cta(box: VBoxContainer, mode: String) -> void:
 		status.add_theme_color_override("font_color", HubKit.WARN)
 		box.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 46))
 		return
-	var b := HubKit.button(L.t("ui.hub.ranked_play") if mode == "ranked" else (L.t("ui.hub.weekly_play") if mode == "weekly" else L.t("ui.hub.hc_play")), func(): _ask(mode), true, 46)
+	var b := HubKit.button(L.t("ui.hub.ranked_play") if mode == "ranked" else (L.t("ui.hub.weekly_play") if mode == "weekly" else (L.t("ui.hub.daily_play") if mode == "daily" else L.t("ui.hub.hc_play"))), func(): _ask(mode), true, 46)
 	b.name = "CtaButton"
 	box.add_child(b)
 	_update_cta()
@@ -501,7 +563,7 @@ func _update_cta() -> void:
 			for r in _runs:
 				if str(r.get("status", "")) == "submitted":
 					pending += 1
-		status.text = L.fa(L.t("ui.hub.pending"), pending) if pending > 0 else (L.t("ui.hub.weekly_status") if _mode == "weekly" else "")
+		status.text = L.fa(L.t("ui.hub.pending"), pending) if pending > 0 else (L.t("ui.hub.weekly_status") if _mode == "weekly" else (L.t("ui.hub.daily_status") if _mode == "daily" else ""))
 
 func _load_runs_for_play() -> void:
 	var mine := _gen
@@ -525,6 +587,10 @@ func _ask(mode: String) -> void:
 		var rule: Dictionary = _weekly.get("rule", {})
 		var rname := str(rule.get("label_en" if TranslationServer.get_locale().begins_with("en") else "label_fr", ""))
 		Dialogs.confirm(_host, L.t("ui.hub.weekly_play"), L.fa(L.t("ui.hub.weekly_confirm"), rname), func(): _start("normal", "weekly"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
+	elif mode == "daily":
+		var drule: Dictionary = _daily.get("rule", {})
+		var dname := str(drule.get("label_en" if TranslationServer.get_locale().begins_with("en") else "label_fr", ""))
+		Dialogs.confirm(_host, L.t("ui.hub.daily_play"), L.fa(L.t("ui.hub.daily_confirm"), dname), func(): _start("normal", "daily"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 	elif mode == "hardcore":
 		Dialogs.confirm(_host, L.t("ui.hub.hc_play"), L.t("ui.hub.hc_confirm"), func(): _start("hardcore", "hardcore_month"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 	else:
