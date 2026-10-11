@@ -1,5 +1,21 @@
 [
  {
+  "version": "1.33.3",
+  "changes": [
+   "## Interface",
+   "La pause est désormais une icône ⏸ dans la vue de jeu (en haut à droite, à côté de 📊 ⌨️ 🔊), disponible dans tous les modes, y compris en combat, et plus dans le menu de l'accueil. En partie classée ou en défi, le temps passé en pause compte dans le temps de jeu du classement.",
+   "Une pastille « Pause » s'affiche dès que le jeu est figé automatiquement : volet d'inventaire déployé, marchand, piège, fontaine, évolution, fiche de héros…",
+   "Le menu du haut se replie vers la droite et se déploie au survol (appui sur la poignée sur écran tactile). Le bouton FPS est retiré : le compteur se règle dans Paramètres › Diagnostic (ou touche F3).",
+   "Le tutoriel de création affiche des chiffres simples pour les étapes, à la place d'emojis mal rendus.",
+   "## Statistiques et marchand",
+   "Fenêtres de survol des statistiques réorganisées en cartes : titre et valeur, règle, calcul ligne à ligne, formules et sources avec icônes ; elles s'adaptent à la largeur de l'écran.",
+   "Chez le marchand, un tableau « Effet sur le héros » montre pour chaque statistique la valeur actuelle, la valeur après équipement et la différence (plafonds compris), avec le détail du calcul au survol.",
+   "Le guide est mis à jour (statistiques détaillées, commandes, progression, boutique, interface).",
+   "## Évolution de classe",
+   "Le Barde, le Skalde et le Ménestrel ont leurs propres icônes de classe : la fenêtre d'évolution affiche maintenant une icône pour chacune des 18 classes. Les sauvegardes existantes sont mises à jour automatiquement."
+  ]
+ },
+ {
   "version": "1.33.2",
   "changes": [
    "## Statistiques précises et visibles",
