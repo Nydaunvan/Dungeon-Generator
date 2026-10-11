@@ -20,6 +20,11 @@ const SPELL_ICON_CHANGES_V3 := {
 	"spell_minstrel2": ["🎼", "@icon:spell_minstrel2"], "spell_minstrel3": ["🎺", "@icon:spell_minstrel3"], "spell_minstrel4": ["🎐", "@icon:spell_minstrel4"],
 }
 
+## v3 : icônes de classe du Barde, du Skalde et du Ménestrel (classId → [ancienne icône, nouvelle icône]).
+const CLASS_ICON_CHANGES_V3 := {
+	"class_bard": ["🪕", "@icon:class_bard"], "class_skald": ["🪓", "@icon:class_skald"], "class_minstrel": ["🎼", "@icon:class_minstrel"],
+}
+
 static func schema_of(d: Dictionary) -> int:
 	return int(d.get("schema", 1))
 
@@ -113,4 +118,24 @@ static func _v2_to_v3(d: Dictionary) -> Array[String]:
 				icons += 1
 	if icons > 0:
 		notes.append("icônes de sorts du barde : %d mise(s) à jour" % icons)
+	var cls_n := _fix_class_icons((cfg as Dictionary).get("classes", []), "id")
+	cls_n += _fix_class_icons((cfg as Dictionary).get("party", []), "classId")
+	var sv = d.get("save")
+	if sv is Dictionary:
+		cls_n += _fix_class_icons((sv as Dictionary).get("party", []), "classId")
+	if cls_n > 0:
+		notes.append("icônes de classes du barde : %d mise(s) à jour" % cls_n)
 	return notes
+
+## Remplace l'ancienne icône emoji d'une classe (ou d'un héros de cette classe) par l'image ; `key` : champ qui donne l'id de classe.
+static func _fix_class_icons(list: Variant, key: String) -> int:
+	var n := 0
+	if not (list is Array):
+		return 0
+	for e in list:
+		if e is Dictionary and CLASS_ICON_CHANGES_V3.has(str(e.get(key, ""))):
+			var ch: Array = CLASS_ICON_CHANGES_V3[str(e.get(key))]
+			if str(e.get("icon", "")) == ch[0]:
+				e["icon"] = ch[1]
+				n += 1
+	return n

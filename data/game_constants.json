@@ -2102,6 +2102,18 @@
      "Note sonique"
     ],
     [
+     "class_bard",
+     "Barde (classe)"
+    ],
+    [
+     "class_skald",
+     "Skalde (classe)"
+    ],
+    [
+     "class_minstrel",
+     "Ménestrel (classe)"
+    ],
+    [
      "spell_bard1",
      "Souffle du barde"
     ],

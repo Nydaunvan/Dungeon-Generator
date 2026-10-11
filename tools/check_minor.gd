@@ -31,7 +31,7 @@ func _init() -> void:
 	var m = current_scene
 	var gs = m.gs
 	var ctrl = m.ctrl
-	for i in 120:   # un piège ou un combat de départ peut encore se jouer : on le termine (attaque) puis on attend le calme
+	for i in 400:   # un piège ou un combat de départ peut encore se jouer : on le termine (attaque) puis on attend le calme
 		if not ctrl.model_in_combat() and get_nodes_in_group("modal").is_empty():
 			break
 		if ctrl.model_in_combat() and ctrl.in_combat():
@@ -77,6 +77,12 @@ func _init() -> void:
 			with_icon += 1
 		check("aucun texte « @icon » dans les boutons", not (b as Button).text.contains("@icon"))
 	check("deux classes d'évolution avec icône (%d)" % with_icon, with_icon == 2)
+	# toutes les classes (y compris les évolutions) ont une vraie icône, sans emoji
+	var no_tex := []
+	for cdef in gs.cfg.classes:
+		if load("res://scripts/ui/icon_resolver.gd").texture(str(cdef.get("icon", ""))) == null:
+			no_tex.append(str(cdef.id))
+	check("toutes les classes ont une icône image %s" % str(no_tex), no_tex.is_empty())
 	# choix de la première évolution : la carte du personnage suit
 	for b in btns:
 		if (b as Button).icon != null:

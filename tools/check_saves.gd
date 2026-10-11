@@ -38,6 +38,15 @@ func _ready() -> void:
 		"fichier réécrit": Saves.read_slot(SLOT).get("schema", 0) == SaveMigrations.SCHEMA,
 		"2e lecture sans migration": not SaveMigrations.needs_migration(Saves.read_slot(SLOT)),
 	}
+	# icônes de classes du barde : ancienne icône emoji → image (classes, équipe de config, héros sauvegardés)
+	var oldc := {"config": {"classes": [{"id": "class_skald", "icon": "🪓"}, {"id": "class_berserker", "icon": "🪓"}],
+		"party": [{"classId": "class_bard", "icon": "🪕"}]}, "save": {"party": [{"classId": "class_minstrel", "icon": "🎼"}]},
+		"schema": 2, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(oldc, Data.original_config)
+	checks["icône de classe skalde"] = oldc.config.classes[0].icon == "@icon:class_skald"
+	checks["hache du berserker intacte"] = oldc.config.classes[1].icon == "🪓"
+	checks["icône de classe barde (équipe)"] = oldc.config.party[0].icon == "@icon:class_bard"
+	checks["icône de classe ménestrel (sauvegarde)"] = oldc.save.party[0].icon == "@icon:class_minstrel"
 	# un donjon personnalisé garde sa bibliothèque
 	var cu := {"config": {"itemLibrary": [], "spells": []}, "save": {}, "dungeonOrigin": "custom"}
 	SaveMigrations.migrate(cu, Data.original_config)

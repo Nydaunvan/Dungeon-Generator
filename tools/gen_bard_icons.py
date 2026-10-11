@@ -151,13 +151,65 @@ def minstrel4():  # Mélodie de Dissipation : carillon, éclat violet
         star(d, x, y, r, (255, 255, 255)); star(d, x, y, r * 0.6, VIO)
     return im
 
+WOOD, WOOD_D, WOOD_L = (176, 108, 52), (96, 54, 24), (222, 160, 90)
+STEEL, STEEL_D, STEEL_L = (214, 224, 238), (84, 100, 130), (248, 252, 255)
+
+def class_bard():  # Barde : luth
+    im = canvas(); glow(im, (255, 236, 170), a=150); d = ImageDraw.Draw(im)
+    # manche et chevillier
+    d.polygon([(318, 196), (356, 160), (448, 62), (486, 100), (392, 196)], fill=WOOD_D, outline=(60, 32, 12), width=W)
+    d.rounded_rectangle([420, 38, 492, 96], 14, fill=WOOD, outline=WOOD_D, width=W)
+    for (x, y) in [(438, 52), (462, 52), (438, 74), (462, 74)]:
+        d.ellipse([x - 7, y - 7, x + 7, y + 7], fill=GOLD_L, outline=GOLD_D, width=3)
+    # caisse
+    d.ellipse([60, 190, 380, 470], fill=WOOD, outline=WOOD_D, width=W + 2)
+    d.ellipse([92, 222, 348, 438], outline=WOOD_L, width=10)
+    d.ellipse([170, 280, 262, 372], fill=(54, 30, 14), outline=WOOD_D, width=W)
+    d.ellipse([186, 296, 246, 356], outline=GOLD_D, width=5)
+    # cordes
+    for dx in (-10, 0, 10):
+        d.line([(214 + dx * 0.6, 340), (440 + dx * 1.2, 80)], fill=(255, 245, 210), width=5)
+    d.rounded_rectangle([196, 410, 262, 428], 6, fill=WOOD_D)
+    note(d, 420, 400, 52, fill=GOLD, line=GOLD_D)
+    return im
+
+def class_skald():  # Skalde : hache de guerre et rune dorée
+    im = canvas(); glow(im, (255, 214, 170), a=150); d = ImageDraw.Draw(im)
+    d.polygon([(236, 70), (276, 70), (286, 470), (226, 470)], fill=WOOD, outline=WOOD_D, width=W)
+    d.rectangle([228, 250, 284, 272], fill=GOLD, outline=GOLD_D, width=5)
+    d.rectangle([228, 360, 284, 382], fill=GOLD, outline=GOLD_D, width=5)
+    left = [(236, 96), (150, 60), (70, 110), (60, 190), (120, 240), (236, 210)]
+    right = [(276, 96), (362, 60), (442, 110), (452, 190), (392, 240), (276, 210)]
+    for pts in (left, right):
+        d.polygon(pts, fill=STEEL, outline=STEEL_D, width=W + 1)
+    d.line([(236, 120), (130, 120), (92, 168)], fill=STEEL_L, width=9)
+    d.line([(276, 120), (382, 120), (420, 168)], fill=STEEL_L, width=9)
+    star(d, 256, 150, 40, GOLD)
+    note(d, 118, 468, 46, fill=GOLD, line=GOLD_D)
+    return im
+
+def class_minstrel():  # Ménestrel : lyre dorée et notes
+    im = canvas(); glow(im, VIO_L, a=160); d = ImageDraw.Draw(im)
+    d.arc([86, 60, 426, 420], 0, 180, fill=GOLD_D, width=44)
+    d.arc([86, 60, 426, 420], 0, 180, fill=GOLD, width=28)
+    d.line([(100, 240), (100, 120)], fill=GOLD_D, width=44); d.line([(100, 240), (100, 120)], fill=GOLD, width=28)
+    d.line([(412, 240), (412, 120)], fill=GOLD_D, width=44); d.line([(412, 240), (412, 120)], fill=GOLD, width=28)
+    d.rounded_rectangle([70, 90, 442, 130], 14, fill=GOLD, outline=GOLD_D, width=W)
+    for x in (150, 205, 256, 307, 362):
+        d.line([(x, 130), (x, 400)], fill=(255, 250, 225), width=7)
+    d.rounded_rectangle([180, 390, 332, 450], 20, fill=GOLD, outline=GOLD_D, width=W)
+    note(d, 196, 300, 56, fill=VIO, line=VIO_D)
+    note(d, 330, 250, 44, fill=BLUE, line=BLUE_D, flag=False)
+    star(d, 420, 60, 36, (255, 255, 255)); star(d, 420, 60, 22, VIO)
+    return im
+
 ICONS = {"bard1": bard1, "skald1": skald1, "skald2": skald2, "skald3": skald3, "skald4": skald4,
-         "minstrel1": minstrel1, "minstrel2": minstrel2, "minstrel3": minstrel3, "minstrel4": minstrel4}
+         "minstrel1": minstrel1, "class_bard": class_bard, "class_skald": class_skald, "class_minstrel": class_minstrel, "minstrel2": minstrel2, "minstrel3": minstrel3, "minstrel4": minstrel4}
 
 if __name__ == "__main__":
-    sheet = Image.new("RGBA", (128 * 5, 128 * 2), (30, 24, 20, 255))
+    sheet = Image.new("RGBA", (128 * 6, 128 * 2), (30, 24, 20, 255))
     for i, (k, fn) in enumerate(ICONS.items()):
         small = fn().resize((128, 128), Image.LANCZOS)
-        small.save(os.path.join(OUT, "spell_%s.png" % k))
-        sheet.alpha_composite(small, ((i % 5) * 128, (i // 5) * 128))
+        small.save(os.path.join(OUT, ("%s.png" % k) if k.startswith("class_") else ("spell_%s.png" % k)))
+        sheet.alpha_composite(small, ((i % 6) * 128, (i // 6) * 128))
     sheet.save(os.environ.get("SHEET", "/tmp/bard_sheet.png"))

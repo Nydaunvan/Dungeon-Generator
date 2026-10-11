@@ -1005,7 +1005,7 @@
   {
    "id": "class_bard",
    "name": "Barde",
-   "icon": "🪕",
+   "icon": "@icon:class_bard",
    "baseSpeed": 11,
    "allowedWeaponTypes": [
     "sword",
@@ -1034,7 +1034,7 @@
   {
    "id": "class_skald",
    "name": "Skalde",
-   "icon": "🪓",
+   "icon": "@icon:class_skald",
    "baseSpeed": 10,
    "evolvesFrom": "Barde",
    "descFr": "Guerrier-barde offensif : chants de combat et attaques renforcées.",
@@ -1072,7 +1072,7 @@
   {
    "id": "class_minstrel",
    "name": "Ménestrel",
-   "icon": "🎼",
+   "icon": "@icon:class_minstrel",
    "baseSpeed": 11,
    "evolvesFrom": "Barde",
    "descFr": "Barde de soutien : chants d'altération et bonus pour le groupe.",
