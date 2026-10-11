@@ -171,7 +171,8 @@ func _build_account() -> void:
 	var specs: Array = [{"text": L.t("ui.hub.open"), "primary": true, "cb": func(): OnlineHub.open(_modal.get_parent())}]
 	# Menu « Super admin » : affiché seulement si le SERVEUR a confirmé le rôle (il le revérifie de toute façon à chaque appel).
 	if SuperAdmin.cached() == 1:
-		specs.append({"text": L.t("ui.sadmin.btn"), "cb": func(): SuperAdminModal.open(_modal.get_parent())})
+		var todo := SuperAdmin.pending()
+		specs.append({"text": L.t("ui.sadmin.btn") + (" (%d)" % todo if todo > 0 else ""), "cb": func(): SuperAdminModal.open(_modal.get_parent())})
 	elif SuperAdmin.cached() == -1:
 		_probe_admin()
 	# colonne : actions principales, puis « Fermer », la suppression du compte à part et discrète tout en bas

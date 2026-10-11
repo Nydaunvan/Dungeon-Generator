@@ -24,12 +24,39 @@ static func check() -> bool:
 	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/is_super_admin", {}, true)
 	if not r.ok:
 		return false
-	var yes: bool = r.data == true
+	var yes: bool = r.data is bool and r.data
 	_known[id] = yes
 	return yes
 
 static func forget() -> void:
 	_known.clear()
+	_pending = {"chat": 0, "gallery": 0, "at": -1000000}
+
+# ------------------------------------------------------------------ « à regarder » : signalements en attente (pastille sur Compte)
+
+static var _pending := {"chat": 0, "gallery": 0, "at": -1000000}
+
+## Nombre de choses à traiter connu (messages de tchat signalés + donjons signalés), 0 si le compte n'est pas super admin.
+static func pending() -> int:
+	return int(_pending.chat) + int(_pending.gallery) if cached() == 1 else 0
+
+static func pending_chat() -> int:
+	return int(_pending.chat) if cached() == 1 else 0
+
+static func pending_gallery() -> int:
+	return int(_pending.gallery) if cached() == 1 else 0
+
+## Relit les compteurs auprès du serveur (au plus une fois toutes les 30 s). Sans effet pour un compte qui n'est pas super admin.
+static func refresh_pending() -> void:
+	if not Cloud.is_signed_in() or Time.get_ticks_msec() - int(_pending.at) < 30000:
+		return
+	_pending["at"] = Time.get_ticks_msec()
+	if not await check():
+		return
+	var c: Dictionary = await chat_stats()
+	var g: Dictionary = await gallery_stats()
+	_pending["chat"] = int((c.data as Dictionary).get("reports_pending", 0)) if c.ok and c.data is Dictionary else 0
+	_pending["gallery"] = int((g.data as Dictionary).get("reports_pending", 0)) if g.ok and g.data is Dictionary else 0
 
 ## Partie classée de TEST : n'utilise pas l'essai du jour, hors classements, sans expérience ni badge ; rejouée comme les autres.
 ## `kind` : "difficulty" ou "hardcore_month" (réglages du mois, graine tirée au hasard : la vraie graine du mois n'est jamais donnée).

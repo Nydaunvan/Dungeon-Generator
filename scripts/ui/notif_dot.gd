@@ -4,12 +4,14 @@ extends Control
 ## `count_fn` : fonction sans argument qui renvoie le nombre à montrer (par défaut, tous les messages non lus du tchat).
 
 var count_fn: Callable = Callable()
+var refresh_fn: Callable = Callable()   ## optionnel, asynchrone : met à jour la source de `count_fn` (au départ, puis toutes les minutes)
 var _n := 0
 
 ## Ajoute une bulle en haut à droite de `target` (bouton). Renvoie la bulle.
-static func attach(target: Control, fn: Callable = Callable(), small: bool = false) -> NotifDot:
+static func attach(target: Control, fn: Callable = Callable(), small: bool = false, refresh: Callable = Callable()) -> NotifDot:
 	var d := NotifDot.new()
 	d.count_fn = fn
+	d.refresh_fn = refresh
 	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	d.anchor_left = 1.0
 	d.anchor_right = 1.0
@@ -23,7 +25,21 @@ static func attach(target: Control, fn: Callable = Callable(), small: bool = fal
 	target.add_child(d)
 	return d
 
+func _poll() -> void:
+	await refresh_fn.call()
+	if is_instance_valid(self) and is_inside_tree():
+		_update()
+
 func _ready() -> void:
+	if refresh_fn.is_valid():                       # pastille à source propre (ex. super admin) : pas de surveillance du tchat
+		var t := Timer.new()
+		t.wait_time = 60.0
+		t.timeout.connect(_poll)
+		add_child(t)
+		t.start()
+		_poll()
+		_update()
+		return
 	ChatAlerts.watch(true)
 	ChatAlerts.changed.connect(_update)
 	tree_exiting.connect(func(): ChatAlerts.watch(false))

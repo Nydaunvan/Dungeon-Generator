@@ -184,7 +184,9 @@ func _fill_strip() -> void:
 			ChatDock.open_panel(), false, 34)
 		NotifDot.attach(cbtn)
 		right.add_child(cbtn)
-		right.add_child(HubKit.button("👤 " + L.t("ui.cloud.header"), func(): AccountModal.open(_host), false, 34))
+		var acc := HubKit.button("👤 " + L.t("ui.cloud.header"), func(): AccountModal.open(_host), false, 34)
+		NotifDot.attach(acc, SuperAdmin.pending, false, SuperAdmin.refresh_pending)
+		right.add_child(acc)
 	right.add_child(HubKit.button(L.t("ui.help.how"), func(): DocModal.guide(_host, "defis"), false, 34))
 
 func _load_xp() -> void:
@@ -877,7 +879,10 @@ func _load_rewards(wait: Label, mine: int) -> void:
 			"color": str(e.get("color_badge", "")) if e.get("color_badge") != null else ""}
 	_build_rewards(total_xp)
 
+var _rw_xp := 0
+
 func _build_rewards(total_xp: int) -> void:
+	_rw_xp = total_xp
 	var lvl := Cosmetics.level_of(total_xp)
 	var top := (HBoxContainer.new() if not _narrow() else VBoxContainer.new()) as BoxContainer
 	top.add_theme_constant_override("separation", 8)
@@ -916,16 +921,151 @@ func _build_rewards(total_xp: int) -> void:
 	row.add_child(_eq_status)
 	v2.add_child(row)
 	v2.add_child(HubKit.label(L.t("ui.rewards.equip_hint"), UiTheme.DIM, 11))
-	# badges
-	var g := GridContainer.new()
-	g.columns = 3 if _narrow() else 5
-	g.add_theme_constant_override("h_separation", 6)
-	g.add_theme_constant_override("v_separation", 6)
-	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_child(g)
-	for b in _cat:
-		g.add_child(_badge_tile(b))
+	# parcourir les récompenses par type
+	_rewards_browser()
 	_modal.call_deferred("_fit")
+
+const REWARD_KINDS := [["all", "ui.rewards.k_all"], ["title", "ui.rewards.k_title"], ["frame", "ui.rewards.k_frame"], ["color", "ui.rewards.k_color"], ["skin", "ui.rewards.k_skin"]]
+const REWARD_FILTERS := [["all", "ui.rewards.f_all"], ["todo", "ui.rewards.f_todo"], ["done", "ui.rewards.f_done"]]
+var _rw_kind := "all"
+var _rw_filter := "all"
+var _rw_box: VBoxContainer
+
+## Entrées d'un type de récompense : [{b: badge, s: anneau (skin) ou {}, have: bool}].
+func _rw_entries(kind: String) -> Array:
+	var out: Array = []
+	if kind == "skin":
+		for s in Unlocks.skins():
+			var ub := str(s.get("unlockBadge", ""))
+			out.append({"b": _badge_by_id(ub), "s": s, "have": _owned.has(ub)})
+		return out
+	for b in _cat:
+		var ok := true
+		match kind:
+			"title": ok = b.get("title_fr") != null
+			"frame": ok = b.get("frame") != null
+			"color": ok = b.get("color") != null
+		if ok:
+			out.append({"b": b, "s": {}, "have": _owned.has(str(b.id))})
+	return out
+
+func _rewards_browser() -> void:
+	_body.add_child(HubKit.label(L.t("ui.rewards.browse_hint"), UiTheme.DIM, 12, false, true))
+	var kinds := HFlowContainer.new()
+	kinds.add_theme_constant_override("h_separation", 6)
+	kinds.add_theme_constant_override("v_separation", 6)
+	_body.add_child(kinds)
+	for k in REWARD_KINDS:
+		var es := _rw_entries(k[0])
+		var have := 0
+		for e in es:
+			if e.have:
+				have += 1
+		var kk: String = k[0]
+		kinds.add_child(HubKit.toggle("%s (%d/%d)" % [L.t(k[1]), have, es.size()], _rw_kind == kk, func():
+			_rw_kind = kk
+			_show_rewards_again.call_deferred(), 14, 12, 6))
+	var flt := HFlowContainer.new()
+	flt.add_theme_constant_override("h_separation", 6)
+	_body.add_child(flt)
+	for f in REWARD_FILTERS:
+		var ff: String = f[0]
+		flt.add_child(HubKit.toggle(L.t(f[1]), _rw_filter == ff, func():
+			_rw_filter = ff
+			_show_rewards_again.call_deferred(), 13, 10, 4))
+	_rw_box = HubKit.vbox(6)
+	_body.add_child(_rw_box)
+	_rw_render()
+
+## Reconstruit l'onglet (sans nouvelle requête réseau pour les données déjà chargées).
+func _show_rewards_again() -> void:
+	for ch in _body.get_children():
+		_body.remove_child(ch)
+		ch.queue_free()
+	_build_rewards(_rw_xp)
+
+func _rw_render() -> void:
+	for ch in _rw_box.get_children():
+		_rw_box.remove_child(ch)
+		ch.queue_free()
+	var es := _rw_entries(_rw_kind)
+	var shown: Array = []
+	for e in es:
+		if _rw_filter == "todo" and e.have:
+			continue
+		if _rw_filter == "done" and not e.have:
+			continue
+		shown.append(e)
+	# à obtenir d'abord, puis par rareté croissante
+	shown.sort_custom(func(a, b):
+		if a.have != b.have:
+			return not a.have
+		return int(a.b.get("rarity", 1)) < int(b.b.get("rarity", 1)))
+	if shown.is_empty():
+		_rw_box.add_child(HubKit.label(L.t("ui.rewards.empty"), UiTheme.DIM, 13, false, true, HORIZONTAL_ALIGNMENT_CENTER))
+		return
+	if _rw_kind == "all":
+		var g := GridContainer.new()
+		g.columns = 3 if _narrow() else 5
+		g.add_theme_constant_override("h_separation", 6)
+		g.add_theme_constant_override("v_separation", 6)
+		g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_rw_box.add_child(g)
+		for e in shown:
+			g.add_child(_badge_tile(e.b))
+		return
+	var g2 := GridContainer.new()
+	g2.columns = 1 if _narrow() else 2
+	g2.add_theme_constant_override("h_separation", 6)
+	g2.add_theme_constant_override("v_separation", 6)
+	g2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rw_box.add_child(g2)
+	for e in shown:
+		g2.add_child(_reward_row(_rw_kind, e))
+
+func _reward_row(kind: String, e: Dictionary) -> Control:
+	var b: Dictionary = e.b
+	var have: bool = e.have
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0.28)
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(1)
+	sb.border_color = Cosmetics.RARITY_COLORS[clampi(int(b.get("rarity", 1)) - 1, 0, 4)] if have else Color(1, 1, 1, 0.1)
+	sb.set_content_margin_all(8)
+	p.add_theme_stylebox_override("panel", sb)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 3)
+	p.add_child(v)
+	# aperçu
+	match kind:
+		"title":
+			v.add_child(Cosmetics.name_plate(Cloud.pseudo(), Cosmetics.loc(b, "title"), "", null, 16))
+		"frame":
+			v.add_child(Cosmetics.name_plate(Cloud.pseudo(), "", str(b.frame), null, 16))
+		"color":
+			v.add_child(Cosmetics.name_plate(Cloud.pseudo(), "", "", b.color, 16))
+		"skin":
+			var s: Dictionary = e.s
+			var ring := Panel.new()
+			var rs := StyleBoxFlat.new()
+			rs.bg_color = Color(0, 0, 0, 0.35)
+			rs.set_corner_radius_all(24)
+			rs.set_border_width_all(4)
+			rs.border_color = Color(str(s.get("color", "#ffffff")))
+			ring.add_theme_stylebox_override("panel", rs)
+			ring.custom_minimum_size = Vector2(48, 48)
+			ring.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			v.add_child(ring)
+			v.add_child(HubKit.label("%s %s" % [str(s.get("icon", "")), _skin_label(s)], UiTheme.PARCH, 13, true, true))
+	if not b.is_empty():
+		v.add_child(HubKit.label("%s %s" % [str(b.get("icon", "🏅")), Cosmetics.loc(b, "label")], GOLD if have else UiTheme.PARCH, 13, true, true))
+		var how := Cosmetics.loc(b, "desc")
+		v.add_child(HubKit.label(L.fa(L.t("ui.rewards.how_skin" if kind == "skin" else "ui.rewards.how"), how), UiTheme.DIM, 12, false, true))
+	v.add_child(HubKit.label(L.t("ui.rewards.t_have") if have else L.t("ui.rewards.t_todo"), HubKit.GOOD if have else GOLD, 12, true))
+	p.modulate = Color.WHITE if have else Color(1, 1, 1, 0.85)
+	return p
 
 func _picker(parent: Control, kind: String, label: String, offers: Callable) -> void:
 	var row := HBoxContainer.new()
@@ -967,7 +1107,7 @@ func _skin_picker(parent: Control) -> void:
 	for s in Unlocks.skins():
 		total += 1
 		if _owned.has(str(s.unlockBadge)):
-			ob.add_item("%s %s" % [str(s.icon), Cosmetics.loc(s, "label")])
+			ob.add_item("%s %s" % [str(s.icon), _skin_label(s)])
 			ob.set_item_metadata(ob.item_count - 1, str(s.id))
 			if str(s.id) == Unlocks.skin_id():
 				cur = ob.item_count - 1
@@ -992,6 +1132,10 @@ func _next_level_reward(lvl: int) -> Dictionary:
 		if n > lvl and (best.is_empty() or n < int(best.level)):
 			best = {"level": n, "badge": b}
 	return best
+
+func _skin_label(s: Dictionary) -> String:
+	var en := str(s.get("labelEn", ""))
+	return en if Data.lang == "en" and en != "" else str(s.get("labelFr", ""))
 
 func _badge_by_id(id: String) -> Dictionary:
 	for b in _cat:

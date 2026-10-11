@@ -1,5 +1,20 @@
 [
  {
+  "version": "1.33.6",
+  "changes": [
+   "## Récompenses",
+   "Nouveau navigateur par type : Titres, Cadres, Couleurs de pseudo et Anneaux des héros, avec le compteur obtenues / total pour chaque type.",
+   "Filtres « À obtenir » et « Obtenues » : les récompenses manquantes passent en premier, avec un aperçu et la condition pour les obtenir.",
+   "Correction : les noms des anneaux des héros s'affichent à nouveau dans le sélecteur.",
+   "## Combat",
+   "Les monstres s'animent aussi pendant les combats : ils attaquent, encaissent les coups, sont étourdis et s'effondrent à leur mort (option dans les paramètres graphiques).",
+   "## Mode en ligne",
+   "Super admin : une pastille sur le bouton Compte indique le nombre de signalements à traiter (tchat et galerie), mise à jour automatiquement.",
+   "Le bouton Tchat de l'en-tête est retiré : le tchat reste accessible par la bulle en bas de l'écran.",
+   "Correction : la galerie de la communauté affiche de nouveau les donjons au lieu d'un message d'erreur."
+  ]
+ },
+ {
   "version": "1.33.5",
   "changes": [
    "## Récompenses et défis",
