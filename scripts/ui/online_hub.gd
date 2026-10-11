@@ -7,6 +7,8 @@ extends RefCounted
 
 const TABS := [["play", "ui.hub.tab_play", "🎮"], ["boards", "ui.hub.tab_boards", "🏆"], ["rewards", "ui.hub.tab_rewards", "🏅"], ["runs", "ui.hub.tab_runs", "📜"]]
 const MODES := ["free", "ranked", "weekly", "hardcore"]
+## Ce que mesure le classement de certaines règles du Défi de la semaine (les autres comptent des niveaux).
+const RULE_METRIC := {"richest": "gold", "bossrush": "bosses"}
 const MODE_ICON := {"free": "🎲", "ranked": "🏆", "weekly": "📅", "hardcore": "🔥"}
 const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "weekly": "ui.hub.mode_weekly", "hardcore": "ui.hub.mode_hardcore"}
 const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "weekly": "ui.hub.tag_weekly", "hardcore": "ui.hub.tag_hardcore"}
@@ -626,6 +628,7 @@ func _load_board(box: VBoxContainer, wait: Label, mine: int) -> void:
 			if _weekly.is_empty():
 				err = {"ok": false, "error_code": "generic", "message": L.t("ui.hub.weekly_unknown")}
 			else:
+				unit = L.t(RankedRun.unit_key(str((_weekly.get("rule", {}) as Dictionary).get("metric", "levels"))))
 				var kr: Dictionary = await RankedRun.period_board("weekly", str(_weekly.get("period", "")))
 				if mine != _gen or not _alive():
 					return
@@ -668,7 +671,8 @@ func _legends_table(box: VBoxContainer, rows: Array) -> void:
 		var when := L.fa(L.t("ui.hub.weekly_week"), str(r.get("period", "")).get_slice("W", 1)) + " " + str(r.get("period", "")).get_slice("-", 0) if weekly else str(r.get("period", ""))
 		g.add_child(HubKit.label(("📅 " if weekly else "🔥 ") + when, UiTheme.DIM, 13, false, false))
 		g.add_child(Cosmetics.name_plate(str(r.get("pseudo", "?")), "", str(r.get("frame", "")) if r.get("frame") != null else "", r.get("color"), 15))
-		g.add_child(HubKit.label("%d %s · %s" % [int(r.get("score", 0)), L.t("ui.challenges.unit_niveaux"), Challenges.format_time(int(r.get("seconds", 0)))], GOLD, 13, false, false))
+		var unit_txt := L.t(RankedRun.unit_key(str(RULE_METRIC.get(str(r.get("rule_id", "")), "levels"))))
+		g.add_child(HubKit.label("%d %s · %s" % [int(r.get("score", 0)), unit_txt, Challenges.format_time(int(r.get("seconds", 0)))], GOLD, 13, false, false))
 		var rule := (str(r.get("rule_en" if en else "rule_fr", "")) if r.get("rule_fr") != null else "")
 		g.add_child(HubKit.label(("%s %s" % [str(r.get("rule_icon", "")), rule]) if rule != "" else "", UiTheme.PARCH, 13, false, false))
 
@@ -1014,7 +1018,7 @@ func _render_runs(mine: int) -> void:
 	_cell(g, L.t("ui.sadmin.col_date"), UiTheme.DIM, 12, 82, HORIZONTAL_ALIGNMENT_LEFT)
 	_cell(g, L.t("ui.sadmin.col_mode"), UiTheme.DIM, 12, 0, HORIZONTAL_ALIGNMENT_LEFT)
 	_cell(g, L.t("ui.sadmin.col_status"), UiTheme.DIM, 12, 150, HORIZONTAL_ALIGNMENT_LEFT)
-	_cell(g, L.t("ui.challenges.unit_niveaux"), UiTheme.DIM, 12, 60, HORIZONTAL_ALIGNMENT_RIGHT)
+	_cell(g, L.t("ui.hub.col_score"), UiTheme.DIM, 12, 60, HORIZONTAL_ALIGNMENT_RIGHT)
 	_cell(g, L.t("ui.challenges.col_time"), UiTheme.DIM, 12, 60, HORIZONTAL_ALIGNMENT_RIGHT)
 	var n := clampi(_rows_fit(), 5, 10)
 	for i in mini(n, _runs.size()):

@@ -176,6 +176,9 @@ static func summary(gs: GameState) -> Dictionary:
 	return {
 		"levelsCleared": int(gs.stats.get("levelsCleared", 0)),
 		"kills": int(gs.stats.get("monstersKilled", 0)),
+		"gold": int(gs.stats.get("goldEarnedTotal", 0)),
+		"bosses": int(gs.stats.get("bossesKilled", 0)),
+		"traps": int(gs.stats.get("trapsTriggered", 0)),
 		"expeditions": gs.run_number,
 		"difficulty": str(gs.cfg.get("genDifficulty", "")),
 		"levels": int(dims.get("numLevels", 0)),

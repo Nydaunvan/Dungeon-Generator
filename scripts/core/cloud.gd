@@ -43,6 +43,7 @@ const ERR_KEYS := {
 	"score_invraisemblable": "ui.cloud.err.score_invraisemblable",
 	"non_connecte": "ui.cloud.err.session_expired",
 	"essai_du_jour_utilise": "ui.cloud.err.essai_du_jour_utilise",
+	"version_trop_ancienne": "ui.cloud.err.version_trop_ancienne",
 	"trop_de_parties": "ui.cloud.err.trop_de_parties",
 	"mode_inconnu": "ui.cloud.err.generic",
 	"journal_invalide": "ui.cloud.err.generic",

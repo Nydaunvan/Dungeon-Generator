@@ -22,7 +22,7 @@ func _replay(inp: Variant) -> Dictionary:
 	if cfg.is_empty():
 		return {"ok": false, "reason": "reglages_invalides"}
 	var res: Dictionary = await Rep.run(self, cfg, inp.log, {"time_scale": 6.0})
-	var rank: Dictionary = RR.ranking_of(res)
+	var rank: Dictionary = RR.ranking_of(res, inp.params)
 	if rank.is_empty():
 		return {"ok": false, "reason": str(res.reason) if str(res.reason) != "" else ("souillee:" + str(res.taint))}
 	return {"ok": true, "reason": "", "score": rank.score, "seconds": rank.seconds, "metrics": rank.metrics}

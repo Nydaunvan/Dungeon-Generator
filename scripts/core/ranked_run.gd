@@ -22,12 +22,38 @@ static func config_for(base: Dictionary, seed_text: String, params: Dictionary) 
 	cfg["runSeed"] = seed_text
 	return cfg
 
+## Ce que mesure le classement d'une partie, d'après `params.metric` (règle du Défi de la semaine) : "levels" (niveaux franchis, défaut),
+## "gold" (or gagné), "bosses" (boss vaincus) ou "clean" (niveaux franchis, mais un seul piège déclenché ramène le score à 0).
+const METRICS := ["levels", "gold", "bosses", "clean"]
+
+static func score_for(summary: Dictionary, metric: String) -> int:
+	match metric:
+		"gold":
+			return int(summary.get("gold", 0))
+		"bosses":
+			return int(summary.get("bosses", 0))
+		"clean":
+			return int(summary.get("levelsCleared", 0)) if int(summary.get("traps", 0)) == 0 else 0
+	return int(summary.get("levelsCleared", 0))
+
 ## Résultat classé d'un rejeu : {score, seconds, metrics} ou {} si la partie n'est pas valable.
-static func ranking_of(res: Dictionary) -> Dictionary:
+static func ranking_of(res: Dictionary, params: Dictionary = {}) -> Dictionary:
 	if not bool(res.get("ok", false)) or str(res.get("taint", "")) != "":
 		return {}
 	var s: Dictionary = res.get("summary", {})
-	return {"score": int(s.get("levelsCleared", 0)), "seconds": int(res.get("clock_ms", 0)) / 1000, "metrics": s}
+	var metric := str(params.get("metric", "levels"))
+	if not METRICS.has(metric):
+		metric = "levels"
+	return {"score": score_for(s, metric), "seconds": int(res.get("clock_ms", 0)) / 1000, "metrics": s}
+
+## Unité du score d'une règle du Défi de la semaine (clé de traduction) : niveaux par défaut.
+static func unit_key(metric: String) -> String:
+	match metric:
+		"gold":
+			return "ui.challenges.unit_or"
+		"bosses":
+			return "ui.challenges.unit_boss"
+	return "ui.challenges.unit_niveaux"
 
 # ------------------------------------------------------------------ côté jeu
 
@@ -55,7 +81,7 @@ static func my_streak() -> Dictionary:
 
 ## Hall des légendes : le champion de chaque semaine et de chaque mois clos, le plus récent d'abord.
 static func hall() -> Dictionary:
-	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/hall_legendes?order=closed_at.desc&limit=60&select=kind,period,score,seconds,pseudo,rule_icon,rule_fr,rule_en,frame,color")
+	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/hall_legendes?order=closed_at.desc&limit=60&select=kind,period,score,seconds,pseudo,rule_id,rule_icon,rule_fr,rule_en,frame,color")
 
 ## Nom du mode d'un donjon aléatoire d'après sa configuration : partie libre, partie classée, défi de la semaine ou hardcore du mois.
 static func mode_label(cfg: Dictionary) -> String:
