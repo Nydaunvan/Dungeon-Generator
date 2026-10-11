@@ -120,7 +120,9 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 	vl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fight.add_child(vl)
-	fight.add_child(_lbl(str(int(c.get("effSpeed", 0))), 14, PARCH, UiTheme.F_BODY_BOLD))
+	var sbd := Stats.breakdown(c, gs.cfg, "speed")
+	var smods := int(sbd.total) - int(sbd.base)
+	fight.add_child(_lbl(str(int(c.get("effSpeed", 0))) + ((" (%d %s)" % [int(sbd.base), ("+%d" % smods) if smods > 0 else str(smods)]) if smods != 0 else ""), 14, PARCH, UiTheme.F_BODY_BOLD))
 	b.add_child(fight)
 	# --- caractéristiques
 	var stats := GridContainer.new()
@@ -134,7 +136,12 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var v := _lbl(str(int(c.get(s[2], 0))), 18, STAT_COLORS[s[0]], UiTheme.F_TITLE_BOLD)
 		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var k := _lbl(str(s[1]), 11, DIM)
+		# base et modificateurs (équipement, talents) : « Dex · 12 +2 », en vert si la valeur est augmentée, en rouge si elle est réduite
+		var bd := Stats.breakdown(c, gs.cfg, str(s[0]))
+		var mods := int(bd.total) - int(bd.base)
+		var k := _lbl(("%s · %d %s" % [s[1], int(bd.base), ("+%d" % mods) if mods > 0 else str(mods)]) if mods != 0 else str(s[1]), 11, DIM)
+		if mods != 0:
+			v.add_theme_color_override("font_color", Color("8fd18f") if mods > 0 else Color("e07a6a"))
 		k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cell.add_child(v)
 		cell.add_child(k)
@@ -143,6 +150,9 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 	var sec := _lbl(L.fa(L.t("ui.party_tip.derives"), [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0)), int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))]), 12, DIM)
 	sec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.add_child(sec)
+	var red := _lbl(L.fa(L.t("ui.party_tip.reductions"), [Stats.reduction(c, false), Stats.reduction(c, true), int(c.get("talentLifestealPct", 0))]), 12, DIM)
+	red.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.add_child(red)
 	# --- statuts
 	var effs: Array = Statuses.active(c) if int(c.hp) > 0 else []
 	if not effs.is_empty():

@@ -1909,7 +1909,18 @@
   "ui.spell_tip.bouclier_points": "Bouclier : %d–%d points absorbés",
   "ui.spell_tip.puissance_lanceur": "Puissance de %s : +%d (Intelligence +%d, équipement +%d, niveau +%d)",
   "ui.equip_dock.crit_esq_garde": "Crit. / Esq. / Garde",
-  "ui.party_tip.derives": "💥 %d %%  ·  💨 %d %%  ·  🛡️ %d %%  ·  ✨ +%d"
+  "ui.party_tip.derives": "💥 %d %%  ·  💨 %d %%  ·  🛡️ %d %%  ·  ✨ +%d",
+  "ui.spell_tip.base_plus": "Base du sort : %d – %d, plus la puissance du lanceur +%d = %d – %d",
+  "ui.spell_tip.int_seule": "Seule l'Intelligence compte ici (ni l'équipement, ni le niveau).",
+  "ui.spell_tip.reduit_par_cible": "Réduit par la résistance magique ou physique de la cible.",
+  "ui.bag.fx_force": "→ dégâts min %s",
+  "ui.bag.fx_force_none": "→ pas de changement de dégâts (1 point de dégâts min tous les 3 de Force)",
+  "ui.bag.fx_dex": "→ dégâts max %s · critique %s %% · esquive %s %%",
+  "ui.bag.fx_con": "→ PV max %s · garde %s %%",
+  "ui.bag.fx_int": "→ puissance des sorts %s",
+  "ui.bag.fx_speed": "→ vitesse %s (joue plus tôt dans la manche)",
+  "ui.bag.fx_spelldmg": "→ dégâts et soins des sorts %s",
+  "ui.party_tip.reductions": "Réduction phys. %d %% · mag. %d %% · vol de vie %d %%"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

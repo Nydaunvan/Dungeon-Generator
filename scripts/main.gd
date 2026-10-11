@@ -23,7 +23,15 @@ var _popup_layer: Control
 var _modal_layer: CanvasLayer
 
 ## Temps de jeu d'un donjon aléatoire (départage les égalités du classement des défis).
+var _choice_poll := 0.0
+
 func _process(delta: float) -> void:
+	if gs != null and not gs.choice_queue.is_empty():
+		# talents / évolutions en attente : présentés dès que le combat (et ses effets) est vraiment terminé, sans attendre une action
+		_choice_poll -= delta
+		if _choice_poll <= 0.0:
+			_choice_poll = 0.25
+			_check_choices()
 	if gs != null:
 		GameClock.advance(delta)         # horloge de jeu : la seule référence de temps de la logique (recharges, fontaines)
 	if gs != null and Data.play_origin == "random" and not gs.game_over and not gs.won and not gs.in_village:
@@ -407,10 +415,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if act.begins_with("slot_"):
-		if get_tree().get_nodes_in_group("modal").is_empty() and ctrl.in_combat():
+		# en combat : 1 = attaque, 2… = sorts ; en exploration : 2… lancent les sorts du personnage sélectionné (soins, protections…), comme un clic sur la barre
+		if get_tree().get_nodes_in_group("modal").is_empty() and not gs.game_over:
 			var slot := int(act.substr(5)) - 1
 			if slot == 0:
-				ctrl.attack()
+				if ctrl.in_combat():
+					ctrl.attack()
 			else:
 				var c := gs.char_by_id(gs.active_char_id)
 				var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []

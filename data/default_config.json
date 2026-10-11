@@ -116,7 +116,7 @@
   {
    "id": "spell_bard1",
    "name": "Souffle du Guerrier",
-   "icon": "🎵",
+   "icon": "@icon:spell_bard1",
    "style": "bard",
    "mode": "staminaRestoreSingle",
    "staminaMin": 15,
@@ -139,7 +139,7 @@
   {
    "id": "spell_skald1",
    "name": "Frappe Discordante",
-   "icon": "🥁",
+   "icon": "@icon:spell_skald1",
    "style": "physical",
    "mode": "damage",
    "dmgMin": 12,
@@ -153,7 +153,7 @@
   {
    "id": "spell_skald2",
    "name": "Armure de Vers",
-   "icon": "📯",
+   "icon": "@icon:spell_skald2",
    "style": "bard",
    "mode": "shieldSingle",
    "shieldMin": 18,
@@ -164,7 +164,7 @@
   {
    "id": "spell_skald3",
    "name": "Cri de Guerre",
-   "icon": "📣",
+   "icon": "@icon:spell_skald3",
    "style": "bard",
    "mode": "damageGroup",
    "dmgMin": 0,
@@ -178,7 +178,7 @@
   {
    "id": "spell_skald4",
    "name": "Lame de l'Épopée",
-   "icon": "🔥",
+   "icon": "@icon:spell_skald4",
    "style": "bard",
    "mode": "selfBuff",
    "statusEffect": "weaponfire",
@@ -190,7 +190,7 @@
   {
    "id": "spell_minstrel1",
    "name": "Berceuse Apaisante",
-   "icon": "😴",
+   "icon": "@icon:spell_minstrel1",
    "style": "bard",
    "mode": "sleepGroup",
    "statusChance": 70,
@@ -201,7 +201,7 @@
   {
    "id": "spell_minstrel2",
    "name": "Ballade Protectrice",
-   "icon": "🎼",
+   "icon": "@icon:spell_minstrel2",
    "style": "bard",
    "mode": "shieldSingle",
    "shieldMin": 24,
@@ -212,7 +212,7 @@
   {
    "id": "spell_minstrel3",
    "name": "Requiem de Vigueur",
-   "icon": "🎺",
+   "icon": "@icon:spell_minstrel3",
    "style": "bard",
    "mode": "partyUtility",
    "cooldownReductionSec": 3,
@@ -223,7 +223,7 @@
   {
    "id": "spell_minstrel4",
    "name": "Mélodie de Dissipation",
-   "icon": "🎐",
+   "icon": "@icon:spell_minstrel4",
    "style": "bard",
    "mode": "dispelSingle",
    "staminaCost": 16,

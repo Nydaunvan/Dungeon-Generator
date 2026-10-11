@@ -1909,7 +1909,18 @@
   "ui.spell_tip.bouclier_points": "Shield: %d–%d points absorbed",
   "ui.spell_tip.puissance_lanceur": "%s's power: +%d (Intelligence +%d, gear +%d, level +%d)",
   "ui.equip_dock.crit_esq_garde": "Crit / Dodge / Guard",
-  "ui.party_tip.derives": "💥 %d %%  ·  💨 %d %%  ·  🛡️ %d %%  ·  ✨ +%d"
+  "ui.party_tip.derives": "💥 %d %%  ·  💨 %d %%  ·  🛡️ %d %%  ·  ✨ +%d",
+  "ui.spell_tip.base_plus": "Spell base: %d – %d, plus caster power +%d = %d – %d",
+  "ui.spell_tip.int_seule": "Only Intelligence counts here (not gear or level).",
+  "ui.spell_tip.reduit_par_cible": "Reduced by the target's magic or physical resistance.",
+  "ui.bag.fx_force": "→ min damage %s",
+  "ui.bag.fx_force_none": "→ no damage change (1 min damage per 3 Strength)",
+  "ui.bag.fx_dex": "→ max damage %s · crit %s %% · dodge %s %%",
+  "ui.bag.fx_con": "→ max HP %s · guard %s %%",
+  "ui.bag.fx_int": "→ spell power %s",
+  "ui.bag.fx_speed": "→ speed %s (acts earlier in the round)",
+  "ui.bag.fx_spelldmg": "→ spell damage and healing %s",
+  "ui.party_tip.reductions": "Reduction phys. %d %% · mag. %d %% · lifesteal %d %%"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -8,10 +8,17 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 2
+const SCHEMA := 3
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
+
+## v3 : icônes claires des sorts du Barde, du Skalde et du Ménestrel.
+const SPELL_ICON_CHANGES_V3 := {
+	"spell_bard1": ["🎵", "@icon:spell_bard1"], "spell_skald1": ["🥁", "@icon:spell_skald1"], "spell_skald2": ["📯", "@icon:spell_skald2"],
+	"spell_skald3": ["📣", "@icon:spell_skald3"], "spell_skald4": ["🔥", "@icon:spell_skald4"], "spell_minstrel1": ["😴", "@icon:spell_minstrel1"],
+	"spell_minstrel2": ["🎼", "@icon:spell_minstrel2"], "spell_minstrel3": ["🎺", "@icon:spell_minstrel3"], "spell_minstrel4": ["🎐", "@icon:spell_minstrel4"],
+}
 
 static func schema_of(d: Dictionary) -> int:
 	return int(d.get("schema", 1))
@@ -28,6 +35,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 		match v:
 			1:
 				notes.append_array(_v1_to_v2(d, defaults))
+			2:
+				notes.append_array(_v2_to_v3(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -87,4 +96,21 @@ static func _v1_to_v2(d: Dictionary, defaults: Dictionary) -> Array[String]:
 			keys += 1
 	if keys > 0:
 		notes.append("réglages ajoutés : %d" % keys)
+	return notes
+
+## v2 → v3 : nouvelles icônes des sorts du Barde et de ses évolutions (seulement si le joueur n'avait pas mis la sienne).
+static func _v2_to_v3(d: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary):
+		return notes
+	var icons := 0
+	for s in (cfg as Dictionary).get("spells", []):
+		if s is Dictionary and SPELL_ICON_CHANGES_V3.has(str(s.get("id", ""))):
+			var ch: Array = SPELL_ICON_CHANGES_V3[str(s.id)]
+			if str(s.get("icon", "")) == ch[0]:
+				s["icon"] = ch[1]
+				icons += 1
+	if icons > 0:
+		notes.append("icônes de sorts du barde : %d mise(s) à jour" % icons)
 	return notes

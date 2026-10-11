@@ -322,6 +322,13 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 				var col := UP if d > 0 else (DOWN if d < 0 else UiTheme.DIM)
 				h.add_child(_lbl(" (%s)" % (("+%d" % d) if d > 0 else (str(d) if d < 0 else "=")), 13, col))
 			v.add_child(h)
+			var net := val - int(emap.get(r.key, 0))
+			var hint := _effect_hint(c, str(r.key), net)
+			if hint != "":
+				var hl := _lbl(hint, 11, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
+				hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				hl.custom_minimum_size = Vector2(210, 0)
+				v.add_child(hl)
 		var foot := L.fa(L.t("ui.bag.remplace"), str(eq.get("name", ""))) if eq != null else L.t("ui.bag.emplacement_libre")
 		v.add_child(_lbl(foot, 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	else:
@@ -331,6 +338,35 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 			l.custom_minimum_size = Vector2(210, 0)
 			v.add_child(l)
 	return box
+
+static func _sg(n: int) -> String:
+	return ("+%d" % n) if n > 0 else str(n)
+
+## Conséquence, pour ce personnage, du changement net d'une caractéristique (objet équipé à la place de l'ancien) : « → PV max +6 · garde +2 % ».
+static func _effect_hint(c: Dictionary, key: String, d: int) -> String:
+	if c.is_empty() or d == 0:
+		return ""
+	match key:
+		"force":
+			var f := int(c.get("effForce", 10))
+			var dm := (f + d) / 3 - f / 3
+			return L.fa(L.t("ui.bag.fx_force"), _sg(dm)) if dm != 0 else L.t("ui.bag.fx_force_none")
+		"dex":
+			var x := int(c.get("effDex", 10))
+			return L.fa(L.t("ui.bag.fx_dex"), [_sg((x + d) / 4 - x / 4), _sg(Stats.crit_from_dex(x + d) - Stats.crit_from_dex(x)), _sg(Stats.dodge_from_dex(x + d) - Stats.dodge_from_dex(x))])
+		"con":
+			var k := int(c.get("effCon", 10))
+			return L.fa(L.t("ui.bag.fx_con"), [_sg(3 * d), _sg(Stats.guard_from_con(k + d) - Stats.guard_from_con(k))])
+		"int":
+			var i := int(c.get("effInt", 10))
+			return L.fa(L.t("ui.bag.fx_int"), _sg(Stats.spell_power(i + d) - Stats.spell_power(i)))
+		"speed":
+			return L.fa(L.t("ui.bag.fx_speed"), _sg(d))
+		"spellDmg":
+			return L.fa(L.t("ui.bag.fx_spelldmg"), _sg(d))
+		"hp":
+			return ""
+	return ""
 
 static func _lbl(text: String, size: int, color: Color, font_path: String = "") -> Label:
 	var l := Label.new()

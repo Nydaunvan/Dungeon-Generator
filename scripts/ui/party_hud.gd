@@ -162,6 +162,16 @@ func refresh() -> void:
 			cd.lvl.text = lv
 			(cd.card as PartyCard)._layout()
 		cd.lvl.text = lv
+		# la classe change à l'évolution : nom, icône et couleur suivent la classe actuelle
+		var ccls := Characters.class_def(gs.cfg, str(c.get("classId", "")))
+		var cname := str(ccls.get("name", ""))
+		if cd.card.cls_lbl.text != cname:
+			cd.card.cls_lbl.text = cname
+			cd.card.cls_ico.texture = IconResolver.texture(str(c.get("icon", "")))
+			cd.card.cls_ico.visible = cd.card.cls_ico.texture != null
+			cd.card.accent = UiTheme.class_color(str(ccls.get("evolvesFrom", cname)))
+			(cd.card as PartyCard)._layout()
+			cd.card.queue_redraw()
 		if PartyTip.current_id() == str(c.id):
 			if _tip_allowed():
 				PartyTip.show_for(cd.card, gs, c)     # la fiche reste à jour (PV, statuts…) pendant le survol

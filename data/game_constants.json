@@ -2100,6 +2100,42 @@
     [
      "spell_sonicnote",
      "Note sonique"
+    ],
+    [
+     "spell_bard1",
+     "Souffle du barde"
+    ],
+    [
+     "spell_skald1",
+     "Tambour"
+    ],
+    [
+     "spell_skald2",
+     "Écu musical"
+    ],
+    [
+     "spell_skald3",
+     "Cor de guerre"
+    ],
+    [
+     "spell_skald4",
+     "Épée enflammée"
+    ],
+    [
+     "spell_minstrel1",
+     "Berceuse"
+    ],
+    [
+     "spell_minstrel2",
+     "Bulle protectrice"
+    ],
+    [
+     "spell_minstrel3",
+     "Trompette"
+    ],
+    [
+     "spell_minstrel4",
+     "Carillon"
     ]
    ]
   ],

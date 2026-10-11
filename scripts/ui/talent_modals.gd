@@ -34,10 +34,17 @@ static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary,
 	m.add_text(L.fa(L.t("ui.talent_modals.atteint_le_niveau_choisissez"), [c.name, int(track.level)]))
 	for o in track.options:
 		var oid := str(o.id)
-		var b := m.add_button("%s %s\n%s" % [o.get("icon", ""), o.get("labelFr", ""), o.get("descFr", Talents.effect_label(o.get("effects", {})))], func():
+		var tico := str(o.get("icon", ""))
+		var ttex := IconResolver.texture(tico) if tico.begins_with("@icon:") else null
+		var tdesc := str(o.get("descFr", Talents.effect_label(o.get("effects", {}))))
+		var b := m.add_button(("%s\n%s" % [o.get("labelFr", ""), tdesc]) if ttex != null else ("%s %s\n%s" % [tico, o.get("labelFr", ""), tdesc]), func():
 			Flows.choose("talent", oid))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 56)
+		if ttex != null:
+			b.icon = ttex
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 40)
 	m.set_buttons([])
 	Flows.open("talent", m, func(oid: Variant):
 		gs.choice_queue.erase(q)
@@ -56,10 +63,18 @@ static func _evolution(host: Node, gs: GameState, c: Dictionary, q: Dictionary, 
 		if oc.is_empty():
 			continue
 		var id := str(cid)
-		var b := m.add_button("%s %s\n%s" % [oc.get("icon", ""), oc.get("name", ""), oc.get("descFr", "")], func():
+		var ico := str(oc.get("icon", ""))
+		var tex := IconResolver.texture(ico)
+		# icône réelle (« @icon:… ») : image à gauche ; sinon (emoji) le glyphe reste devant le nom
+		var label := ("%s\n%s" % [oc.get("name", ""), oc.get("descFr", "")]) if tex != null else ("%s %s\n%s" % [ico, oc.get("name", ""), oc.get("descFr", "")])
+		var b := m.add_button(label, func():
 			Flows.choose("evolve", id))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 56)
+		b.custom_minimum_size = Vector2(0, 64)
+		if tex != null:
+			b.icon = tex
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 48)
 	m.set_buttons([])
 	Flows.open("evolve", m, func(cid_chosen: Variant):
 		gs.choice_queue.erase(q)

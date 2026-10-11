@@ -35,8 +35,22 @@ static func lines(spell: Dictionary, caster: Dictionary = {}) -> Array[String]:
 		out.append(value)
 	if mode == "shieldSingle":
 		out.append(L.fa(L.t("ui.spell_tip.bouclier_points"), [int(spell.get("shieldMin", 0)) + add, int(spell.get("shieldMax", 0)) + add]))
+	if not caster.is_empty():
+		var lo := 0
+		var hi := 0
+		match mode:
+			"healSingle", "healParty": lo = int(spell.get("healMin", 0)); hi = int(spell.get("healMax", 0))
+			"staminaRestoreSingle": lo = int(spell.get("staminaMin", 0)); hi = int(spell.get("staminaMax", 0))
+			"shieldSingle": lo = int(spell.get("shieldMin", 0)); hi = int(spell.get("shieldMax", 0))
+			"damage", "damageGroup": lo = int(spell.get("dmgMin", 0)); hi = int(spell.get("dmgMax", 0))
+		if hi > 0:
+			out.append(L.fa(L.t("ui.spell_tip.base_plus"), [lo, hi, add, lo + add, hi + add]))
+		if mode == "shieldSingle" or mode == "staminaRestoreSingle":
+			out.append(L.t("ui.spell_tip.int_seule"))
 	if not caster.is_empty() and add > 0:
 		out.append(L.fa(L.t("ui.spell_tip.puissance_lanceur"), [str(caster.get("name", "")), add, int(sb.power), int(sb.gear), int(sb.level)]))
+	if (mode == "damage" or mode == "damageGroup") and not bool(spell.get("ignoreAllResist", false)):
+		out.append(L.t("ui.spell_tip.reduit_par_cible"))
 	if int(spell.get("spellLifestealPct", 0)) > 0:
 		out.append(L.fa(L.t("ui.spell_tip.vol_de_vie_des_degats"), int(spell.spellLifestealPct)))
 	var se := str(spell.get("statusEffect", ""))
