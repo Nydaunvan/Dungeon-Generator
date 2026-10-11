@@ -62,6 +62,24 @@ func _init() -> void:
 		m._on_command("turn_right")
 		await create_timer(0.8).timeout
 		check("[%s] le joueur répond aux commandes" % way, absf(m.rig.rotation_degrees.y - rot0) > 1.0 or m.ctrl.in_combat())      # un monstre peut engager le combat : les déplacements sont alors refusés
+	# partie classée / défi : la pause fonctionne aussi (reprise comprise) et son temps est ajouté au temps de jeu du classement
+	var old_seed: String = str(gs.run_seed)
+	gs.run_seed = "test-seed"
+	var t_before := float(gs.stats.get("playSeconds", 0.0))
+	PO.toggle(self)
+	await process_frame
+	check("classée : jeu en pause", paused and PO.active())
+	await create_timer(1.5).timeout
+	key(KEY_P)
+	for k in 4: await process_frame
+	check("classée : jeu repris", not paused and not PO.active())
+	check("classée : le temps de pause compte (%.2f s)" % (float(gs.stats.get("playSeconds", 0.0)) - t_before), float(gs.stats.get("playSeconds", 0.0)) - t_before > 1.4)
+	check("classée : aucune fenêtre de refus", get_nodes_in_group("modal").is_empty())
+	var rot1: float = m.rig.rotation_degrees.y
+	m._on_command("turn_right")
+	await create_timer(0.8).timeout
+	check("classée : le joueur répond aux commandes", absf(m.rig.rotation_degrees.y - rot1) > 1.0 or m.ctrl.in_combat())
+	gs.run_seed = old_seed
 	# la pause ne fige pas à jamais si la scène est libérée en pleine pause
 	PO.toggle(self)
 	await process_frame

@@ -1,25 +1,24 @@
 class_name PauseOverlay
 extends CanvasLayer
 ## Pause du jeu (outil de test : captures d'écran). Fige tout (arbre en pause) ; un grand symbole ⏸ s'affiche au centre. On reprend
-## par un clic n'importe où, ou avec P, Échap, Espace ou Entrée. Refusée en partie classée : figer le jeu y donnerait du temps de réflexion gratuit.
+## par un clic n'importe où, ou avec P, Échap, Espace ou Entrée. Disponible dans tous les modes ; en partie classée / défi, le temps passé en pause est ajouté au temps de jeu du classement.
 ## Reprend d'elle-même si la scène change. Quoi qu'il arrive (fermeture comprise), l'arbre n'est jamais laissé en pause.
 
 static var _inst: PauseOverlay = null
 var _scene: Node
 var _done := false
+var _since_ms := 0
 
 ## Met le jeu en pause ou le reprend. `tree` : l'arbre de scènes courant.
 static func toggle(tree: SceneTree) -> void:
 	if _inst != null and is_instance_valid(_inst):
 		_inst.resume()
 		return
-	if RunLog.ranked():
-		Dialogs.notice(tree.current_scene, L.t("ui.pause.label"), L.t("ui.pause.ranked"))
-		return
 	var o := PauseOverlay.new()
 	o.process_mode = Node.PROCESS_MODE_ALWAYS
 	o.layer = 120
 	o._scene = tree.current_scene
+	o._since_ms = Time.get_ticks_msec()
 	tree.root.add_child(o)
 	_inst = o
 	tree.paused = true
@@ -81,15 +80,23 @@ func resume() -> void:
 	if _done:
 		return
 	_done = true
+	_count_pause_time()
 	if get_tree() != null:
 		get_tree().paused = false
 	if _inst == self:
 		_inst = null
 	queue_free()
 
+## Parties classées et défis : le temps passé en pause compte dans le temps de jeu envoyé au classement (la pause ne fait pas gagner de secondes).
+func _count_pause_time() -> void:
+	if RunLog.ranked() and RunLog.gs != null:
+		var secs := float(Time.get_ticks_msec() - _since_ms) / 1000.0
+		RunLog.gs.stats["playSeconds"] = float(RunLog.gs.stats.get("playSeconds", 0.0)) + maxf(0.0, secs)
+
 func _exit_tree() -> void:
 	if not _done:
 		_done = true
+		_count_pause_time()
 		if _inst == self:
 			_inst = null
 		if get_tree() != null:

@@ -1865,7 +1865,6 @@
   "ui.pause.label": "Pause",
   "ui.pause.resume": "Reprendre (P)",
   "ui.pause.tip": "Fige le jeu pour une capture d'écran (outil de test, temporaire).",
-  "ui.pause.ranked": "Pause indisponible en partie classée : le temps de jeu compte pour le classement.",
   "common.retour": "Retour",
   "ui.pause.resume_hint": "Pause — clic, P ou Échap pour reprendre",
   "rules.combat.esquive_attaque": "💨 %s esquive l'attaque de %s (%d%% d'esquive).",

@@ -1865,7 +1865,6 @@
   "ui.pause.label": "Pause",
   "ui.pause.resume": "Resume (P)",
   "ui.pause.tip": "Freezes the game for a screenshot (temporary test tool).",
-  "ui.pause.ranked": "Pause is unavailable in a ranked run: game time counts toward the ranking.",
   "common.retour": "Back",
   "ui.pause.resume_hint": "Paused — click, P or Esc to resume",
   "rules.combat.esquive_attaque": "💨 %s dodges %s's attack (%d%% dodge).",
