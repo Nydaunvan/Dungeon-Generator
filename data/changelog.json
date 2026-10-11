@@ -1,5 +1,25 @@
 [
  {
+  "version": "1.33.4",
+  "changes": [
+   "## Parties classées",
+   "Une partie classée se joue désormais en une seule fois : durée maximale de 2 heures, avec un minuteur « Temps restant » sous le badge de mode. Pas de sauvegarde ni de reprise ; quitter ou dépasser le temps abandonne la partie. Les conditions sont rappelées dans l'écran du défi.",
+   "Vérification accélérée : une période (semaine, mois) est clôturée dès que toutes ses parties sont vérifiées, sans marge fixe de 2 jours.",
+   "## Mes donjons et galerie",
+   "« Créer votre propre donjon » propose maintenant : partir d'un donjon vide, partir d'une base générée aléatoirement, ou ouvrir « Mes donjons ».",
+   "Nouvel espace personnel « Mes donjons » : vos créations y sont sauvegardées automatiquement (copie locale + cloud si vous êtes connecté) et retrouvables sur vos autres appareils.",
+   "Galerie en ligne : publiez un donjon pour votre communauté, parcourez ceux des autres, téléchargez-les et signalez ceux qui posent problème.",
+   "La fenêtre affichée quand on quitte la création d'un donjon est réorganisée en cartes (export, code de partage, quitter), sans boutons en longueur.",
+   "## Tchat",
+   "Nouveau tchat moderne : un bouton en bas à gauche, disponible en jeu comme dans les menus, ouvre la boîte de dialogue au survol et la replie quand la souris la quitte.",
+   "Canaux : général et langue de jeu obligatoires, puis canaux privés et autre langue en option, 5 canaux simultanés au maximum. Les notifications se règlent canal par canal ; l'indicateur de nouveaux messages est conservé.",
+   "## Modération",
+   "Super admin : la liste des mots interdits est organisée (recherche, lettres, expressions), et un nouvel onglet « Galerie » permet de traiter les signalements (retirer, supprimer, classer sans suite, interdire de publier).",
+   "## Publication",
+   "Chaque publication est désormais analysée par VirusTotal : un bandeau bilingue avec badges est placé en tête des notes de version."
+  ]
+ },
+ {
   "version": "1.33.3",
   "changes": [
    "## Interface",
