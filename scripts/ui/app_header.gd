@@ -157,7 +157,7 @@ func _process(d: float) -> void:
 func _animate_menu(d: float) -> void:
 	if _holder == null or _box == null:
 		return
-	var over := _holder.get_global_rect().has_point(get_global_mouse_position()) and get_viewport().get_visible_rect().has_point(get_viewport().get_mouse_position())
+	var over := _box.get_global_rect().has_point(get_global_mouse_position()) and get_viewport().get_visible_rect().has_point(get_viewport().get_mouse_position())
 	if over or _pinned or (_lang != null and _lang.get_popup().visible):
 		_idle = 0.0
 	else:
@@ -165,12 +165,12 @@ func _animate_menu(d: float) -> void:
 	var want := 1.0 if (over or _pinned or _idle < 0.45) else 0.0
 	_open = move_toward(_open, want, d * 6.0)
 	_grip.text = "▸" if _open > 0.5 else "◂"
-	var full := _box.get_combined_minimum_size()
-	var closed_w := _grip.get_combined_minimum_size().x + UiMetrics.css(4.0)
+	var full := nav_row.get_combined_minimum_size()
+	var closed_w := _grip.get_combined_minimum_size().x
 	var w := lerpf(closed_w, full.x, smoothstep(0.0, 1.0, _open))
 	_holder.custom_minimum_size = Vector2(w, full.y)
-	_box.size = full
-	_box.position = Vector2(w - full.x, 0.0)
+	nav_row.size = full
+	nav_row.position = Vector2(w - full.x, 0.0)
 
 func _button(text: String) -> Button:
 	var b := Button.new()
