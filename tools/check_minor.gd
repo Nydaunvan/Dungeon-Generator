@@ -103,5 +103,20 @@ func _init() -> void:
 		check("infobulle « %s » sans clé brute" % k, not tx.contains("ui.") and not tx.contains("%d"))
 	check("infobulle Force cite l'objet équipé", SE.text(eqc, gs.cfg, "force").contains("Épée de test"))
 	check("infobulle Attaque cite l'objet équipé", SE.text(eqc, gs.cfg, "atk").contains("Épée de test"))
+	# fenêtre de survol : apparaît à l'entrée de la souris, disparaît à la sortie, reste dans l'écran
+	var ST = load("res://scripts/ui/stat_tip.gd")
+	var hostc := Control.new()
+	hostc.position = Vector2(200, 400)
+	hostc.size = Vector2(120, 24)
+	m.add_child(hostc)
+	ST.attach(hostc, func(): return SE.many_data(eqc, gs.cfg, ["force", "dex", "con", "int"]))
+	hostc.mouse_entered.emit()
+	await create_timer(0.4).timeout
+	check("survol : fenêtre visible", ST._inst != null and ST._inst.visible)
+	var vr: Vector2 = root.get_visible_rect().size
+	check("survol : fenêtre entièrement dans l'écran", ST._inst.position.x >= 0 and ST._inst.position.y >= 0 and ST._inst.position.x + ST._inst.size.x <= vr.x + 1 and ST._inst.position.y + ST._inst.size.y <= vr.y + 1)
+	hostc.mouse_exited.emit()
+	await create_timer(0.4).timeout
+	check("survol : fenêtre masquée à la sortie", not ST._inst.visible)
 	print("check_minor : ", "OK" if fails == 0 else "%d échec(s)" % fails)
 	quit(1 if fails > 0 else 0)

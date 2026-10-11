@@ -560,7 +560,8 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 		h.add_child(_label(r[1], 14, UiTheme.PARCH, UiTheme.F_BODY_BOLD))
 		# survol : règle, calcul chiffré et sources (objets, talents, statuts) de chaque valeur de la ligne
 		h.mouse_filter = Control.MOUSE_FILTER_PASS
-		h.tooltip_text = StatExplain.many(c, gs.cfg, r[2])
+		var rkeys: Array = r[2]
+		StatTip.attach(h, func(): return StatExplain.many_data(c, gs.cfg, rkeys))
 		bv.add_child(h)
 	return col
 
@@ -776,8 +777,8 @@ func _build_drawer(c: Dictionary) -> Control:
 	]
 	for line in lines_stat:
 		var ln := _label(line, 13)
-		ln.mouse_filter = Control.MOUSE_FILTER_PASS
-		ln.tooltip_text = StatExplain.many(c, gs.cfg, ["force", "dex", "con", "int"] if line == lines_stat[0] else ["spell_power"])
+		var lkeys: Array = ["force", "dex", "con", "int"] if line == lines_stat[0] else ["spell_power"]
+		StatTip.attach(ln, func(): return StatExplain.many_data(c, gs.cfg, lkeys))
 		_drawer_inner.add_child(ln)
 	_drawer_inner.add_child(_label(L.t("ui.equip_dock.sorts_et_capacites"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	var known: Array = c.get("spellsKnown", [])
