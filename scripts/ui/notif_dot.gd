@@ -32,7 +32,7 @@ func _ready() -> void:
 		ChatAlerts.refresh()
 
 func _update() -> void:
-	_n = int(count_fn.call()) if count_fn.is_valid() else ChatAlerts.total
+	_n = int(count_fn.call()) if count_fn.is_valid() else ChatAlerts.effective()
 	visible = _n > 0
 	queue_redraw()
 

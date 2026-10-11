@@ -174,7 +174,9 @@ func _fill_strip() -> void:
 	if _online() and not _signed():
 		right.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 34))
 	if _signed():
-		var cbtn := HubKit.button("💬 " + L.t("ui.chat.header"), func(): ChatModal.open(_host), false, 34)
+		var cbtn := HubKit.button("💬 " + L.t("ui.chat.header"), func():
+			_modal.close()
+			ChatDock.open_panel(), false, 34)
 		NotifDot.attach(cbtn)
 		right.add_child(cbtn)
 		right.add_child(HubKit.button("👤 " + L.t("ui.cloud.header"), func(): AccountModal.open(_host), false, 34))
