@@ -12,16 +12,36 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 	var g := GridContainer.new()
 	g.columns = 2
 	g.add_theme_constant_override("h_separation", 24)
-	for c in [[L.t("ui.monster_info_modal.force"), int(def.get("force", 8))], [L.t("ui.monster_info_modal.dexterite"), int(def.get("dex", 8))], ["🛡️ Constitution", int(def.get("con", 8))],
-			[L.t("ui.monster_info_modal.degats"), "%d–%d" % [int(st.atkMin), int(st.atkMax)]], [L.t("ui.monster_info_modal.resist_physique"), "%d%%" % int(def.get("resistPhys", 0))],
-			[L.t("ui.monster_info_modal.resist_magique"), "%d%%" % int(def.get("resistMagic", 0))],
-			["⚡ " + L.t("common.vitesse"), str(int(Stats.monster_speed(def)))], ["❤️ " + L.t("common.pv"), "%d" % int(round(float(st.maxHp)))]]:
+	var f := int(def.get("force", 8))
+	var dx := int(def.get("dex", 8))
+	var cn := int(def.get("con", 8))
+	var dmg_min := maxi(1, int(floor(float(f) / 2.5)))
+	var status_lines: Array[String] = []
+	for e in Statuses.active(st):
+		var sd := Statuses.def(str(e.type))
+		status_lines.append("  • %s %s (%d)" % [sd.get("icon", "✨"), sd.get("label", e.type), int(e.remaining)])
+	var st_txt := "\n".join(status_lines) if not status_lines.is_empty() else L.t("ui.stat_explain.aucune_source")
+	var speed_txt := L.fa(L.t("ui.monster_info_modal.tip_speed_fixed"), int(Stats.monster_speed(def))) if def.get("speed") != null \
+			else L.fa(L.t("ui.monster_info_modal.tip_speed_dex"), [dx, int(Stats.monster_speed(def))])
+	for c in [[L.t("ui.monster_info_modal.force"), f, L.fa(L.t("ui.monster_info_modal.tip_force"), [f, dmg_min])],
+			[L.t("ui.monster_info_modal.dexterite"), dx, L.fa(L.t("ui.monster_info_modal.tip_dex"), [dmg_min, dx, int(st.atkMax), int(Stats.monster_speed(def))])],
+			["🛡️ Constitution", cn, L.fa(L.t("ui.monster_info_modal.tip_con"), [cn, int(round(float(st.maxHp)))])],
+			[L.t("ui.monster_info_modal.degats"), "%d–%d" % [int(st.atkMin), int(st.atkMax)], L.fa(L.t("ui.monster_info_modal.tip_dmg"), [int(st.atkMin), int(st.atkMax)]) + "\n" + st_txt],
+			[L.t("ui.monster_info_modal.resist_physique"), "%d%%" % int(def.get("resistPhys", 0)), L.fa(L.t("ui.monster_info_modal.tip_resist"), [int(def.get("resistPhys", 0))]) + "\n" + st_txt],
+			[L.t("ui.monster_info_modal.resist_magique"), "%d%%" % int(def.get("resistMagic", 0)), L.fa(L.t("ui.monster_info_modal.tip_resist"), [int(def.get("resistMagic", 0))]) + "\n" + st_txt],
+			["⚡ " + L.t("common.vitesse"), str(int(Stats.monster_speed(def))), speed_txt + "\n" + L.t("ui.monster_info_modal.tip_speed_rule")],
+			["❤️ " + L.t("common.pv"), "%d" % int(round(float(st.maxHp))), L.fa(L.t("ui.monster_info_modal.tip_con"), [cn, int(round(float(st.maxHp)))])]]:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.tooltip_text = str(c[2])    # survol : règle de calcul, résultat et statuts qui la modifient
 		var l := AdminUtil.label(str(c[0]), 14, UiTheme.DIM)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(l)
 		row.add_child(AdminUtil.label(str(c[1]), 14, UiTheme.PARCH))
+		for ch in row.get_children():
+			ch.mouse_filter = Control.MOUSE_FILTER_PASS
+			(ch as Control).tooltip_text = str(c[2])
 		g.add_child(row)
 	m.content.add_child(g)
 	var members: Array = st.members if (bool(def.get("isGroup", false)) and st.has("members")) else [st]

@@ -31,13 +31,22 @@ func _init() -> void:
 	var m = current_scene
 	var gs = m.gs
 	var ctrl = m.ctrl
-	for i in 40:   # un piège ou un combat de départ peut encore se jouer : on attend le calme
+	for i in 120:   # un piège ou un combat de départ peut encore se jouer : on le termine (attaque) puis on attend le calme
 		if not ctrl.model_in_combat() and get_nodes_in_group("modal").is_empty():
 			break
-		await create_timer(0.25).timeout
+		if ctrl.model_in_combat() and ctrl.in_combat():
+			ctrl.attack()
+		await create_timer(0.4).timeout
+	await create_timer(1.5).timeout
+	for mo in get_nodes_in_group("modal"):   # butin / montée de niveau d'un combat de départ : on referme
+		mo.queue_free()
+	gs.choice_queue.clear()
+	await create_timer(0.5).timeout
 	check("partie chargée hors combat", gs != null and not ctrl.in_combat())
 	# 1. raccourci de sort hors combat : la touche 2 lance le premier sort (ici un sort sur allié → attend la cible)
 	var c: Dictionary = gs.party[0]
+	for h in gs.party:
+		h["hp"] = h["maxHp"]
 	gs.active_char_id = str(c.id)
 	c["spellsKnown"] = ["spell_bard1"]
 	ctrl.pending_spell = ""
@@ -83,5 +92,16 @@ func _init() -> void:
 		check("carte du personnage : classe « %s »" % card.cls_lbl.text, card.cls_lbl.text == str(cls.name))
 	else:
 		print("(party_hud introuvable dans layout)")
+	# infobulles de statistiques : règle + calcul + sources, pour chaque statistique
+	var eqc: Dictionary = gs.party[1]
+	eqc["equipment"]["weapon"] = {"name": "Épée de test", "type": "weapon", "slot": "weapon", "bonusForce": 3, "bonusAtkMin": 1}
+	load("res://scripts/rules/characters.gd").recompute(eqc, gs.cfg)
+	var SE = load("res://scripts/ui/stat_explain.gd")
+	for k in SE.ALL + ["hp", "stamina"]:
+		var tx: String = SE.text(eqc, gs.cfg, k)
+		check("infobulle « %s » non vide" % k, tx.length() > 40)
+		check("infobulle « %s » sans clé brute" % k, not tx.contains("ui.") and not tx.contains("%d"))
+	check("infobulle Force cite l'objet équipé", SE.text(eqc, gs.cfg, "force").contains("Épée de test"))
+	check("infobulle Attaque cite l'objet équipé", SE.text(eqc, gs.cfg, "atk").contains("Épée de test"))
 	print("check_minor : ", "OK" if fails == 0 else "%d échec(s)" % fails)
 	quit(1 if fails > 0 else 0)

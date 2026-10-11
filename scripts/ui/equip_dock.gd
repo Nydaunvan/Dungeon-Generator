@@ -544,13 +544,13 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 	hh.add_child(more)
 	bv.add_child(hh)
 	var rows := [
-		[L.t("common.pv"), "%d/%d" % [int(c.hp), int(c.maxHp)]],
-		[L.t("common.endurance"), "%d/%d" % [int(c.get("stamina", 0)), int(c.get("maxStamina", 100))]],
-		[L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)]],
-		[L.t("ui.equip_dock.for_dex_con_int"), "%d / %d / %d / %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]],
-		[L.t("common.vitesse"), str(int(c.get("effSpeed", 10)))],
-		[L.t("ui.equip_dock.crit_esq_garde"), "%d %% / %d %% / %d %%" % [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0))]],
-		[L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0)))],
+		[L.t("common.pv"), "%d/%d" % [int(c.hp), int(c.maxHp)], ["hp"]],
+		[L.t("common.endurance"), "%d/%d" % [int(c.get("stamina", 0)), int(c.get("maxStamina", 100))], ["stamina"]],
+		[L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)], ["atk"]],
+		[L.t("ui.equip_dock.for_dex_con_int"), "%d / %d / %d / %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))], ["force", "dex", "con", "int"]],
+		[L.t("common.vitesse"), str(int(c.get("effSpeed", 10))), ["speed"]],
+		[L.t("ui.equip_dock.crit_esq_garde"), "%d %% / %d %% / %d %%" % [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0))], ["crit", "dodge", "guard"]],
+		[L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))), ["spell_power"]],
 	]
 	for r in rows:
 		var h := HBoxContainer.new()
@@ -558,6 +558,9 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(a)
 		h.add_child(_label(r[1], 14, UiTheme.PARCH, UiTheme.F_BODY_BOLD))
+		# survol : règle, calcul chiffré et sources (objets, talents, statuts) de chaque valeur de la ligne
+		h.mouse_filter = Control.MOUSE_FILTER_PASS
+		h.tooltip_text = StatExplain.many(c, gs.cfg, r[2])
 		bv.add_child(h)
 	return col
 
@@ -767,11 +770,15 @@ func _build_drawer(c: Dictionary) -> Control:
 	sep.custom_minimum_size = Vector2(0, 1)
 	_drawer_inner.add_child(sep)
 	_drawer_inner.add_child(_label("STATISTIQUES", 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
-	for line in [
+	var lines_stat: Array = [
 		L.fa(L.t("ui.equip_dock.force_dexterite_constitution"), [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))]),
 		L.fa(L.t("ui.equip_dock.degats_de_sort_xp"), [int(c.get("bonusSpellDmg", 0)), int(c.get("xp", 0)), int(c.get("xpToNext", 1))]),
-	]:
-		_drawer_inner.add_child(_label(line, 13))
+	]
+	for line in lines_stat:
+		var ln := _label(line, 13)
+		ln.mouse_filter = Control.MOUSE_FILTER_PASS
+		ln.tooltip_text = StatExplain.many(c, gs.cfg, ["force", "dex", "con", "int"] if line == lines_stat[0] else ["spell_power"])
+		_drawer_inner.add_child(ln)
 	_drawer_inner.add_child(_label(L.t("ui.equip_dock.sorts_et_capacites"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	var known: Array = c.get("spellsKnown", [])
 	if known.is_empty():
