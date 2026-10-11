@@ -68,6 +68,12 @@ func _init() -> void:
 	await create_timer(1.2).timeout
 	var modals := get_nodes_in_group("modal")
 	check("fenêtre d'évolution ouverte sans action du joueur", not modals.is_empty())
+	var badge = null
+	for n in m.get_children():
+		if n.get_class() == "CanvasLayer" and n.get_child_count() > 0 and n.get_script() != null and str(n.get_script().resource_path).ends_with("pause_badge.gd"):
+			badge = n
+	check("pastille pause présente", badge != null)
+	check("pastille pause visible quand une fenêtre est ouverte", badge != null and badge._pill.visible)
 	var btns: Array = []
 	for mo in modals:
 		find_buttons(mo, btns)

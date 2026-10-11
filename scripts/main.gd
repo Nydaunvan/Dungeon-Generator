@@ -67,6 +67,9 @@ func _ready() -> void:
 	var resume := not Data.pending_save.is_empty()
 	# Pendant la construction (répartie sur plusieurs images derrière l'écran de chargement), la scène reste figée.
 	process_mode = Node.PROCESS_MODE_DISABLED
+	var pause_badge := PauseBadge.new()      # pastille « pause » quand une fenêtre ou le volet d'inventaire fige la partie
+	add_child(pause_badge)
+	pause_badge.setup(self)
 	await Loader.step(0.08, L.t("loading.etape_sauvegarde") if resume else L.t("loading.etape_equipe_nouvelle"))
 	var pend_log := Data.pending_log
 	var pend_transient := Data.pending_transient
