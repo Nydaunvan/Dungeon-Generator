@@ -1964,7 +1964,12 @@
   "ui.stat_explain.r_life": "Talents",
   "ui.stat_explain.r_atk_min": "Min damage",
   "ui.stat_explain.r_atk_max": "Max damage",
-  "ui.stat_explain.calcul": "Calculation"
+  "ui.stat_explain.calcul": "Calculation",
+  "ui.shop_modal.effet_sur": "Effect on %s (once equipped)",
+  "ui.shop_modal.col_now": "Now",
+  "ui.shop_modal.col_after": "After",
+  "ui.shop_modal.aucun_changement": "None of %s's statistics change.",
+  "ui.shop_modal.survol_detail": "Hover a row: the detailed calculation, with this item equipped."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

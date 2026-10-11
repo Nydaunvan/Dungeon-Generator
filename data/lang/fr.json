@@ -1964,7 +1964,12 @@
   "ui.stat_explain.r_life": "Talents",
   "ui.stat_explain.r_atk_min": "Dégâts min",
   "ui.stat_explain.r_atk_max": "Dégâts max",
-  "ui.stat_explain.calcul": "Calcul"
+  "ui.stat_explain.calcul": "Calcul",
+  "ui.shop_modal.effet_sur": "Effet sur %s (une fois équipé)",
+  "ui.shop_modal.col_now": "Actuel",
+  "ui.shop_modal.col_after": "Après",
+  "ui.shop_modal.aucun_changement": "Aucune statistique de %s ne change.",
+  "ui.shop_modal.survol_detail": "Survolez une ligne : le calcul détaillé, avec cet objet équipé."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

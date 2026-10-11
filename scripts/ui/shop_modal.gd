@@ -14,7 +14,7 @@ const CARD_H := 118.0
 static func open(host: Node, gs: GameState, offers: Array, village: bool, on_change: Callable = Callable()) -> Modal:
 	var vp := host.get_viewport().get_visible_rect().size if host.is_inside_tree() else Vector2(1280, 720)
 	var m := Modal.open(host, L.t("ui.shop_modal.le_marchand") if village else L.t("ui.shop_modal.le_marchand_itinerant"), 960.0)
-	var body_h := clampf(vp.y * 0.66 - 150.0, 250.0, 420.0)
+	var body_h := clampf(vp.y * 0.74 - 150.0, 250.0, 560.0)
 	var greet := "ui.shop_modal.salut_village" if village else "ui.shop_modal.salut_%d" % (1 + randi() % 3)
 	var st := {"tab": "buy", "cat": "items", "who": str(gs.active_char_id), "sel": "", "qty": {}, "msg": "", "ok": false, "greet": greet}
 	var merchant_icon := "@icon:merchant" if village else "@icon:merchant_dungeon"
@@ -328,6 +328,81 @@ static func _stat_rows(it: Dictionary) -> Dictionary:
 			d[f[0]] = int(it[f[0]])
 	return d
 
+## Statistiques affichées dans « Effet sur… » : [clé de StatExplain, libellé, extracteur de valeur].
+static func _effect_rows() -> Array:
+	return [
+		["hp", L.t("common.pv"), func(c): return [int(c.maxHp)]],
+		["atk", L.t("common.attaque"), func(c): return [int(c.atkMin), int(c.atkMax)]],
+		["force", L.t("common.force"), func(c): return [int(c.get("effForce", 10))]],
+		["dex", L.t("common.dexterite"), func(c): return [int(c.get("effDex", 10))]],
+		["con", L.t("common.constitution"), func(c): return [int(c.get("effCon", 10))]],
+		["int", L.t("common.intelligence"), func(c): return [int(c.get("effInt", 10))]],
+		["speed", L.t("common.vitesse"), func(c): return [int(c.get("effSpeed", 10))]],
+		["crit", L.t("ui.party_modal.critique"), func(c): return [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0))]],
+		["dodge", L.t("ui.party_modal.esquive"), func(c): return [int(c.get("dodgePct", 0))]],
+		["guard", L.t("ui.party_modal.garde"), func(c): return [int(c.get("guardPct", 0))]],
+		["reduc_phys", L.t("ui.party_modal.reduc_phys"), func(c): return [Stats.reduction(c, false)]],
+		["reduc_mag", L.t("ui.party_modal.reduc_mag"), func(c): return [Stats.reduction(c, true)]],
+		["spell_power", L.t("ui.party_modal.puissance_sorts"), func(c): return [int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))]],
+	]
+
+static func _fmt(v: Array, pct: bool) -> String:
+	if v.size() == 2:
+		return "%d – %d" % [v[0], v[1]]
+	return ("%d %%" % v[0]) if pct else str(v[0])
+
+## « Effet sur <héros> » : toutes les statistiques du héros avant / après avoir équipé l'objet (calcul exact du jeu, plafonds compris).
+## Chaque ligne se survole : le détail du calcul est donné pour le héros ÉQUIPÉ de l'objet.
+static func _effect_section(box: VBoxContainer, gs: GameState, who: Dictionary, rep: Dictionary, slot: String) -> void:
+	var after: Dictionary = who.duplicate(true)
+	if not (after.get("equipment") is Dictionary):
+		after["equipment"] = {}
+	after["equipment"][slot] = rep.duplicate(true)
+	Characters.recompute(after, gs.cfg)
+	box.add_child(HSeparator.new())
+	box.add_child(AdminUtil.label(L.fa(L.t("ui.shop_modal.effet_sur"), str(who.name)), 14, UiTheme.GOLD))
+	var g := GridContainer.new()
+	g.columns = 4
+	g.add_theme_constant_override("h_separation", 12)
+	g.add_theme_constant_override("v_separation", 2)
+	box.add_child(g)
+	for h in ["", L.t("ui.shop_modal.col_now"), L.t("ui.shop_modal.col_after"), ""]:
+		var hl := AdminUtil.label(h, 12, UiTheme.DIM)
+		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		g.add_child(hl)
+	var changed := 0
+	for r in _effect_rows():
+		var fn: Callable = r[2]
+		var b: Array = fn.call(who)
+		var a: Array = fn.call(after)
+		if b == a:
+			continue
+		changed += 1
+		var pct: bool = ["crit", "dodge", "guard", "reduc_phys", "reduc_mag"].has(str(r[0]))
+		var d := 0.0
+		for i in a.size():
+			d += float(a[i]) - float(b[i])
+		d /= float(a.size())
+		var key: String = r[0]
+		var provider := func(): return StatExplain.many_data(after, gs.cfg, [key])
+		var cells: Array = [AdminUtil.label(str(r[1]), 14, UiTheme.PARCH), AdminUtil.label(_fmt(b, pct), 14, UiTheme.DIM),
+			AdminUtil.label(_fmt(a, pct), 14, UiTheme.PARCH),
+			AdminUtil.label(("▲ +" if d > 0 else "▼ −") + _num(absf(d)) + (" %" if pct else ""), 13, UiTheme.HP_GREEN if d > 0 else RED)]
+		for i in cells.size():
+			var cl: Label = cells[i]
+			if i > 0:
+				cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL if i == 0 else Control.SIZE_SHRINK_END
+			g.add_child(cl)
+			StatTip.attach(cl, provider)
+	if changed == 0:
+		g.queue_free()
+		box.add_child(AdminUtil.label(L.fa(L.t("ui.shop_modal.aucun_changement"), str(who.name)), 13, UiTheme.DIM))
+	else:
+		var hint := AdminUtil.label(L.t("ui.shop_modal.survol_detail"), 11, UiTheme.DIM)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(hint)
+
 static func _num(v: float) -> String:
 	var r := snappedf(v, 0.1)
 	return str(int(r)) if is_equal_approx(r, floorf(r)) else "%.1f" % r
@@ -453,6 +528,9 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 		var el := AdminUtil.label(L.fa(L.t("ui.shop_modal.n_a_rien_equipe_a"), who.name) if eq.is_empty() else L.fa(L.t("ui.shop_modal.equipe_sur"), [who.name, L.c(str(eq.get("name", "?")))]), 12, UiTheme.DIM)
 		el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(el)
+
+	if compare and not who.is_empty():
+		_effect_section(box, gs, who, rep, slot)
 
 	var fill := Control.new()
 	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
