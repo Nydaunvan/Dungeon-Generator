@@ -29,6 +29,7 @@ var merchant_node: Node3D = null
 var fountains: Dictionary = {}  # id -> Fountain3D
 ## Renvoie true si la fontaine `id` est utilisable (délai de recharge écoulé). Fournie par main.gd.
 var fountain_ready: Callable = Callable()
+var combat_info: Callable = Callable()   ## () -> {id, gauge 0..1} du monstre engagé au combat, ou {} (animations de combat)
 var _poll := 0.0
 const FOUNTAIN_SCALE := 0.8
 const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
@@ -180,6 +181,9 @@ func _animate_monsters(delta: float) -> void:
 	var cam := get_viewport().get_camera_3d()
 	var cb: Basis = cam.global_transform.basis if cam != null else Basis.IDENTITY
 	var idle: bool = not Settings.reduced_motion
+	var ci: Dictionary = combat_info.call() if combat_info.is_valid() else {}
+	var cid := str(ci.get("id", ""))
+	var charge := clampf(float(ci.get("gauge", 0.0)), 0.0, 1.0)
 	for p in monsters.keys():
 		for e in monsters[p]:
 			if not is_instance_valid(e.node):
@@ -194,10 +198,25 @@ func _animate_monsters(delta: float) -> void:
 			var sx := 1.0
 			var dy := 0.0
 			var off := Vector3.ZERO
+			var fighting: bool = cid != "" and str(e.def.id) == cid
 			if idle:
 				var boss: bool = n.get_meta("boss", false)
-				sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
-				dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
+				if fighting:
+					# au combat : souffle plus ample et plus rapide, balancement d'un pied sur l'autre, léger pas en avant
+					sy += (0.03 if boss else 0.05) * sin(_clock * 3.4 + ph)
+					dy += 0.02 * sin(_clock * 2.6 + ph * 1.7)
+					off += cb.x * 0.055 * sin(_clock * 1.7 + ph)
+					off += cb.z * 0.05 * (0.5 + 0.5 * sin(_clock * 0.9 + ph))
+				else:
+					sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
+					dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
+			if fighting and charge > 0.7:
+				# annonce de l'attaque : le monstre se ramasse, gonfle et vibre quand sa jauge approche du plein
+				var wind := (charge - 0.7) / 0.3
+				sy += 0.07 * wind
+				sx += 0.04 * wind
+				off -= cb.z * 0.1 * wind
+				off += cb.x * 0.012 * wind * sin(_clock * 55.0)
 			var r: Variant = _react.get(n)
 			if r != null:
 				r["t"] = float(r.t) + delta

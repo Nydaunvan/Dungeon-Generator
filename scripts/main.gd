@@ -348,6 +348,18 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		elif bool(it.get("startHidden", false)) and not ist.get("hidden", true):
 			level_node.entities.set_item_visible(str(it.id), true)
 	var lvl_id := str(level.id)
+	level_node.entities.combat_info = func() -> Dictionary:
+		if ctrl == null or ctrl.combat == null or gs.game_over or not ctrl.model_in_combat():
+			return {}
+		var eng: Dictionary = ctrl.combat.engaged()
+		if eng.is_empty():
+			return {}
+		var mid := str(eng.monster.id)
+		var g := 0.0
+		for k in ctrl.combat.gauges.keys():
+			if str(k) == "mon_" + mid or str(k).begins_with("mon_%s#" % mid):
+				g = maxf(g, float(ctrl.combat.gauges[k]))
+		return {"id": mid, "gauge": g / 100.0}
 	level_node.entities.fountain_ready = func(fid: String) -> bool:
 		var fst := gs.item_state(lvl_id, fid)
 		if not fst.has("usedAt"):
