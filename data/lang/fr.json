@@ -2017,7 +2017,7 @@
   "ui.creation_leave.autosaved": "✔ Votre donjon est enregistré automatiquement dans « Mes donjons » (sur cet appareil et dans votre compte si vous êtes connecté).",
   "ui.create_choice.intro": "Comment voulez-vous commencer ?",
   "ui.create_choice.empty_t": "Partir d'un donjon vide",
-  "ui.create_choice.empty_d": "Un seul niveau sans rien dedans : murs, monstres, objets, escaliers… tout est à créer.",
+  "ui.create_choice.empty_d": "Un seul niveau entièrement plein de murs, avec seulement la case de départ : couloirs, monstres, objets, escaliers… tout est à creuser et à créer.",
   "ui.create_choice.empty_b": "Commencer avec un donjon vide",
   "ui.create_choice.random_t": "Partir d'une base aléatoire",
   "ui.create_choice.random_d": "Un donjon généré au hasard que vous modifiez à votre goût (la méthode habituelle).",

@@ -2017,7 +2017,7 @@
   "ui.creation_leave.autosaved": "✔ Your dungeon is saved automatically in “My dungeons” (on this device and in your account if you are signed in).",
   "ui.create_choice.intro": "How do you want to start?",
   "ui.create_choice.empty_t": "Start from an empty dungeon",
-  "ui.create_choice.empty_d": "A single empty level: walls, monsters, items, stairs… everything is yours to build.",
+  "ui.create_choice.empty_d": "A single level filled entirely with walls, with only the starting tile: corridors, monsters, items, stairs… everything is yours to dig and build.",
   "ui.create_choice.empty_b": "Start with an empty dungeon",
   "ui.create_choice.random_t": "Start from a random base",
   "ui.create_choice.random_d": "A randomly generated dungeon that you tweak to your liking (the usual way).",

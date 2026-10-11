@@ -386,8 +386,9 @@ static func report(cloud_id: String, reason: String) -> Dictionary:
 
 # ------------------------------------------------------------------ donjon vide
 
-## Configuration d'un donjon VIDE : les règles du jeu (classes, sorts, objets, groupe) mais un seul niveau sans murs intérieurs,
-## sans monstre, sans objet, sans escalier : tout reste à créer.
+## Configuration d'un donjon VIDE : les règles du jeu (classes, sorts, objets, groupe) mais un seul niveau ENTIÈREMENT plein
+## (murs partout, sauf la case de départ du groupe), sans monstre, sans objet, sans escalier : tout reste à creuser.
+## Pas de grande salle ouverte au départ : les salles ne sont pas encore autorisées et le joueur ne doit pas y jouer par accident.
 static func empty_config() -> Dictionary:
 	var c: Dictionary = Data.original_config.duplicate(true)
 	var w := 11
@@ -396,7 +397,7 @@ static func empty_config() -> Dictionary:
 	for y in h:
 		var s := ""
 		for x in w:
-			s += "#" if (x == 0 or y == 0 or x == w - 1 or y == h - 1) else "."
+			s += "." if (x == 1 and y == 1) else "#"
 		rows.append(s)
 	c["levels"] = [{"id": "lvl_1", "name": L.t("ui.mydun.level_1"), "theme": "stone", "mapRows": rows, "startX": 1, "startY": 1, "startDir": 1,
 		"stairs": [], "doors": [], "monsters": [], "items": []}]
