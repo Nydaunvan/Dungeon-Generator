@@ -635,10 +635,14 @@ class Synth:
 		st.mix_rate = rate
 		st.stereo = false
 		var n := data.size()
+		var pad := mini(n, 32)     # marge : le lecteur audio de Godot lit un échantillon au-delà de la fin (interpolation) ; sans elle, lecture hors du tampon
 		var bytes := PackedByteArray()
-		bytes.resize(n * 2)
+		bytes.resize((n + pad) * 2)
 		for i in n:
 			bytes.encode_s16(i * 2, int(clampf(data[i], -1.0, 1.0) * 32000.0))
+		if loop:
+			for i in pad:    # boucle : la marge reprend le début, le raccord reste inaudible
+				bytes.encode_s16((n + i) * 2, bytes.decode_s16(i * 2))
 		st.data = bytes
 		if loop:
 			st.loop_mode = AudioStreamWAV.LOOP_FORWARD
