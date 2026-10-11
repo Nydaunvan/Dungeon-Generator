@@ -146,6 +146,8 @@ static func _send(run_id: String, log: Array) -> Dictionary:
 	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/submit_ranked_run", {"p_run_id": run_id, "p_log": log}, true)
 	if not r.ok and (bool(r.get("offline", false)) or int(r.get("status", 0)) >= 500):
 		_save_pending(run_id, log)
+	else:
+		_clear_pending(run_id)        # envoyé, ou refusé pour de bon par le serveur (partie expirée…) : plus rien à renvoyer
 	return r
 
 static func _save_pending(run_id: String, log: Array) -> void:
@@ -153,14 +155,60 @@ static func _save_pending(run_id: String, log: Array) -> void:
 	if f != null:
 		f.store_string(JSON.stringify({"run_id": run_id, "log": log}))
 
+## Supprime le journal en attente (de cette partie seulement, si `run_id` est donné).
+static func _clear_pending(run_id: String = "") -> void:
+	if not FileAccess.file_exists(PENDING_PATH):
+		return
+	if run_id != "":
+		var d = JSON.parse_string(FileAccess.get_file_as_string(PENDING_PATH))
+		if d is Dictionary and str(d.get("run_id", "")) != run_id:
+			return
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PENDING_PATH))
+
+# ------------------------------------------------------------------ reprise après plantage / fermeture brutale
+# Pendant une partie classée, le journal est recopié dans user://ranked_pending.json (au plus toutes les 15 s, et à la fermeture de la
+# fenêtre). Si le jeu plante ou se ferme sans avoir envoyé la partie, `flush_pending` l'envoie au prochain lancement : le serveur
+# l'accepte tant que la partie a moins de 2 h 10, et le score est celui de l'abandon (« Terminer ici » : niveaux déjà franchis).
+
+const CHECKPOINT_SEC := 15.0
+static var _live_id := ""              ## partie classée en cours dans cette session (jamais renvoyée par flush_pending)
+static var _ck_ms := -1000000
+static var _ck_n := -1
+
+static func checkpoint(gs: GameState, force: bool = false) -> void:
+	var run_id := str(gs.cfg.get("runId", ""))
+	if run_id == "" or not RunLog.ranked() or gs.run_log.is_empty() or bool(gs.stats.get("rankedSent", false)):
+		return
+	_live_id = run_id
+	if not RunLog.is_clean():
+		_clear_pending(run_id)          # partie souillée : jamais classable, rien à récupérer
+		return
+	var n := gs.run_log.size()
+	var now := Time.get_ticks_msec()
+	if not force and (n == _ck_n or now - _ck_ms < int(CHECKPOINT_SEC * 1000.0)):
+		return
+	_ck_n = n
+	_ck_ms = now
+	_save_pending(run_id, gs.run_log)
+
+## Les nombres entiers relus d'un fichier JSON sont des flottants : on les remet en entiers avant l'envoi.
+static func _ints(v: Variant) -> Variant:
+	if v is Array:
+		return (v as Array).map(func(x): return _ints(x))
+	if v is float and is_equal_approx(v, roundf(v)) and absf(v) < 9.0e15:
+		return int(v)
+	return v
+
 ## Renvoie le journal resté en attente (envoi échoué hors ligne), si un compte est connecté.
 static func flush_pending() -> void:
 	if not Cloud.is_signed_in() or not FileAccess.file_exists(PENDING_PATH):
 		return
 	var d = JSON.parse_string(FileAccess.get_file_as_string(PENDING_PATH))
+	if d is Dictionary and str(d.get("run_id", "")) == _live_id and _live_id != "":
+		return                          # c'est la partie en cours dans cette session : elle s'enverra à sa fin
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PENDING_PATH))
 	if d is Dictionary and d.get("log") is Array and str(d.get("run_id", "")) != "":
-		_send(str(d.run_id), d.log)
+		_send(str(d.run_id), _ints(d.log))
 
 ## Les parties classées du joueur connecté (hors tests), les plus récentes d'abord : état, score, temps, jour de Paris.
 static func my_runs(limit: int = 30) -> Dictionary:

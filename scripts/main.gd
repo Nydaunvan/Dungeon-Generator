@@ -54,6 +54,7 @@ func _tick_ranked_timer() -> void:
 	if not _ranked_t0_set:
 		_ranked_t0_set = true
 		_ranked_t0_ms = Time.get_ticks_msec()
+	RankedRun.checkpoint(gs)               # copie du journal pour reprise après plantage (au plus toutes les 15 s)
 	var left := RankedRun.TIME_LIMIT_SEC - int((Time.get_ticks_msec() - _ranked_t0_ms) / 1000)
 	var col := Color("ffd88a")
 	if left <= 120:
@@ -92,6 +93,10 @@ func _submit_run(announce: bool = false) -> void:
 func _end_ranked_run() -> void:
 	if RunLog.ranked() and str(gs.cfg.get("runId", "")) != "":
 		RankedRun.submit(gs)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and gs != null and RunLog.ranked():
+		RankedRun.checkpoint(gs, true)     # fermeture de la fenêtre en pleine partie classée : le journal sera envoyé au prochain lancement
 
 func _exit_tree() -> void:
 	if RunLog.gs == gs:

@@ -110,6 +110,39 @@ func _init() -> void:
 	check("journal renvoyé", calls.size() == 1 and str(calls[0].body).contains("run-hors-ligne"))
 	check("fichier en attente supprimé", not FileAccess.file_exists(RR.PENDING_PATH))
 
+	# --- reprise après plantage : copie régulière du journal, renvoi au lancement suivant
+	gs.stats["rankedSent"] = false
+	gs.cfg["runId"] = "run-plantage"
+	RR._ck_ms = -1000000
+	RR.checkpoint(gs, true)
+	check("copie du journal pendant la partie", FileAccess.file_exists(RR.PENDING_PATH) and FileAccess.get_file_as_string(RR.PENDING_PATH).contains("run-plantage"))
+	queue = [resp(204)]
+	calls.clear()
+	RR.flush_pending()
+	for j in 5:
+		await process_frame
+	check("partie en cours dans cette session : jamais renvoyée", calls.is_empty() and FileAccess.file_exists(RR.PENDING_PATH))
+	RR._live_id = ""      # nouvelle session après un plantage
+	queue = [resp(204)]
+	calls.clear()
+	RR.flush_pending()
+	for j in 10:
+		await process_frame
+	check("après plantage : journal renvoyé", calls.size() == 1 and str(calls[0].body).contains("run-plantage") and str(calls[0].url).ends_with("/rpc/submit_ranked_run"))
+	check("après plantage : entiers conservés", not str(calls[0].body).contains(".0"))
+	check("après plantage : copie supprimée", not FileAccess.file_exists(RR.PENDING_PATH))
+	# souillée : plus de copie
+	RR._ck_ms = -1000000
+	RR.checkpoint(gs, true)
+	check("nouvelle copie", FileAccess.file_exists(RR.PENDING_PATH))
+	gs.run_taint = "test"
+	RR.checkpoint(gs, true)
+	check("partie souillée : copie supprimée", not FileAccess.file_exists(RR.PENDING_PATH))
+	gs.run_taint = ""
+	gs.stats["rankedSent"] = true
+	gs.cfg["runId"] = "run-abc"
+	RR._live_id = ""
+
 	# --- repartir de zéro : partie libre
 	m._restart()
 	var m2: Node = null

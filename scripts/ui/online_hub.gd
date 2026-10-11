@@ -582,19 +582,36 @@ func _load_runs_for_play() -> void:
 		return
 	_update_cta()
 
+## Avertissement si une partie classée est déjà en cours : en lancer une autre l'abandonne (« expirée », sans score).
+## Une partie démarrée depuis plus de 2 h 10 est de toute façon déjà expirée : pas d'avertissement.
+func _expiry_note() -> String:
+	var r: Dictionary = await RankedRun.my_runs(10)
+	if not r.ok or not (r.data is Array):
+		return ""
+	for x in r.data:
+		if str(x.get("status", "")) != "started":
+			continue
+		var t0 := Time.get_unix_time_from_datetime_string(str(x.get("started_at", "")).substr(0, 19))
+		if Time.get_unix_time_from_system() - t0 < 7800.0:
+			return "\n\n" + L.fa(L.t("ui.hub.expire_warn"), HubKit.short_date(x.get("started_at")))
+	return ""
+
 func _ask(mode: String) -> void:
+	var note: String = await _expiry_note()
+	if not _alive():
+		return
 	if mode == "weekly":
 		var rule: Dictionary = _weekly.get("rule", {})
 		var rname := str(rule.get("label_en" if TranslationServer.get_locale().begins_with("en") else "label_fr", ""))
-		Dialogs.confirm(_host, L.t("ui.hub.weekly_play"), L.fa(L.t("ui.hub.weekly_confirm"), rname), func(): _start("normal", "weekly"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
+		Dialogs.confirm(_host, L.t("ui.hub.weekly_play"), L.fa(L.t("ui.hub.weekly_confirm"), rname) + note, func(): _start("normal", "weekly"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 	elif mode == "daily":
 		var drule: Dictionary = _daily.get("rule", {})
 		var dname := str(drule.get("label_en" if TranslationServer.get_locale().begins_with("en") else "label_fr", ""))
-		Dialogs.confirm(_host, L.t("ui.hub.daily_play"), L.fa(L.t("ui.hub.daily_confirm"), dname), func(): _start("normal", "daily"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
+		Dialogs.confirm(_host, L.t("ui.hub.daily_play"), L.fa(L.t("ui.hub.daily_confirm"), dname) + note, func(): _start("normal", "daily"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 	elif mode == "hardcore":
-		Dialogs.confirm(_host, L.t("ui.hub.hc_play"), L.t("ui.hub.hc_confirm"), func(): _start("hardcore", "hardcore_month"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
+		Dialogs.confirm(_host, L.t("ui.hub.hc_play"), L.t("ui.hub.hc_confirm") + note, func(): _start("hardcore", "hardcore_month"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 	else:
-		Dialogs.confirm(_host, L.t("ui.hub.ranked_play"), L.fa(L.t("ui.hub.ranked_confirm"), L.t(ChallengesModal.DIFF_KEYS[_diff])),
+		Dialogs.confirm(_host, L.t("ui.hub.ranked_play"), L.fa(L.t("ui.hub.ranked_confirm"), L.t(ChallengesModal.DIFF_KEYS[_diff])) + note,
 			func(): _start(_diff, "difficulty"), L.t("ui.challenges.hc_go"), L.t("common.annuler"))
 
 func _start(difficulty: String, kind: String) -> void:

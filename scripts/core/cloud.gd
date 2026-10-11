@@ -82,6 +82,7 @@ signal _refresh_finished
 func _ready() -> void:
 	_load_config()
 	_load_session()
+	RankedRun.flush_pending.call_deferred()      # journal d'une partie classée restée en attente (plantage, hors ligne)
 
 # ------------------------------------------------------------------ état
 
@@ -257,6 +258,7 @@ func sign_in(mail: String, password: String) -> Dictionary:
 		session = {}
 		_store_session(r.data)
 		await load_profile()
+		RankedRun.flush_pending.call_deferred()
 	return r
 
 ## Relit le pseudo du profil (il peut avoir été changé depuis l'inscription).
