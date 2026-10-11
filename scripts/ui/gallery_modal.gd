@@ -13,6 +13,7 @@ var _sort := "recent"
 var _offset := 0
 var _gen := 0
 var _toggles: Dictionary = {}
+var _featured_box: VBoxContainer
 
 static func open(host: Node) -> GalleryModal:
 	var s := GalleryModal.new()
@@ -21,6 +22,7 @@ static func open(host: Node) -> GalleryModal:
 	s._modal.fit_ratio = 0.8
 	s._build()
 	s._load(true)
+	s._load_featured()
 	return s
 
 func _alive() -> bool:
@@ -34,6 +36,8 @@ func _flash(text: String, color: Color = UiTheme.DIM) -> void:
 func _build() -> void:
 	var c := _modal.content
 	_modal.add_text(L.t("ui.gallery.intro"), UiTheme.DIM, 13, true)
+	_featured_box = HubKit.vbox(4)
+	c.add_child(_featured_box)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	_search = LineEdit.new()
@@ -66,6 +70,18 @@ func _build() -> void:
 	_more.visible = false
 	c.add_child(_more)
 	_modal.set_buttons([{"text": L.t("common.fermer"), "cb": func(): _modal.close()}])
+
+## « Donjon de la semaine » : le plus téléchargé depuis 7 jours, mis en avant en haut de la galerie.
+func _load_featured() -> void:
+	var r: Dictionary = await MyDungeons.featured()
+	if not _alive() or not r.ok or not (r.data is Dictionary):
+		return
+	var row: Dictionary = r.data
+	if str(row.get("id", "")) == "":
+		return
+	_featured_box.add_child(HubKit.label("⭐ " + L.t("ui.gallery.featured"), UiTheme.GOLD, 14, true))
+	_featured_box.add_child(_card(row))
+	_modal.call_deferred("_fit")
 
 func _sync_toggles() -> void:
 	for k in _toggles:

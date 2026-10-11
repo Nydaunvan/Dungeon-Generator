@@ -78,7 +78,7 @@ static func _levels_of(cfg: Dictionary) -> int:
 	return (cfg.get("levels", []) as Array).size() if cfg.get("levels") is Array else 0
 
 ## Crée un donjon à partir d'une configuration. Renvoie son identifiant local.
-static func create(cfg: Dictionary, cloud_id: String = "", desc: String = "", is_public: bool = false) -> String:
+static func create(cfg: Dictionary, cloud_id: String = "", desc: String = "", is_public: bool = false, from_gallery: String = "") -> String:
 	_ensure_dir()
 	var id := _new_id()
 	cfg["title"] = _clean_title(str(cfg.get("title", "")))
@@ -89,7 +89,8 @@ static func create(cfg: Dictionary, cloud_id: String = "", desc: String = "", is
 	var now := Time.get_unix_time_from_system()
 	var items := _index()
 	items.append({"id": id, "cloud_id": cloud_id, "title": cfg.title, "desc": desc.left(MAX_DESC), "created": now, "updated": now,
-		"dirty": cloud_id == "", "public": is_public, "levels": _levels_of(cfg), "game_version": AppVersion.number(), "cloud_updated": ""})
+		"dirty": cloud_id == "", "public": is_public, "levels": _levels_of(cfg), "game_version": AppVersion.number(), "cloud_updated": "",
+		"from_gallery": from_gallery, "cleared": false})
 	_write_index(items)
 	schedule_push()
 	return id
@@ -375,10 +376,32 @@ static func download(cloud_id: String) -> Dictionary:
 		return {"ok": false, "message": L.t("common.ce_code_est_invalide_ou")}
 	Data.ensure_defaults(cfg)
 	cfg["title"] = str(row.get("title", ""))
-	var id := create(cfg, "", str(row.get("description", "")), false)
+	var id := create(cfg, "", str(row.get("description", "")), false, cloud_id)
 	if Cloud.is_signed_in():
 		Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/count_download", {"dungeon": cloud_id}, true)
 	return {"ok": id != "", "id": id, "message": ""}
+
+## Donjon de la semaine (le plus téléchargé en 7 jours) : {ok, data: {id,title,description,downloads,created_at,owner_id,pseudo,week_downloads} ou null}.
+static func featured() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/gallery_featured", {}, Cloud.is_signed_in())
+
+## Victoire dans le donjon « Mes donjons » en cours d'édition : si c'est un donjon téléchargé de la galerie, le serveur le compte une fois
+## (badges « Testeur »). Sans compte ou sans réseau, rien n'est envoyé et le jeu continue.
+static func report_gallery_clear() -> void:
+	if current_id == "" or not online():
+		return
+	var m := meta(current_id)
+	var gid := str(m.get("from_gallery", ""))
+	if gid == "" or bool(m.get("cleared", false)):
+		return
+	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/record_gallery_clear", {"p_dungeon": gid}, true)
+	if not r.ok:
+		return
+	var items := _index()
+	for it in items:
+		if str(it.get("id", "")) == str(m.get("id", "")):
+			it["cleared"] = true
+	_write_index(items)
 
 static func report(cloud_id: String, reason: String) -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/dungeon_reports",

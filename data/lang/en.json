@@ -2119,7 +2119,9 @@
   "ui.sadmin.gal_banned_title": "Authors banned from publishing",
   "ui.sadmin.gal_banned_none": "No banned author.",
   "ui.sadmin.gal_unban": "Lift ban",
-  "ui.cloud.err.publication_interdite": "You are no longer allowed to publish to the gallery."
+  "ui.cloud.err.publication_interdite": "You are no longer allowed to publish to the gallery.",
+  "ui.gallery.featured": "Dungeon of the week",
+  "ui.rewards.next_reward": "Next reward: level %d — %s"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

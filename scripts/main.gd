@@ -700,6 +700,8 @@ func _victory_by_stairs() -> void:
 	gs.stats["dungeonsCompleted"] = int(gs.stats.get("dungeonsCompleted", 0)) + 1
 	Challenges.track_level_cleared(gs)
 	_submit_run(true)
+	if Data.play_origin == "custom":
+		MyDungeons.report_gallery_clear()       # donjon téléchargé de la galerie : compté une fois pour les badges « Testeur »
 	_show_victory()
 
 ## Premier passage dans un niveau : le groupe reprend son souffle (PV et endurance en pourcentage du maximum).

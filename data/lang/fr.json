@@ -2119,7 +2119,9 @@
   "ui.sadmin.gal_banned_title": "Auteurs interdits de publication",
   "ui.sadmin.gal_banned_none": "Aucun auteur interdit.",
   "ui.sadmin.gal_unban": "Lever l'interdiction",
-  "ui.cloud.err.publication_interdite": "Vous n'êtes plus autorisé à publier dans la galerie."
+  "ui.cloud.err.publication_interdite": "Vous n'êtes plus autorisé à publier dans la galerie.",
+  "ui.gallery.featured": "Donjon de la semaine",
+  "ui.rewards.next_reward": "Prochaine récompense : niveau %d — %s"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

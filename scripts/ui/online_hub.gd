@@ -805,6 +805,9 @@ func _build_rewards(total_xp: int) -> void:
 	v1.add_child(HubKit.label(L.fa(L.t("ui.hub.level"), lvl), GOLD, 22, true, false))
 	v1.add_child(HubKit.progress(total_xp, Cosmetics.xp_for_level(lvl), Cosmetics.xp_for_level(lvl + 1), 12))
 	v1.add_child(HubKit.label(L.fa(L.t("ui.rewards.next"), [Cosmetics.xp_for_level(lvl + 1) - total_xp, lvl + 1]), UiTheme.DIM, 12))
+	var nxt := _next_level_reward(lvl)
+	if not nxt.is_empty():
+		v1.add_child(HubKit.label(L.fa(L.t("ui.rewards.next_reward"), [int(nxt.level), "%s %s" % [str(nxt.badge.get("icon", "🏅")), Cosmetics.loc(nxt.badge, "label")]]), GOLD, 12))
 	v1.add_child(HubKit.label(L.fa(L.t("ui.rewards.collection"), [_owned.size(), _cat.size()]), UiTheme.PARCH, 14, true))
 	v1.add_child(HubKit.label(L.t("ui.hub.xp_how"), UiTheme.DIM, 12))
 	# cosmétiques
@@ -890,6 +893,18 @@ func _skin_picker(parent: Control) -> void:
 			_eq_status.add_theme_color_override("font_color", HubKit.GOOD))
 	row.add_child(ob)
 	parent.add_child(row)
+
+## Prochain palier de niveau de compte (badge « lvl_<n> ») au-dessus du niveau actuel : {level, badge} ou {}.
+func _next_level_reward(lvl: int) -> Dictionary:
+	var best: Dictionary = {}
+	for b in _cat:
+		var id := str(b.id)
+		if not id.begins_with("lvl_") or not id.substr(4).is_valid_int():
+			continue
+		var n := id.substr(4).to_int()
+		if n > lvl and (best.is_empty() or n < int(best.level)):
+			best = {"level": n, "badge": b}
+	return best
 
 func _badge_by_id(id: String) -> Dictionary:
 	for b in _cat:
