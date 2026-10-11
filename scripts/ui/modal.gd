@@ -123,8 +123,10 @@ func add_row(icon: Texture2D, text: String, color: Color = UiTheme.PARCH) -> HBo
 
 ## Boutons du bas : [{"text", "cb", "disabled", "primary"}]. `cb` est un Callable (sans argument).
 ## Par défaut en colonne pleine largeur (2 ou 3 boutons), comme `.modal-actions` de l'original ; `row` force une rangée.
-func set_buttons(specs: Array, row: bool = false) -> void:
-	var as_row := row or specs.size() > 3
+## `stack` : toujours en colonne (même au-delà de 3 boutons). Clés d'un bouton : text, cb, primary, disabled, et pour une zone sensible
+## « danger » (texte rouge, plus petit) précédé d'un espace si « gap ».
+func set_buttons(specs: Array, row: bool = false, stack: bool = false) -> void:
+	var as_row := (row or specs.size() > 3) and not stack
 	var parent := _buttons_row.get_parent()
 	var idx := _buttons_row.get_index()
 	_buttons_row.queue_free()
@@ -134,12 +136,16 @@ func set_buttons(specs: Array, row: bool = false) -> void:
 	parent.move_child(_buttons_row, idx)
 	var first := true
 	for sp in specs:
+		if bool(sp.get("gap", false)) and not as_row:
+			var gap := Control.new()
+			gap.custom_minimum_size = Vector2(0, UiMetrics.css(10.0))
+			_buttons_row.add_child(gap)
 		var b := Button.new()
 		b.text = str(sp.get("text", ""))
 		b.focus_mode = Control.FOCUS_NONE
 		b.disabled = bool(sp.get("disabled", false))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, UiMetrics.css(40.0))
+		b.custom_minimum_size = Vector2(0, UiMetrics.css(32.0 if bool(sp.get("danger", false)) else 40.0))
 		var primary: bool = bool(sp.get("primary", first and specs.size() > 1))
 		first = false
 		var st := IronBox.modal_styles(primary)
@@ -149,6 +155,10 @@ func set_buttons(specs: Array, row: bool = false) -> void:
 		b.add_theme_color_override("font_color", Color("ffd88a") if primary else Color("e2d2b0"))
 		b.add_theme_color_override("font_hover_color", Color("fff0c8") if primary else Color("f4e6c6"))
 		b.add_theme_color_override("font_disabled_color", Color("7a6a50"))
+		if bool(sp.get("danger", false)):
+			b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.78)))
+			b.add_theme_color_override("font_color", Color("d9806a"))
+			b.add_theme_color_override("font_hover_color", Color("ff9d85"))
 		var cb: Callable = sp.get("cb", Callable())
 		b.pressed.connect(func():
 			if cb.is_valid():

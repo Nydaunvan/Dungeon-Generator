@@ -78,7 +78,7 @@ func _build_form() -> void:
 	if not signup:
 		specs.append({"text": L.t("ui.cloud.forgot"), "cb": _forgot})
 	specs.append({"text": L.t("common.fermer"), "cb": func(): _modal.close()})
-	_modal.set_buttons(specs)
+	_modal.set_buttons(specs, false, true)
 	(func(): if is_instance_valid(_email) and _email.is_inside_tree(): _email.grab_focus()).call_deferred()
 
 func _switch(mode: String) -> void:
@@ -174,12 +174,13 @@ func _build_account() -> void:
 		specs.append({"text": L.t("ui.sadmin.btn"), "cb": func(): SuperAdminModal.open(_modal.get_parent())})
 	elif SuperAdmin.cached() == -1:
 		_probe_admin()
+	# colonne : actions principales, puis « Fermer », la suppression du compte à part et discrète tout en bas
 	specs.append_array([
 		{"text": L.t("ui.cloud.btn_logout"), "cb": _logout},
-		{"text": L.t("ui.cloud.btn_delete"), "cb": _ask_delete},
 		{"text": L.t("common.fermer"), "cb": func(): _modal.close()},
+		{"text": L.t("ui.cloud.btn_delete"), "cb": _ask_delete, "danger": true, "gap": true},
 	])
-	_modal.set_buttons(specs)
+	_modal.set_buttons(specs, false, true)
 
 ## Demande au serveur si le compte est super admin ; ne reconstruit la fenêtre que pour AJOUTER le bouton.
 func _probe_admin() -> void:
