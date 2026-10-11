@@ -291,6 +291,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 			HubKit.facts(box, [
 				["⚖", L.t("ui.hub.f_fair"), L.t("ui.hub.ranked_fair")],
 				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.ranked_board")],
+				["⏳", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
 				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.ranked_quit")],
 				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.ranked_reward")],
 				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
@@ -306,6 +307,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 			HubKit.facts(box, [
 				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.weekly_dungeon")],
 				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.weekly_tries")],
+				["⏳", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
 				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
 				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.weekly_board")],
 				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.weekly_reward")],
@@ -320,6 +322,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 			HubKit.facts(box, [
 				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.hc_dungeon")],
 				["⏳", L.t("ui.hub.f_tries"), L.t("ui.hub.hc_tries"), HubKit.WARN],
+				["⏳", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
 				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.hc_quit")],
 				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.hc_board")],
 				["🎖", L.t("ui.hub.f_reward"), L.t("ui.hub.hc_reward")],

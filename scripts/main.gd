@@ -36,6 +36,47 @@ func _process(delta: float) -> void:
 		GameClock.advance(delta)         # horloge de jeu : la seule référence de temps de la logique (recharges, fontaines)
 	if gs != null and Data.play_origin == "random" and not gs.game_over and not gs.won and not gs.in_village:
 		Challenges.track_time(gs, delta)
+	_tick_ranked_timer()
+
+## Minuteur d'une partie classée : 2 h d'horloge réelle (pauses, inventaire et fenêtres comprises), une seule session, pas de sauvegarde.
+## À zéro, la partie est envoyée en l'état et on revient à l'accueil.
+var _ranked_t0_ms := 0
+var _ranked_t0_set := false
+var _ranked_warned := 0
+var _ranked_over := false
+
+func _tick_ranked_timer() -> void:
+	if gs == null or layout == null or not is_instance_valid(layout):
+		return
+	if not RunLog.ranked() or str(gs.cfg.get("runId", "")) == "" or gs.game_over or gs.won:
+		layout.set_ranked_timer("", Color.WHITE)
+		return
+	if not _ranked_t0_set:
+		_ranked_t0_set = true
+		_ranked_t0_ms = Time.get_ticks_msec()
+	var left := RankedRun.TIME_LIMIT_SEC - int((Time.get_ticks_msec() - _ranked_t0_ms) / 1000)
+	var col := Color("ffd88a")
+	if left <= 120:
+		col = Color("e86a5a")
+	elif left <= 600:
+		col = Color("f0a050")
+	var l := maxi(0, left)
+	layout.set_ranked_timer(L.t("ui.ranked.timer_label") % ("%d:%02d:%02d" % [l / 3600, (l % 3600) / 60, l % 60]), col)
+	if left <= 600 and _ranked_warned < 1:
+		_ranked_warned = 1
+		show_message(L.t("ui.ranked.warn_10"), 4.0)
+	elif left <= 60 and _ranked_warned < 2:
+		_ranked_warned = 2
+		show_message(L.t("ui.ranked.warn_1"), 4.0)
+	if left <= 0 and not _ranked_over:
+		_ranked_over = true
+		_ranked_time_up()
+
+func _ranked_time_up() -> void:
+	_submit_run()
+	_end_ranked_run()
+	var m := Dialogs.notice(_modals(), L.t("ui.ranked.time_up_title"), L.t("ui.ranked.time_up_text"))
+	m.tree_exited.connect(func(): Data.go_home())
 
 ## Envoie la progression de la partie au classement des défis (compte connecté, donjon aléatoire, administration jamais ouverte).
 ## `announce` : affiche un message de confirmation (fin de partie).
@@ -684,7 +725,7 @@ func _transition_regen(target: Dictionary) -> void:
 ## Première arrivée dans un niveau : proposition de sauvegarde.
 func _prompt_save_on_level(target: Dictionary) -> void:
 	var tls := gs.level_state(target)
-	if tls.get("stairsPromptShown", false):
+	if tls.get("stairsPromptShown", false) or (RunLog.ranked() and str(gs.cfg.get("runId", "")) != ""):
 		return
 	tls["stairsPromptShown"] = true
 	Dialogs.confirm(_modals(), L.t("main.nouveau_niveau_du_donjon"), L.t("main.c_est_le_bon_moment"),
@@ -714,6 +755,9 @@ func _on_menu(name: String) -> void:
 			Sound.stop_ambient()
 			Data.open_admin()
 		"Slots":
+			if RunLog.ranked() and str(gs.cfg.get("runId", "")) != "":
+				show_message(L.t("ui.ranked.no_save"))
+				return
 			if not ctrl.in_combat():
 				SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
 		"Nouveau":
@@ -729,7 +773,11 @@ func _on_menu(name: String) -> void:
 				show_message(L.t("main.ranked_no_export"))
 				return
 			Files.pick_text(_modals(), _import_text)
-		"Sauvegarder": SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
+		"Sauvegarder":
+			if RunLog.ranked() and str(gs.cfg.get("runId", "")) != "":
+				show_message(L.t("ui.ranked.no_save"))
+				return
+			SlotsModal.open(_modals(), snapshot, Data.launch_save, Callable(), _slot_opts())
 		"Charger": SlotsModal.open(_modals(), Callable(), Data.launch_save)
 		_: show_message(L.fa(L.t("main.a_venir"), name))
 
@@ -854,8 +902,6 @@ func _leave_ranked() -> void:
 	elif str(gs.cfg.get("rankedKind", "")) == "weekly":
 		header.append([L.t("ui.leave.weekly_note"), Color("9cc79a"), 13])
 	var opts: Array = [
-		{"icon": "⏸", "title": L.t("ui.leave.opt_pause_t"), "desc": L.t("ui.leave.opt_pause_d"), "btn": L.t("ui.leave.opt_pause_b"), "primary": true, "cb": func():
-			SlotsModal.open(_modals(), snapshot, Data.launch_save, func(_i): Data.go_home(), _slot_opts())},
 		{"icon": "📤" if cleared > 0 else "🏳", "title": L.t("ui.leave.opt_finish_t") if cleared > 0 else L.t("ui.leave.opt_abandon_t"),
 			"desc": L.t("ui.leave.opt_finish_d") if cleared > 0 else L.t("ui.leave.opt_abandon_d"),
 			"btn": L.fa(L.t("ui.leave.btn_finish"), cleared) if cleared > 0 else L.t("ui.leave.btn_abandon"), "danger": cleared == 0, "cb": func():

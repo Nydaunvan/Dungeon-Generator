@@ -60,6 +60,7 @@ var _compact: bool = false     # mobile (portrait, écran tactile ou fenêtre tr
 var _built_mode: int = -1
 var _title: Label
 var type_badge: Label
+var ranked_timer: Label
 var view_controls: HBoxContainer
 var keys_panel: PanelContainer
 var sound_panel: PanelContainer
@@ -378,6 +379,16 @@ func _build_parts() -> void:
 	type_badge.add_theme_stylebox_override("normal", tb)
 	type_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(type_badge)
+	# temps restant d'une partie classée (2 h maximum) : sous la pastille du type, visible seulement en partie classée
+	ranked_timer = Label.new()
+	ranked_timer.position = Vector2(UiMetrics.css(12.0), UiMetrics.css(72.0))
+	ranked_timer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	ranked_timer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.78)))
+	ranked_timer.add_theme_stylebox_override("normal", tb)
+	ranked_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ranked_timer.tooltip_text = L.t("ui.ranked.timer_tip")
+	ranked_timer.visible = false
+	stage.add_child(ranked_timer)
 
 	# boussole (haut centre) : N E ☠ S O, la direction actuelle est en or
 	var comp := PanelContainer.new()
@@ -787,6 +798,14 @@ func _size_overlays() -> void:
 	map_btn.offset_top = -mm - mb
 
 # ------------------------------------------------------------------ mises à jour
+
+## Minuteur de partie classée : `text` vide = masqué.
+func set_ranked_timer(text: String, color: Color) -> void:
+	if ranked_timer == null:
+		return
+	ranked_timer.visible = text != ""
+	ranked_timer.text = text
+	ranked_timer.add_theme_color_override("font_color", color)
 
 func set_level_name(text: String) -> void:
 	level_label.text = text

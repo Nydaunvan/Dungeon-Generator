@@ -68,9 +68,13 @@ static func mode_label(cfg: Dictionary) -> String:
 		return "🏆 " + L.t("ui.hub.mode_ranked")
 	return "🎲 " + L.t("ui.hub.mode_free")
 
-## Délai entre la fin d'une période (semaine, mois) et la distribution des récompenses : miroir de `close_due_periods` côté base (2 jours,
-## pour laisser arriver les parties encore à envoyer).
-const REWARD_DELAY_SEC := 172800
+## Délai habituel entre la fin d'une période (semaine, mois) et la distribution des récompenses : la base clôt la période dès qu'aucune
+## partie n'est plus en cours (2 h maximum) ni à vérifier ; sans partie en cours à l'échéance, cela prend quelques minutes.
+const REWARD_DELAY_SEC := 600
+
+## Durée maximale d'une partie classée (secondes), du lancement à la fin. Au-delà, la partie est envoyée en l'état.
+## Miroir côté base : `expire_stale_ranked_runs` (2 h + 10 min de marge pour l'envoi).
+const TIME_LIMIT_SEC := 7200
 
 const PENDING_PATH := "user://ranked_pending.json"
 
