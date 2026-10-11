@@ -1,5 +1,28 @@
 [
  {
+  "version": "1.33.5",
+  "changes": [
+   "## Récompenses et défis",
+   "Nouveau Défi du jour : un petit défi par jour (heure de Paris), sans classement, qui rapporte de l'expérience et des badges de régularité (7, 30 et 100 jours).",
+   "Défi de la semaine : quatre nouvelles règles — Plus riche (or gagné), Chasseur de boss (boss vaincus), Sans piège (un seul piège déclenché ramène le score à 0) et Marathon (dix niveaux dans de grands donjons). Chaque règle a son propre score, avec l'unité affichée dans les classements.",
+   "Paliers de niveau de compte (5 à 100) : un badge cosmétique est donné automatiquement à chaque palier.",
+   "Récompenses de communauté : badges de créateur et de testeur de donjons, et « Donjon de la semaine » mis en avant en haut de la galerie.",
+   "## Parties classées",
+   "Avant de lancer une partie classée, un avertissement apparaît si une autre est déjà en cours : en démarrer une nouvelle abandonne l'ancienne, qui expire sans compter au classement.",
+   "Si le jeu plante, se ferme ou perd la connexion en pleine partie classée, le journal est copié régulièrement puis renvoyé automatiquement au lancement suivant : les niveaux déjà franchis comptent, comme avec « Terminer ici ».",
+   "## Marchands",
+   "Le marchand détaille maintenant chaque parchemin : effet exact du sort pour chaque héros (selon son Intelligence, son équipement et son niveau), chance de critique, statuts, vol de vie et conditions de lecture.",
+   "La classe de chaque héros est indiquée dans « Comparer avec ».",
+   "Les marchands (village et ambulant) proposent toujours des potions de soin et d'endurance, de 1 à 6 de chaque.",
+   "## Monstres et donjons",
+   "Animations des monstres (option activée par défaut dans les paramètres) : respiration au repos, réactions quand ils sont touchés, attaquent ou sont étourdis, et mort animée. « Mouvements réduits » coupe la respiration.",
+   "Un nouveau donjon vide est désormais entièrement fait de murs, avec seulement la case de départ libre : plus de salle ouverte au départ.",
+   "La clé d'une porte n'est plus jamais posée sur la première dalle du niveau.",
+   "## Interface",
+   "L'indicateur de pause et le symbole de la pause manuelle sont centrés sur l'écran du donjon et non sur la fenêtre entière."
+  ]
+ },
+ {
   "version": "1.33.4",
   "changes": [
    "## Parties classées",
