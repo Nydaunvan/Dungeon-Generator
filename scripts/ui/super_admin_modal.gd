@@ -38,7 +38,7 @@ func _build() -> void:
 	tabs.add_theme_constant_override("v_separation", 6)
 	tabs.alignment = FlowContainer.ALIGNMENT_CENTER
 	_modal.content.add_child(tabs)
-	for t in ["tests", "overview", "players", "runs", "chat"]:
+	for t in ["tests", "overview", "players", "runs", "chat", "gallery"]:
 		var b := Button.new()
 		b.text = L.t("ui.sadmin.tab_" + t)
 		b.toggle_mode = true
@@ -66,6 +66,7 @@ func _show(tab: String) -> void:
 		"players": _build_players()
 		"runs": _build_runs()
 		"chat": _build_chat()
+		"gallery": _build_gallery()
 
 # ------------------------------------------------------------------ outils d'affichage
 
@@ -651,4 +652,142 @@ func _report_card(box: Control, x: Dictionary) -> void:
 	card.add_child(act)
 	var sep := HSeparator.new()
 	card.add_child(sep)
+	box.add_child(card)
+
+# ------------------------------------------------------------------ onglet Galerie (modération des donjons publiés)
+
+func _build_gallery() -> void:
+	_begin()
+	_list = VBoxContainer.new()
+	_list.add_theme_constant_override("separation", 4)
+	_body.add_child(_list)
+	_fill_gallery()
+
+func _fill_gallery() -> void:
+	var box := _list
+	_gen += 1
+	var mine := _gen
+	_clear(box)
+	_wait(box)
+	var st: Dictionary = await SuperAdmin.gallery_stats()
+	if mine != _gen or not _alive():
+		return
+	var rp: Dictionary = await SuperAdmin.gallery_reports()
+	if mine != _gen or not _alive():
+		return
+	var bn: Dictionary = await SuperAdmin.gallery_bans()
+	if mine != _gen or not _alive():
+		return
+	_clear(box)
+	if not st.ok or not (st.data is Dictionary):
+		_error(box, st)
+		return
+	var d: Dictionary = st.data
+	_title(box, L.t("ui.sadmin.gal_stats"))
+	_kv(box, L.t("ui.sadmin.gal_public"), "%s / %s" % [num(d.get("public")), num(d.get("total"))])
+	_kv(box, L.t("ui.sadmin.gal_downloads"), num(d.get("downloads")))
+	_kv(box, L.t("ui.sadmin.gal_bans"), num(d.get("bans")))
+	_title(box, L.t("ui.sadmin.gal_reports") % num(d.get("reports_pending")))
+	_status = Form.status_label(box)
+	if not rp.ok or not (rp.data is Array):
+		_error(box, rp)
+	elif (rp.data as Array).is_empty():
+		_note(box, L.t("ui.sadmin.gal_no_reports"))
+	else:
+		for x in rp.data:
+			_gallery_card(box, x)
+	_title(box, L.t("ui.sadmin.gal_banned_title"))
+	if not bn.ok or not (bn.data is Array):
+		_error(box, bn)
+	elif (bn.data as Array).is_empty():
+		_note(box, L.t("ui.sadmin.gal_banned_none"))
+	else:
+		for b in bn.data:
+			var h := HBoxContainer.new()
+			h.add_theme_constant_override("separation", 8)
+			var txt := "%s · %s%s" % [str(b.get("pseudo", "?")), date(b.get("created_at")), (" · " + str(b.get("reason"))) if b.get("reason") != null else ""]
+			var l := _label(txt)
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			h.add_child(l)
+			var pid := str(b.get("player_id", ""))
+			var ub := Button.new()
+			ub.text = L.t("ui.sadmin.gal_unban")
+			ub.focus_mode = Control.FOCUS_NONE
+			ub.pressed.connect(func():
+				ub.disabled = true
+				var r: Dictionary = await SuperAdmin.gallery_unban(pid)
+				if mine == _gen and _alive():
+					if r.ok:
+						_fill_gallery()
+					else:
+						ub.disabled = false
+						_flash(str(r.message), BAD))
+			h.add_child(ub)
+			box.add_child(h)
+	_fit()
+
+## Un donjon signalé : titre, auteur, état, nombre de signalements et motifs, puis les décisions.
+func _gallery_card(box: Control, x: Dictionary) -> void:
+	var mine := _gen
+	var did := str(x.get("dungeon_id", ""))
+	var pid := str(x.get("player_id", ""))
+	var pseudo := str(x.get("pseudo", "?"))
+	var card := VBoxContainer.new()
+	card.add_theme_constant_override("separation", 2)
+	var state := L.t("ui.sadmin.gal_state_public") if bool(x.get("is_public", false)) else L.t("ui.sadmin.gal_state_private")
+	card.add_child(_label("%s — %s" % [str(x.get("title", "")), pseudo], GOLD, 14))
+	var info := "%s · %s · ⬇ %s · %s" % [state, date(x.get("created_at")), num(x.get("downloads")), L.t("ui.sadmin.chat_n_reports") % num(x.get("reports"))]
+	card.add_child(_label(info, UiTheme.DIM, 12))
+	var desc := str(x.get("description", ""))
+	if desc != "":
+		var dl := _label(desc.left(240))
+		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		dl.custom_minimum_size.x = 60
+		card.add_child(dl)
+	var reasons: Variant = x.get("reasons")
+	if reasons is Array and not (reasons as Array).is_empty():
+		_note(card, "↳ " + " | ".join((reasons as Array).map(func(r): return str(r))), UiTheme.DIM, false)
+	if bool(x.get("banned", false)):
+		_note(card, L.t("ui.sadmin.gal_author_banned"), BAD, false)
+	var act := HFlowContainer.new()
+	act.add_theme_constant_override("h_separation", 6)
+	act.add_theme_constant_override("v_separation", 4)
+	var after := func(r: Dictionary, b: Button):
+		if mine != _gen or not _alive():
+			return
+		if r.ok:
+			_fill_gallery()
+		else:
+			b.disabled = false
+			_flash(str(r.message), BAD)
+	var specs: Array = []
+	if bool(x.get("is_public", false)):
+		specs.append([L.t("ui.sadmin.gal_view"), func(b: Button):
+			var r: Dictionary = await MyDungeons.download(did)
+			if mine == _gen and _alive():
+				b.disabled = false
+				_flash(L.t("ui.gallery.added_long") if r.ok else str(r.get("message", "")), GOOD if r.ok else BAD)])
+		specs.append([L.t("ui.sadmin.gal_unpublish"), func(b: Button): after.call(await SuperAdmin.gallery_unpublish(did), b)])
+	specs.append([L.t("ui.sadmin.gal_dismiss"), func(b: Button): after.call(await SuperAdmin.gallery_dismiss(did), b)])
+	specs.append([L.t("ui.sadmin.gal_delete"), func(b: Button):
+		b.disabled = false
+		Dialogs.confirm(_host, L.t("ui.sadmin.gal_delete"), L.fa(L.t("ui.sadmin.gal_delete_confirm"), str(x.get("title", ""))), func():
+			after.call(await SuperAdmin.gallery_delete(did), b), L.t("common.confirmer"))])
+	if not bool(x.get("banned", false)):
+		specs.append([L.t("ui.sadmin.gal_ban"), func(b: Button):
+			b.disabled = false
+			Dialogs.confirm(_host, L.t("ui.sadmin.gal_ban"), L.fa(L.t("ui.sadmin.gal_ban_confirm"), pseudo), func():
+				after.call(await SuperAdmin.gallery_ban(pid, "signalement"), b), L.t("common.confirmer"))])
+	for sp in specs:
+		var b := Button.new()
+		b.text = str(sp[0])
+		b.focus_mode = Control.FOCUS_NONE
+		var fn: Callable = sp[1]
+		b.pressed.connect(func():
+			b.disabled = true
+			fn.call(b))
+		act.add_child(b)
+	card.add_child(act)
+	card.add_child(HSeparator.new())
 	box.add_child(card)

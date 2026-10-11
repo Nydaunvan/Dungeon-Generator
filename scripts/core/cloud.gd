@@ -51,6 +51,7 @@ const ERR_KEYS := {
 	"badge_non_possede": "ui.cloud.err.badge_non_possede",
 	"acces_refuse": "ui.cloud.err.acces_refuse",
 	"chat_mute": "ui.cloud.err.chat_mute",
+	"publication_interdite": "ui.cloud.err.publication_interdite",
 	"chat_trop_rapide": "ui.cloud.err.chat_trop_rapide",
 	"message_repete": "ui.cloud.err.message_repete",
 	"message_vide": "ui.cloud.err.message_vide",
