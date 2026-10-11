@@ -38,6 +38,13 @@ func _ready() -> void:
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shade.add_child(box)
+	# le symbole se place au centre de la zone du donjon (vue 3D), pas de la fenêtre entière
+	var lay = _scene.get("layout") if _scene != null else null
+	if lay != null and is_instance_valid(lay) and lay.sub_container != null:
+		var r: Rect2 = (lay.sub_container as Control).get_global_rect()
+		box.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		box.position = r.position
+		box.size = r.size
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 14)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE

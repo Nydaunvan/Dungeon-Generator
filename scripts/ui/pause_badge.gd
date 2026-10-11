@@ -44,12 +44,16 @@ func setup(h: Node) -> void:
 	lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(lab)
 	_pill.visible = false
-	_pill.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_pill.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_pill.position.y = 8
 	add_child(_pill)
 
 func _process(_d: float) -> void:
 	var on: bool = is_instance_valid(host) and host.has_method("is_game_paused") and host.is_game_paused() and not PauseOverlay.active()
 	if _pill.visible != on:
 		_pill.visible = on
+	if on:
+		# centrée sur la zone du donjon (vue 3D), pas sur la fenêtre entière
+		var r := Rect2(Vector2.ZERO, host.get_viewport().get_visible_rect().size)
+		var lay = host.get("layout")
+		if lay != null and is_instance_valid(lay) and lay.sub_container != null:
+			r = (lay.sub_container as Control).get_global_rect()
+		_pill.position = Vector2(r.position.x + (r.size.x - _pill.size.x) * 0.5, r.position.y + 8.0)
