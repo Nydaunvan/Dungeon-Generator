@@ -1,5 +1,27 @@
 [
  {
+  "version": "1.34.0",
+  "date": "2026-10-12",
+  "changes": [
+   "## Combat",
+   "File d'initiative stable : dans une manche, le plus rapide joue d'abord ; à vitesse égale, les héros passent avant les monstres. L'ordre ne change plus que si une vitesse change (bonus ou malus) ou si un combattant meurt : un loup ne change plus de place quand un autre meurt.",
+   "Chaque pastille de la file affiche sa place dans la manche (1, 2, 3…) et sa vitesse effective (⚡), en vert avec un bonus et en rouge avec un malus.",
+   "La barre dorée sous la carte d'un héros est maintenant le chronomètre de réflexion : visible seulement pour le héros dont c'est le tour.",
+   "Le bilan de victoire détaille la durée du combat en manches et, pour chaque héros, les dégâts infligés, subis et les soins.",
+   "## Mode en ligne",
+   "« Mes parties » : résumé chiffré (parties, vérifiées, meilleur score, moyenne) et histogramme des scores de tes dernières parties vérifiées.",
+   "Signaler un joueur depuis le tchat (menu du joueur) ; la galerie de la communauté peut être fermée temporairement par l'équipe.",
+   "## Équipe et modération",
+   "Rôles de l'équipe : modérateur, super administrateur et développeur, avec des droits distincts.",
+   "Outils de modération : signalements de joueurs, notes privées, historique des pseudos, parties suspectes, statistiques d'activité, réglages à distance, alerte de file d'attente, sanction temporaire de la galerie avec motifs prédéfinis, filtres et recherche dans le journal.",
+   "Développeur : revoir les parties classées dans le moteur (pause, vitesse, retour en arrière avec points de reprise, capture d'écran et vidéo) et exporter leur journal en CSV.",
+   "## Interface",
+   "Le journal des versions affiche la date de publication à côté de chaque numéro de version.",
+   "## Mises à jour",
+   "L'exécutable Windows n'est plus retéléchargé à chaque mise à jour : seul le paquet principal change."
+  ]
+ },
+ {
   "version": "1.33.6",
   "date": "2026-10-11",
   "changes": [
