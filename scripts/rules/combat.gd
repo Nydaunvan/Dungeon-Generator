@@ -182,7 +182,9 @@ func _side(key: String) -> int:
 ## Dans une manche, l'ordre est STABLE : vitesse décroissante ; à vitesse égale, les héros avant les monstres, puis l'ordre d'arrivée dans les jauges
 ## (ordre du groupe). Il ne change que si une vitesse change (bonus ou malus gagné ou perdu) ou si un participant meurt (sa place disparaît, les
 ## autres ne bougent pas). Les jauges ne servent plus qu'à l'affichage : elles montent selon la vitesse et valent 100 pour celui qui joue.
-func _advance(g: Dictionary, done: Dictionary, _stt: Dictionary) -> String:
+func _advance(g: Dictionary, done: Dictionary, stt: Dictionary) -> String:
+	if legacy_initiative:
+		return _advance_legacy(g, done, stt)
 	var live: Array = []
 	for k in g:
 		if participant_speed(k) > 0.0:
@@ -201,6 +203,40 @@ func _advance(g: Dictionary, done: Dictionary, _stt: Dictionary) -> String:
 		var sk := participant_speed(k)
 		var sr := participant_speed(ready)
 		if sk > sr or (is_equal_approx(sk, sr) and _side(k) < _side(ready)):
+			ready = k
+	var elapsed := maxf(0.0, 100.0 - float(g[ready])) / participant_speed(ready)
+	for k in live:
+		g[k] = minf(100.0, float(g[k]) + participant_speed(k) * elapsed)
+	g[ready] = 100.0
+	return ready
+
+## Ancienne règle (versions < 1.34.0 : jauges, fenêtre d'égalité et alternance des camps). Conservée pour revoir dans le moteur les parties
+## enregistrées avec ces versions ; le serveur, lui, rejoue chaque partie avec le code de sa propre version (étiquette Git).
+static var legacy_initiative := false
+
+const TIE_WINDOW := 0.5
+
+func _advance_legacy(g: Dictionary, done: Dictionary, stt: Dictionary) -> String:
+	var live: Array = []
+	for k in g:
+		if participant_speed(k) > 0.0:
+			live.append(k)
+	if live.is_empty():
+		return ""
+	var pool: Array = live.filter(func(k): return not done.has(k))
+	if pool.is_empty():
+		done.clear()
+		pool = live
+	var min_time := INF
+	for k in pool:
+		min_time = minf(min_time, maxf(0.0, 100.0 - float(g[k])) / participant_speed(k))
+	var ready := ""
+	var last_side := int(stt.get("last_side", -1))
+	for k in pool:
+		var t := maxf(0.0, 100.0 - float(g[k])) / participant_speed(k)
+		if t > min_time + TIE_WINDOW:
+			continue
+		if ready == "" or (_side(k) != last_side and _side(ready) == last_side):
 			ready = k
 	var elapsed := maxf(0.0, 100.0 - float(g[ready])) / participant_speed(ready)
 	for k in live:

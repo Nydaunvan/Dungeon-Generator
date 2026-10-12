@@ -76,5 +76,22 @@ func _init() -> void:
 	c6.speeds = sp3
 	c6.ensure_gauges()
 	check("bonus de vitesse : le loup passe en tête", c6.upcoming(1)[0] == "mon_x#1")
+	# ancienne règle (parties enregistrées avant 1.34.0) : jauges + alternance des camps
+	var AV = load("res://scripts/core/app_version.gd")
+	check("is_before 1.33.6 < 1.34.0", AV.is_before("1.33.6", "1.34.0"))
+	check("is_before 1.34.0 n'est pas < 1.34.0", not AV.is_before("1.34.0", "1.34.0"))
+	check("is_before 1.34.0-test2 n'est pas < 1.34.0", not AV.is_before("1.34.0-test2", "1.34.0"))
+	check("is_before 1.9.0 < 1.34.0", AV.is_before("1.9.0", "1.34.0"))
+	C.legacy_initiative = true
+	var c7 = T.new(null, {}, null)
+	c7.speeds = {"char_r": 14, "char_a": 12, "char_m": 9, "char_g": 7, "mon_x#0": 12, "mon_x#1": 12, "mon_x#2": 12}
+	c7.ensure_gauges()
+	var legacy_seq: Array = []
+	for i in 7:
+		var k7: String = c7.advance_gauges_once()
+		c7.gauges[k7] = 0.0
+		legacy_seq.append(k7)
+	C.legacy_initiative = false
+	check("ancienne règle : R L A L L M G (%s)" % " ".join(legacy_seq), legacy_seq == ["char_r", "mon_x#0", "char_a", "mon_x#1", "mon_x#2", "char_m", "char_g"])
 	print("check_initiative : ", "OK" if fails == 0 else "%d échec(s)" % fails)
 	quit(1 if fails > 0 else 0)

@@ -79,6 +79,8 @@ static func open(m: Dictionary) -> String:
 	var cfg_v: Dictionary = RankedRun.config_for(Data.original_config, str(m.get("seed", "")), params)
 	if cfg_v.is_empty():
 		return L.t("ui.replay.bad_settings")
+	# partie enregistrée avec une version antérieure à 1.34.0 : on rejoue avec l'ancienne règle d'initiative
+	Combat.legacy_initiative = AppVersion.is_before(str(m.get("game_version", "")), "1.34.0")
 	var r := ReplayLive.new()
 	r.meta = m
 	r.cfg = cfg_v
@@ -266,6 +268,7 @@ func close() -> void:
 	Engine.time_scale = 1.0
 	RunLog.replaying = false
 	GameClock.manual = false
+	Combat.legacy_initiative = false
 	if is_instance_valid(_blocker_layer):
 		_blocker_layer.queue_free()
 	if is_instance_valid(_bar_layer):
