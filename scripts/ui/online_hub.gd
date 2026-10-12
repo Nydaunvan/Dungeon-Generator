@@ -1089,14 +1089,19 @@ func _reward_row(kind: String, e: Dictionary) -> Control:
 	p.modulate = Color.WHITE if have else Color(1, 1, 1, 0.85)
 	return p
 
+## Colonnes des listes de choix : étiquettes de largeur fixe, listes alignées et plus étroites.
+const PICK_LABEL_W := 150.0
+const PICK_BOX_W := 250.0
+
 func _picker(parent: Control, kind: String, label: String, offers: Callable) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	var l := HubKit.label(label, UiTheme.DIM, 13, false, false)
-	l.custom_minimum_size.x = 100
+	l.custom_minimum_size.x = PICK_LABEL_W
 	row.add_child(l)
 	var ob := OptionButton.new()
-	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ob.custom_minimum_size.x = PICK_BOX_W
+	ob.clip_text = true
 	ob.add_item(L.t("ui.rewards.none"))
 	ob.set_item_metadata(0, "")
 	var cur := 0
@@ -1118,10 +1123,11 @@ func _skin_picker(parent: Control) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	var l := HubKit.label(L.t("ui.rewards.pick_skin"), UiTheme.DIM, 13, false, false)
-	l.custom_minimum_size.x = 100
+	l.custom_minimum_size.x = PICK_LABEL_W
 	row.add_child(l)
 	var ob := OptionButton.new()
-	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ob.custom_minimum_size.x = PICK_BOX_W
+	ob.clip_text = true
 	ob.add_item(L.t("ui.rewards.none"))
 	ob.set_item_metadata(0, "")
 	var cur := 0
