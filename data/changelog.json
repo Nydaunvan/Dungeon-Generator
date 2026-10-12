@@ -1,5 +1,24 @@
 [
  {
+  "version": "1.34.1",
+  "date": "2026-10-12",
+  "changes": [
+   "## Rendu",
+   "Le jeu passe en Forward+ (Vulkan) sur ordinateur, avec repli automatique sur OpenGL si Vulkan est indisponible. La qualité Auto est recalculée au premier lancement sous ce nouveau moteur.",
+   "La version navigateur est abandonnée : le jeu n'existe plus qu'en versions Windows et Linux.",
+   "## Combat",
+   "Les monstres s'animent enfin pendant le combat dans la salle de combat : respiration, balancement, annonce de l'attaque, bond, coup reçu, étourdissement et effondrement à la mort, avec des réactions propres à chaque monstre d'un groupe.",
+   "## Qualité graphique",
+   "Le résultat de la calibration automatique est mémorisé avec la signature de la machine et réutilisé dès le chargement ; Ultra est visible dès la première image.",
+   "L'indicateur de qualité des paramètres suit les changements automatiques : le bouton du niveau réellement appliqué est enfoncé et l'onglet se met à jour en direct.",
+   "L'adaptation automatique est moins nerveuse : 95 images/s ne font plus baisser la qualité avec une cible de 120, et la résolution 3D ne fait plus de va-et-vient.",
+   "Le compteur de performances affiche de nouveau la RAM réellement utilisée par le jeu.",
+   "## Interface",
+   "Les listes de choix de l'onglet Récompenses sont alignées et moins larges.",
+   "La fenêtre de mise à jour présente les résultats VirusTotal sous forme de liste lisible, avec des liens vers les rapports."
+  ]
+ },
+ {
   "version": "1.34.0",
   "date": "2026-10-12",
   "changes": [
