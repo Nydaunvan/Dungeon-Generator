@@ -51,6 +51,7 @@ func _init() -> void:
 	var err: String = RL.open(meta)
 	check("ouverture du rejeu", err == "")
 	var rl = RL.active
+	rl.cp_every_ms = 1500
 	await create_timer(6.0, true, false, true).timeout
 	check("rejeu en lecture seule (replaying)", load("res://scripts/rules/run_log.gd").replaying)
 	rl.set_speed(16.0)
@@ -88,6 +89,20 @@ func _init() -> void:
 	await create_timer(25.0, true, false, true).timeout
 	print("fin : ended ", rl._ended, " bad ", rl._bad, " status ", rl._status)
 	check("rejeu terminé sans divergence", rl._ended and not rl._bad)
+	var fp1: String = rl._end_fp
+	check("points de reprise enregistrés (%d)" % rl._cps.size(), rl._cps.size() >= 2)
+	print("recul via point : repart de l'action ", rl._from_cp)
+	check("le recul est reparti d'un point de reprise", rl._from_cp > 0)
+	# recul vers 4 s : doit utiliser un point puis finir à l'identique
+	rl.seek(4000)
+	await create_timer(12.0, true, false, true).timeout
+	print("2e recul : depuis action ", rl._from_cp, " pos ", rl._pos_ms, " bad ", rl._bad)
+	check("2e recul : point de reprise utilisé", rl._from_cp > 0 and not rl._bad)
+	rl.paused = false
+	rl.set_speed(16.0)
+	await create_timer(15.0, true, false, true).timeout
+	print("fin 2 : ended ", rl._ended, " bad ", rl._bad, " busy ", rl._busy, " paused ", rl.paused, " pos ", rl._pos_ms, " applied ", rl._applied, " fp1 ", fp1, " fp2 ", rl._end_fp)
+	check("fin après point de reprise identique à la lecture complète", rl._ended and rl._end_fp == fp1 and fp1 != "")
 	root.get_texture().get_image().save_png(pre + "_3.png")
 	rl.close()
 	await create_timer(3.0, true, false, true).timeout

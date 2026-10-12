@@ -12,6 +12,8 @@ const SPEEDS := [1.0, 2.0, 4.0, 8.0, 16.0]
 const FAST_SCALE := 8.0
 const IDLE_CAP_MS := 2000            ## temps mort maximal entre deux actions quand « sauter les temps morts » est actif
 const JUMP_MS := 30000
+const CP_EVERY_MS := 30000           ## point de reprise toute les 30 s de partie (le recul repart du plus proche au lieu du début)
+const CP_MAX := 400
 const REC_FPS := 15
 const REC_MAX_SEC := 30
 const REC_MAX_W := 1280
@@ -36,6 +38,11 @@ var _seek_resume := true
 var _ended := false
 var _status := ""
 var _bad := false
+var cp_every_ms := CP_EVERY_MS
+var _cps: Array = []                 ## points de reprise : {idx (actions déjà appliquées), last (temps de la dernière), snap (instantané du jeu)}
+var _last_cp_ms := -1000000
+var _from_cp := -1                   ## (contrôle) indice d'action du point de reprise utilisé au dernier lancement, -1 = départ
+var _end_fp := ""                    ## (contrôle) empreinte de l'état final
 # interface
 var _blocker_layer: CanvasLayer
 var _bar_layer: CanvasLayer
@@ -104,7 +111,12 @@ func _play(target: int) -> void:
 	_say(L.t("ui.replay.loading"))
 	var tree := get_tree()
 	var old_id: int = tree.current_scene.get_instance_id() if tree.current_scene != null else 0
-	Data.launch(cfg, "random")
+	var cp: Dictionary = _best_cp(target)
+	_from_cp = int(cp.idx) if not cp.is_empty() else -1
+	if cp.is_empty():
+		Data.launch(cfg, "random")
+	else:
+		Data.reload_game((cp.snap as Dictionary).duplicate(true))   # même mécanique que le changement de langue en pleine partie
 	var ok: bool = await Replayer._until(tree, func():
 		var mm := Replayer.main_of(tree)
 		return mm != null and mm.get_instance_id() != old_id and not mm.get("_loading") and mm.get("level_node") != null and not Loader.is_active(), Replayer.READY_TIMEOUT)
@@ -115,9 +127,18 @@ func _play(target: int) -> void:
 		_busy = false
 		return
 	var v_ms := 0.0
+	var i0 := 0
+	if not cp.is_empty():
+		i0 = int(cp.idx)
+		v_ms = float(cp.last)
+		_applied = i0
+		_pos_ms = v_ms
+		_last_cp_ms = int(cp.last)
+	else:
+		_last_cp_ms = -1000000
 	var t_prev := Time.get_ticks_msec()
 	var failed := ""
-	for i in log.size():
+	for i in range(i0, log.size()):
 		var e: Array = log[i]
 		var ms := int(e[0])
 		# attente jusqu'au moment de l'action (cadence de lecture), sauf en avance rapide
@@ -151,6 +172,7 @@ func _play(target: int) -> void:
 		Engine.time_scale = FAST_SCALE if (_seek_target >= 0 and ms <= _seek_target) else speed
 		if not is_instance_valid(m):
 			break
+		_maybe_checkpoint(m, i)
 		var why: String = await Replayer.step(tree, m, e, _applied)
 		if why != "":
 			failed = why
@@ -177,11 +199,39 @@ func _play(target: int) -> void:
 		var rank := RankedRun.ranking_of(res, meta.get("params", {}) if meta.get("params") is Dictionary else {})
 		var mine := str(rank.get("score", "?"))
 		var theirs := str(meta.get("score", "?")) if meta.get("score") != null else "—"
+		_end_fp = Replayer.fingerprint(m.gs)
 		_ended = true
 		paused = true
 		_pos_ms = float(total_ms)
 		_say(L.fa(L.t("ui.replay.ended"), [mine, theirs]))
 	_busy = false
+
+## Point de reprise le plus avancé dont la dernière action appliquée ne dépasse pas `target` (vide : repartir du début).
+func _best_cp(target: int) -> Dictionary:
+	if target < 0:
+		return {}
+	var best := {}
+	for c in _cps:
+		if int(c.last) <= target and (best.is_empty() or int(c.idx) > int(best.idx)):
+			best = c
+	return best
+
+## Avant d'appliquer l'action `i` : si 30 s de partie se sont écoulées depuis le dernier point et que le jeu est au repos
+## (aucune fenêtre ouverte), on garde un instantané complet (celui des sauvegardes : état, hasard, horloge, jauges de combat).
+func _maybe_checkpoint(m: Node, i: int) -> void:
+	if i == 0 or _cps.size() >= CP_MAX:
+		return
+	var last := int(log[i - 1][0])
+	if last - _last_cp_ms < cp_every_ms:
+		return
+	for c in _cps:
+		if int(c.idx) == i:
+			_last_cp_ms = last
+			return
+	if not m.settled() or not (m.get_tree().get_nodes_in_group("modal") as Array).is_empty():
+		return
+	_cps.append({"idx": i, "last": last, "snap": (m.snapshot() as Dictionary).duplicate(true)})
+	_last_cp_ms = last
 
 func seek(ms: int) -> void:
 	ms = clampi(ms, 0, total_ms)
