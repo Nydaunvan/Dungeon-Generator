@@ -66,6 +66,12 @@ func _build(host: Node, tab: String) -> Modal:
 	_timer.timeout.connect(_tick)
 	_m.add_child(_timer)
 	_show(tab)
+	# l'adaptation automatique peut changer le niveau pendant que la fenêtre est ouverte : l'onglet suit
+	var on_auto := func():
+		if Settings.auto_change and _tab == "graphics":
+			_refresh()
+	Settings.changed.connect(on_auto)
+	_m.tree_exiting.connect(func(): Settings.changed.disconnect(on_auto))
 	_m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): _m.close()}])
 	return _m
 
@@ -162,13 +168,14 @@ func _graphics() -> void:
 	_section(L.t("ui.settings.quality_title"))
 	var flow := AdminUtil.flow(_body)
 	var group := ButtonGroup.new()
+	var shown: String = Settings.level if (Settings.LEVELS.has(Settings.preset) and Settings.level != Settings.preset) else Settings.preset
 	for p in Settings.PRESET_IDS:
 		var b := Button.new()
 		b.text = Settings.preset_name(p)
 		b.toggle_mode = true
 		b.button_group = group
 		b.focus_mode = Control.FOCUS_NONE
-		b.button_pressed = p == Settings.preset
+		b.button_pressed = p == shown          # niveau réellement appliqué si l'adaptation automatique a baissé la qualité
 		var id: String = p
 		b.pressed.connect(func():
 			Settings.set_preset(id)
