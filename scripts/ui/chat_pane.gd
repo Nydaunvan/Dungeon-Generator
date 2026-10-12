@@ -223,6 +223,7 @@ func _menu(m: Dictionary) -> MenuButton:
 	var pm := mb.get_popup()
 	pm.add_item(L.t("ui.chat.report"), 0)
 	pm.add_item(L.t("ui.chat.block"), 1)
+	pm.add_item(L.t("ui.chat.report_player"), 3)
 	if not Chat.is_dm(room):
 		pm.add_item("✉ " + L.t("ui.chat.write_private"), 2)
 	var mid := int(m.get("id", 0))
@@ -233,6 +234,8 @@ func _menu(m: Dictionary) -> MenuButton:
 			_report(mid)
 		elif i == 1:
 			_ask_block(pid, pseudo)
+		elif i == 3:
+			_report_player_dialog(pid, pseudo)
 		else:
 			dm_requested.emit(pid, pseudo))
 	return mb
@@ -280,6 +283,29 @@ func _mark_read() -> void:
 func _report(message_id: int) -> void:
 	var r: Dictionary = await Chat.report(message_id)
 	_say(L.t("ui.chat.reported") if r.ok else str(r.message), GOOD if r.ok else BAD)
+
+## Signalement d'un joueur (comportement, pseudo…) : motif type + précision facultative, envoyé à l'équipe de modération.
+func _report_player_dialog(player_id: String, pseudo: String) -> void:
+	var m := Modal.open(host if host != null else self, L.fa(L.t("ui.chat.rp_title"), pseudo), 460.0)
+	m.add_text(L.t("ui.chat.rp_text"), UiTheme.PARCH, 15)
+	var why := OptionButton.new()
+	for i in 5:
+		why.add_item(L.t("ui.chat.rp_%d" % i))
+	m.content.add_child(why)
+	var free := LineEdit.new()
+	free.placeholder_text = L.t("ui.chat.rp_hint")
+	free.max_length = 120
+	m.content.add_child(free)
+	m.set_buttons([
+		{"text": L.t("ui.chat.report"), "primary": true, "cb": func():
+			var reason := why.get_item_text(why.selected)
+			if free.text.strip_edges() != "":
+				reason += " — " + free.text.strip_edges()
+			m.close()
+			var r: Dictionary = await Chat.report_player(player_id, reason)
+			_say(L.t("ui.chat.rp_done") if r.ok else str(r.message), GOOD if r.ok else BAD)},
+		{"text": L.t("common.annuler"), "cb": func(): m.close()},
+	])
 
 func _ask_block(player_id: String, pseudo: String) -> void:
 	Dialogs.confirm(host if host != null else self, L.t("ui.chat.block_title"), L.t("ui.chat.block_confirm") % pseudo,

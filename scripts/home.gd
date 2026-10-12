@@ -23,6 +23,8 @@ func _ready() -> void:
 			DocModal.whats_new.call_deferred(_modal_layer)
 	ServerNotice.popup_once(_modal_layer)
 	StaffBadges.refresh()
+	ServerFlags.refresh()
+	SuperAdmin.alert_popup(_modal_layer)
 
 func _on_nav(name: String) -> void:
 	match name:

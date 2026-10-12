@@ -58,15 +58,17 @@ static func check() -> bool:
 
 static func forget() -> void:
 	_known.clear()
-	_pending = {"chat": 0, "gallery": 0, "at": -1000000}
+	_pending = {"chat": 0, "gallery": 0, "players": 0, "suspects": 0, "alert": 5, "at": -1000000}
+	_alerted = false
 
 # ------------------------------------------------------------------ « à regarder » : signalements en attente (pastille sur Compte)
 
-static var _pending := {"chat": 0, "gallery": 0, "at": -1000000}
+static var _pending := {"chat": 0, "gallery": 0, "players": 0, "suspects": 0, "alert": 5, "at": -1000000}
+static var _alerted := false
 
-## Nombre de choses à traiter connu (messages de tchat signalés + donjons signalés), 0 si le compte n'est pas super admin.
+## Nombre de choses à traiter connu (messages de tchat, donjons et joueurs signalés), 0 si le compte n'est pas de l'équipe.
 static func pending() -> int:
-	return int(_pending.chat) + int(_pending.gallery) if cached() == 1 else 0
+	return int(_pending.chat) + int(_pending.gallery) + int(_pending.players) if cached() == 1 else 0
 
 static func pending_chat() -> int:
 	return int(_pending.chat) if cached() == 1 else 0
@@ -74,17 +76,59 @@ static func pending_chat() -> int:
 static func pending_gallery() -> int:
 	return int(_pending.gallery) if cached() == 1 else 0
 
-## Relit les compteurs auprès du serveur (au plus une fois toutes les 30 s). Sans effet pour un compte qui n'est pas super admin.
-static func refresh_pending() -> void:
-	if not Cloud.is_signed_in() or Time.get_ticks_msec() - int(_pending.at) < 30000:
+static func pending_players() -> int:
+	return int(_pending.players) if cached() == 1 else 0
+
+## Parties suspectes de la semaine (super admin et développeur seulement).
+static func pending_suspects() -> int:
+	return int(_pending.suspects) if rank() >= 2 else 0
+
+## Relit les compteurs auprès du serveur (au plus une fois toutes les 30 s). Sans effet pour un compte qui n'est pas de l'équipe.
+static func refresh_pending(force: bool = false) -> void:
+	if not Cloud.is_signed_in() or (not force and Time.get_ticks_msec() - int(_pending.at) < 30000):
 		return
 	_pending["at"] = Time.get_ticks_msec()
 	if not await check():
 		return
-	var c: Dictionary = await chat_stats()
-	var g: Dictionary = await gallery_stats()
-	_pending["chat"] = int((c.data as Dictionary).get("reports_pending", 0)) if c.ok and c.data is Dictionary else 0
-	_pending["gallery"] = int((g.data as Dictionary).get("reports_pending", 0)) if g.ok and g.data is Dictionary else 0
+	var q: Dictionary = await _rpc("admin_queue_counts")
+	if q.ok and q.data is Dictionary:
+		var d: Dictionary = q.data
+		for k in ["chat", "gallery", "players", "suspects", "alert"]:
+			_pending[k] = int(d.get(k, 0 if k != "alert" else 5))
+	else:       # serveur sans la mise à jour : seulement tchat et galerie
+		var c: Dictionary = await chat_stats()
+		var g: Dictionary = await gallery_stats()
+		_pending["chat"] = int((c.data as Dictionary).get("reports_pending", 0)) if c.ok and c.data is Dictionary else 0
+		_pending["gallery"] = int((g.data as Dictionary).get("reports_pending", 0)) if g.ok and g.data is Dictionary else 0
+		_pending["players"] = 0
+		_pending["suspects"] = 0
+
+## La file dépasse le seuil réglé par le développeur ? Vrai UNE fois par session (et de nouveau si elle est repassée sous le seuil).
+static func take_alert() -> bool:
+	var total := pending() + pending_suspects()
+	if total < maxi(1, int(_pending.alert)):
+		_alerted = false
+		return false
+	if _alerted:
+		return false
+	_alerted = true
+	return true
+
+## À l'ouverture du jeu : prévient un membre de l'équipe que beaucoup de choses attendent, avec un accès direct à l'administration.
+static func alert_popup(host: Node) -> void:
+	if not Cloud.is_signed_in():
+		return
+	await refresh_pending(true)
+	if not is_instance_valid(host) or not take_alert():
+		return
+	var m := Modal.open(host, L.t("ui.sadmin.alert_title"), 460.0)
+	m.add_text(L.fa(L.t("ui.sadmin.alert_text"), [pending(), pending_suspects()]), UiTheme.PARCH, 15)
+	m.set_buttons([
+		{"text": L.t("ui.sadmin.alert_open"), "primary": true, "cb": func():
+			m.close()
+			SuperAdminModal.open(host)},
+		{"text": L.t("ui.sadmin.alert_later"), "cb": func(): m.close()},
+	])
 
 ## Partie classée de TEST : n'utilise pas l'essai du jour, hors classements, sans expérience ni badge ; rejouée comme les autres.
 ## `kind` : "difficulty" ou "hardcore_month" (réglages du mois, graine tirée au hasard : la vraie graine du mois n'est jamais donnée).
@@ -180,8 +224,8 @@ static func player_card(player_id: String) -> Dictionary:
 	return await _rpc("admin_player_card", {"p_player": player_id})
 
 ## Journal des actions. Un modérateur ne reçoit que les siennes (le serveur impose le filtre).
-static func log_list(action: String = "", since_iso: String = "", limit: int = 100, offset: int = 0) -> Dictionary:
-	return await _rpc("staff_log_list", {"p_actor": null, "p_action": action if action != "" else null,
+static func log_list(action: String = "", since_iso: String = "", limit: int = 100, offset: int = 0, actor: String = "") -> Dictionary:
+	return await _rpc("staff_log_list", {"p_actor": actor if actor != "" else null, "p_action": action if action != "" else null,
 		"p_since": since_iso if since_iso != "" else null, "p_limit": limit, "p_offset": offset})
 
 # ------------------------------------------------------------------ outils du développeur
@@ -217,6 +261,42 @@ static func cancel_run(run_id: String, reason: String = "") -> Dictionary:
 
 static func health() -> Dictionary:
 	return await _rpc("admin_health")
+
+# ------------------------------------------------------------------ outils de modération (1.34.0)
+
+## Joueurs signalés : [{player_id, pseudo, reports, total, last_report, reasons, banned, muted_until}].
+static func player_reports(handled: bool = false) -> Dictionary:
+	return await _rpc("admin_player_reports", {"p_include_handled": handled, "p_limit": 50})
+
+static func player_report_handle(player_id: String, note: String = "") -> Dictionary:
+	return await _rpc("admin_player_report_handle", {"p_player": player_id, "p_note": note})
+
+static func notes(player_id: String) -> Dictionary:
+	return await _rpc("admin_player_notes", {"p_player": player_id})
+
+static func note_add(player_id: String, body: String) -> Dictionary:
+	return await _rpc("admin_player_note_add", {"p_player": player_id, "p_body": body})
+
+static func note_delete(note_id: int) -> Dictionary:
+	return await _rpc("admin_player_note_delete", {"p_id": note_id})
+
+## {pseudos: [{pseudo, changed_at}], actions: [{action, detail, created_at, actor_pseudo}], counts: {…}}
+static func history(player_id: String) -> Dictionary:
+	return await _rpc("admin_player_history", {"p_player": player_id})
+
+static func suspect_runs(days: int = 14) -> Dictionary:
+	return await _rpc("admin_suspect_runs", {"p_days": days, "p_limit": 60})
+
+static func stats(days: int = 14) -> Dictionary:
+	return await _rpc("admin_stats", {"p_days": days})
+
+## Interdiction de publier en galerie, `hours` <= 0 : définitive.
+static func gallery_ban_for(player_id: String, hours: int, reason: String = "") -> Dictionary:
+	return await _rpc("admin_gallery_ban_for", {"p_player": player_id, "p_hours": hours if hours > 0 else null, "p_reason": reason})
+
+## Réglage à distance (développeur) : `value` est un booléen ou un entier selon le réglage.
+static func flag_set(key: String, value: Variant) -> Dictionary:
+	return await _rpc("dev_flag_set", {"p_key": key, "p_value": value})
 
 # ------------------------------------------------------------------ revoir les parties (développeur)
 

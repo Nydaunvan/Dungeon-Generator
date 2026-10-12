@@ -134,6 +134,10 @@ func _publish(id: String) -> void:
 	if not MyDungeons.online():
 		Form.alert(_host, L.t("ui.mydun.need_account"))
 		return
+	await ServerFlags.refresh()
+	if not ServerFlags.is_on("gallery_publish", true):
+		Form.alert(_host, L.t("ui.mydun.gallery_closed"))
+		return
 	var m := Modal.open(_host, L.t("ui.mydun.publish_title"), 480.0)
 	m.add_text(L.t("ui.mydun.publish_text"), UiTheme.PARCH, 14, true)
 	var d := TextEdit.new()

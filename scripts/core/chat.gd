@@ -90,6 +90,10 @@ static func accept_charter(version: int) -> Dictionary:
 static func report(message_id: int, reason: String = "") -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_report", {"p_message_id": message_id, "p_reason": reason.substr(0, 200)}, true)
 
+## Signale un joueur (comportement général, pseudo…) à l'équipe de modération.
+static func report_player(player_id: String, reason: String = "") -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/player_report", {"p_player": player_id, "p_reason": reason.substr(0, 200)}, true)
+
 static func block(player_id: String) -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/chat_block", {"p_player": player_id}, true)
 
