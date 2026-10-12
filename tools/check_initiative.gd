@@ -1,5 +1,5 @@
 extends SceneTree
-## Initiative : jauges + plafond. Personne ne rejoue avant que tous les autres vivants aient joué ; héros et monstres s'intercalent à égalité.
+## Initiative : jauges + plafond. Personne ne rejoue avant que tous les autres vivants aient joué ; ordre stable (vitesse, puis héros avant monstres, puis ordre du groupe).
 ## Lancer : godot --headless --path . --script res://tools/check_initiative.gd
 var fails := 0
 func check(label: String, cond: bool) -> void:
@@ -39,20 +39,42 @@ func _init() -> void:
 			for k in slice: uniq[k] = true
 			check("%s : manche %d, chacun joue une fois (%s)" % [name, r + 1, " ".join(slice)], uniq.size() == n)
 		print(name, " → ", " ".join(seq.slice(0, n * 2)))
-	# égalité : alternance des camps
-	var c2 = T.new(null, {}, null)
-	c2.speeds = cases["vitesses égales"]
-	c2.ensure_gauges()
-	var sides: Array = []
-	for i in 8:
-		var k: String = c2.advance_gauges_once()
-		c2.gauges[k] = 0.0
-		sides.append(0 if k.begins_with("char_") else 1)
-	var run := 1
-	var maxrun := 1
-	for i in range(1, sides.size()):
-		run = run + 1 if sides[i] == sides[i - 1] else 1
-		maxrun = maxi(maxrun, run)
-	check("vitesses égales : les camps alternent (série max %d)" % maxrun, maxrun <= 1)
+	# ordre stable : la même séquence à chaque manche ; vitesse décroissante ; à égalité, héros avant monstres
+	for name in cases:
+		var c3 = T.new(null, {}, null)
+		c3.speeds = cases[name]
+		c3.ensure_gauges()
+		var n3: int = (cases[name] as Dictionary).size()
+		var seq3: Array = []
+		for i in n3 * 4:
+			var k3: String = c3.advance_gauges_once()
+			c3.gauges[k3] = 0.0
+			seq3.append(k3)
+		for r in 4:
+			check("%s : manche %d identique à la manche 1" % [name, r + 1], seq3.slice(r * n3, (r + 1) * n3) == seq3.slice(0, n3))
+		for i in range(1, n3):
+			var sa: float = (cases[name] as Dictionary)[seq3[i - 1]]
+			var sb: float = (cases[name] as Dictionary)[seq3[i]]
+			check("%s : vitesses décroissantes (%s puis %s)" % [name, seq3[i - 1], seq3[i]], sa >= sb)
+	# la mort d'un monstre ne change pas l'ordre des autres ; un bonus de vitesse le change
+	var sp := {"char_a": 14, "char_b": 12, "char_c": 9, "char_d": 7, "mon_x#0": 12, "mon_x#1": 12, "mon_x#2": 12}
+	var c4 = T.new(null, {}, null)
+	c4.speeds = sp.duplicate()
+	c4.ensure_gauges()
+	var before: Array = c4.upcoming(7)
+	var sp2 := sp.duplicate()
+	sp2.erase("mon_x#0")
+	var c5 = T.new(null, {}, null)
+	c5.speeds = sp2
+	c5.ensure_gauges()
+	var after: Array = c5.upcoming(6)
+	var expect: Array = before.filter(func(k): return k != "mon_x#0")
+	check("mort d'un loup : les autres gardent leur ordre (%s → %s)" % [" ".join(before), " ".join(after)], after == expect)
+	var sp3 := sp.duplicate()
+	sp3["mon_x#1"] = 17
+	var c6 = T.new(null, {}, null)
+	c6.speeds = sp3
+	c6.ensure_gauges()
+	check("bonus de vitesse : le loup passe en tête", c6.upcoming(1)[0] == "mon_x#1")
 	print("check_initiative : ", "OK" if fails == 0 else "%d échec(s)" % fails)
 	quit(1 if fails > 0 else 0)

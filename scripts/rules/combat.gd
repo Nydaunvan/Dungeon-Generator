@@ -178,12 +178,11 @@ func upcoming(n: int) -> Array:
 func _side(key: String) -> int:
 	return 0 if key.begins_with("char_") else 1
 
-## Règle d'initiative : les jauges se remplissent selon la vitesse, mais personne ne rejoue avant que tous les autres participants
-## vivants aient joué une fois (la « manche » repart alors de zéro). À égalité (à 0,5 près), le camp qui n'a pas joué en dernier passe
-## d'abord : les héros et les monstres s'intercalent au lieu de s'enchaîner.
-const TIE_WINDOW := 0.5
-
-func _advance(g: Dictionary, done: Dictionary, stt: Dictionary) -> String:
+## Règle d'initiative : personne ne rejoue avant que tous les autres participants vivants aient joué une fois (la « manche » repart alors de zéro).
+## Dans une manche, l'ordre est STABLE : vitesse décroissante ; à vitesse égale, les héros avant les monstres, puis l'ordre d'arrivée dans les jauges
+## (ordre du groupe). Il ne change que si une vitesse change (bonus ou malus gagné ou perdu) ou si un participant meurt (sa place disparaît, les
+## autres ne bougent pas). Les jauges ne servent plus qu'à l'affichage : elles montent selon la vitesse et valent 100 pour celui qui joue.
+func _advance(g: Dictionary, done: Dictionary, _stt: Dictionary) -> String:
 	var live: Array = []
 	for k in g:
 		if participant_speed(k) > 0.0:
@@ -194,16 +193,14 @@ func _advance(g: Dictionary, done: Dictionary, stt: Dictionary) -> String:
 	if pool.is_empty():
 		done.clear()
 		pool = live
-	var min_time := INF
-	for k in pool:
-		min_time = minf(min_time, maxf(0.0, 100.0 - float(g[k])) / participant_speed(k))
 	var ready := ""
-	var last_side := int(stt.get("last_side", -1))
 	for k in pool:
-		var t := maxf(0.0, 100.0 - float(g[k])) / participant_speed(k)
-		if t > min_time + TIE_WINDOW:
+		if ready == "":
+			ready = k
 			continue
-		if ready == "" or (_side(k) != last_side and _side(ready) == last_side):
+		var sk := participant_speed(k)
+		var sr := participant_speed(ready)
+		if sk > sr or (is_equal_approx(sk, sr) and _side(k) < _side(ready)):
 			ready = k
 	var elapsed := maxf(0.0, 100.0 - float(g[ready])) / participant_speed(ready)
 	for k in live:
