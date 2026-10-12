@@ -202,13 +202,12 @@ func _process(_delta: float) -> void:
 	var tf := ctrl.turn_timer_fraction()
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
-		cd.gauge.visible = in_fight
-		if in_fight:
-			var g := float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0))
-			if g >= 100.0 and gs.active_char_id == str(c.id) and tf >= 0.0:
-				cd.gauge.set_values(tf * 100.0, 100.0, "")
-			else:
-				cd.gauge.set_values(g, 100.0, "")
+		# la barre dorée est le chronomètre de réflexion : visible seulement pour le héros dont c'est le tour
+		var g := float(ctrl.combat.gauges.get("char_" + str(c.id), 0.0))
+		var timing: bool = in_fight and g >= 100.0 and gs.active_char_id == str(c.id) and tf >= 0.0
+		cd.gauge.visible = timing
+		if timing:
+			cd.gauge.set_values(tf * 100.0, 100.0, "")
 
 const STATUS_COLORS := {"freeze": "7fd0ff", "stun": "e6d36b", "burn": "ff8a3d", "poison": "7fd17f", "lifedrain": "b06be0",
 	"weaken": "c9a27a", "warcry": "d67a7a", "slow": "8fa8c9", "haste": "ffe27a", "vigor": "ffd88a", "weaponfire": "ff9a4d"}
