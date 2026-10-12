@@ -269,8 +269,15 @@ func _calibration() -> void:
 	# réglage manuel : pas de calibration
 	Settings.set_preset("high")
 	expect(Settings.calib_state == "done", "préréglage manuel : pas de calibration")
+	var saved_cf := ConfigFile.new()
+	saved_cf.load(Settings.CFG)
+	var saved_level := str(saved_cf.get_value("calib", "level", "?"))
 	Settings.set_preset("auto")
-	expect(Settings.calib_state == "pending", "retour en Auto : nouvelle calibration")
+	expect(Settings.calib_state == "done" and Settings.calib_restored and Settings.level == saved_level, "retour en Auto : résultat mémorisé réutilisé, sans nouvelle mesure")
+	Settings.set_preset("high")
+	Settings._forget_calib()
+	Settings.set_preset("auto")
+	expect(Settings.calib_state == "pending", "retour en Auto sans résultat mémorisé : nouvelle calibration")
 	# V-Sync et limite rétablis à la fin
 	_calib_run([80.0])
 	expect(Engine.max_fps == (Settings.fps_cap if Settings.fps_cap > 0 else 0) or Settings.fps_cap == 0, "limite d'images rétablie après calibration")

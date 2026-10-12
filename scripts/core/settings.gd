@@ -56,7 +56,8 @@ var ceiling := ""                # niveau maximal tenu lors des essais (mode Aut
 var detect_info: Dictionary = {}
 var last_event: Dictionary = {}  # dernier ajustement automatique : {time, reason, level} (affiché dans Diagnostic)
 var fps_window := 0.0            # dernière moyenne mesurée par l'adaptation
-var calib_state := "pending"     # pending → running → done (une calibration par lancement, en mode Auto)
+var calib_state := "pending"     # pending → running → done (en mode Auto : mesure au premier lancement sur cette machine, puis résultat réutilisé)
+var calib_restored := false      # le niveau de départ vient du résultat mémorisé (aucune mesure visible au lancement)
 var calib_fps := 0.0             # images/s mesurées sans limite au niveau retenu
 var calib_log: Array = []        # essais de la calibration : [{level, dyn, fps}]
 
@@ -231,6 +232,7 @@ func is_fullscreen() -> bool:
 
 ## Relance la détection de la machine (et oublie les limites apprises) ; en mode Auto, la calibration est refaite.
 func redetect() -> void:
+	_forget_calib()
 	ceiling = ""
 	_session_cap = 99
 	dyn_scale = 1.0
@@ -334,10 +336,15 @@ func _load() -> void:
 	if not FPS_CAPS.has(fps_cap):
 		fps_cap = 0
 	detect_info = _machine_info()
-	_auto_level = _baseline_level()     # le niveau du mode Auto n'est pas mémorisé : il est recalibré à chaque lancement
+	_auto_level = _baseline_level()
 	ceiling = ""
 	level = preset if LEVELS.has(preset) else _auto_level
 	calib_state = "pending" if preset == "auto" else "done"
+	calib_restored = false
+	dyn_scale = 1.0
+	# Mode Auto : le résultat de la dernière calibration sur CETTE machine est réutilisé tout de suite, pour que la qualité retenue (Ultra par
+	# exemple) soit visible dès la première image au lieu d'être cherchée pendant la partie. L'adaptation en jeu continue de corriger.
+	_restore_calib()
 
 func _save() -> void:
 	var cf := ConfigFile.new()
@@ -576,6 +583,7 @@ func _adapted(new_level: String, reason: String) -> void:
 		_auto_level = level
 	_resolve()
 	_save()
+	_save_calib()
 	last_event = {"time": Time.get_time_string_from_system(), "reason": reason, "level": level, "dyn": dyn_scale}
 	_emit_auto()
 	if new_level != "":
@@ -589,12 +597,60 @@ func _adapted(new_level: String, reason: String) -> void:
 ## (V-Sync levé) : on part de Moyen (textures Standard), on ne réduit que le nécessaire pour tenir la cible (≥ 60 i/s)
 ## et on ne monte que si la marge mesurée est nette. Rien n'est mémorisé : la mesure est refaite à chaque lancement.
 func _restart_calibration() -> void:
+	calib_restored = false
 	calib_state = "pending" if preset == "auto" else "done"
+	if _restore_calib():
+		return
 	calib_log = []
 	calib_fps = 0.0
 	_cw = 1.0
 	_ct = 0.0
 	_cn = 0
+
+## Signature de la machine et de la cible de fluidité : un résultat mémorisé n'est réutilisé que si elle n'a pas changé (carte graphique,
+## pilote, écran, images/s visées). Sinon, la calibration est refaite.
+func _calib_sig() -> String:
+	return "%s|%s|%s|%d|%d|%d|%s" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_vendor(),
+		RenderingServer.get_video_adapter_api_version(), roundi(refresh_rate()), target_fps, fps_cap, "v" if vsync else "n"]
+
+## Réutilise le résultat de calibration mémorisé (mode Auto seulement). Renvoie true s'il y en a un valable pour cette machine.
+func _restore_calib() -> bool:
+	if preset != "auto":
+		return false
+	var cf := ConfigFile.new()
+	if cf.load(CFG) != OK or str(cf.get_value("calib", "sig", "")) != _calib_sig():
+		return false
+	var lv := str(cf.get_value("calib", "level", ""))
+	if not LEVELS.has(lv) or LEVELS.find(lv) > _calib_max_idx():
+		return false
+	level = lv
+	dyn_scale = clampf(float(cf.get_value("calib", "dyn", 1.0)), DYN_MIN, 1.0)
+	_auto_level = lv
+	calib_fps = float(cf.get_value("calib", "fps", 0.0))
+	# pas de plafond : si la machine peut faire mieux que la dernière fois, l'adaptation en jeu retente le niveau supérieur
+	_session_cap = 99
+	_dyn_cap = 1.0
+	calib_state = "done"
+	calib_restored = true
+	return true
+
+## Mémorise le niveau et la résolution retenus (calibration ou adaptation en jeu) avec la signature de la machine.
+func _save_calib() -> void:
+	if preset != "auto":
+		return
+	var cf := ConfigFile.new()
+	cf.load(CFG)
+	cf.set_value("calib", "sig", _calib_sig())
+	cf.set_value("calib", "level", level)
+	cf.set_value("calib", "dyn", dyn_scale)
+	cf.set_value("calib", "fps", calib_fps)
+	cf.save(CFG)
+
+func _forget_calib() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(CFG) == OK and cf.has_section("calib"):
+		cf.erase_section("calib")
+		cf.save(CFG)
 
 func _calib_max_idx() -> int:
 	return 2 if (is_web() or is_mobile()) else 3
@@ -692,6 +748,7 @@ func _calib_finish(f: float) -> void:
 	_settle = 3.0
 	_resolve()
 	_apply_display()                     # rétablit V-Sync et limite d'images choisis par le joueur
+	_save_calib()
 	last_event = {"time": Time.get_time_string_from_system(), "reason": "calib", "level": level, "dyn": dyn_scale}
 	_emit_auto()
 	if level != _baseline_level() or dyn_scale < 0.999:
