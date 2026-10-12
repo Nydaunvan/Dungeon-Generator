@@ -38,7 +38,7 @@ static func start(tree: SceneTree, cfg: Dictionary) -> Node:
 ## Exécute une commande du journal. Renvoie "" si tout va bien, sinon la raison de l'échec.
 ## Au rejeu, personne ne referme les fenêtres d'information (bilan de combat…) : on le fait, car elles bloquent le jeu.
 ## Les fenêtres de décision (fontaine, talent…) restent : seule une commande du journal peut y répondre.
-static func _sweep(tree: SceneTree, m: Node) -> void:
+static func _sweep(tree: SceneTree, _m: Node) -> void:
 	for n in tree.get_nodes_in_group("modal"):
 		if n is Modal and not n.has_meta("flow") and not n.is_queued_for_deletion():
 			(n as Modal).close()
@@ -103,6 +103,43 @@ static func apply(m: Node, e: Array) -> String:
 			return "commande_inconnue:" + cmd
 	return ""
 
+## Applique UNE entrée du journal : attend l'état requis (jeu au repos, fenêtre de décision…), règle l'horloge de jeu, exécute la
+## commande puis laisse passer une image. Renvoie "" si tout va bien, sinon la raison de l'échec. `applied` : nombre d'entrées déjà
+## appliquées (pour le message d'erreur). Partagé par le vérificateur (`run`) et par le lecteur de rejeu (ReplayLive).
+static func step(tree: SceneTree, m: Node, e: Array, applied: int) -> String:
+	var ms := int(e[0])
+	var cmd := str(e[1])
+	var wm: WeakRef = weakref(m)                                # la scène peut être remplacée (relance du rejeu) pendant l'attente
+	if cmd == "e":
+		var ok_e: bool = await _until(tree, func(): return wm.get_ref() == null or wm.get_ref().wand.engage_pending, SETTLE_TIMEOUT)
+		if not ok_e:
+			return "engagement_inattendu@%d" % applied
+	elif cmd == "ui":
+		var flow := str(e[2])
+		var ok_u: bool = await _until(tree, func():
+			if wm.get_ref() == null:
+				return true
+			_sweep(tree, null)
+			return _flow_ready(flow, e), SETTLE_TIMEOUT)
+		if not ok_u:
+			return "fenetre_absente@%d(%s)" % [applied, flow]
+	elif NEEDS_SETTLED.has(cmd):
+		var ok_s: bool = await _until(tree, func():
+			if wm.get_ref() == null:
+				return true
+			_sweep(tree, null)
+			return wm.get_ref().settled() and not _decision_open(tree), SETTLE_TIMEOUT)
+		if not ok_s:
+			return "jeu_jamais_au_repos@%d(%s)" % [applied, cmd]
+	if wm.get_ref() == null:
+		return "scene_perdue"
+	GameClock.set_ms(ms)
+	var why := apply(m, e)
+	if why != "":
+		return why
+	await tree.process_frame
+	return ""
+
 ## Rejoue `log` sur une nouvelle partie. Options : time_scale (accélération, 1 = temps réel).
 ## Résultat : {ok, reason, applied, clock_ms, fingerprint, summary}
 static func run(tree: SceneTree, cfg: Dictionary, log: Array, opts: Dictionary = {}) -> Dictionary:
@@ -112,6 +149,7 @@ static func run(tree: SceneTree, cfg: Dictionary, log: Array, opts: Dictionary =
 	var prev_scale := Engine.time_scale
 	Engine.time_scale = float(opts.get("time_scale", 1.0))
 	var m := await start(tree, cfg)
+	var wm: WeakRef = weakref(m)
 	if m == null:
 		out.reason = "demarrage_impossible"
 		return _finish(out, prev_scale)
@@ -125,35 +163,12 @@ static func run(tree: SceneTree, cfg: Dictionary, log: Array, opts: Dictionary =
 			out.reason = "temps_non_monotone"
 			return _finish(out, prev_scale)
 		last_ms = ms
-		var cmd := str(e[1])
-		if cmd == "e":
-			var ok_e: bool = await _until(tree, func(): return m.wand.engage_pending, SETTLE_TIMEOUT)
-			if not ok_e:
-				out.reason = "engagement_inattendu@%d" % out.applied
-				return _finish(out, prev_scale)
-		elif cmd == "ui":
-			var flow := str(e[2])
-			var ok_u: bool = await _until(tree, func():
-				_sweep(tree, m)
-				return _flow_ready(flow, e), SETTLE_TIMEOUT)
-			if not ok_u:
-				out.reason = "fenetre_absente@%d(%s)" % [out.applied, flow]
-				return _finish(out, prev_scale)
-		elif NEEDS_SETTLED.has(cmd):
-			var ok_s: bool = await _until(tree, func():
-				_sweep(tree, m)
-				return m.settled() and not _decision_open(tree), SETTLE_TIMEOUT)
-			if not ok_s:
-				out.reason = "jeu_jamais_au_repos@%d(%s)" % [out.applied, cmd]
-				return _finish(out, prev_scale)
-		GameClock.set_ms(ms)
-		var why := apply(m, e)
+		var why: String = await step(tree, m, e, out.applied)
 		if why != "":
 			out.reason = why
 			return _finish(out, prev_scale)
 		out.applied += 1
-		await tree.process_frame
-	var ok_end: bool = await _until(tree, func(): return m.settled() or m.gs.game_over or m.gs.won, SETTLE_TIMEOUT)
+	var ok_end: bool = await _until(tree, func(): return wm.get_ref() == null or wm.get_ref().settled() or wm.get_ref().gs.game_over or wm.get_ref().gs.won, SETTLE_TIMEOUT)
 	if not ok_end:
 		out.reason = "fin_jamais_au_repos"
 		return _finish(out, prev_scale)

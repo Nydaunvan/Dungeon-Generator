@@ -986,6 +986,8 @@ func _open_card(pid: String) -> void:
 			_body.add_child(h)
 	else:
 		_note(_body, L.t("ui.sadmin.card_no_messages"), UiTheme.DIM, false)
+	if my_rank >= 3:
+		_runs_section(pid)
 	# historique des actions le concernant
 	var hist: Variant = d.get("history")
 	if hist is Array and not (hist as Array).is_empty():
@@ -1133,7 +1135,7 @@ func _fill_candidates() -> void:
 
 const LOG_ACTIONS := ["chat_mute", "chat_unmute", "chat_delete", "chat_word_add", "chat_word_remove", "gallery_ban", "gallery_unban",
 	"gallery_unpublish", "gallery_delete", "role_set", "role_remove", "account_ban", "account_unban", "announce", "announce_clear",
-	"maintenance", "board_reset", "run_cancel"]
+	"maintenance", "board_reset", "run_cancel", "run_view"]
 const LOG_PERIODS := [1, 7, 30, 0]
 
 static func _action_name(a: String) -> String:
@@ -1397,3 +1399,79 @@ static func _bytes(v: Variant) -> String:
 	if b >= 1048576.0:
 		return "%.1f Mo" % (b / 1048576.0)
 	return "%d Ko" % int(b / 1024.0)
+
+# ------------------------------------------------------------------ parties d'un joueur : revoir / CSV (développeur)
+
+## Section « Parties » de la fiche : 30 dernières parties, avec « Revoir » (dans le moteur) et « CSV ».
+func _runs_section(pid: String) -> void:
+	_title(_body, L.t("ui.sadmin.card_runs"))
+	_note(_body, L.t("ui.sadmin.card_runs_dev"), UiTheme.DIM, false)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 3)
+	_body.add_child(box)
+	_fill_runs_section(box, pid)
+
+func _fill_runs_section(box: VBoxContainer, pid: String) -> void:
+	var mine := _gen
+	_wait(box)
+	var r: Dictionary = await SuperAdmin.player_runs(pid)
+	if mine != _gen or not _alive():
+		return
+	_clear(box)
+	if not r.ok or not (r.data is Array):
+		_error(box, r)
+		return
+	if (r.data as Array).is_empty():
+		_note(box, L.t("ui.sadmin.card_no_runs"), UiTheme.DIM, false)
+		return
+	for x in r.data:
+		var id := str(x.get("id", ""))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 6)
+		var txt := "%s · %s%s · %s · %s · v%s" % [date(x.get("started_at")), mode_name(str(x.get("difficulty", "")), str(x.get("kind", ""))),
+			(" 🧪" if bool(x.get("test", false)) else ""), status_name(str(x.get("status", ""))),
+			("%s pts" % num(x.get("score"))) if x.get("score") != null else "—", str(x.get("game_version", "?"))]
+		if x.get("seconds") != null:
+			txt += " · " + age(x.get("seconds"))
+		if bool(x.get("has_log", false)):
+			txt += " · %s act." % num(x.get("actions"))
+		else:
+			txt += " · " + L.t("ui.sadmin.run_nolog")
+		var l := _label(txt, UiTheme.PARCH, 12)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 60
+		h.add_child(l)
+		if bool(x.get("has_log", false)):
+			_btn(h, L.t("ui.sadmin.run_watch"), func(): _watch(id))
+			_btn(h, L.t("ui.sadmin.run_csv"), func(): _export_csv(id))
+		box.add_child(h)
+	_fit()
+
+## Charge une partie complète (avec journal) puis appelle `then(meta)`.
+func _with_run(id: String, then: Callable) -> void:
+	_flash(L.t("ui.sadmin.run_loading"))
+	var r: Dictionary = await SuperAdmin.run_log(id)
+	if not _alive():
+		return
+	if not r.ok or not (r.data is Dictionary):
+		_flash(str(r.get("message", "")), BAD)
+		return
+	_flash("")
+	then.call(r.data)
+
+## Lance le rejeu : la fenêtre d'administration se ferme, le jeu démarre avec la barre de commandes du rejeu.
+func _watch(id: String) -> void:
+	_with_run(id, func(meta: Dictionary):
+		var err := ReplayLive.open(meta)
+		if err != "":
+			_flash(err, BAD)
+		else:
+			_modal.close())
+
+func _export_csv(id: String) -> void:
+	_with_run(id, func(meta: Dictionary):
+		if not (meta.get("log") is Array) or (meta.log as Array).is_empty():
+			_flash(L.t("ui.replay.no_log"), BAD)
+			return
+		Files.save_text(_host, RunExport.file_name(meta, "csv"), RunExport.to_csv(meta), func(msg: String): _flash(msg, GOOD), "text/csv;charset=utf-8", "*.csv ; Fichier CSV"))

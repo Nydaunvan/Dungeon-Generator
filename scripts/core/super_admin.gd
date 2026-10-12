@@ -217,3 +217,13 @@ static func cancel_run(run_id: String, reason: String = "") -> Dictionary:
 
 static func health() -> Dictionary:
 	return await _rpc("admin_health")
+
+# ------------------------------------------------------------------ revoir les parties (développeur)
+
+## Les 30 dernières parties d'un joueur (sans le journal).
+static func player_runs(player_id: String) -> Dictionary:
+	return await _rpc("admin_player_runs", {"p_player": player_id, "p_limit": 30})
+
+## Une partie complète : graine, réglages, version, résultat et journal d'actions. La consultation est écrite dans le journal de l'équipe.
+static func run_log(run_id: String) -> Dictionary:
+	return await _rpc("admin_run_log", {"p_run": run_id})

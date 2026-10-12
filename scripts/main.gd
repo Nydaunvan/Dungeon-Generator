@@ -46,6 +46,8 @@ var _ranked_warned := 0
 var _ranked_over := false
 
 func _tick_ranked_timer() -> void:
+	if RunLog.replaying:
+		return
 	if gs == null or layout == null or not is_instance_valid(layout):
 		return
 	if not RunLog.ranked() or str(gs.cfg.get("runId", "")) == "" or gs.game_over or gs.won:
@@ -82,6 +84,8 @@ func _ranked_time_up() -> void:
 ## Envoie la progression de la partie au classement des défis (compte connecté, donjon aléatoire, administration jamais ouverte).
 ## `announce` : affiche un message de confirmation (fin de partie).
 func _submit_run(announce: bool = false) -> void:
+	if RunLog.replaying:
+		return                              # un rejeu n'envoie jamais rien au classement
 	var info := Challenges.run_info(gs, Data.play_origin)
 	if info.is_empty():
 		return
@@ -453,6 +457,8 @@ func _toggle_map() -> void:
 	Sound.map_open()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if RunLog.replaying:
+		return                              # rejeu : aucune commande du clavier ne doit modifier la partie
 	if not (event is InputEventKey and event.pressed):
 		return
 	# Touches modifiables dans Paramètres › Commandes (voir Keybinds) ; Échap reste géré par chaque fenêtre.

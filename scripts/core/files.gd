@@ -25,6 +25,30 @@ static func save_text(host: Node, file_name: String, text: String, on_done: Call
 	host.add_child(dlg)
 	dlg.popup_centered_ratio(0.6)
 
+## Enregistre un fichier binaire (image, vidéo) : téléchargement (Web) / boîte de dialogue native (ordinateur).
+static func save_bytes(host: Node, file_name: String, data: PackedByteArray, on_done: Callable = Callable(), mime: String = "application/octet-stream", filter: String = "*.* ; Tous les fichiers") -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(data, file_name, mime)
+		if on_done.is_valid():
+			on_done.call(L.fa(L.t("core.files.telechargement_lance"), file_name))
+		return
+	var dlg := FileDialog.new()
+	dlg.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	dlg.access = FileDialog.ACCESS_FILESYSTEM
+	dlg.use_native_dialog = true
+	dlg.current_file = file_name
+	dlg.filters = PackedStringArray([filter])
+	dlg.file_selected.connect(func(path: String):
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f != null:
+			f.store_buffer(data)
+		if on_done.is_valid():
+			on_done.call((L.fa(L.t("core.files.fichier_enregistre"), path)) if f != null else L.t("core.files.echec_enregistrement"))
+		dlg.queue_free())
+	dlg.canceled.connect(func(): dlg.queue_free())
+	host.add_child(dlg)
+	dlg.popup_centered_ratio(0.6)
+
 ## Choisit un fichier texte ; `on_text(text)` reçoit son contenu. Sur le Web, ouvre plutôt la fenêtre « coller le contenu ».
 static func pick_text(host: Node, on_text: Callable) -> void:
 	if OS.has_feature("web"):
