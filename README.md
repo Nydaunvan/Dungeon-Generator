@@ -1,6 +1,6 @@
 # Dungeon-Generator (migration Godot 4.7)
 
-Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu GL Compatibility ; versions exécutables Windows et Linux uniquement, le Web est abandonné).
+Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu Forward+ (Vulkan, repli OpenGL si Vulkan est absent) ; versions exécutables Windows et Linux uniquement, le Web est abandonné).
 
 ## Structure
 - `data/` : données extraites du build HTML (config par défaut, talents, constantes)

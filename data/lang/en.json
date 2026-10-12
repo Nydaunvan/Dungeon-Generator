@@ -2420,7 +2420,8 @@
   "ui.update.vt_title": "Antivirus scan (VirusTotal)",
   "ui.update.vt_link": "report",
   "ui.update.vt_hint": "Number of antivirus engines flagging the file, out of the total scanned.",
-  "ui.update.vt_hint_flag": "Number of antivirus engines flagging the file, out of the total scanned. Unsigned executables often trigger false positives: check the report if in doubt."
+  "ui.update.vt_hint_flag": "Number of antivirus engines flagging the file, out of the total scanned. Unsigned executables often trigger false positives: check the report if in doubt.",
+  "ui.settings.renderer_forward": "Forward+ (Vulkan)"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

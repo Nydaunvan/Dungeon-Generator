@@ -240,6 +240,14 @@ func _opt(key: String, options: Array) -> OptionButton:
 
 # ------------------------------------------------------------------ Affichage
 
+func _renderer_name() -> String:
+	var m := RenderingServer.get_current_rendering_method()
+	if m == "forward_plus":
+		return L.t("ui.settings.renderer_forward")
+	if m == "gl_compatibility":
+		return L.t("ui.settings.renderer_compat")      # repli OpenGL si Vulkan est indisponible
+	return m
+
 func _display() -> void:
 	_section(L.t("ui.settings.tab_display"))
 	_row(L.t("ui.settings.win_mode"), _drop([[1, L.t("ui.settings.win_full")], [0, L.t("ui.settings.win_windowed")]],
@@ -364,7 +372,7 @@ func _diag() -> void:
 	_section(L.t("ui.settings.diag_machine"))
 	var gpu := str(info.get("gpu", ""))
 	_kv(L.t("ui.settings.diag_gpu"), gpu if gpu != "" else L.t("ui.settings.unknown"))
-	_kv(L.t("ui.settings.diag_renderer"), L.t("ui.settings.renderer_compat") if RenderingServer.get_current_rendering_method() == "gl_compatibility" else RenderingServer.get_current_rendering_method())
+	_kv(L.t("ui.settings.diag_renderer"), _renderer_name())
 	_kv(L.t("ui.settings.diag_platform"), L.t("ui.settings.platform_%s" % str(info.get("platform", "pc"))))
 	var ram := float(info.get("ram_gb", 0.0))
 	_kv(L.t("ui.settings.diag_ram"), L.t("ui.settings.ram_value") % ram if ram > 0.0 else L.t("ui.settings.unknown"))
