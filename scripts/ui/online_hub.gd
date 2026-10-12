@@ -1230,8 +1230,11 @@ func _show_runs() -> void:
 	var wait := _wait(box)
 	_load_runs(box, wait, _gen)
 
+## Nombre de parties lues pour le résumé et l'histogramme (le tableau n'en montre que quelques-unes).
+const RUNS_STATS_LIMIT := 100
+
 func _load_runs(box: VBoxContainer, wait: Label, mine: int) -> void:
-	var r: Dictionary = await RankedRun.my_runs()
+	var r: Dictionary = await RankedRun.my_runs(RUNS_STATS_LIMIT)
 	if mine != _gen or not _alive():
 		return
 	wait.queue_free()
@@ -1258,6 +1261,7 @@ func _render_runs(mine: int) -> void:
 	if _runs.is_empty():
 		_runs_holder.add_child(HubKit.label(L.t("ui.hub.runs_none"), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
 		return
+	_render_runs_stats()
 	var g := GridContainer.new()
 	g.columns = 5
 	g.add_theme_constant_override("h_separation", 12)
@@ -1292,6 +1296,31 @@ func _render_runs(mine: int) -> void:
 	_runs_holder.add_child(HubKit.label(L.t("ui.hub.runs_legend"), UiTheme.DIM, 11))
 	_modal.call_deferred("_fit")
 
+## Résumé chiffré des parties du joueur et histogramme de ses scores (une barre par partie vérifiée, de la plus ancienne à la plus récente).
+func _render_runs_stats() -> void:
+	var verified: Array = _runs.filter(func(x): return str(x.get("status", "")) == "verified" and x.get("score") != null)
+	if verified.is_empty():
+		return
+	var best := 0
+	var total := 0
+	for x in verified:
+		best = maxi(best, int(x.score))
+		total += int(x.score)
+	var avg := "%.1f" % (float(total) / float(verified.size()))
+	_runs_holder.add_child(HubKit.label(L.fa(L.t("ui.hub.runs_stats"), [_runs.size(), verified.size(), best, avg]), UiTheme.GOLD, 13))
+	if verified.size() < 2:
+		return
+	var recent: Array = verified.slice(0, 20)
+	recent.reverse()
+	var vals: Array = []
+	var labs: Array = []
+	for x in recent:
+		vals.append(int(x.score))
+		labs.append(HubKit.short_date(x.get("started_at")))
+	_runs_holder.add_child(HubKit.label(L.t("ui.hub.runs_chart"), UiTheme.DIM, 11))
+	var bars := MiniBars.new().setup(vals, labs, Color("7fae4a"))
+	_runs_holder.add_child(bars)
+
 ## Secondes UNIX (UTC) d'un horodatage ISO renvoyé par la base.
 static func _utc(v: Variant) -> float:
 	var t := str(v)
@@ -1318,7 +1347,7 @@ func _tick_runs(mine: int) -> void:
 		return
 	_run_poll = 0
 	_run_busy = true
-	var r: Dictionary = await RankedRun.my_runs()
+	var r: Dictionary = await RankedRun.my_runs(RUNS_STATS_LIMIT)
 	_run_busy = false
 	if mine != _gen or not _alive() or not r.ok or not (r.data is Array):
 		return

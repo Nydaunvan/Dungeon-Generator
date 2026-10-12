@@ -2410,7 +2410,13 @@
   "ui.chat.rp_4": "Other",
   "ui.chat.rp_hint": "Details (optional)",
   "ui.chat.rp_done": "Report sent to the team.",
-  "ui.mydun.gallery_closed": "Publishing to the gallery is closed for now."
+  "ui.mydun.gallery_closed": "Publishing to the gallery is closed for now.",
+  "main.bilan_rounds_one": "⏱ Fight over in %d round",
+  "main.bilan_rounds_many": "⏱ Fight over in %d rounds",
+  "main.bilan_title": "Per-hero breakdown",
+  "main.bilan_hero": "%s: %d dealt · %d taken · %d healed",
+  "ui.hub.runs_stats": "%d games · %d verified · best score %d · average %s",
+  "ui.hub.runs_chart": "Levels cleared in your latest verified games (oldest to newest)"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

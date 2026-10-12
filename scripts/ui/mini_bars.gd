@@ -54,4 +54,4 @@ func _draw() -> void:
 		var c := color.lightened(0.25) if i == _hover else color
 		draw_rect(Rect2(area.position.x + i * w + 1, area.end.y - h, maxf(1.0, w - 2), h), c)
 	draw_string(font, Vector2(area.position.x, size.y - 4), str(labels[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1, 1, 1, 0.6))
-	draw_string(font, Vector2(area.end.x - 60, size.y - 4), str(labels[labels.size() - 1]), HORIZONTAL_ALIGNMENT_RIGHT, 60, 11, Color(1, 1, 1, 0.6))
+	draw_string(font, Vector2(area.end.x - 100, size.y - 4), str(labels[labels.size() - 1]), HORIZONTAL_ALIGNMENT_RIGHT, 100, 11, Color(1, 1, 1, 0.6))

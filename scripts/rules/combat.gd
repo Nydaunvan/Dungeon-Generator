@@ -28,7 +28,36 @@ var summary: Dictionary = {}
 func take_summary() -> Dictionary:
 	var s := summary
 	summary = {}
+	var b: Dictionary = lstate().get("combatBilan", {})
+	if not s.is_empty() and not b.is_empty():
+		s["rounds"] = int(b.get("rounds", 0))
+		s["heroes"] = _bilan_heroes(b)
+	lstate().erase("combatBilan")
 	return s
+
+## Début de combat : état de départ des compteurs de chaque héros, pour le bilan détaillé. Gardé dans l'état du niveau, donc sauvegardé
+## avec la partie (un combat interrompu par une sauvegarde garde son bilan).
+func _bilan_begin() -> void:
+	var base := {}
+	var per: Dictionary = gs.stats.get("perChar", {})
+	for c in gs.party:
+		var p: Dictionary = per.get(str(c.id), {})
+		base[str(c.id)] = {"dealt": int(p.get("damageDealt", 0)), "taken": int(p.get("damageTaken", 0)), "heal": int(p.get("healingDone", 0)),
+			"kills": int(p.get("kills", 0)), "actions": int(p.get("actions", 0))}
+	lstate()["combatBilan"] = {"base": base, "rounds": 0}
+
+## Par héros : ce qui s'est passé depuis le début du combat.
+func _bilan_heroes(b: Dictionary) -> Array:
+	var out: Array = []
+	var per: Dictionary = gs.stats.get("perChar", {})
+	var base: Dictionary = b.get("base", {})
+	for c in gs.party:
+		var p: Dictionary = per.get(str(c.id), {})
+		var b0: Dictionary = base.get(str(c.id), {})
+		out.append({"name": str(c.name), "dealt": int(p.get("damageDealt", 0)) - int(b0.get("dealt", 0)),
+			"taken": int(p.get("damageTaken", 0)) - int(b0.get("taken", 0)), "heal": int(p.get("healingDone", 0)) - int(b0.get("heal", 0)),
+			"kills": int(p.get("kills", 0)) - int(b0.get("kills", 0)), "actions": int(p.get("actions", 0)) - int(b0.get("actions", 0))})
+	return out
 
 func _note_summary(def: Dictionary, xp: int, gold: int) -> void:
 	if summary.is_empty():
@@ -122,6 +151,8 @@ func ensure_gauges() -> void:
 			wanted["char_" + str(c.id)] = true
 	var eng := engaged()
 	if not eng.is_empty():
+		if not lstate().has("combatBilan"):
+			_bilan_begin()
 		var m: Dictionary = eng.monster
 		var st: Dictionary = lstate().monsters[str(m.id)]
 		if m.get("isGroup", false) and st.has("members"):
@@ -144,6 +175,10 @@ func ensure_gauges() -> void:
 func advance_gauges_once() -> String:
 	var key := _advance(gauges, acted, _state)
 	if key != "":
+		if acted.is_empty():      # `_advance` vient d'ouvrir une nouvelle manche
+			var bil: Dictionary = lstate().get("combatBilan", {})
+			if not bil.is_empty():
+				bil["rounds"] = int(bil.get("rounds", 0)) + 1
 		acted[key] = true
 		_state["last_side"] = _side(key)
 		_state["current"] = key
@@ -979,6 +1014,7 @@ func flee() -> Vector2i:
 	gauges.clear()
 	acted.clear()
 	_state.clear()
+	lstate().erase("combatBilan")
 	return dest
 
 func _alive_monster_cells() -> Array:

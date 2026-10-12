@@ -1027,6 +1027,14 @@ func _show_combat_summary(s: Dictionary) -> void:
 	for c in gs.party:
 		recap.append("%s %d/%d" % [c.name, int(c.hp), int(c.maxHp)])
 	m.add_text("❤️ " + " · ".join(recap), UiTheme.DIM, 13)
+	# bilan détaillé : durée du combat et, pour chaque héros, dégâts infligés et subis, soins, coups fatals, actions
+	if s.has("heroes"):
+		var rounds := int(s.get("rounds", 0))
+		if rounds > 0:
+			m.add_text(L.fa(L.t("main.bilan_rounds_one" if rounds == 1 else "main.bilan_rounds_many"), [rounds]), UiTheme.PARCH, 14)
+		m.add_text(L.t("main.bilan_title"), UiTheme.GOLD, 14)
+		for h in s.heroes:
+			m.add_text(L.fa(L.t("main.bilan_hero"), [h.name, int(h.dealt), int(h.taken), int(h.heal)]), UiTheme.DIM, 13)
 	m.set_buttons([{"text": L.t("common.continuer"), "cb": func(): m.close()}])
 
 func _on_game_over() -> void:
