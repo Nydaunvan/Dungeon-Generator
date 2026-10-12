@@ -55,10 +55,11 @@ func _process(d: float) -> void:
 
 func _refresh() -> void:
 	var fps := Engine.get_frames_per_second()
-	var ram := float(OS.get_static_memory_usage()) / 1048576.0
+	var ram := ProcMem.mb()
 	var vram := float(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED)) / 1048576.0
 	var calls := int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
-	_label.text = "FPS  %d\nRAM  %.0f Mo\nVRAM %.0f Mo\nDraw %d" % [fps, ram, vram, calls]
+	var ram_txt := "%.0f Mo" % ram if ram > 0.0 else "…"          # « … » : première mesure en cours (Windows / macOS)
+	_label.text = "FPS  %d\nRAM  %s\nVRAM %.0f Mo\nDraw %d" % [fps, ram_txt, vram, calls]
 	_panel.reset_size()
 	_panel.position = Vector2(8, get_viewport().get_visible_rect().size.y - _panel.size.y - 8)   # coin bas-gauche : ne masque ni l'en-tête ni la vue 3D
 	_label.add_theme_color_override("font_color", Color("9be07a") if fps >= 55 else (Color("ffd98a") if fps >= 30 else Color("ff7a6a")))
