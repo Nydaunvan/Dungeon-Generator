@@ -2416,7 +2416,11 @@
   "main.bilan_title": "Per-hero breakdown",
   "main.bilan_hero": "%s: %d dealt · %d taken · %d healed",
   "ui.hub.runs_stats": "%d games · %d verified · best score %d · average %s",
-  "ui.hub.runs_chart": "Levels cleared in your latest verified games (oldest to newest)"
+  "ui.hub.runs_chart": "Levels cleared in your latest verified games (oldest to newest)",
+  "ui.update.vt_title": "Antivirus scan (VirusTotal)",
+  "ui.update.vt_link": "report",
+  "ui.update.vt_hint": "Number of antivirus engines flagging the file, out of the total scanned.",
+  "ui.update.vt_hint_flag": "Number of antivirus engines flagging the file, out of the total scanned. Unsigned executables often trigger false positives: check the report if in doubt."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

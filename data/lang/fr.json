@@ -2416,7 +2416,11 @@
   "main.bilan_title": "Détail par héros",
   "main.bilan_hero": "%s : %d infligés · %d subis · %d soins",
   "ui.hub.runs_stats": "%d parties · %d vérifiées · meilleur score %d · moyenne %s",
-  "ui.hub.runs_chart": "Niveaux franchis à tes dernières parties vérifiées (de la plus ancienne à la plus récente)"
+  "ui.hub.runs_chart": "Niveaux franchis à tes dernières parties vérifiées (de la plus ancienne à la plus récente)",
+  "ui.update.vt_title": "Analyse antivirus (VirusTotal)",
+  "ui.update.vt_link": "rapport",
+  "ui.update.vt_hint": "Nombre de moteurs antivirus qui signalent le fichier, sur le total analysé.",
+  "ui.update.vt_hint_flag": "Nombre de moteurs antivirus qui signalent le fichier, sur le total analysé. Un exécutable non signé produit souvent de faux positifs : consulte le rapport en cas de doute."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",
