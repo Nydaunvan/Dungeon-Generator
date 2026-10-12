@@ -340,10 +340,16 @@ func _drain() -> void:
 			"mon_hit":
 				var mst: Dictionary = combat.lstate().monsters.get(str(e.id), {})
 				view.entities.play(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
+				if view.stage != null:
+					view.stage.react(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
 			"mon_attack":
 				view.entities.play(str(e.id), "attack")
+				if view.stage != null:
+					view.stage.react(str(e.id), "attack")
 			"mon_stun":
 				view.entities.play(str(e.id), "stun")
+				if view.stage != null:
+					view.stage.react(str(e.id), "stun")
 			"monster_died":
 				Crumbs.mark("monstre mort %s%s" % [str(e.id), "" if model_in_combat() else " (combat fini)"])
 				view.entities.remove_monster(str(e.id), true)

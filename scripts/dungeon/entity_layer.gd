@@ -162,7 +162,7 @@ func _reset_pose(n: Node3D) -> void:
 	n.position.x -= off.x
 	n.position.z -= off.z
 	n.set_meta("off", Vector3.ZERO)
-	n.scale = Vector3.ONE
+	n.scale = Vector3(float(n.get_meta("mirror", 1.0)), 1.0, 1.0)
 	n.position.y = float(n.get_meta("by"))
 
 func _animate_monsters(delta: float) -> void:
@@ -178,8 +178,7 @@ func _animate_monsters(delta: float) -> void:
 						_reset_pose(e.node)
 		return
 	_clock += delta
-	var cam := get_viewport().get_camera_3d()
-	var cb: Basis = cam.global_transform.basis if cam != null else Basis.IDENTITY
+	var cb := _cam_basis()
 	var idle: bool = not Settings.reduced_motion
 	var ci: Dictionary = combat_info.call() if combat_info.is_valid() else {}
 	var cid := str(ci.get("id", ""))
@@ -192,63 +191,106 @@ func _animate_monsters(delta: float) -> void:
 			if not n.visible or not n.has_meta("by"):
 				continue
 			_anim_dirty = true
-			var ph: float = n.get_meta("ph", 0.0)
-			var h: float = n.get_meta("h", 1.0)
-			var sy := 1.0
-			var sx := 1.0
-			var dy := 0.0
-			var off := Vector3.ZERO
-			var fighting: bool = cid != "" and str(e.def.id) == cid
-			if idle:
-				var boss: bool = n.get_meta("boss", false)
-				if fighting:
-					# au combat : souffle plus ample et plus rapide, balancement d'un pied sur l'autre, léger pas en avant
-					sy += (0.03 if boss else 0.05) * sin(_clock * 3.4 + ph)
-					dy += 0.02 * sin(_clock * 2.6 + ph * 1.7)
-					off += cb.x * 0.055 * sin(_clock * 1.7 + ph)
-					off += cb.z * 0.05 * (0.5 + 0.5 * sin(_clock * 0.9 + ph))
-				else:
-					sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
-					dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
-			if fighting and charge > 0.7:
-				# annonce de l'attaque : le monstre se ramasse, gonfle et vibre quand sa jauge approche du plein
-				var wind := (charge - 0.7) / 0.3
-				sy += 0.07 * wind
-				sx += 0.04 * wind
-				off -= cb.z * 0.1 * wind
-				off += cb.x * 0.012 * wind * sin(_clock * 55.0)
-			var r: Variant = _react.get(n)
-			if r != null:
-				r["t"] = float(r.t) + delta
-				var k: float = float(r.t) / float(r.dur)
-				if k >= 1.0:
-					_end_react(n)
-				else:
-					var env := 1.0 - k
-					var arc := sin(k * PI)
-					match str(r.kind):
-						"hit":
-							sy -= 0.16 * env
-							sx += 0.12 * env
-							off -= cb.z * 0.14 * env                     # recul (s'éloigne de la caméra)
-							var m := (n as MeshInstance3D).material_override as StandardMaterial3D
-							if m != null:
-								m.albedo_color = Color(1.0, 0.35 + 0.65 * k, 0.35 + 0.65 * k)
-						"attack":
-							sy += 0.16 * arc
-							sx += 0.16 * arc
-							dy += 0.06 * arc
-							off += cb.z * 0.28 * arc                     # bond vers la caméra
-						"stun":
-							off += cb.x * 0.045 * sin(_clock * 46.0) * env
-							sy -= 0.03 * env
-			sx *= 1.0 - (sy - 1.0) * 0.5                                  # volume à peu près conservé
-			n.scale = Vector3(sx, sy, 1.0)
-			n.position.y = float(n.get_meta("by")) + h * 0.5 * (sy - 1.0) + dy
-			var prev: Vector3 = n.get_meta("off", Vector3.ZERO)
-			n.position.x += off.x - prev.x
-			n.position.z += off.z - prev.z
-			n.set_meta("off", off)
+			_pose(n, delta, cid != "" and str(e.def.id) == cid, charge, idle, cb)
+
+func _cam_basis() -> Basis:
+	var cam := get_viewport().get_camera_3d()
+	return cam.global_transform.basis if cam != null else Basis.IDENTITY
+
+## Animation des combattants de la salle de combat (CombatStage) : ce sont d'autres sprites que ceux de la carte
+## (ceux-ci sont cachés pendant le combat). Appelé à chaque image par la salle ; `nodes` = sprites affichés.
+func animate_stage(nodes: Array, delta: float) -> void:
+	if not Settings.monster_anim:
+		for n in nodes:
+			if is_instance_valid(n):
+				_end_react(n)
+				_reset_pose(n)
+		return
+	var cb := _cam_basis()
+	var idle: bool = not Settings.reduced_motion
+	var ci: Dictionary = combat_info.call() if combat_info.is_valid() else {}
+	var charge := clampf(float(ci.get("gauge", 0.0)), 0.0, 1.0)
+	for n in nodes:
+		if is_instance_valid(n) and n.visible and n.has_meta("by"):
+			_pose(n, delta, true, charge, idle, cb)
+
+## Réaction courte sur un sprite précis (salle de combat).
+func play_node(n: Node3D, kind: String) -> void:
+	if not Settings.monster_anim or not is_instance_valid(n) or not n.visible or not n.has_meta("by"):
+		return
+	_end_react(n)
+	_react[n] = {"kind": kind, "t": 0.0, "dur": float(REACT_DUR.get(kind, 0.4))}
+	if kind == "hit":
+		var base: Material = (n as MeshInstance3D).material_override
+		n.set_meta("mat0", base)
+		var flash: StandardMaterial3D = base.duplicate()
+		flash.albedo_color = Color(1.0, 0.35, 0.35)
+		(n as MeshInstance3D).material_override = flash
+
+## Mort animée d'un sprite précis (salle de combat).
+func die_node(n: Node3D) -> void:
+	if Settings.monster_anim and is_instance_valid(n) and n.visible and n.has_meta("by"):
+		_die(n as MeshInstance3D)
+	elif is_instance_valid(n):
+		n.queue_free()
+
+func _pose(n: Node3D, delta: float, fighting: bool, charge: float, idle: bool, cb: Basis) -> void:
+	var ph: float = n.get_meta("ph", 0.0)
+	var h: float = n.get_meta("h", 1.0)
+	var sy := 1.0
+	var sx := 1.0
+	var dy := 0.0
+	var off := Vector3.ZERO
+	if idle:
+		var boss: bool = n.get_meta("boss", false)
+		if fighting:
+			# au combat : souffle plus ample et plus rapide, balancement d'un pied sur l'autre, léger pas en avant
+			sy += (0.03 if boss else 0.05) * sin(_clock * 3.4 + ph)
+			dy += 0.02 * sin(_clock * 2.6 + ph * 1.7)
+			off += cb.x * 0.055 * sin(_clock * 1.7 + ph)
+			off += cb.z * 0.05 * (0.5 + 0.5 * sin(_clock * 0.9 + ph))
+		else:
+			sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
+			dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
+	if fighting and charge > 0.7:
+		# annonce de l'attaque : le monstre se ramasse, gonfle et vibre quand sa jauge approche du plein
+		var wind := (charge - 0.7) / 0.3
+		sy += 0.07 * wind
+		sx += 0.04 * wind
+		off -= cb.z * 0.1 * wind
+		off += cb.x * 0.012 * wind * sin(_clock * 55.0)
+	var r: Variant = _react.get(n)
+	if r != null:
+		r["t"] = float(r.t) + delta
+		var k: float = float(r.t) / float(r.dur)
+		if k >= 1.0:
+			_end_react(n)
+		else:
+			var env := 1.0 - k
+			var arc := sin(k * PI)
+			match str(r.kind):
+				"hit":
+					sy -= 0.16 * env
+					sx += 0.12 * env
+					off -= cb.z * 0.14 * env                     # recul (s'éloigne de la caméra)
+					var m := (n as MeshInstance3D).material_override as StandardMaterial3D
+					if m != null:
+						m.albedo_color = Color(1.0, 0.35 + 0.65 * k, 0.35 + 0.65 * k)
+				"attack":
+					sy += 0.16 * arc
+					sx += 0.16 * arc
+					dy += 0.06 * arc
+					off += cb.z * 0.28 * arc                     # bond vers la caméra
+				"stun":
+					off += cb.x * 0.045 * sin(_clock * 46.0) * env
+					sy -= 0.03 * env
+	sx *= 1.0 - (sy - 1.0) * 0.5                                  # volume à peu près conservé
+	n.scale = Vector3(sx * float(n.get_meta("mirror", 1.0)), sy, 1.0)
+	n.position.y = float(n.get_meta("by")) + h * 0.5 * (sy - 1.0) + dy
+	var prev: Vector3 = n.get_meta("off", Vector3.ZERO)
+	n.position.x += off.x - prev.x
+	n.position.z += off.z - prev.z
+	n.set_meta("off", off)
 
 ## PNJ fixe (forgeron, maître des talents) : grand sprite posé au sol.
 func add_npc(icon: String, x: int, y: int) -> void:
@@ -364,6 +406,9 @@ func remove_monster(id: String, animate: bool = false) -> void:
 		var keep: Array = []
 		for e in monsters[p]:
 			if str(e.def.id) == id:
+				var stage = get_parent().get("stage") if get_parent() != null else null
+				if stage != null and stage.active:
+					stage.die_all()             # salle de combat : les sprites affichés s'effondrent aussi
 				if animate and Settings.monster_anim and is_instance_valid(e.node) and e.node.visible:
 					_die(e.node)
 				else:

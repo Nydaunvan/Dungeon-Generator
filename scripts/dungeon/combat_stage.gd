@@ -12,6 +12,8 @@ var camera: Camera3D
 var active: bool = false
 var _arena: MeshInstance3D
 var _sig: String = ""
+var mon_id: String = ""          # monstre affiché (réactions visuelles)
+var _atk_turn := 0
 var _hidden: Array = []
 var _nodes: Dictionary = {}   # clé -> {node, halo, idx, h}
 
@@ -25,6 +27,7 @@ func enter(theme: String, p: Vector2i, dir: int, def: Dictionary, st: Dictionary
 				_hidden.append(c)
 				c.hide()
 		active = true
+	mon_id = str(def.id)
 	var sig := "%s|%d,%d|%d" % [theme, p.x, p.y, dir]
 	if sig != _sig:
 		_build_arena(theme, p, dir)
@@ -45,9 +48,45 @@ func exit() -> void:
 	for k in _nodes.keys():
 		_free_entry(k)
 
-func _free_entry(k) -> void:
+func _process(delta: float) -> void:
+	if not active or view == null or view.entities == null:
+		return
+	var nodes: Array = []
+	for k in _nodes.keys():
+		nodes.append(_nodes[k].node)
+	view.entities.animate_stage(nodes, delta)
+
+## Réaction visuelle d'un combattant : « hit » touche le membre ciblé (ou tous), « attack » fait avancer un membre à tour de rôle.
+func react(id: String, kind: String) -> void:
+	if not active or id != mon_id or _nodes.is_empty():
+		return
+	var keys: Array = _nodes.keys()
+	keys.sort()
+	var picked: Array = []
+	if kind == "attack" and keys.size() > 1:
+		picked.append(keys[_atk_turn % keys.size()])
+		_atk_turn += 1
+	elif kind == "hit":
+		for k in keys:
+			var e: Dictionary = _nodes[k]
+			if e.halo != null and e.halo.visible:
+				picked.append(k)
+	if picked.is_empty():
+		picked = keys
+	for k in picked:
+		view.entities.play_node(_nodes[k].node, kind)
+
+## Mort du monstre : tous les sprites affichés s'effondrent puis disparaissent.
+func die_all() -> void:
+	for k in _nodes.keys():
+		_free_entry(k, true)
+
+func _free_entry(k, dying: bool = false) -> void:
 	var e: Dictionary = _nodes[k]
-	e.node.queue_free()
+	if dying and view != null and view.entities != null:
+		view.entities.die_node(e.node)
+	else:
+		e.node.queue_free()
 	if e.halo != null:
 		e.halo.queue_free()
 	_nodes.erase(k)
@@ -126,14 +165,22 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			e = {"node": node, "halo": null, "idx": idx, "h": float(node.get_meta("h"))}
 			_nodes[key] = e
 			_sprite_mass(node)      # précalcule le centre visible (visée des sorts)
+			node.set_meta("ph", randf() * TAU)      # animations (voir EntityLayer.animate_stage)
+			node.set_meta("boss", is_boss)
 		var h: float = e.h
 		var gap := maxf(2.6, h * 1.15)
 		var slot := float(pos) - float(n - 1) / 2.0
 		var off := view.entities.anchor_offset(icon) * h
 		var at := Vector3(cell.x * CELL + right.x * slot * gap, h * 0.5 + 0.02 + off, cell.y * CELL + right.y * slot * gap)
-		e.node.position = at
 		var mirrored: bool = is_group and idx == int(st.get("mirrorSlot", -1))
-		e.node.scale = Vector3(-1.0 if mirrored else 1.0, 1.0, 1.0)
+		if e.node.get_meta("at", Vector3.INF) != at:       # on ne touche à la pose animée que si l'emplacement change
+			e.node.position = at
+			e.node.set_meta("at", at)
+			e.node.set_meta("by", at.y)
+			e.node.set_meta("off", Vector3.ZERO)
+		e.node.set_meta("mirror", -1.0 if mirrored else 1.0)
+		if not e.node.has_meta("by") or e.node.scale.y == 1.0:
+			e.node.scale = Vector3(-1.0 if mirrored else 1.0, 1.0, 1.0)
 		e.node.visible = true
 		var targeted: bool = is_group and idx == sel
 		if targeted and e.halo == null:

@@ -1,5 +1,5 @@
 extends SceneTree
-## Vérifie les animations pendant un combat : souffle plus ample, balancement, annonce de l'attaque quand la jauge approche du plein.
+## Vérifie les animations du sprite AFFICHÉ pendant un combat (celui de la salle de combat, pas celui de la carte) : souffle plus ample, balancement, annonce de l'attaque quand la jauge approche du plein.
 ## Usage : xvfb-run -a godot --rendering-driver opengl3 --path . --script res://tools/check_combat_anim.gd -- [capture.png]
 func _init() -> void:
 	var a := OS.get_cmdline_user_args()
@@ -26,14 +26,15 @@ func _init() -> void:
 	if not engaged:
 		quit(1)
 		return
-	var info: Dictionary = ents.combat_info.call()
-	var mid := str(info.get("id", ""))
+	var stage = m.ctrl.view.stage
+	print("salle de combat active : ", stage.active, " sprites : ", stage._nodes.size())
+	if not stage.active or stage._nodes.is_empty():
+		print("ÉCHEC : pas de sprite dans la salle de combat")
+		quit(1)
+		return
 	var node: Node3D = null
-	for p in ents.monsters.keys():
-		for e in ents.monsters[p]:
-			if str(e.def.id) == mid:
-				node = e.node
-	print("monstre engagé : ", mid, " nœud : ", node != null)
+	for k in stage._nodes.keys():
+		node = stage._nodes[k].node
 	var lo := 9.0
 	var hi := 0.0
 	var wind_max := 0.0
@@ -46,6 +47,8 @@ func _init() -> void:
 			break
 		lo = minf(lo, node.scale.y)
 		hi = maxf(hi, node.scale.y)
+		if not ents._react.is_empty():
+			continue
 		var ci: Dictionary = ents.combat_info.call()
 		wind_max = maxf(wind_max, float(ci.get("gauge", 0.0)))
 		var off: Vector3 = node.get_meta("off", Vector3.ZERO)
