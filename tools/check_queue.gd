@@ -22,6 +22,9 @@ func _init() -> void:
 	await create_timer(8.0).timeout
 	var m = current_scene
 	var ctrl = m.ctrl
+	var t_wait := Time.get_ticks_msec() + 40000
+	while Time.get_ticks_msec() < t_wait and not ctrl.model_in_combat():
+		await process_frame
 	var q = m.layout.queue
 	var samples := 0
 	var bad := 0
