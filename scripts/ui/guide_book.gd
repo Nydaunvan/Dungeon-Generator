@@ -167,11 +167,15 @@ func _load_changelog() -> void:
 		if not buckets.has(key):
 			buckets[key] = chapters.size()
 			chapters.append({"title": L.fa(L.t("ui.guide.versions_range"), key)})
-		var out := "[font_size=20][color=#e8b45c]Version %s[/color][/font_size]\n\n" % ver
+		var dt := DocModal.entry_date(e)
+		var out := "[font_size=20][color=#e8b45c]Version %s[/color][/font_size]" % ver
+		if dt != "":
+			out += "  [color=#a8957a]· %s[/color]" % dt
+		out += "\n\n"
 		for c in e.changes:
 			var ln := str(c)
 			out += ("[b]%s[/b]\n" % ln.substr(3)) if ln.begins_with("## ") else ("  • %s\n" % ln)
-		topics.append({"id": ver, "label": "Version " + ver, "text": out, "chapter": int(buckets[key])})
+		topics.append({"id": ver, "label": "Version " + ver + ((" · " + dt) if dt != "" else ""), "text": out, "chapter": int(buckets[key])})
 
 func _ch_title(ci: int) -> String:
 	var c: Dictionary = chapters[ci]

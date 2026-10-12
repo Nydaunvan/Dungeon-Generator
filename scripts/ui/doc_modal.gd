@@ -73,13 +73,23 @@ static func tutorial(host: Node) -> Modal:
 static func changelog(host: Node) -> Modal:
 	return GuideBook.open(host, "", "changelog").modal
 
+## Date de publication d'une entrée du journal (champ « date », AAAA-MM-JJ, jour de Paris) : « 11/10/2026 » en français, « 2026-10-11 » en anglais.
+## Vide si l'entrée n'a pas de date (anciennes versions du jeu d'origine).
+static func entry_date(e: Dictionary) -> String:
+	var d := str(e.get("date", ""))
+	var p := d.split("-")
+	if p.size() != 3:
+		return ""
+	return d if TranslationServer.get_locale().begins_with("en") else "%s/%s/%s" % [p[2], p[1], p[0]]
+
 ## Notes de la version courante, affichées une fois après une mise à jour.
 static func whats_new(host: Node) -> Modal:
 	var ver := AppVersion.number()
 	for e in _load("changelog"):
 		if str(e.version) != ver:
 			continue
-		var m := Modal.open(host, "%s %s" % [L.t("ui.doc_modal.nouveautes"), ver], 640.0)
+		var dt := entry_date(e)
+		var m := Modal.open(host, "%s %s%s" % [L.t("ui.doc_modal.nouveautes"), ver, (" · " + dt) if dt != "" else ""], 640.0)
 		var out := ""
 		for c in e.changes:
 			var s := str(c)

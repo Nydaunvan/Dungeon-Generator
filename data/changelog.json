@@ -1,6 +1,7 @@
 [
  {
   "version": "1.33.6",
+  "date": "2026-10-11",
   "changes": [
    "## Récompenses",
    "Nouveau navigateur par type : Titres, Cadres, Couleurs de pseudo et Anneaux des héros, avec le compteur obtenues / total pour chaque type.",
@@ -16,6 +17,7 @@
  },
  {
   "version": "1.33.5",
+  "date": "2026-10-11",
   "changes": [
    "## Récompenses et défis",
    "Nouveau Défi du jour : un petit défi par jour (heure de Paris), sans classement, qui rapporte de l'expérience et des badges de régularité (7, 30 et 100 jours).",
@@ -39,6 +41,7 @@
  },
  {
   "version": "1.33.4",
+  "date": "2026-10-11",
   "changes": [
    "## Parties classées",
    "Une partie classée se joue désormais en une seule fois : durée maximale de 2 heures, avec un minuteur « Temps restant » sous le badge de mode. Pas de sauvegarde ni de reprise ; quitter ou dépasser le temps abandonne la partie. Les conditions sont rappelées dans l'écran du défi.",
@@ -59,6 +62,7 @@
  },
  {
   "version": "1.33.3",
+  "date": "2026-10-11",
   "changes": [
    "## Interface",
    "La pause est désormais une icône ⏸ dans la vue de jeu (en haut à droite, à côté de 📊 ⌨️ 🔊), disponible dans tous les modes, y compris en combat, et plus dans le menu de l'accueil. En partie classée ou en défi, le temps passé en pause compte dans le temps de jeu du classement.",
@@ -75,6 +79,7 @@
  },
  {
   "version": "1.33.2",
+  "date": "2026-10-11",
   "changes": [
    "## Statistiques précises et visibles",
    "Barème unique, affiché tel quel : Force = dégâts minimum, Dextérité = dégâts maximum, critique (+1 % par point au-dessus de 10) et esquive (+0,8 % par point au-dessus de 10), Constitution = PV et garde (réduit tous les dégâts, +1 % par point au-dessus de 10), Intelligence = puissance de tous les sorts (dégâts, soins, boucliers, restauration d'endurance), Vitesse = fréquence des tours. Les résistances des héros s'appliquent désormais vraiment.",
@@ -100,6 +105,7 @@
  },
  {
   "version": "1.33.1",
+  "date": "2026-10-10",
   "changes": [
    "## Défi de la semaine",
    "Une règle spéciale par semaine (8 règles en rotation), un donjon commun à tous, des essais illimités, un classement vérifié par rejeu, des badges et de l'expérience. La fenêtre des défis affiche la règle de la semaine, le temps restant et ta série.",
@@ -126,6 +132,7 @@
  },
  {
   "version": "1.33.0",
+  "date": "2026-10-10",
   "changes": [
    "## Tchat des joueurs",
    "Nouveau bouton « 💬 Tchat » dans la barre du haut : un tchat pour les joueurs connectés, avec trois salons — Général, Français et English (le salon de la langue du jeu s'ouvre par défaut). Les messages se mettent à jour tout seuls ; chaque message affiche l'heure, le pseudo (couleur cosmétique et niveau de compte) et le texte, toujours en texte brut.",
@@ -143,6 +150,7 @@
  },
  {
   "version": "1.32.2",
+  "date": "2026-10-10",
   "changes": [
    "## Parties classées",
    "Nouvelle fenêtre « Parties classées » (depuis la fenêtre des défis, avant un donjon aléatoire) : un classement par difficulté — Facile, Normal, Difficile, Hardcore. C'est le serveur qui tire la graine du donjon et fixe ses réglages : tout le monde joue à armes égales.",
@@ -166,6 +174,7 @@
  },
  {
   "version": "1.32.1",
+  "date": "2026-10-09",
   "changes": [
    "## Compte en ligne",
    "Nouvelle fenêtre « Compte » (bouton dans l'en-tête) : création de compte, connexion, mot de passe oublié, déconnexion et suppression du compte. Le compte est facultatif : le jeu reste entièrement jouable sans lui, et hors ligne.",
@@ -175,6 +184,7 @@
  },
  {
   "version": "1.32.0",
+  "date": "2026-10-09",
   "changes": [
    "## Mises à jour dans le jeu",
    "Cette version change le format d'installation du jeu : les versions précédentes ne la proposent pas dans leur fenêtre de mise à jour. Pour la première fois, installez-la à la main (installateur Windows ou installation complète) ; les mises à jour suivantes seront automatiques et partielles.",
@@ -192,6 +202,7 @@
  },
  {
   "version": "1.31.3",
+  "date": "2026-10-08",
   "changes": [
    "## Mises à jour",
    "Version de contrôle de la mise à jour automatique : aucune nouveauté de jeu. Elle permet de vérifier, depuis la 1.31.2, le téléchargement, le remplacement de l'exécutable et le redémarrage sans fenêtre de commande."
@@ -199,6 +210,7 @@
  },
  {
   "version": "1.31.2",
+  "date": "2026-10-08",
   "changes": [
    "## Mises à jour dans le jeu",
    "Au lancement, un sablier s'affiche pendant que le jeu vérifie si une nouvelle version est publiée et propose, dans une fenêtre avec les notes de version, de la télécharger et de l'installer : « Mettre à jour », « Plus tard » ou « Ignorer cette version ». Le téléchargement est vérifié (somme SHA-256), puis le jeu se remplace et redémarre tout seul (Windows et Linux), sans aucune fenêtre de commande.",
@@ -222,6 +234,7 @@
  },
  {
   "version": "1.30.1",
+  "date": "2026-10-07",
   "changes": [
    "## Menu Paramètres et qualité graphique",
    "Nouveau bouton « Paramètres » dans l'en-tête : niveaux de qualité Faible, Moyen, Élevé et Ultra (résolution 3D, lissage, lumières des torches, particules, distance de vue, textures HD…), détection de la machine et réglages détaillés.",
