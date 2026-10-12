@@ -3,7 +3,6 @@ extends RefCounted
 ## Mémoire RAM réellement occupée par le jeu (en Mo), pour le compteur de performances.
 ## OS.get_static_memory_usage() renvoie 0 dans un export « release » : on interroge donc le système.
 ##   Linux : /proc/self/statm (instantané) · Windows : tasklist · macOS : ps (échantillonnés dans un fil, jamais sur le fil du jeu)
-##   Navigateur : mémoire WebAssembly (HEAP8), à défaut le tas JavaScript (Chrome).
 ## Une valeur de 0 signifie « indisponible » (le compteur affiche alors « — »).
 
 const PERIOD_MS := 3000
@@ -14,8 +13,6 @@ static var _thread: Thread = null
 
 ## Dernière valeur connue (Mo) ; lance au besoin un nouvel échantillonnage (au plus un toutes les 3 s).
 static func mb() -> float:
-	if OS.has_feature("web"):
-		return _web_mb()
 	if OS.get_name() == "Linux" or OS.get_name() == "FreeBSD":
 		var f := FileAccess.open("/proc/self/statm", FileAccess.READ)
 		if f != null:
@@ -54,7 +51,3 @@ static func parse_tasklist(text: String) -> float:
 		if ch >= "0" and ch <= "9":
 			digits += ch
 	return float(digits.to_int()) / 1024.0
-
-static func _web_mb() -> float:
-	var v: Variant = JavaScriptBridge.eval("(typeof HEAP8 !== 'undefined' && HEAP8.length) || (performance.memory ? performance.memory.usedJSHeapSize : 0)")
-	return float(v) / 1048576.0 if v != null else 0.0

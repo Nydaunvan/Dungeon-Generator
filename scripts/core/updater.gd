@@ -9,7 +9,7 @@ extends Node
 ##     relance le jeu. Les sauvegardes (user://) ne sont jamais touchées ; elles sont migrées à la lecture.
 ## État installé : « install.json » (dans le dossier du jeu) = pour chaque fichier, l'empreinte de contenu et la taille. Il est mis à
 ## jour au lancement qui suit une installation réussie (la version qui tourne prouve que le script a fait son travail).
-## La version Web n'est pas concernée (elle se met à jour avec le site), ni l'éditeur Godot.
+## L'éditeur Godot n'est pas concerné.
 
 const REPO := "Nydaunvan/Dungeon-Generator"
 const API := "https://api.github.com/repos/%s/releases?per_page=20"
@@ -89,9 +89,9 @@ static func platform() -> String:
 		"Linux": return "linux"
 	return ""
 
-## Le jeu peut-il se remplacer lui-même ici ? (pas dans l'éditeur, pas sur le Web, pas sur une autre plateforme)
+## Le jeu peut-il se remplacer lui-même ici ? (pas dans l'éditeur, pas sur une autre plateforme)
 static func can_self_update() -> bool:
-	return platform() != "" and not OS.has_feature("editor") and not OS.has_feature("web")
+	return platform() != "" and not OS.has_feature("editor")
 
 ## Choisit, parmi les publications GitHub, la plus récente qui apporte du nouveau (voir l'en-tête).
 static func pick(releases: Array, current: String, include_pre: bool, plat: String, ignored: String = "") -> Dictionary:

@@ -2,7 +2,7 @@
 """Régénère les préréglages d'export de bureau de export_presets.cfg à partir des définitions de paquets ci-dessous.
  - « Windows » et « Linux » : exécutable + « <nom>.pck » (code, scènes, données, polices, interface) sans les gros assets ;
  - « Pack <nom> » : un paquet par groupe de dossiers (exportés avec `godot --export-pack "Pack themes" build/packs/themes.pck`).
-Le préréglage « Web » (tout intégré) est conservé tel quel. Usage : python3 tools/gen_export_presets.py"""
+Plus de préréglage Web : le jeu n'existe qu'en version exécutable (Windows, Linux). Usage : python3 tools/gen_export_presets.py"""
 import re, pathlib
 
 PACKS = {
@@ -62,17 +62,15 @@ def asset_dirs(dirs): return [d + ("/*" if "." not in d.split("/")[-1] else "*")
 
 def main():
     path = pathlib.Path(__file__).resolve().parent.parent / "export_presets.cfg"
-    text = path.read_text(encoding="utf-8")
-    web = text[:text.index("[preset.1]")].rstrip() + "\n\n"
     all_pack_dirs = [d for ds in PACKS.values() for d in ds]
-    out = web
-    out += preset(1, "Windows", "Windows Desktop", "build/windows/Dungeon Generator.exe", BASE_EXCLUDE + asset_dirs(all_pack_dirs), "data/*.json", WIN_OPTS) + "\n"
-    out += preset(2, "Linux", "Linux", "build/linux/Dungeon Generator.x86_64", BASE_EXCLUDE + asset_dirs(all_pack_dirs), "data/*.json", LIN_OPTS) + "\n"
-    for i, (name, dirs) in enumerate(PACKS.items(), start=3):
+    out = ""
+    out += preset(0, "Windows", "Windows Desktop", "build/windows/Dungeon Generator.exe", BASE_EXCLUDE + asset_dirs(all_pack_dirs), "data/*.json", WIN_OPTS) + "\n"
+    out += preset(1, "Linux", "Linux", "build/linux/Dungeon Generator.x86_64", BASE_EXCLUDE + asset_dirs(all_pack_dirs), "data/*.json", LIN_OPTS) + "\n"
+    for i, (name, dirs) in enumerate(PACKS.items(), start=2):
         others = CORE_DIRS + [d for n2, ds in PACKS.items() if n2 != name for d in ds]
         out += preset(i, "Pack " + name, "Linux", f"build/packs/{name}.pck", BASE_EXCLUDE + asset_dirs(others), "", LIN_OPTS) + "\n"
     path.write_text(out.rstrip() + "\n", encoding="utf-8")
-    print("préréglages écrits :", ["Web", "Windows", "Linux"] + ["Pack " + n for n in PACKS])
+    print("préréglages écrits :", ["Windows", "Linux"] + ["Pack " + n for n in PACKS])
 
 if __name__ == "__main__":
     main()

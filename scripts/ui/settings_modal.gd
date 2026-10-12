@@ -242,10 +242,6 @@ func _opt(key: String, options: Array) -> OptionButton:
 
 func _display() -> void:
 	_section(L.t("ui.settings.tab_display"))
-	if Settings.is_web():
-		_hint(L.t("ui.settings.display_web_note"))
-		_hint(L.t("ui.update.web_note"))
-		return
 	_row(L.t("ui.settings.win_mode"), _drop([[1, L.t("ui.settings.win_full")], [0, L.t("ui.settings.win_windowed")]],
 		1 if Settings.is_fullscreen() else 0, func(v): Settings.set_fullscreen(int(v) == 1)))
 	_hint(L.t("ui.settings.win_hint"))

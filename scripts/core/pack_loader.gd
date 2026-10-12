@@ -12,7 +12,7 @@ const DIR := "packs"
 var loaded: PackedStringArray = []
 
 func _init() -> void:
-	if OS.has_feature("editor") or OS.has_feature("web"):
+	if OS.has_feature("editor"):
 		return
 	var dir := OS.get_executable_path().get_base_dir().path_join(DIR)
 	if not DirAccess.dir_exists_absolute(dir):

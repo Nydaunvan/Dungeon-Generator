@@ -302,11 +302,8 @@ func credits_music(on: bool) -> void:
 			menu_music(true, 1.5)
 
 ## Musique de l'accueil. `on` = true : fondu d'entrée (elle continue d'un écran du menu à l'autre) ; false : fondu de sortie.
-## Sur le Web, rien ne sort avant le premier geste du joueur : la demande est mémorisée et jouée par unlock().
 func menu_music(on: bool, fade: float = 1.2) -> void:
 	_menu_wanted = on
-	if on and (OS.has_feature("web") and not _unlocked):
-		return
 	if _menu_tween != null:
 		_menu_tween.kill()
 	if on:

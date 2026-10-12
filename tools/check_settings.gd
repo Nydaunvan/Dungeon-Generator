@@ -82,15 +82,14 @@ func _detection() -> void:
 	for c in cases:
 		var t: int = Settings.gpu_tier(c[0], "")
 		expect(t == c[1], "gpu_tier(%s) = %d, attendu %d" % [c[0], t, c[1]])
-	expect(Settings.suggest_level(false, false, 2, 16.0, 8) == 2, "PC confortable → Élevé")
-	expect(Settings.suggest_level(false, false, 2, 16.0, 8) < 3, "jamais Ultra d'office")
-	expect(Settings.suggest_level(false, false, 0, 16.0, 8) == 0, "GPU modeste → Faible")
-	expect(Settings.suggest_level(false, false, 2, 4.0, 8) == 0, "4 Go de RAM → Faible")
-	expect(Settings.suggest_level(false, false, 2, 6.0, 8) == 1, "6 Go de RAM → Moyen au plus")
-	expect(Settings.suggest_level(false, false, 2, 16.0, 2) == 0, "2 cœurs → Faible")
-	expect(Settings.suggest_level(true, false, 2, 16.0, 8) == 2, "Web → Élevé au plus")
-	expect(Settings.suggest_level(true, true, 2, 16.0, 8) == 0, "mobile → Faible")
-	expect(Settings.suggest_level(false, false, -1, 16.0, 8) == 1, "GPU inconnu → Moyen")
+	expect(Settings.suggest_level(false, 2, 16.0, 8) == 2, "PC confortable → Élevé")
+	expect(Settings.suggest_level(false, 2, 16.0, 8) < 3, "jamais Ultra d'office")
+	expect(Settings.suggest_level(false, 0, 16.0, 8) == 0, "GPU modeste → Faible")
+	expect(Settings.suggest_level(false, 2, 4.0, 8) == 0, "4 Go de RAM → Faible")
+	expect(Settings.suggest_level(false, 2, 6.0, 8) == 1, "6 Go de RAM → Moyen au plus")
+	expect(Settings.suggest_level(false, 2, 16.0, 2) == 0, "2 cœurs → Faible")
+	expect(Settings.suggest_level(true, 2, 16.0, 8) == 0, "mobile → Faible")
+	expect(Settings.suggest_level(false, -1, 16.0, 8) == 1, "GPU inconnu → Moyen")
 
 ## Premier lancement (pas de fichier de réglages) : le mode Auto part du niveau détecté pour la machine.
 func _first_launch() -> void:
@@ -211,7 +210,7 @@ func _texts() -> void:
 		keys.append("ui.settings.preset_hint_%s" % p)
 	for d in SettingsModal.DISTANCE_VALUES:
 		keys.append("ui.settings.dist_%s" % d[1])
-	for p in ["pc", "web", "mobile"]:
+	for p in ["pc", "mobile"]:
 		keys.append("ui.settings.platform_%s" % p)
 	for e in ["down", "up", "revert", "dyn_down", "dyn_up", "calib"]:
 		keys.append("ui.settings.event_%s" % e)
@@ -241,7 +240,7 @@ func _calib_run(fps_list: Array) -> int:
 	return n
 
 func _calibration() -> void:
-	var web := Settings.is_web() or Settings.is_mobile()
+	var web := Settings.is_mobile()
 	var top := "high" if web else "ultra"
 	# machine très rapide : on monte tant que la marge est nette (Élevé sur navigateur, Ultra sur PC)
 	_calib_run([300.0, 250.0, 200.0])

@@ -1,6 +1,6 @@
 # Dungeon-Generator (migration Godot 4.7)
 
-Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu GL Compatibility pour mobile + PC + Web).
+Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu GL Compatibility ; versions exécutables Windows et Linux uniquement, le Web est abandonné).
 
 ## Structure
 - `data/` : données extraites du build HTML (config par défaut, talents, constantes)
@@ -14,7 +14,7 @@ Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu GL C
 Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène principale (F5) : la console affiche le donjon chargé et les stats des 4 personnages.
 
 ## Plan de migration
-1. Données en JSON ✔ 2. Moteur de règles 3. Couloir 3D (✔ murs, torches, portes, escaliers, monstres et objets en sprites) 4. Interface adaptative 5. Boutique/forge/talents 6. Audio 7. Éditeur intégré + sauvegardes + export Web
+1. Données en JSON ✔ 2. Moteur de règles 3. Couloir 3D (✔ murs, torches, portes, escaliers, monstres et objets en sprites) 4. Interface adaptative 5. Boutique/forge/talents 6. Audio 7. Éditeur intégré + sauvegardes
 
 ## Vérifications
 - Compilation : `godot --headless --path . res://tools/check_compile.tscn`
@@ -30,9 +30,9 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène princ
 - Le numéro de version est dans `project.godot` (`config/version`, forme `1.30.1`, ou `1.30.1-test1` pour un build de test). Le jeu l'affiche à partir de là (`AppVersion`).
 - Journal des versions : `data/changelog.json` (affiché dans le jeu). Les notes de la publication GitHub en sont tirées (`tools/release_notes.py`).
 - Publier : pousser sur `migration/donnees` un commit dont le message contient `[exe]` (préversion `v<version>`) ou `[release]` (publication normale). Le workflow « Publication » exporte Windows et Linux en **exécutable + paquets** (voir ci-dessous), crée ou met à jour la publication et y joint : l'installateur Windows (`...-setup.exe`), les installations complètes (`...-windows-full.zip`, `...-linux-full.tar.gz`), les fichiers un par un (`exe-*`, `core-*.pck`, `themes.pck`, `monsters.pck`, `audio.pck`) et les manifestes `manifest-<plateforme>.json` lus par la mise à jour du jeu.
-- Disposition d'une installation : `Dungeon Generator.exe` (moteur seul) + `Dungeon Generator.pck` (code, données, polices, interface) + `packs/*.pck` (gros assets) + `install.json` (état des fichiers). Les groupes de paquets sont définis dans `tools/gen_export_presets.py` (qui régénère `export_presets.cfg`) ; `scripts/core/pack_loader.gd` monte `packs/*.pck` au démarrage. Le Web reste en un seul bloc.
+- Disposition d'une installation : `Dungeon Generator.exe` (moteur seul) + `Dungeon Generator.pck` (code, données, polices, interface) + `packs/*.pck` (gros assets) + `install.json` (état des fichiers). Les groupes de paquets sont définis dans `tools/gen_export_presets.py` (qui régénère `export_presets.cfg`) ; `scripts/core/pack_loader.gd` monte `packs/*.pck` au démarrage.
 - Mise à jour partielle (`scripts/core/updater.gd`) : le jeu lit le manifeste de la dernière publication et ne télécharge que les fichiers dont l'empreinte de contenu a changé. Essai complet : `sh tools/check_update_e2e.sh` (variable `GODOT`).
-- L'export Web part en FTP à chaque push, sans condition (workflow « Export Web »).
+- Il n'y a plus d'export Web : le workflow d'envoi FTP a été supprimé (le site déjà en ligne n'est plus mis à jour).
 
 ## Partie en ligne (Supabase)
 - Le jeu reste jouable hors ligne : rien n'est appelé au lancement. Le module de compte est l'autoload `Cloud` (`scripts/core/cloud.gd`) ; sa configuration (URL du projet + clé **publique**) est dans `data/cloud_config.json`. La clé secrète (`sb_secret_…` / `service_role`) ne va jamais dans le dépôt ni dans le jeu.

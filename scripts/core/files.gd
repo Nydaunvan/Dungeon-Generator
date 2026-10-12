@@ -1,13 +1,8 @@
 class_name Files
 extends RefCounted
-## Échange de fichiers texte avec l'utilisateur : téléchargement (Web) / boîtes de dialogue natives (ordinateur).
+## Échange de fichiers texte avec l'utilisateur : boîtes de dialogue natives.
 
 static func save_text(host: Node, file_name: String, text: String, on_done: Callable = Callable(), mime: String = "application/json", filter: String = "*.json ; Fichier JSON") -> void:
-	if OS.has_feature("web"):
-		JavaScriptBridge.download_buffer(text.to_utf8_buffer(), file_name, mime)
-		if on_done.is_valid():
-			on_done.call(L.fa(L.t("core.files.telechargement_lance"), file_name))
-		return
 	var dlg := FileDialog.new()
 	dlg.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	dlg.access = FileDialog.ACCESS_FILESYSTEM
@@ -25,13 +20,8 @@ static func save_text(host: Node, file_name: String, text: String, on_done: Call
 	host.add_child(dlg)
 	dlg.popup_centered_ratio(0.6)
 
-## Enregistre un fichier binaire (image, vidéo) : téléchargement (Web) / boîte de dialogue native (ordinateur).
+## Enregistre un fichier binaire (image, vidéo) : boîte de dialogue native.
 static func save_bytes(host: Node, file_name: String, data: PackedByteArray, on_done: Callable = Callable(), mime: String = "application/octet-stream", filter: String = "*.* ; Tous les fichiers") -> void:
-	if OS.has_feature("web"):
-		JavaScriptBridge.download_buffer(data, file_name, mime)
-		if on_done.is_valid():
-			on_done.call(L.fa(L.t("core.files.telechargement_lance"), file_name))
-		return
 	var dlg := FileDialog.new()
 	dlg.file_mode = FileDialog.FILE_MODE_SAVE_FILE
 	dlg.access = FileDialog.ACCESS_FILESYSTEM
@@ -49,11 +39,8 @@ static func save_bytes(host: Node, file_name: String, data: PackedByteArray, on_
 	host.add_child(dlg)
 	dlg.popup_centered_ratio(0.6)
 
-## Choisit un fichier texte ; `on_text(text)` reçoit son contenu. Sur le Web, ouvre plutôt la fenêtre « coller le contenu ».
+## Choisit un fichier texte ; `on_text(text)` reçoit son contenu.
 static func pick_text(host: Node, on_text: Callable) -> void:
-	if OS.has_feature("web"):
-		paste_dialog(host, L.t("common.importer_un_fichier_json"), L.t("core.files.ouvrez_le_fichier_json_dans"), on_text)
-		return
 	var dlg := FileDialog.new()
 	dlg.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	dlg.access = FileDialog.ACCESS_FILESYSTEM

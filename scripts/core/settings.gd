@@ -143,9 +143,6 @@ func flame_fps() -> int:
 func motion_k() -> float:
 	return 0.25 if reduced_motion else 1.0
 
-func is_web() -> bool:
-	return OS.has_feature("web")
-
 func is_mobile() -> bool:
 	return OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
 
@@ -288,10 +285,9 @@ func _resolve() -> void:
 
 func _apply_display() -> void:
 	Engine.max_fps = maxi(0, fps_cap)
-	if not is_web():
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
-		if _fullscreen_pref >= 0 and is_fullscreen() != (_fullscreen_pref == 1):
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if _fullscreen_pref == 1 else DisplayServer.WINDOW_MODE_WINDOWED)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+	if _fullscreen_pref >= 0 and is_fullscreen() != (_fullscreen_pref == 1):
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if _fullscreen_pref == 1 else DisplayServer.WINDOW_MODE_WINDOWED)
 
 # ------------------------------------------------------------------ fichier
 
@@ -393,14 +389,12 @@ static func gpu_tier(gpu: String, vendor: String = "") -> int:
 	return -1
 
 ## Niveau de départ conseillé pour une machine (jamais « ultra » : seul l'essai en jeu peut le valider).
-static func suggest_level(web: bool, mobile: bool, tier: int, ram_gb: float, cpus: int) -> int:
+static func suggest_level(mobile: bool, tier: int, ram_gb: float, cpus: int) -> int:
 	var idx := 1
 	if mobile:
 		idx = 0
 	elif tier >= 0:
 		idx = tier
-	if web:
-		idx = mini(idx, 2)
 	if ram_gb > 0.0 and ram_gb <= 4.0:
 		idx = mini(idx, 0)
 	elif ram_gb > 0.0 and ram_gb <= 6.0:
@@ -424,9 +418,9 @@ func _machine_info() -> Dictionary:
 	var ram_gb := float(phys) / 1073741824.0 if phys > 0 else 0.0
 	var cpus := OS.get_processor_count()
 	var tier := gpu_tier(gpu, vendor)
-	var idx := suggest_level(is_web(), is_mobile(), tier, ram_gb, cpus)
+	var idx := suggest_level(is_mobile(), tier, ram_gb, cpus)
 	return {"gpu": gpu, "vendor": vendor, "ram_gb": ram_gb, "cpus": cpus, "tier": tier,
-		"platform": "mobile" if is_mobile() else ("web" if is_web() else "pc"), "level": LEVELS[idx]}
+		"platform": "mobile" if is_mobile() else "pc", "level": LEVELS[idx]}
 
 # ------------------------------------------------------------------ adaptation dynamique
 
@@ -466,7 +460,7 @@ func _in_game() -> bool:
 func _in_play() -> bool:
 	if not _in_game() or get_tree().paused or Loader.is_active():
 		return false
-	if not is_web() and not DisplayServer.window_is_focused():   # fenêtre en arrière-plan : mesure faussée (le navigateur suspend déjà l'animation d'un onglet masqué)
+	if not DisplayServer.window_is_focused():   # fenêtre en arrière-plan : mesure faussée
 		return false
 	return true
 
@@ -481,22 +475,18 @@ func _target() -> float:
 	var t := float(target_fps)
 	if fps_cap > 0:
 		t = minf(t, float(fps_cap))
-	# Avec la synchro verticale (et toujours dans un navigateur), l'écran plafonne les images : viser plus haut que sa fréquence
+	# Avec la synchro verticale, l'écran plafonne les images : viser plus haut que sa fréquence
 	# ferait croire à un jeu « trop lent » et dégraderait la qualité pour rien.
-	if vsync or is_web():
+	if vsync:
 		var r := refresh_rate()
 		if r > 0.0:
 			t = minf(t, r)
-		elif is_web():     # navigateur : fréquence inconnue, on ne dépasse que ce qui a déjà été mesuré en jeu
-			t = minf(t, maxf(60.0, _peak_fps))
 	return t
 
-## Fréquence de l'écran en Hz (0 si inconnue, ex. dans un navigateur).
+## Fréquence de l'écran en Hz (0 si inconnue).
 func refresh_rate() -> float:
 	if refresh_override > 0.0:
 		return refresh_override
-	if is_web():
-		return 0.0
 	var r := DisplayServer.screen_get_refresh_rate(DisplayServer.window_get_current_screen())
 	return r if r > 1.0 else 0.0
 
@@ -504,7 +494,7 @@ func _max_idx() -> int:
 	var cap := 3
 	if LEVELS.has(preset):
 		cap = LEVELS.find(preset)
-	elif preset == "auto" and (is_web() or is_mobile()):
+	elif preset == "auto" and is_mobile():
 		cap = 2
 	if preset == "auto" and ceiling != "":
 		cap = mini(cap, LEVELS.find(ceiling))
@@ -667,7 +657,7 @@ func _forget_calib() -> void:
 		cf.save(CFG)
 
 func _calib_max_idx() -> int:
-	return 2 if (is_web() or is_mobile()) else 3
+	return 2 if is_mobile() else 3
 
 func _calibrate(delta: float) -> void:
 	if preset != "auto":
@@ -697,9 +687,8 @@ func _calib_begin() -> void:
 	level = _baseline_level()
 	dyn_scale = 1.0
 	_dyn_cap = 1.0
-	Engine.max_fps = 0                # mesure de la vraie capacité : ni limite d'images, ni V-Sync (sauf navigateur)
-	if not is_web():
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = 0                # mesure de la vraie capacité : ni limite d'images, ni V-Sync
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_calib_next()
 
 func _calib_next() -> void:

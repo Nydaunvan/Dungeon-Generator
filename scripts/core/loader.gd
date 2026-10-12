@@ -96,10 +96,9 @@ func boot() -> void:
 	sampler.autostart = true
 	sampler.timeout.connect(Crumbs.sample)
 	add_child(sampler)
-	Sound.menu_music(true, 2.0)   # bureau : dès le lancement ; Web : à l'entrée (premier clic)
+	Sound.menu_music(true, 2.0)   # dès le lancement
 	_show(L.t("loading.sous_titre_jeu"))
 	await _frames(2)
-	var web := OS.has_feature("web")
 	# poids de chaque étape dans la barre : les sons (synthétisés par le code) sont de loin les plus longs
 	var phases := [
 		{"label": L.t("loading.polices"), "w": 0.04},
@@ -139,12 +138,7 @@ func boot() -> void:
 	while not screen.is_full():
 		await get_tree().process_frame
 	await _check_updates()
-	if web:
-		screen.show_gate()
-		await screen.entered
-		Sound.unlock()
-	else:
-		await get_tree().create_timer(0.25).timeout
+	await get_tree().create_timer(0.25).timeout
 	booted = true
 
 ## Recherche de mise à jour au lancement (Windows et Linux) : sablier derrière lequel le jeu interroge GitHub ; s'il y a du
