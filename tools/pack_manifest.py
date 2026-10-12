@@ -51,7 +51,18 @@ def main(version):
             shutil.copyfile(src, dist / asset)
             digest = sha(src)
             files.append({"path": path, "asset": asset, "size": src.stat().st_size, "sha256": digest, "content": content or digest})
-        add(b / exe_name, exe_name, exe_asset)
+        # Exécutable Windows : ses octets changent à chaque version (numéro de version écrit dans l'exécutable par patch_windows_exe.sh) alors que
+        # le moteur ne change pas ; on compare donc l'empreinte de l'export brut + celle de l'icône et du script de patch. Sans ce fichier
+        # (build local), repli sur l'empreinte des octets.
+        exe_content = None
+        mark = b / "exe.content"
+        if plat == "windows" and mark.exists():
+            h = hashlib.sha256()
+            h.update(mark.read_text().strip().encode())
+            h.update(sha(ROOT / "installer" / "app.ico").encode())
+            h.update(sha(ROOT / "tools" / "patch_windows_exe.sh").encode())
+            exe_content = h.hexdigest()
+        add(b / exe_name, exe_name, exe_asset, exe_content)
         core_src = b / "Dungeon Generator.pck"
         add(core_src, "Dungeon Generator.pck", f"core-{plat}.pck")
         for name in PACKS:

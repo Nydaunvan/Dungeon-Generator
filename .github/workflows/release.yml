@@ -98,6 +98,9 @@ jobs:
           "$GODOT" --headless --path . --import
           "$GODOT" --headless --path . --export-release "Windows" "build/windows/Dungeon Generator.exe"
           "$GODOT" --headless --path . --export-release "Linux" "build/linux/Dungeon Generator.x86_64"
+          # empreinte de l'exécutable Windows AVANT les informations de version : celles-ci changent les octets à chaque numéro de version,
+          # alors que le moteur ne change pas. Le jeu compare cette empreinte (et non les octets) pour savoir s'il doit retélécharger l'exécutable.
+          sha256sum "build/windows/Dungeon Generator.exe" | cut -d' ' -f1 > build/windows/exe.content
           # l'exécutable Windows reçoit l'icône du jeu (sinon : celle de Godot) AVANT d'être empaqueté et publié
           sh tools/patch_windows_exe.sh "build/windows/Dungeon Generator.exe" "$V" || echo "::warning::Icône de l'exécutable Windows non appliquée (voir le journal)."
           # paquets communs aux deux plateformes (thèmes, monstres, audio…) : définis dans tools/gen_export_presets.py
