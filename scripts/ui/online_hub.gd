@@ -56,6 +56,7 @@ static func open(host: Node, on_launch: Callable = Callable(), tab: String = "pl
 	h._modal.closed.connect(h._on_closed)
 	Cloud.session_changed.connect(h._on_session)
 	h._build()
+	h._refresh_notice.call_deferred()
 	return h
 
 func _alive() -> bool:
@@ -139,6 +140,19 @@ func _error(parent: Control, r: Dictionary) -> void:
 
 # ------------------------------------------------------------------ bandeau « mon compte »
 
+## Marque de rôle (développeur, super admin, modérateur) suivie d'une espace, "" pour un joueur ordinaire.
+func _role_mark(player_id: String) -> String:
+	var m := StaffBadges.mark(player_id)
+	return m + " " if m != "" else ""
+
+## Relit annonce, maintenance et rôles ; redessine le bandeau si quelque chose a changé.
+func _refresh_notice() -> void:
+	var before := ServerNotice.banner_text()
+	await ServerNotice.refresh()
+	await StaffBadges.refresh()
+	if _alive() and _strip_box != null and ServerNotice.banner_text() != before:
+		_fill_strip()
+
 func _fill_strip() -> void:
 	for ch in _strip_box.get_children():
 		_strip_box.remove_child(ch)
@@ -155,7 +169,7 @@ func _fill_strip() -> void:
 	if _signed():
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
-		top.add_child(HubKit.label("👤 " + Cloud.pseudo(), GOLD, 17, true, false))
+		top.add_child(HubKit.label("👤 " + _role_mark(Cloud.user_id()) + Cloud.pseudo(), GOLD, 17, true, false))
 		var lv := HubKit.label("", UiTheme.DIM, 13, false, false)
 		lv.name = "Level"
 		top.add_child(lv)
@@ -188,6 +202,14 @@ func _fill_strip() -> void:
 		NotifDot.attach(acc, SuperAdmin.pending, false, SuperAdmin.refresh_pending)
 		right.add_child(acc)
 	right.add_child(HubKit.button(L.t("ui.help.how"), func(): DocModal.guide(_host, "defis"), false, 34))
+	var notice := ServerNotice.banner_text()
+	if notice != "":
+		var nl := HubKit.label(notice, Color("e0b87a"), 13, false, true)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var nm := MarginContainer.new()
+		nm.add_theme_constant_override("margin_top", 4)
+		nm.add_child(nl)
+		_strip_box.add_child(nm)
 
 func _load_xp() -> void:
 	var r: Dictionary = await RankedRun.my_xp()
@@ -755,7 +777,7 @@ func _legends_table(box: VBoxContainer, rows: Array) -> void:
 		var weekly := str(r.get("kind", "")) == "weekly"
 		var when := L.fa(L.t("ui.hub.weekly_week"), str(r.get("period", "")).get_slice("W", 1)) + " " + str(r.get("period", "")).get_slice("-", 0) if weekly else str(r.get("period", ""))
 		g.add_child(HubKit.label(("📅 " if weekly else "🔥 ") + when, UiTheme.DIM, 13, false, false))
-		g.add_child(Cosmetics.name_plate(str(r.get("pseudo", "?")), "", str(r.get("frame", "")) if r.get("frame") != null else "", r.get("color"), 15))
+		g.add_child(Cosmetics.name_plate(_role_mark(str(r.get("player_id", ""))) + str(r.get("pseudo", "?")), "", str(r.get("frame", "")) if r.get("frame") != null else "", r.get("color"), 15))
 		var unit_txt := L.t(RankedRun.unit_key(str(RULE_METRIC.get(str(r.get("rule_id", "")), "levels"))))
 		g.add_child(HubKit.label("%d %s · %s" % [int(r.get("score", 0)), unit_txt, Challenges.format_time(int(r.get("seconds", 0)))], GOLD, 13, false, false))
 		var rule := (str(r.get("rule_en" if en else "rule_fr", "")) if r.get("rule_fr") != null else "")
@@ -798,7 +820,7 @@ func _board_table(box: VBoxContainer, rows: Array, unit: String) -> void:
 			any_declared = true
 		_cell(g, str(i + 1), col, 15, 34, HORIZONTAL_ALIGNMENT_RIGHT)
 		var title := Cosmetics.loc(row, "title") if row.get("title_fr") != null else ""
-		var plate := Cosmetics.name_plate(str(row.get("pseudo", "?")) + (" ✔" if verified else ""), title,
+		var plate := Cosmetics.name_plate(_role_mark(str(row.get("player_id", ""))) + str(row.get("pseudo", "?")) + (" ✔" if verified else ""), title,
 			str(row.get("frame", "")) if row.get("frame") != null else "", row.get("color") if row.get("color") != null else (col.to_html(false) if (mine_row or i < 3) else null),
 			15, int(row.get("level", 0)) if int(row.get("level", 0)) > 1 else 0)
 		if _src == "free":

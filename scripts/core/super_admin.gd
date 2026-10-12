@@ -1,32 +1,60 @@
 class_name SuperAdmin
 extends RefCounted
-## Rôle « super admin » de la partie en ligne : parties classées de TEST et statistiques de toute la partie en ligne.
+## Équipe d'administration de la partie en ligne : modérateur < super admin < développeur.
 ##
-## SÉCURITÉ : ce fichier ne décide de rien. Le rôle est une ligne de la table `admins` du serveur (illisible depuis le jeu, inscriptible
-## seulement depuis le tableau de bord Supabase) et CHAQUE fonction appelée ici revérifie le rôle côté serveur (`acces_refuse` sinon).
-## `check()` ne sert qu'à décider si le bouton s'affiche. Les courriels et les journaux d'actions ne sont jamais renvoyés.
+## SÉCURITÉ : ce fichier ne décide de rien. Le rôle est une ligne de la table `staff_roles` du serveur (illisible depuis le jeu ; le rôle
+## de développeur ne se change que par SQL) et CHAQUE fonction appelée ici revérifie le rôle côté serveur (`acces_refuse` sinon).
+## `check()` / `rank()` ne servent qu'à décider quoi AFFICHER. Les courriels ne sont jamais renvoyés.
 
-static var _known: Dictionary = {}      ## identifiant du compte -> bool (réponse du serveur)
+const RANKS := {"moderator": 1, "super_admin": 2, "dev": 3}
 
-## Réponse déjà connue pour le compte connecté : 1 = super admin, 0 = non, -1 = pas encore demandé (ou hors ligne).
+static var _known: Dictionary = {}      ## identifiant du compte -> rôle du serveur ("" = aucun, "moderator", "super_admin" ou "dev")
+
+## Réponse déjà connue pour le compte connecté : 1 = membre de l'équipe (tous rôles), 0 = non, -1 = pas encore demandé (ou hors ligne).
 static func cached() -> int:
 	if not Cloud.is_signed_in() or not _known.has(Cloud.user_id()):
 		return -1
-	return 1 if _known[Cloud.user_id()] else 0
+	return 1 if str(_known[Cloud.user_id()]) != "" else 0
 
-## Demande au serveur si le compte connecté est super admin. Hors ligne ou sans compte : false, sans rien mémoriser.
-static func check() -> bool:
+## Rôle connu du compte connecté : "", "moderator", "super_admin" ou "dev".
+static func role() -> String:
 	if not Cloud.is_signed_in():
-		return false
+		return ""
+	return str(_known.get(Cloud.user_id(), ""))
+
+## Rang connu : 0 aucun, 1 modérateur, 2 super admin, 3 développeur.
+static func rank() -> int:
+	return int(RANKS.get(role(), 0))
+
+static func is_dev() -> bool:
+	return rank() >= 3
+
+static func is_super() -> bool:
+	return rank() >= 2
+
+## Demande au serveur le rôle du compte connecté. Hors ligne ou sans compte : "", sans rien mémoriser.
+## Un serveur qui n'a pas encore reçu la mise à jour des rôles répond à l'ancienne question « super admin ? ».
+static func fetch_role() -> String:
+	if not Cloud.is_signed_in():
+		return ""
 	var id := Cloud.user_id()
 	if _known.has(id):
-		return _known[id]
-	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/is_super_admin", {}, true)
-	if not r.ok:
-		return false
-	var yes: bool = r.data is bool and r.data
-	_known[id] = yes
-	return yes
+		return str(_known[id])
+	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/staff_role", {}, true)
+	var found := ""
+	if r.ok:
+		found = str(r.data) if r.data is String and RANKS.has(str(r.data)) else ""
+	else:
+		var old: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/is_super_admin", {}, true)
+		if not old.ok:
+			return ""
+		found = "super_admin" if old.data is bool and old.data else ""
+	_known[id] = found
+	return found
+
+## Le compte connecté fait-il partie de l'équipe ? (sert à afficher le bouton ; le serveur revérifie chaque action)
+static func check() -> bool:
+	return (await fetch_role()) != ""
 
 static func forget() -> void:
 	_known.clear()
@@ -137,3 +165,55 @@ static func gallery_unban(player_id: String) -> Dictionary:
 
 static func gallery_bans() -> Dictionary:
 	return await _rpc("admin_gallery_bans")
+
+# ------------------------------------------------------------------ équipe, fiches joueurs, journal
+
+## Membres de l'équipe : [{player_id, pseudo, role, rank, granted_at, granted_by, granted_by_pseudo}].
+static func team() -> Dictionary:
+	return await _rpc("staff_list")
+
+## `role` : "moderator", "super_admin" ou "none" (retire).
+static func set_role(player_id: String, new_role: String) -> Dictionary:
+	return await _rpc("staff_set_role", {"p_player": player_id, "p_role": new_role})
+
+static func player_card(player_id: String) -> Dictionary:
+	return await _rpc("admin_player_card", {"p_player": player_id})
+
+## Journal des actions. Un modérateur ne reçoit que les siennes (le serveur impose le filtre).
+static func log_list(action: String = "", since_iso: String = "", limit: int = 100, offset: int = 0) -> Dictionary:
+	return await _rpc("staff_log_list", {"p_actor": null, "p_action": action if action != "" else null,
+		"p_since": since_iso if since_iso != "" else null, "p_limit": limit, "p_offset": offset})
+
+# ------------------------------------------------------------------ outils du développeur
+
+## `hours` <= 0 : définitif.
+static func account_ban(player_id: String, hours: int, reason: String = "") -> Dictionary:
+	return await _rpc("admin_account_ban", {"p_player": player_id, "p_hours": hours if hours > 0 else null, "p_reason": reason})
+
+static func account_unban(player_id: String) -> Dictionary:
+	return await _rpc("admin_account_unban", {"p_player": player_id})
+
+static func account_bans() -> Dictionary:
+	return await _rpc("admin_account_bans")
+
+static func announce(body: String, hours: int) -> Dictionary:
+	return await _rpc("admin_announce", {"p_body": body, "p_hours": hours})
+
+static func announce_clear() -> Dictionary:
+	return await _rpc("admin_announce_clear")
+
+static func set_server_state(ranked_closed: bool, chat_closed: bool, message: String) -> Dictionary:
+	return await _rpc("admin_set_server_state", {"p_ranked_closed": ranked_closed, "p_chat_closed": chat_closed, "p_message": message})
+
+static func boards() -> Dictionary:
+	return await _rpc("admin_boards")
+
+static func reset_board(kind: String, period: String, difficulty: String, confirm: String) -> Dictionary:
+	return await _rpc("admin_reset_board", {"p_kind": kind, "p_period": period if period != "" else null,
+		"p_difficulty": difficulty if difficulty != "" else null, "p_confirm": confirm})
+
+static func cancel_run(run_id: String, reason: String = "") -> Dictionary:
+	return await _rpc("admin_cancel_run", {"p_run": run_id, "p_reason": reason})
+
+static func health() -> Dictionary:
+	return await _rpc("admin_health")

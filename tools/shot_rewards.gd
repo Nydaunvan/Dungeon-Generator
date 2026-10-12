@@ -4,6 +4,12 @@ extends SceneTree
 func resp(code: int, data: Variant = null) -> Dictionary:
 	return {"result": HTTPRequest.RESULT_SUCCESS, "code": code, "body": ("" if data == null else JSON.stringify(data)).to_utf8_buffer()}
 func fake(method: int, full_url: String, headers: PackedStringArray, body: String) -> Dictionary:
+	if "rpc/announcement_current" in full_url:
+		return resp(200, {"id": 1, "body": "Maintenance ce soir à 22 h.", "created_at": "2026-10-12T05:00:00Z", "expires_at": "2026-10-13T05:00:00Z"})
+	if "rpc/server_state_get" in full_url:
+		return resp(200, {"ranked_closed": true, "chat_closed": false, "message": "Retour vers 23 h"})
+	if "rpc/staff_public" in full_url:
+		return resp(200, [{"player_id": "u1", "role": "dev"}])
 	if "/rest/v1/badges" in full_url:
 		return resp(200, [
 			{"id": "a", "icon": "🗡️", "label_fr": "Tueur", "desc_fr": "Tuer 100 monstres", "rarity": 1, "title_fr": "Le Tueur", "frame": null, "color": null},

@@ -4,8 +4,8 @@ extends SceneTree
 func resp(code: int, data: Variant = null) -> Dictionary:
 	return {"result": HTTPRequest.RESULT_SUCCESS, "code": code, "body": ("" if data == null else JSON.stringify(data)).to_utf8_buffer()}
 func fake(method: int, full_url: String, headers: PackedStringArray, body: String) -> Dictionary:
-	if "rpc/is_super_admin" in full_url:
-		return resp(200, true)
+	if "rpc/staff_role" in full_url:
+		return resp(200, "moderator")
 	if "rpc/admin_chat_stats" in full_url:
 		return resp(200, {"reports_pending": 2})
 	if "rpc/admin_gallery_stats" in full_url:

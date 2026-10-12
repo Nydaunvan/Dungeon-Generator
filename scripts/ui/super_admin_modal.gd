@@ -1,8 +1,10 @@
 class_name SuperAdminModal
 extends RefCounted
-## « Super admin » : parties classées de TEST (sans essai consommé, hors classements) et statistiques de toute la partie en ligne
-## (vue d'ensemble, joueurs, parties). Réservé aux comptes présents dans la table `admins` du serveur : le serveur vérifie le rôle à
-## chaque appel, l'écran n'est qu'une vitrine (voir SuperAdmin). Ni courriel ni journal d'actions n'y figurent.
+## « Administration » : écran de l'équipe (modérateur < super admin < développeur). Les onglets affichés dépendent du rôle ; le SERVEUR
+## revérifie le rôle à chaque appel, l'écran n'est qu'une vitrine (voir SuperAdmin). Aucun courriel n'y figure.
+##   modérateur : Modération (tchat + galerie), Joueurs, Équipe (lecture), Journal (ses actions)
+##   super admin : + Vue d'ensemble, Parties, Tests, nomination des modérateurs, journal complet
+##   développeur : + nomination des super admins, onglet Développeur (santé, maintenance, annonce, bannissements, classements)
 
 const STATUSES := ["started", "submitted", "verified", "rejected", "expired"]
 const GOLD := Color("ffd98a")
@@ -12,7 +14,11 @@ const ROW_SIZE := 14
 
 var _host: Node
 var _modal: Modal
-var _tab := "tests"
+var _tab := "mod"
+var _mod_sub := "chat"
+var _log_action := ""
+var _log_days := 7
+var _log_limit := 100
 var _gen := 0
 var _body: VBoxContainer
 var _list: VBoxContainer
@@ -29,6 +35,15 @@ static func open(host: Node) -> SuperAdminModal:
 	s._build()
 	return s
 
+## Onglets visibles pour un rang (1 modérateur, 2 super admin, 3 développeur).
+static func tabs_for_rank(rank: int) -> Array:
+	var out: Array = ["mod", "players", "team", "log"]
+	if rank >= 2:
+		out.append_array(["overview", "runs", "tests"])
+	if rank >= 3:
+		out.append("dev")
+	return out
+
 func _alive() -> bool:
 	return is_instance_valid(_modal) and not _modal.is_queued_for_deletion()
 
@@ -38,9 +53,9 @@ func _build() -> void:
 	tabs.add_theme_constant_override("v_separation", 6)
 	tabs.alignment = FlowContainer.ALIGNMENT_CENTER
 	_modal.content.add_child(tabs)
-	for t in ["tests", "overview", "players", "runs", "chat", "gallery"]:
+	for t in tabs_for_rank(SuperAdmin.rank()):
 		var b := Button.new()
-		b.text = L.t("ui.sadmin.tab_" + t)
+		b.text = L.t("ui.sadmin.tab_" + t) + (" (%d)" % SuperAdmin.pending() if t == "mod" and SuperAdmin.pending() > 0 else "")
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
 		b.button_pressed = t == _tab
@@ -65,8 +80,10 @@ func _show(tab: String) -> void:
 		"overview": _load_overview()
 		"players": _build_players()
 		"runs": _build_runs()
-		"chat": _build_chat()
-		"gallery": _build_gallery()
+		"mod": _build_chat() if _mod_sub == "chat" else _build_gallery()
+		"team": _build_team()
+		"log": _build_log()
+		"dev": _build_dev()
 
 # ------------------------------------------------------------------ outils d'affichage
 
@@ -75,7 +92,27 @@ func _begin() -> int:
 	_clear(_body)
 	_list = null
 	_status = null
+	if _tab == "mod":
+		_mod_bar()
 	return _gen
+
+## Tchat / Galerie, avec le nombre de signalements à traiter.
+func _mod_bar() -> void:
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 6)
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	for sub in ["chat", "gallery"]:
+		var n := SuperAdmin.pending_chat() if sub == "chat" else SuperAdmin.pending_gallery()
+		var b := Button.new()
+		b.text = L.t("ui.sadmin.tab_" + sub) + (" (%d)" % n if n > 0 else "")
+		b.toggle_mode = true
+		b.button_pressed = _mod_sub == sub
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(func():
+			_mod_sub = sub
+			_show("mod"))
+		bar.add_child(b)
+	_body.add_child(bar)
 
 func _clear(box: Control) -> void:
 	for c in box.get_children():
@@ -363,10 +400,20 @@ func _fill_players() -> void:
 		_note(box, L.t("ui.sadmin.none"))
 		return
 	var w := [0, 40, 60, 62, 52, 92]
-	_cells(box, [L.t("ui.sadmin.col_player"), L.t("ui.sadmin.col_level"), L.t("ui.sadmin.col_xp"), L.t("ui.sadmin.col_runs_ok"), L.t("ui.sadmin.col_best"), L.t("ui.sadmin.col_last")], w, UiTheme.DIM)
+	var head := _cells(box, [L.t("ui.sadmin.col_player"), L.t("ui.sadmin.col_level"), L.t("ui.sadmin.col_xp"), L.t("ui.sadmin.col_runs_ok"), L.t("ui.sadmin.col_best"), L.t("ui.sadmin.col_last")], w, UiTheme.DIM)
+	var pad := Control.new()
+	pad.custom_minimum_size = Vector2(70, 0)
+	head.add_child(pad)
 	for p in rows:
-		var name := str(p.get("pseudo", "?")) + (" 🛡️" if bool(p.get("admin", false)) else "")
-		_cells(box, [name, num(p.get("level")), num(p.get("xp")), "%s/%s" % [num(p.get("verified")), num(p.get("runs"))], num(p.get("best_score")), date(p.get("last_run_at"))], w)
+		var pid := str(p.get("id", ""))
+		var name := _mark(str(p.get("role", ""))) + str(p.get("pseudo", "?")) + (" 🔇" if bool(p.get("muted", false)) else "") + (" 🚫" if bool(p.get("banned", false)) else "")
+		var row := _cells(box, [name, num(p.get("level")), num(p.get("xp")), "%s/%s" % [num(p.get("verified")), num(p.get("runs"))], num(p.get("best_score")), date(p.get("last_run_at"))], w)
+		var cb := Button.new()
+		cb.text = L.t("ui.sadmin.card_btn")
+		cb.focus_mode = Control.FOCUS_NONE
+		cb.custom_minimum_size = Vector2(70, 0)
+		cb.pressed.connect(func(): _open_card(pid))
+		row.add_child(cb)
 	_note(box, L.t("ui.sadmin.shown") % rows.size())
 
 # ------------------------------------------------------------------ onglet Parties
@@ -772,10 +819,11 @@ func _gallery_card(box: Control, x: Dictionary) -> void:
 				_flash(L.t("ui.gallery.added_long") if r.ok else str(r.get("message", "")), GOOD if r.ok else BAD)])
 		specs.append([L.t("ui.sadmin.gal_unpublish"), func(b: Button): after.call(await SuperAdmin.gallery_unpublish(did), b)])
 	specs.append([L.t("ui.sadmin.gal_dismiss"), func(b: Button): after.call(await SuperAdmin.gallery_dismiss(did), b)])
-	specs.append([L.t("ui.sadmin.gal_delete"), func(b: Button):
-		b.disabled = false
-		Dialogs.confirm(_host, L.t("ui.sadmin.gal_delete"), L.fa(L.t("ui.sadmin.gal_delete_confirm"), str(x.get("title", ""))), func():
-			after.call(await SuperAdmin.gallery_delete(did), b), L.t("common.confirmer"))])
+	if SuperAdmin.is_super():
+		specs.append([L.t("ui.sadmin.gal_delete"), func(b: Button):
+			b.disabled = false
+			Dialogs.confirm(_host, L.t("ui.sadmin.gal_delete"), L.fa(L.t("ui.sadmin.gal_delete_confirm"), str(x.get("title", ""))), func():
+				after.call(await SuperAdmin.gallery_delete(did), b), L.t("common.confirmer"))])
 	if not bool(x.get("banned", false)):
 		specs.append([L.t("ui.sadmin.gal_ban"), func(b: Button):
 			b.disabled = false
@@ -793,3 +841,559 @@ func _gallery_card(box: Control, x: Dictionary) -> void:
 	card.add_child(act)
 	card.add_child(HSeparator.new())
 	box.add_child(card)
+
+# ------------------------------------------------------------------ rôles : outils communs
+
+## Icône du rôle suivie d'une espace ("" pour un joueur ordinaire).
+static func _mark(role: String) -> String:
+	var m := str(StaffBadges.MARKS.get(role, ""))
+	return m + " " if m != "" else ""
+
+func _btn(parent: Control, text: String, cb: Callable, danger: bool = false) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	if danger:
+		b.add_theme_color_override("font_color", BAD)
+	b.pressed.connect(cb)
+	parent.add_child(b)
+	return b
+
+func _flow(parent: Control) -> HFlowContainer:
+	var f := HFlowContainer.new()
+	f.add_theme_constant_override("h_separation", 6)
+	f.add_theme_constant_override("v_separation", 6)
+	parent.add_child(f)
+	return f
+
+## Exécute une action serveur puis appelle `then` (rechargement) ; l'erreur éventuelle s'affiche dans la ligne d'état.
+func _run(fn: Callable, then: Callable, b: Button = null) -> void:
+	var mine := _gen
+	if b != null:
+		b.disabled = true
+	var r: Dictionary = await fn.call()
+	if mine != _gen or not _alive():
+		return
+	if r.ok:
+		then.call()
+	else:
+		if b != null:
+			b.disabled = false
+		_flash(str(r.get("message", "")), BAD)
+
+## Confirmation simple.
+func _ask(title: String, text: String, yes: Callable) -> void:
+	Dialogs.confirm(_host, title, text, yes, L.t("common.confirmer"))
+
+## Confirmation à deux étapes : la première fenêtre explique, la seconde demande de taper le mot `word`.
+func _typed_confirm(title: String, text: String, word: String, on_ok: Callable) -> void:
+	Dialogs.confirm(_host, title, text, func():
+		var m := Modal.open(_host, title, 460.0)
+		m.add_text(L.fa(L.t("ui.sadmin.typed_hint"), word), UiTheme.PARCH, 15)
+		var le := LineEdit.new()
+		le.placeholder_text = word
+		m.content.add_child(le)
+		m.set_buttons([
+			{"text": L.t("common.confirmer"), "primary": true, "cb": func():
+				if le.text.strip_edges() == word:
+					m.close()
+					on_ok.call()
+				else:
+					le.text = ""
+					le.placeholder_text = L.t("ui.sadmin.typed_wrong")},
+			{"text": L.t("common.annuler"), "cb": func(): m.close()},
+		])
+		le.grab_focus(), L.t("common.confirmer"))
+
+# ------------------------------------------------------------------ fiche d'un joueur
+
+func _open_card(pid: String) -> void:
+	var mine := _begin()
+	_wait(_body)
+	var r: Dictionary = await SuperAdmin.player_card(pid)
+	if mine != _gen or not _alive():
+		return
+	_clear(_body)
+	if not r.ok or not (r.data is Dictionary):
+		_error(_body, r)
+		_btn(_body, L.t("ui.sadmin.back"), func(): _show(_tab))
+		return
+	var d: Dictionary = r.data
+	var back_tab := _tab
+	var reload := func(): _open_card(pid)
+	_btn(_body, L.t("ui.sadmin.back"), func(): _show(back_tab))
+	var role := str(d.get("role", "")) if d.get("role") != null else ""
+	var target_rank := int(d.get("rank", 0))
+	var my_rank := SuperAdmin.rank()
+	_title(_body, "%s%s" % [_mark(role), str(d.get("pseudo", "?"))])
+	_kv(_body, L.t("ui.sadmin.card_role"), StaffBadges.role_name(role) if role != "" else L.t("ui.sadmin.role_player"), GOLD if role != "" else UiTheme.PARCH)
+	_kv(_body, L.t("ui.sadmin.card_since"), date(d.get("created_at")))
+	_status = Form.status_label(_body)
+	# sanctions en cours
+	_title(_body, L.t("ui.sadmin.card_sanctions"))
+	var any := false
+	var mute: Variant = d.get("mute")
+	if mute is Dictionary:
+		any = true
+		_kv(_body, L.t("ui.sadmin.card_mute"), L.fa(L.t("ui.sadmin.until"), date((mute as Dictionary).get("until"))), BAD)
+	if d.get("gallery_ban") is Dictionary:
+		any = true
+		_kv(_body, L.t("ui.sadmin.card_gallery_ban"), str((d.gallery_ban as Dictionary).get("reason", "")) if (d.gallery_ban as Dictionary).get("reason") != null else "—", BAD)
+	var ab: Variant = d.get("account_ban")
+	if ab is Dictionary:
+		any = true
+		var until: Variant = (ab as Dictionary).get("until")
+		_kv(_body, L.t("ui.sadmin.card_account_ban"), L.t("ui.sadmin.forever") if until == null else L.fa(L.t("ui.sadmin.until"), date(until)), BAD)
+	if not any:
+		_note(_body, L.t("ui.sadmin.card_none"), UiTheme.DIM, false)
+	# actions : seulement sur un rang strictement inférieur au sien (le serveur l'impose aussi)
+	if my_rank > target_rank:
+		_title(_body, L.t("ui.sadmin.card_actions"))
+		var act := _flow(_body)
+		if mute is Dictionary:
+			_btn(act, L.t("ui.sadmin.chat_unmute"), func(): _run(func(): return await SuperAdmin.chat_unmute(pid), reload))
+		else:
+			for mins in [60, 1440, 10080]:
+				var txt := L.t("ui.sadmin.mute_1h") if mins == 60 else (L.t("ui.sadmin.mute_24h") if mins == 1440 else L.t("ui.sadmin.mute_7d"))
+				_btn(act, txt, func(): _run(func(): return await SuperAdmin.chat_mute(pid, mins, "moderation"), reload))
+		if d.get("gallery_ban") is Dictionary:
+			_btn(act, L.t("ui.sadmin.gal_unban"), func(): _run(func(): return await SuperAdmin.gallery_unban(pid), reload))
+		else:
+			_btn(act, L.t("ui.sadmin.gal_ban"), func(): _ask(L.t("ui.sadmin.gal_ban"), L.fa(L.t("ui.sadmin.gal_ban_confirm"), str(d.get("pseudo", "?"))),
+				func(): _run(func(): return await SuperAdmin.gallery_ban(pid, "moderation"), reload)))
+		_role_buttons(act, pid, str(d.get("pseudo", "?")), target_rank, reload)
+		if my_rank >= 3:
+			if ab is Dictionary:
+				_btn(act, L.t("ui.sadmin.acc_unban"), func(): _run(func(): return await SuperAdmin.account_unban(pid), reload))
+			else:
+				_btn(act, L.t("ui.sadmin.acc_ban"), func(): _ban_dialog(pid, str(d.get("pseudo", "?")), reload), true)
+	# derniers messages publics
+	_title(_body, L.t("ui.sadmin.card_messages"))
+	var msgs: Variant = d.get("messages")
+	if msgs is Array and not (msgs as Array).is_empty():
+		for m in msgs:
+			var h := HBoxContainer.new()
+			h.add_theme_constant_override("separation", 8)
+			var mid := int(m.get("id", 0))
+			var deleted := bool(m.get("deleted", false))
+			var l := _label("%s · %s · %s" % [date(m.get("created_at")), Chat.room_name(str(m.get("room", ""))), str(m.get("body", ""))], UiTheme.DIM if deleted else UiTheme.PARCH, 13)
+			l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			l.custom_minimum_size.x = 60
+			h.add_child(l)
+			if not deleted and my_rank > target_rank:
+				_btn(h, L.t("ui.sadmin.chat_delete"), func(): _run(func(): return await SuperAdmin.chat_delete(mid), reload))
+			_body.add_child(h)
+	else:
+		_note(_body, L.t("ui.sadmin.card_no_messages"), UiTheme.DIM, false)
+	# historique des actions le concernant
+	var hist: Variant = d.get("history")
+	if hist is Array and not (hist as Array).is_empty():
+		_title(_body, L.t("ui.sadmin.card_history"))
+		for x in hist:
+			_note(_body, "%s · %s · %s" % [date(x.get("created_at")), _action_name(str(x.get("action", ""))), str(x.get("actor_pseudo", "?")) if x.get("actor_pseudo") != null else "—"], UiTheme.DIM, false)
+	_fit()
+
+## Boutons de nomination / retrait selon mon rang et celui de la cible (le serveur revérifie).
+func _role_buttons(parent: Control, pid: String, pseudo: String, target_rank: int, reload: Callable) -> void:
+	var my_rank := SuperAdmin.rank()
+	if my_rank < 2:
+		return
+	var set_role := func(new_role: String, title_key: String, text_key: String):
+		_ask(L.t(title_key), L.fa(L.t(text_key), pseudo), func(): _run(func(): return await SuperAdmin.set_role(pid, new_role), reload))
+	if target_rank == 0:
+		_btn(parent, L.t("ui.sadmin.role_make_mod"), func(): set_role.call("moderator", "ui.sadmin.role_make_mod", "ui.sadmin.role_make_mod_q"))
+	elif target_rank == 1:
+		_btn(parent, L.t("ui.sadmin.role_remove_mod"), func(): set_role.call("none", "ui.sadmin.role_remove_mod", "ui.sadmin.role_remove_mod_q"), true)
+	if my_rank >= 3:
+		if target_rank <= 1:
+			_btn(parent, L.t("ui.sadmin.role_make_super"), func(): set_role.call("super_admin", "ui.sadmin.role_make_super", "ui.sadmin.role_make_super_q"))
+		elif target_rank == 2:
+			_btn(parent, L.t("ui.sadmin.role_demote_mod"), func(): set_role.call("moderator", "ui.sadmin.role_demote_mod", "ui.sadmin.role_demote_mod_q"))
+			_btn(parent, L.t("ui.sadmin.role_remove_super"), func(): set_role.call("none", "ui.sadmin.role_remove_super", "ui.sadmin.role_remove_super_q"), true)
+
+## Bannissement de compte : durée et motif.
+func _ban_dialog(pid: String, pseudo: String, reload: Callable) -> void:
+	var m := Modal.open(_host, L.t("ui.sadmin.acc_ban"), 460.0)
+	m.add_text(L.fa(L.t("ui.sadmin.acc_ban_q"), pseudo), UiTheme.PARCH, 15)
+	var ob := OptionButton.new()
+	var hours := [24, 168, 720, 0]
+	for i in 4:
+		ob.add_item(L.t("ui.sadmin.dur_%d" % i))
+	m.content.add_child(ob)
+	var why := LineEdit.new()
+	why.placeholder_text = L.t("ui.sadmin.reason_hint")
+	why.max_length = 200
+	m.content.add_child(why)
+	m.set_buttons([
+		{"text": L.t("common.confirmer"), "primary": true, "cb": func():
+			var h: int = hours[ob.selected]
+			var reason := why.text.strip_edges()
+			m.close()
+			_run(func(): return await SuperAdmin.account_ban(pid, h, reason), reload)},
+		{"text": L.t("common.annuler"), "cb": func(): m.close()},
+	])
+
+# ------------------------------------------------------------------ onglet Équipe
+
+func _build_team() -> void:
+	var mine := _begin()
+	_wait(_body)
+	var r: Dictionary = await SuperAdmin.team()
+	if mine != _gen or not _alive():
+		return
+	_clear(_body)
+	if not r.ok or not (r.data is Array):
+		_error(_body, r)
+		return
+	_status = Form.status_label(_body)
+	var my_id := Cloud.user_id()
+	var my_rank := SuperAdmin.rank()
+	for x in r.data:
+		var role := str(x.get("role", ""))
+		var pid := str(x.get("player_id", ""))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.add_child(_label("%s%s — %s" % [_mark(role), str(x.get("pseudo", "?")), StaffBadges.role_name(role)], GOLD, 15))
+		var by := str(x.get("granted_by_pseudo", "")) if x.get("granted_by_pseudo") != null else ""
+		var since := L.fa(L.t("ui.sadmin.team_since"), date(x.get("granted_at")))
+		info.add_child(_label(since + ((" · " + L.fa(L.t("ui.sadmin.team_by"), by)) if by != "" else ""), UiTheme.DIM, 12))
+		h.add_child(info)
+		_btn(h, L.t("ui.sadmin.card_btn"), func(): _open_card(pid))
+		if pid != my_id and int(x.get("rank", 0)) < my_rank:
+			var rk := int(x.get("rank", 0))
+			if rk <= 1 or my_rank >= 3:
+				_btn(h, L.t("ui.sadmin.team_remove"), func():
+					_ask(L.t("ui.sadmin.team_remove"), L.fa(L.t("ui.sadmin.team_remove_q"), str(x.get("pseudo", "?"))),
+						func(): _run(func(): return await SuperAdmin.set_role(pid, "none"), func(): _show("team"))), true)
+		_body.add_child(h)
+		_body.add_child(HSeparator.new())
+	if my_rank >= 2:
+		_title(_body, L.t("ui.sadmin.team_add"))
+		_note(_body, L.t("ui.sadmin.team_add_hint"), UiTheme.DIM, false)
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 8)
+		_search = LineEdit.new()
+		_search.placeholder_text = L.t("ui.sadmin.search_hint")
+		_search.max_length = 20
+		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(_search)
+		_list = VBoxContainer.new()
+		_list.add_theme_constant_override("separation", 4)
+		_search.text_submitted.connect(func(_t): _fill_candidates())
+		_btn(line, L.t("ui.sadmin.search"), _fill_candidates)
+		_body.add_child(line)
+		_body.add_child(_list)
+	_fit()
+
+## Résultats de recherche pour nommer quelqu'un (8 au plus).
+func _fill_candidates() -> void:
+	var box := _list
+	if box == null or _search == null:
+		return
+	var q := _search.text.strip_edges()
+	if q == "":
+		_clear(box)
+		return
+	var mine := _gen
+	_clear(box)
+	_wait(box)
+	var r: Dictionary = await SuperAdmin.players(q, 8, 0)
+	if mine != _gen or not _alive():
+		return
+	_clear(box)
+	if not r.ok or not (r.data is Array):
+		_error(box, r)
+		return
+	if (r.data as Array).is_empty():
+		_note(box, L.t("ui.sadmin.none"))
+	for p in r.data:
+		var pid := str(p.get("id", ""))
+		var pseudo := str(p.get("pseudo", "?"))
+		var rank := int(SuperAdmin.RANKS.get(str(p.get("role", "")) if p.get("role") != null else "", 0))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		var l := _label("%s%s" % [_mark(str(p.get("role", "")) if p.get("role") != null else ""), pseudo])
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(l)
+		_btn(h, L.t("ui.sadmin.card_btn"), func(): _open_card(pid))
+		if rank < SuperAdmin.rank():
+			var do := func(role: String, q_key: String):
+				_ask(L.t("ui.sadmin.team_add"), L.fa(L.t(q_key), pseudo), func(): _run(func(): return await SuperAdmin.set_role(pid, role), func(): _show("team")))
+			if rank == 0:
+				_btn(h, L.t("ui.sadmin.role_make_mod"), func(): do.call("moderator", "ui.sadmin.role_make_mod_q"))
+			if SuperAdmin.is_dev() and rank <= 1:
+				_btn(h, L.t("ui.sadmin.role_make_super"), func(): do.call("super_admin", "ui.sadmin.role_make_super_q"))
+		box.add_child(h)
+	_fit()
+
+# ------------------------------------------------------------------ onglet Journal
+
+const LOG_ACTIONS := ["chat_mute", "chat_unmute", "chat_delete", "chat_word_add", "chat_word_remove", "gallery_ban", "gallery_unban",
+	"gallery_unpublish", "gallery_delete", "role_set", "role_remove", "account_ban", "account_unban", "announce", "announce_clear",
+	"maintenance", "board_reset", "run_cancel"]
+const LOG_PERIODS := [1, 7, 30, 0]
+
+static func _action_name(a: String) -> String:
+	var k := "ui.sadmin.act_" + a
+	var t := L.t(k)
+	return a if t == k else t
+
+## Détail lisible d'une entrée du journal.
+static func _detail_text(a: String, d: Variant) -> String:
+	if not (d is Dictionary):
+		return ""
+	var x: Dictionary = d
+	var parts: Array[String] = []
+	for k in ["title", "word", "body", "role", "previous", "reason", "message", "hours", "kind", "period", "difficulty", "runs", "run"]:
+		if x.get(k) != null and str(x.get(k)) != "":
+			parts.append("%s: %s" % [k, str(x.get(k))])
+	if x.get("until") != null:
+		parts.append("→ " + date(x.get("until")))
+	if x.get("ranked_closed") != null:
+		parts.append("%s: %s · %s: %s" % ["classé fermé", str(x.get("ranked_closed")), "tchat fermé", str(x.get("chat_closed"))])
+	return " · ".join(parts)
+
+func _since_iso() -> String:
+	if _log_days <= 0:
+		return ""
+	return Time.get_datetime_string_from_unix_time(int(Time.get_unix_time_from_system()) - _log_days * 86400) + "Z"
+
+func _build_log() -> void:
+	_begin()
+	var f := _flow(_body)
+	var act := OptionButton.new()
+	act.add_item(L.t("ui.sadmin.log_all"))
+	var sel := 0
+	for i in LOG_ACTIONS.size():
+		act.add_item(_action_name(LOG_ACTIONS[i]))
+		if LOG_ACTIONS[i] == _log_action:
+			sel = i + 1
+	act.select(sel)
+	act.item_selected.connect(func(i: int):
+		_log_action = "" if i == 0 else str(LOG_ACTIONS[i - 1])
+		_log_limit = 100
+		_fill_log())
+	f.add_child(act)
+	var per := OptionButton.new()
+	var psel := 0
+	for i in LOG_PERIODS.size():
+		per.add_item(L.t("ui.sadmin.log_p%d" % i))
+		if LOG_PERIODS[i] == _log_days:
+			psel = i
+	per.select(psel)
+	per.item_selected.connect(func(i: int):
+		_log_days = int(LOG_PERIODS[i])
+		_log_limit = 100
+		_fill_log())
+	f.add_child(per)
+	if SuperAdmin.is_super():
+		_btn(f, L.t("ui.sadmin.log_export"), _export_log)
+	if SuperAdmin.rank() < 2:
+		_note(_body, L.t("ui.sadmin.log_mine"), UiTheme.DIM, false)
+	_status = Form.status_label(_body)
+	_list = VBoxContainer.new()
+	_list.add_theme_constant_override("separation", 3)
+	_body.add_child(_list)
+	_fill_log()
+
+func _fill_log() -> void:
+	var box := _list
+	if box == null:
+		return
+	_gen += 1
+	var mine := _gen
+	_clear(box)
+	_wait(box)
+	var r: Dictionary = await SuperAdmin.log_list(_log_action, _since_iso(), _log_limit)
+	if mine != _gen or not _alive():
+		return
+	_clear(box)
+	if not r.ok or not (r.data is Array):
+		_error(box, r)
+		return
+	var rows: Array = r.data
+	if rows.is_empty():
+		_note(box, L.t("ui.sadmin.log_none"))
+		return
+	for x in rows:
+		var who := str(x.get("actor_pseudo", "?")) if x.get("actor_pseudo") != null else "—"
+		var tgt := (" → " + str(x.get("target_pseudo"))) if x.get("target_pseudo") != null else ""
+		var l := _label("%s · %s · %s%s" % [date(x.get("created_at")), who, _action_name(str(x.get("action", ""))), tgt], UiTheme.PARCH, 13)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 60
+		box.add_child(l)
+		var det := _detail_text(str(x.get("action", "")), x.get("detail"))
+		if det != "":
+			var dl := _label("   " + det, UiTheme.DIM, 12)
+			dl.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+			dl.custom_minimum_size.x = 60
+			box.add_child(dl)
+	if rows.size() >= _log_limit:
+		_btn(box, L.t("ui.sadmin.log_more"), func():
+			_log_limit += 100
+			_fill_log())
+	_fit()
+
+## Exporte le journal filtré (jusqu'à 2000 lignes) en CSV.
+func _export_log() -> void:
+	_flash(L.t("ui.sadmin.loading"))
+	var rows: Array = []
+	for page in 4:
+		var r: Dictionary = await SuperAdmin.log_list(_log_action, _since_iso(), 500, page * 500)
+		if not _alive():
+			return
+		if not r.ok or not (r.data is Array):
+			_flash(str(r.get("message", "")), BAD)
+			return
+		rows.append_array(r.data)
+		if (r.data as Array).size() < 500:
+			break
+	var out := PackedStringArray(["date_utc,acteur,action,cible,detail"])
+	for x in rows:
+		var cells := [str(x.get("created_at", "")), str(x.get("actor_pseudo", "")) if x.get("actor_pseudo") != null else "",
+			str(x.get("action", "")), str(x.get("target_pseudo", "")) if x.get("target_pseudo") != null else "", JSON.stringify(x.get("detail", {}))]
+		out.append(",".join(cells.map(func(c): return '"%s"' % str(c).replace('"', '""'))))
+	var stamp := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
+	Files.save_text(_host, "journal_%s.csv" % stamp, "\n".join(out) + "\n", func(msg: String): _flash(msg, GOOD), "text/csv", "*.csv ; Fichier CSV")
+
+# ------------------------------------------------------------------ onglet Développeur
+
+func _build_dev() -> void:
+	var mine := _begin()
+	_wait(_body)
+	var h: Dictionary = await SuperAdmin.health()
+	var bans: Dictionary = await SuperAdmin.account_bans()
+	var bd: Dictionary = await SuperAdmin.boards()
+	if mine != _gen or not _alive():
+		return
+	_clear(_body)
+	if not h.ok or not (h.data is Dictionary):
+		_error(_body, h)
+		return
+	var d: Dictionary = h.data
+	_status = Form.status_label(_body)
+	# santé du serveur
+	_title(_body, L.t("ui.sadmin.dev_health"))
+	_kv(_body, L.t("ui.sadmin.dev_queue"), "%s (%s)" % [num(d.get("queue")), age(d.get("oldest_queue_seconds"))], GOOD if int(d.get("queue", 0)) == 0 else GOLD)
+	_kv(_body, L.t("ui.sadmin.dev_in_progress"), num(d.get("in_progress")))
+	_kv(_body, L.t("ui.sadmin.dev_stuck"), num(d.get("stuck_started")), GOOD if int(d.get("stuck_started", 0)) == 0 else BAD)
+	_kv(_body, L.t("ui.sadmin.dev_expired_24h"), num(d.get("expired_24h")))
+	_kv(_body, L.t("ui.sadmin.dev_chat_24h"), num(d.get("chat_24h")))
+	_kv(_body, L.t("ui.sadmin.dev_actions_24h"), num(d.get("staff_actions_24h")))
+	_kv(_body, L.t("ui.sadmin.dev_db"), _bytes(d.get("db_bytes")))
+	var rj: Variant = d.get("rejected_24h")
+	if rj is Array and not (rj as Array).is_empty():
+		_note(_body, L.t("ui.sadmin.dev_rejected") + " " + ", ".join((rj as Array).map(func(x): return "%s ×%s" % [str(x.get("reason", "?")), num(x.get("n"))])), UiTheme.DIM, false)
+	var tb: Variant = d.get("tables")
+	if tb is Array and not (tb as Array).is_empty():
+		_note(_body, L.t("ui.sadmin.dev_tables") + " " + ", ".join((tb as Array).map(func(x): return "%s %s" % [str(x.get("name", "?")), _bytes(x.get("bytes"))])), UiTheme.DIM, false)
+	# maintenance
+	_title(_body, L.t("ui.sadmin.dev_maint"))
+	var st: Dictionary = d.get("server_state", {}) if d.get("server_state") is Dictionary else {}
+	var c_ranked := CheckBox.new()
+	c_ranked.text = L.t("ui.sadmin.dev_close_ranked")
+	c_ranked.button_pressed = bool(st.get("ranked_closed", false))
+	_body.add_child(c_ranked)
+	var c_chat := CheckBox.new()
+	c_chat.text = L.t("ui.sadmin.dev_close_chat")
+	c_chat.button_pressed = bool(st.get("chat_closed", false))
+	_body.add_child(c_chat)
+	var msg := LineEdit.new()
+	msg.placeholder_text = L.t("ui.sadmin.dev_maint_msg")
+	msg.max_length = 300
+	msg.text = str(st.get("message", "")) if st.get("message") != null else ""
+	_body.add_child(msg)
+	_btn(_body, L.t("ui.sadmin.dev_apply"), func(): _run(func(): return await SuperAdmin.set_server_state(c_ranked.button_pressed, c_chat.button_pressed, msg.text.strip_edges()),
+		func():
+			ServerNotice.refresh(true)
+			_flash(L.t("ui.sadmin.dev_done"), GOOD)))
+	# annonce
+	_title(_body, L.t("ui.sadmin.dev_announce"))
+	var ann := LineEdit.new()
+	ann.placeholder_text = L.t("ui.sadmin.dev_announce_hint")
+	ann.max_length = 400
+	_body.add_child(ann)
+	var line := _flow(_body)
+	var dur := OptionButton.new()
+	var hours := [1, 6, 24, 72, 168]
+	for i in hours.size():
+		dur.add_item(L.t("ui.sadmin.ann_%d" % i))
+	dur.select(2)
+	line.add_child(dur)
+	_btn(line, L.t("ui.sadmin.dev_publish"), func():
+		if ann.text.strip_edges() == "":
+			return
+		_run(func(): return await SuperAdmin.announce(ann.text.strip_edges(), int(hours[dur.selected])),
+			func():
+				ServerNotice.refresh(true)
+				ann.text = ""
+				_flash(L.t("ui.sadmin.dev_done"), GOOD)))
+	_btn(line, L.t("ui.sadmin.dev_withdraw"), func(): _run(func(): return await SuperAdmin.announce_clear(),
+		func():
+			ServerNotice.refresh(true)
+			_flash(L.t("ui.sadmin.dev_done"), GOOD)))
+	# comptes bannis
+	_title(_body, L.t("ui.sadmin.dev_bans"))
+	if bans.ok and bans.data is Array and not (bans.data as Array).is_empty():
+		for b in bans.data:
+			var pid := str(b.get("player_id", ""))
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			var l := _label("%s — %s%s" % [str(b.get("pseudo", "?")), L.t("ui.sadmin.forever") if b.get("until") == null else L.fa(L.t("ui.sadmin.until"), date(b.get("until"))),
+				(" · " + str(b.get("reason"))) if b.get("reason") != null else ""], UiTheme.PARCH, 13)
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.custom_minimum_size.x = 60
+			row.add_child(l)
+			_btn(row, L.t("ui.sadmin.acc_unban"), func(): _run(func(): return await SuperAdmin.account_unban(pid), func(): _show("dev")))
+			_body.add_child(row)
+	else:
+		_note(_body, L.t("ui.sadmin.dev_no_bans"), UiTheme.DIM, false)
+	# réinitialisation d'un classement
+	_title(_body, L.t("ui.sadmin.dev_boards"))
+	_note(_body, L.t("ui.sadmin.dev_boards_hint"), UiTheme.DIM, false)
+	var boards: Array = bd.data if bd.ok and bd.data is Array else []
+	if boards.is_empty():
+		_note(_body, L.t("ui.sadmin.none"), UiTheme.DIM, false)
+	else:
+		var ob := OptionButton.new()
+		for x in boards:
+			ob.add_item("%s%s — %s %s" % [mode_name(str(x.get("difficulty", "")) if x.get("difficulty") != null else "", str(x.get("kind", ""))),
+				(" " + str(x.get("period"))) if x.get("period") != null else "", num(x.get("verified")), L.t("ui.sadmin.dev_runs_word")])
+		_body.add_child(ob)
+		_btn(_body, L.t("ui.sadmin.dev_reset"), func():
+			var x: Dictionary = boards[ob.selected]
+			var kind := str(x.get("kind", ""))
+			var period := str(x.get("period", "")) if x.get("period") != null else ""
+			var diff := str(x.get("difficulty", "")) if x.get("difficulty") != null else ""
+			_typed_confirm(L.t("ui.sadmin.dev_reset"), L.fa(L.t("ui.sadmin.dev_reset_q"), ob.get_item_text(ob.selected)), "REINITIALISER", func():
+				var r: Dictionary = await SuperAdmin.reset_board(kind, period, diff, "REINITIALISER")
+				if _alive():
+					_flash(L.fa(L.t("ui.sadmin.dev_reset_done"), int(r.data if r.data != null else 0)) if r.ok else str(r.get("message", "")), GOOD if r.ok else BAD)), true)
+	# annulation d'une partie
+	_title(_body, L.t("ui.sadmin.dev_cancel"))
+	_note(_body, L.t("ui.sadmin.dev_cancel_hint"), UiTheme.DIM, false)
+	var run_id := LineEdit.new()
+	run_id.placeholder_text = L.t("ui.sadmin.dev_cancel_id")
+	run_id.max_length = 40
+	_body.add_child(run_id)
+	_btn(_body, L.t("ui.sadmin.dev_cancel_btn"), func():
+		var id := run_id.text.strip_edges()
+		if id == "":
+			return
+		_typed_confirm(L.t("ui.sadmin.dev_cancel_btn"), L.fa(L.t("ui.sadmin.dev_cancel_q"), id), "ANNULER", func():
+			var r: Dictionary = await SuperAdmin.cancel_run(id, "annulation")
+			if _alive():
+				_flash(L.t("ui.sadmin.dev_done") if r.ok else str(r.get("message", "")), GOOD if r.ok else BAD)), true)
+	_fit()
+
+static func _bytes(v: Variant) -> String:
+	if v == null:
+		return "—"
+	var b := float(v)
+	if b >= 1048576.0:
+		return "%.1f Mo" % (b / 1048576.0)
+	return "%d Ko" % int(b / 1024.0)

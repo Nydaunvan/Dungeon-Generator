@@ -67,6 +67,12 @@ const ERR_KEYS := {
 	"charte_obsolete": "ui.cloud.err.charte_obsolete",
 	"destinataire_indisponible": "ui.cloud.err.destinataire_indisponible",
 	"trop_de_destinataires": "ui.cloud.err.trop_de_destinataires",
+	"role_invalide": "ui.cloud.err.role_invalide",
+	"compte_banni": "ui.cloud.err.compte_banni",
+	"maintenance": "ui.cloud.err.maintenance",
+	"tchat_ferme": "ui.cloud.err.tchat_ferme",
+	"confirmation_requise": "ui.cloud.err.confirmation_requise",
+	"message_invalide": "ui.cloud.err.message_invalide",
 	"generic": "ui.cloud.err.generic",
 }
 

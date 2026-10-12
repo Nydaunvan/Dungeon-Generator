@@ -52,6 +52,7 @@ func focus_input() -> void:
 
 ## Affiche un canal (recharge les derniers messages) et lance l'interrogation.
 func show_room(r: String) -> void:
+	StaffBadges.refresh()
 	stop()
 	room = r
 	for c in get_children():
@@ -186,7 +187,7 @@ func _row(m: Dictionary) -> Control:
 	var cs := str(m.get("color", ""))
 	if cs != "" and Color.html_is_valid(cs):
 		col = Color.html(cs)
-	var who := _label(str(m.get("pseudo", "?")), GOLD if mine else col, 13)
+	var who := _label(StaffBadges.mark(str(m.get("player_id", ""))) + (" " if StaffBadges.mark(str(m.get("player_id", ""))) != "" else "") + str(m.get("pseudo", "?")), GOLD if mine else col, 13)
 	who.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
 	head.add_child(who)
 	var lvl := int(m.get("level", 0))

@@ -21,6 +21,8 @@ func _ready() -> void:
 		Updater.set_pref("last_seen_version", AppVersion.number())
 		if seen != "":
 			DocModal.whats_new.call_deferred(_modal_layer)
+	ServerNotice.popup_once(_modal_layer)
+	StaffBadges.refresh()
 
 func _on_nav(name: String) -> void:
 	match name:

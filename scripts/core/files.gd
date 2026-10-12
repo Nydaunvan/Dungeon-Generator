@@ -2,9 +2,9 @@ class_name Files
 extends RefCounted
 ## Échange de fichiers texte avec l'utilisateur : téléchargement (Web) / boîtes de dialogue natives (ordinateur).
 
-static func save_text(host: Node, file_name: String, text: String, on_done: Callable = Callable()) -> void:
+static func save_text(host: Node, file_name: String, text: String, on_done: Callable = Callable(), mime: String = "application/json", filter: String = "*.json ; Fichier JSON") -> void:
 	if OS.has_feature("web"):
-		JavaScriptBridge.download_buffer(text.to_utf8_buffer(), file_name, "application/json")
+		JavaScriptBridge.download_buffer(text.to_utf8_buffer(), file_name, mime)
 		if on_done.is_valid():
 			on_done.call(L.fa(L.t("core.files.telechargement_lance"), file_name))
 		return
@@ -13,7 +13,7 @@ static func save_text(host: Node, file_name: String, text: String, on_done: Call
 	dlg.access = FileDialog.ACCESS_FILESYSTEM
 	dlg.use_native_dialog = true
 	dlg.current_file = file_name
-	dlg.filters = PackedStringArray(["*.json ; Fichier JSON"])
+	dlg.filters = PackedStringArray([filter])
 	dlg.file_selected.connect(func(path: String):
 		var f := FileAccess.open(path, FileAccess.WRITE)
 		if f != null:
