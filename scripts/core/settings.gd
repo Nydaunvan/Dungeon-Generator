@@ -24,7 +24,9 @@ const WINDOW := 5.0         # secondes d'observation avant chaque décision
 const COOLDOWN := 10.0      # délai minimal entre deux changements
 const UP_STABLE := 45.0     # secondes de fluidité continue avant d'essayer un niveau supérieur
 const PROBE_WATCH := 20.0   # après une montée : si ça rame dans ce délai, retour au niveau d'avant (et on s'y tient)
-const SLOW_RATIO := 0.85    # « trop lent » = moins de 85 % de la cible
+const SLOW_RATIO := 0.85    # « trop lent » = moins de 85 % de la cible (cible ≤ 60 i/s)
+const SLOW_RATIO_HIGH := 0.70   # cible > 60 i/s : seuil plus tolérant (95 i/s pour une cible de 120 reste très fluide)
+const DYN_RETRY := 25.0     # un recul de résolution aussitôt après une remontée bloque cette remontée (plus de va-et-vient)
 const DYN_MIN := 0.6        # résolution 3D dynamique : plancher (multiplicateur)
 const DYN_STEP := 0.1
 
@@ -510,7 +512,7 @@ func _max_idx() -> int:
 
 func _evaluate(avg: float) -> void:
 	_peak_fps = maxf(_peak_fps, avg)
-	var slow := avg < _target() * SLOW_RATIO
+	var slow := avg < slow_threshold()
 	if slow:
 		_stable_t = 0.0
 		if _probe_from != "":
@@ -524,10 +526,20 @@ func _evaluate(avg: float) -> void:
 	if _probe_from == "" and _stable_t >= UP_STABLE and _since_change >= COOLDOWN:
 		_step_up()
 
+## Moyenne d'images/s en dessous de laquelle le jeu est jugé « trop lent ». Jamais au-dessus de 85 % de 60 i/s tant
+## que la cible est plus haute : une cible de 120 i/s ne doit pas faire baisser la qualité d'un jeu qui tourne à 95.
+func slow_threshold() -> float:
+	var t := _target()
+	if t <= 60.0:
+		return t * SLOW_RATIO
+	return maxf(t * SLOW_RATIO_HIGH, 60.0 * SLOW_RATIO)
+
 func _step_down() -> void:
 	var idx := LEVELS.find(level)
 	if dyn_scale > DYN_MIN + 0.001:
 		dyn_scale = maxf(DYN_MIN, snappedf(dyn_scale - DYN_STEP, 0.01))
+		if Time.get_ticks_msec() / 1000.0 - _dyn_up_at < DYN_RETRY:
+			_dyn_cap = dyn_scale          # la remontée vient d'échouer : on ne la retente pas
 		_adapted("", "dyn_down")
 	elif idx > 0:
 		level = LEVELS[idx - 1]
@@ -539,6 +551,7 @@ func _step_up() -> void:
 	var idx := LEVELS.find(level)
 	if dyn_scale < _dyn_cap - 0.001:      # jamais au-delà de ce que la calibration a validé
 		dyn_scale = minf(_dyn_cap, snappedf(dyn_scale + DYN_STEP, 0.01))
+		_dyn_up_at = Time.get_ticks_msec() / 1000.0
 		_adapted("", "dyn_up")
 	elif _dyn_cap >= 0.999 and idx < _max_idx():
 		_probe_from = level
@@ -567,6 +580,7 @@ func _clear_probe() -> void:
 ## le filtrage en pleine partie (pilotes NVIDIA, rendu Compatibilité) a fait fermer le jeu ; seule la résolution 3D suit alors,
 ## le reste est appliqué au prochain chargement de niveau.
 var auto_change: bool = false
+var _dyn_up_at := -1000.0
 
 func _emit_auto() -> void:
 	Crumbs.mark("qualité auto %s dyn=%.2f" % [level, dyn_scale])
