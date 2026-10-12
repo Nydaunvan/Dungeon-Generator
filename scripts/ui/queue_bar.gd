@@ -71,13 +71,17 @@ func _entries(n: int) -> Array:
 		if keys.size() > n:
 			keys.resize(n)
 		seq0 -= 1
+	var order: Array = ctrl.combat.round_order()
 	var occ := {}
 	for i in keys.size():
 		var key: String = keys[i]
 		var o: int = int(occ.get(key, 0))
 		occ[key] = o + 1
 		var suffix := "_occ%d" % o if o > 0 else ""
-		var e := {"turnSeq": seq0 + i, "current": out.is_empty()}
+		var e := {"turnSeq": seq0 + i, "current": out.is_empty(), "rank": order.find(key) + 1}
+		var spd: Dictionary = ctrl.combat.speed_info(key)
+		e["speed"] = int(spd.speed)
+		e["speed_col"] = Color("8fe06a") if int(spd.speed) > int(spd.base) else (Color("ff7a6a") if int(spd.speed) < int(spd.base) else Color("f3e6c8"))
 		if key.begins_with("char_"):
 			var c := gs.char_by_id(key.substr(5))
 			if c.is_empty() or int(c.hp) <= 0:
@@ -196,6 +200,9 @@ func _update(entries: Array) -> void:
 			rec.icon_key = ikey
 			rec.chip.tex = _icon_tex(e)
 		rec.chip.hp = float(e.hp)
+		rec.chip.rank = int(e.rank)
+		rec.chip.speed = int(e.speed)
+		rec.chip.speed_col = e.speed_col
 		rec.chip.halo_on = bool(e.current)
 		if e.current:
 			rec.chip.halo_col = Color("ff4d3d") if e.kind == "mon" else Color("ffcf7a")
@@ -378,6 +385,9 @@ class QueueChip extends Node2D:
 	var status: String = ""
 	var status_on: bool = false
 	var bar_color: Color = Color("7fae4a")
+	var rank: int = 0                       # place dans la manche (1 = joue en premier)
+	var speed: int = 0                      # vitesse effective
+	var speed_col: Color = Color("f3e6c8")  # vert : bonus, rouge : malus
 	var _halo: Sprite2D
 
 	func _ready() -> void:
@@ -409,6 +419,25 @@ class QueueChip extends Node2D:
 		var bc := bar_color
 		bc.a = 0.5 if dim else 1.0
 		draw_rect(Rect2(-bw * 0.5, base * 0.62 - 2.0, bw, 4.0), bc)
+		# rang dans la manche (haut gauche) et vitesse (bas gauche)
+		var tf := UiTheme.font(UiTheme.F_TITLE)
+		var a := 0.55 if dim else 1.0
+		if rank > 0:
+			var rp := Vector2(-base * 0.36, -base * 0.36)
+			var rr := maxf(5.0, base * 0.2)
+			draw_circle(rp, rr, Color(0.078, 0.047, 0.031, 0.92 * a))
+			draw_arc(rp, rr, 0.0, TAU, 20, Color("e8b45c", a), maxf(1.0, base * 0.03), true)
+			var rs := str(rank)
+			var rf := int(rr * 1.35)
+			var rt := tf.get_string_size(rs, HORIZONTAL_ALIGNMENT_LEFT, -1, rf)
+			draw_string(tf, rp + Vector2(-rt.x * 0.5, rf * 0.36), rs, HORIZONTAL_ALIGNMENT_LEFT, -1, rf, Color("f3e6c8", a))
+		if speed > 0:
+			var vs := "⚡%d" % speed
+			var vf := maxi(8, int(base * 0.24))
+			var vt := tf.get_string_size(vs, HORIZONTAL_ALIGNMENT_LEFT, -1, vf)
+			var vp := Vector2(-base * 0.5, base * 0.5 - 2.0)
+			draw_rect(Rect2(vp.x - 1.0, vp.y - vf, vt.x + 2.0, vf + 2.0), Color(0.05, 0.03, 0.02, 0.7 * a))
+			draw_string(tf, vp, vs, HORIZONTAL_ALIGNMENT_LEFT, -1, vf, Color(speed_col, a))
 		# statut
 		if status_on and not dim:
 			var bs := base * 0.42

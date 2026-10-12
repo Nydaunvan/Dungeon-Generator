@@ -208,6 +208,44 @@ func _advance(g: Dictionary, done: Dictionary, _stt: Dictionary) -> String:
 	g[ready] = 100.0
 	return ready
 
+## Ordre complet d'une manche (clés des participants vivants), le plus rapide d'abord : même règle que `_advance`, sans tenir compte de ceux qui ont déjà joué.
+## Sert à numéroter les combattants dans la frise (rang 1 = joue en premier dans la manche).
+func round_order() -> Array:
+	ensure_gauges()
+	var keys: Array = []
+	for k in gauges:
+		if participant_speed(k) > 0.0:
+			keys.append(k)
+	var idx := {}
+	for i in keys.size():
+		idx[keys[i]] = i
+	keys.sort_custom(func(a, b):
+		var sa := participant_speed(a)
+		var sb := participant_speed(b)
+		if not is_equal_approx(sa, sb):
+			return sa > sb
+		if _side(a) != _side(b):
+			return _side(a) < _side(b)
+		return int(idx[a]) < int(idx[b]))
+	return keys
+
+## Vitesse effective d'un participant et sa vitesse de base (pour colorer un bonus ou un malus).
+func speed_info(key: String) -> Dictionary:
+	var eff := int(participant_speed(key))
+	var base := eff
+	if key.begins_with("char_"):
+		var c := gs.char_by_id(key.substr(5))
+		if not c.is_empty():
+			var cls := Characters.class_def(gs.cfg, str(c.get("classId", "")))
+			base = int(c["baseSpeed"]) if c.has("baseSpeed") else int(cls.get("baseSpeed", 10))
+	else:
+		var rest := key.substr(4)
+		var hi := rest.find("#")
+		var def := monster_def(rest if hi < 0 else rest.substr(0, hi))
+		if not def.is_empty():
+			base = int(maxf(1.0, round(Stats.monster_speed(def))))
+	return {"speed": eff, "base": base}
+
 ## Prochain à agir : {"kind":"char","id"} | {"kind":"monster","key"} | {"kind":"none"}.
 func advance() -> Dictionary:
 	ensure_gauges()
