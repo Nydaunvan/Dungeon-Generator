@@ -388,10 +388,10 @@ static func _add_arch(view: LevelView, torches: TorchLayer, edge: Vector3, d: Ve
 			if not view.doors.has(sid):
 				view.doors[sid] = []
 			view.doors[sid].append(gate)
-	# torches : même distance de l'arche des deux côtés, la paire décalée légèrement à gauche
+	# torches : paire symétrique, exactement centrée sur l'arche
 	var tang := Vector3(0.0 if d.x != 0 else 1.0, 0.0, 0.0 if d.y != 0 else 1.0)
 	var offset := 0.43
-	var lateral := -0.05
+	var lateral := 0.0
 	var center := edge + Vector3(-d.x, 0, -d.y) * CELL * 0.01 + tang * CELL * lateral
 	var atype := str(_stair_def.get("action", {}).get("type", "")) if _stair_def.get("action") is Dictionary else ""
 	var torch_theme := "village_forward" if atype == "villageExit" else ("village_return" if atype == "villageReturn" else theme)
