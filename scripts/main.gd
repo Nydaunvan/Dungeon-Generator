@@ -380,6 +380,10 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		env.ambient_light_energy = float(level.get("lightAmbient", 1.1))
 		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4
 		level_node.torches.light_scale = float(level.get("lightTorch", 1.4)) / 1.4
+	if FogMist.level_has_mist(gs.run_seed, str(level.id), bool(level.get("outdoor", false))):
+		var mist := FogMist.new()
+		level_node.add_child(mist)
+		mist.setup(grid, env, str(level.id), gs.run_seed)
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig, gs)
 	layout.minimap.merchant_cell = func():

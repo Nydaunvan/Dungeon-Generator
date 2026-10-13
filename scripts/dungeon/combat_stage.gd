@@ -23,7 +23,7 @@ static var _halo_tex: Texture2D
 func enter(theme: String, p: Vector2i, dir: int, def: Dictionary, st: Dictionary, sel: int) -> void:
 	if not active:
 		for c in view.get_children():
-			if c != self and c.visible:
+			if c != self and c.visible and not c is FogMist:       # la brume reste visible pendant le combat
 				_hidden.append(c)
 				c.hide()
 		active = true
