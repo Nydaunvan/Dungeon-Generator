@@ -238,6 +238,7 @@ func _graphics() -> void:
 	_row(L.t("ui.settings.fx_shadows"), _opt("fx_shadows", [[0, L.t("ui.settings.off")], [1, L.t("ui.settings.fx_shadows_1")], [2, L.t("ui.settings.fx_shadows_2")], [3, L.t("ui.settings.fx_shadows_3")]]))
 	_row(L.t("ui.settings.fx_ssao"), _opt("fx_ssao", onoff))
 	_row(L.t("ui.settings.fx_reflect"), _opt("fx_reflect", onoff))
+	_row(L.t("ui.settings.fx_volfog"), _opt("fx_volfog", onoff))
 	_row(L.t("ui.settings.fx_decals"), _opt("fx_decals", onoff))
 	_row(L.t("ui.settings.fx_parallax"), _opt("fx_parallax", onoff))
 	_section(L.t("ui.settings.anim_title"))

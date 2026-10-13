@@ -16,7 +16,8 @@
    "fx_ssao": false,
    "fx_reflect": false,
    "fx_decals": false,
-   "fx_parallax": false
+   "fx_parallax": false,
+   "fx_volfog": false
   },
   "medium": {
    "res_scale": 0.8,
@@ -34,7 +35,8 @@
    "fx_ssao": false,
    "fx_reflect": false,
    "fx_decals": true,
-   "fx_parallax": false
+   "fx_parallax": false,
+   "fx_volfog": false
   },
   "high": {
    "res_scale": 1.0,
@@ -52,7 +54,8 @@
    "fx_ssao": true,
    "fx_reflect": false,
    "fx_decals": true,
-   "fx_parallax": false
+   "fx_parallax": false,
+   "fx_volfog": true
   },
   "ultra": {
    "res_scale": 1.25,
@@ -70,7 +73,8 @@
    "fx_ssao": true,
    "fx_reflect": true,
    "fx_decals": true,
-   "fx_parallax": true
+   "fx_parallax": true,
+   "fx_volfog": true
   }
  }
 }

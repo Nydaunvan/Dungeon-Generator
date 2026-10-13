@@ -2435,7 +2435,8 @@
   "ui.settings.fx_reflect": "Reflections (wet floors, ice, lava)",
   "ui.settings.fx_decals": "Blood stains after a fight",
   "ui.settings.fx_parallax": "Wall relief",
-  "ui.settings.anim_title": "Animations"
+  "ui.settings.anim_title": "Animations",
+  "ui.settings.fx_volfog": "Volumetric fog (some levels)"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

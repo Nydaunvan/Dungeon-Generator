@@ -105,3 +105,11 @@ static func blood_texture(variant: int) -> Texture2D:
 					img.set_pixel(x, y, Color(0.30 * shade, 0.015, 0.02, a * 0.9))
 			_blood.append(ImageTexture.create_from_image(img))
 	return _blood[posmod(variant, _blood.size())]
+
+## Résolution du brouillard volumétrique selon le niveau graphique (plus fin = plus net, plus coûteux) : largeur/hauteur et profondeur du volume.
+static func apply_volumetric_quality() -> void:
+	var lvl := str(Settings.level)
+	var xy := 128 if lvl == "ultra" else 96
+	var depth := 96 if lvl == "ultra" else 64
+	RenderingServer.environment_set_volumetric_fog_volume_size(xy, depth)
+	RenderingServer.environment_set_volumetric_fog_filter_active(true)
