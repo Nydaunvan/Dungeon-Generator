@@ -311,6 +311,11 @@ func _drain() -> void:
 			"fx3d":
 				Crumbs.mark("effet3d %s" % str(e.spell))
 				fx3d.emit(str(e.spell), e.get("ctx", {}))
+			"mon_attack":
+				# l'avancée du monstre part en même temps que l'effet du coup, pas après
+				view.entities.play(str(e.id), "attack")
+				if view.stage != null:
+					view.stage.react(str(e.id), "attack")
 			_:
 				rest.append(e)
 	# Un sort de soutien (soin, endurance, bouclier, buff…) s'applique à l'instant : jauges et chiffres sans attendre l'effet visuel
@@ -342,10 +347,6 @@ func _drain() -> void:
 				view.entities.play(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
 				if view.stage != null:
 					view.stage.react(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
-			"mon_attack":
-				view.entities.play(str(e.id), "attack")
-				if view.stage != null:
-					view.stage.react(str(e.id), "attack")
 			"mon_stun":
 				view.entities.play(str(e.id), "stun")
 				if view.stage != null:
