@@ -235,7 +235,6 @@ func _graphics() -> void:
 	var onoff: Array = [[false, L.t("ui.settings.off")], [true, L.t("ui.settings.on")]]
 	_row(L.t("ui.settings.fx_grade"), _opt("fx_grade", onoff))
 	_row(L.t("ui.settings.fx_glow"), _opt("fx_glow", onoff))
-	_row(L.t("ui.settings.fx_shadows"), _opt("fx_shadows", [[0, L.t("ui.settings.off")], [1, L.t("ui.settings.fx_shadows_1")], [2, L.t("ui.settings.fx_shadows_2")], [3, L.t("ui.settings.fx_shadows_3")]]))
 	_row(L.t("ui.settings.fx_ssao"), _opt("fx_ssao", onoff))
 	_row(L.t("ui.settings.fx_reflect"), _opt("fx_reflect", onoff))
 	_row(L.t("ui.settings.fx_volfog"), _opt("fx_volfog", onoff))

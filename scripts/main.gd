@@ -318,9 +318,7 @@ func _apply_fx() -> void:
 	if env == null or rig == null:
 		return
 	VisualFx.apply_environment(env, _fx_theme, _fx_outdoor)
-	rig.torch.shadow_enabled = VisualFx.is_forward() and int(Settings.opt("fx_shadows")) > 0 and not _fx_outdoor
-	rig.torch.shadow_bias = 0.08
-	rig.torch.shadow_normal_bias = 1.2
+	rig.torch.shadow_enabled = false
 
 func _has_merchant_level() -> bool:
 	for lv in gs.cfg.levels:

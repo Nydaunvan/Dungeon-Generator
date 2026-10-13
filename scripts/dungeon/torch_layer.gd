@@ -370,12 +370,8 @@ func _refresh(cam_pos: Vector3) -> void:
 			cand.append([d2, i])
 	cand.sort_custom(func(a, b): return a[0] < b[0])
 	var want := {}
-	var shadow_n := int(Settings.opt("fx_shadows")) if VisualFx.is_forward() else 0
-	var shadowed := {}                  # les torches les plus proches projettent des ombres (option « Ombres des torches »)
 	for k in mini(Settings.torch_lights(), cand.size()):
 		want[int(cand[k][1])] = true
-		if k < shadow_n - 1:
-			shadowed[int(cand[k][1])] = true
 	for r in _rigs:
 		if r.torch >= 0 and not want.has(r.torch):
 			r.target = 0.0      # fondu sortant (la fumée cesse d'être émise), puis le rig est libéré
@@ -384,7 +380,6 @@ func _refresh(cam_pos: Vector3) -> void:
 	for ti in want:
 		var rig = _torches[ti].rig
 		if rig != null:
-			rig.light.shadow_enabled = shadowed.has(ti)
 			rig.target = 1.0
 			rig.smoke.emitting = true
 			rig.sparks.emitting = true
@@ -392,7 +387,6 @@ func _refresh(cam_pos: Vector3) -> void:
 			var free := _free_rig()
 			if free != null:
 				_assign(free, int(ti))
-				free.light.shadow_enabled = shadowed.has(ti)
 
 func _update_rig(r: TorchFx, delta: float) -> void:
 	if r.torch < 0:

@@ -13,8 +13,8 @@ const PRESETS_PATH := "res://data/quality_presets.json"
 const LEVELS := ["low", "medium", "high", "ultra"]
 const PRESET_IDS := ["auto", "low", "medium", "high", "ultra", "custom"]
 const OPTION_KEYS := ["res_scale", "msaa", "aniso", "torch_lights", "particles", "spell_lamps", "view_distance", "texture_hd", "flame_fps",
-		"fx_grade", "fx_glow", "fx_shadows", "fx_ssao", "fx_reflect", "fx_decals", "fx_parallax", "fx_volfog"]
-const INT_KEYS := ["msaa", "aniso", "torch_lights", "flame_fps", "fx_shadows"]
+		"fx_grade", "fx_glow", "fx_ssao", "fx_reflect", "fx_decals", "fx_parallax", "fx_volfog"]
+const INT_KEYS := ["msaa", "aniso", "torch_lights", "flame_fps"]
 const FLOAT_KEYS := ["res_scale", "particles", "view_distance"]
 const BOOL_KEYS := ["spell_lamps", "texture_hd", "fx_grade", "fx_glow", "fx_ssao", "fx_reflect", "fx_decals", "fx_parallax", "fx_volfog"]
 const TARGETS := [30, 45, 60, 90, 120]
@@ -40,7 +40,7 @@ const CALIB_MAX_STEPS := 12   # garde-fou
 
 const _FALLBACK := {"res_scale": 1.0, "msaa": 0, "aniso": 4, "torch_lights": 5, "particles": 1.0, "spell_lamps": true,
 	"view_distance": 1.0, "texture_hd": true, "flame_fps": 60,
-	"fx_grade": true, "fx_glow": true, "fx_shadows": 1, "fx_ssao": true, "fx_reflect": false, "fx_decals": true, "fx_parallax": false, "fx_volfog": true}
+	"fx_grade": true, "fx_glow": true, "fx_ssao": true, "fx_reflect": false, "fx_decals": true, "fx_parallax": false, "fx_volfog": true}
 
 var preset := "auto"
 var level := "high"              # niveau effectif (base des options ; en « custom », sert seulement de point de départ)

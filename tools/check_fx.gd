@@ -58,8 +58,8 @@ func _init() -> void:
 		print("ÉCHEC : décalque non créé")
 	await create_timer(1.0).timeout
 	print("ombre de la torche du groupe : ", m.rig.torch.shadow_enabled)
-	if not m.rig.torch.shadow_enabled:
+	if m.rig.torch.shadow_enabled:
 		bad += 1
-		print("ÉCHEC : ombre de la torche du groupe attendue en Ultra")
+		print("ÉCHEC : les ombres de torches sont retirées")
 	print("anomalies : ", bad)
 	quit(1 if bad > 0 else 0)
