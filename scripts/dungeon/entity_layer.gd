@@ -401,11 +401,36 @@ func set_monster_visible(id: String, on: bool) -> void:
 			if str(e.def.id) == id and is_instance_valid(e.node):
 				e.node.visible = on
 
+## Tache de sang au sol sous un monstre qui meurt (Forward+, option « Taches de sang ») : décalque propre à la case, sans hasard de jeu.
+const MAX_BLOOD := 48
+var _blood_nodes: Array = []
+
+func add_blood(p: Vector2i) -> void:
+	if not (VisualFx.is_forward() and bool(Settings.opt("fx_decals"))):
+		return
+	var h := absi(("blood|%d|%d|%d" % [p.x, p.y, _blood_nodes.size()]).hash())
+	var d := Decal.new()
+	d.size = Vector3(LevelBuilder.CELL * 0.8, 1.2, LevelBuilder.CELL * 0.8)
+	d.texture_albedo = VisualFx.blood_texture(h)
+	d.modulate = Color(1, 1, 1, 0.9)
+	d.upper_fade = 0.5
+	d.lower_fade = 0.5
+	d.position = Vector3(p.x * LevelBuilder.CELL + float(h % 100) / 100.0 - 0.5, 0.3, p.y * LevelBuilder.CELL + float((h / 100) % 100) / 100.0 - 0.5)
+	d.rotation.y = float(h % 628) / 100.0
+	add_child(d)
+	_blood_nodes.append(d)
+	if _blood_nodes.size() > MAX_BLOOD:
+		var old: Node = _blood_nodes.pop_front()
+		if is_instance_valid(old):
+			old.queue_free()
+
 func remove_monster(id: String, animate: bool = false) -> void:
 	for p in monsters.keys():
 		var keep: Array = []
 		for e in monsters[p]:
 			if str(e.def.id) == id:
+				if animate:
+					add_blood(p)
 				var stage = get_parent().get("stage") if get_parent() != null else null
 				if stage != null and stage.active:
 					stage.die_all()             # salle de combat : les sprites affichés s'effondrent aussi
@@ -469,6 +494,7 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 		return null
 	var h := _entity_height(icon, is_boss, is_item) * 1.3 * mult
 	var mi := MeshInstance3D.new()
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF       # un sprite plat ne doit pas projeter d'ombre de carton
 	var q := QuadMesh.new()
 	q.size = Vector2(h, h)
 	mi.mesh = q

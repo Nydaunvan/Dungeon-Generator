@@ -12,10 +12,11 @@ const CFG := "user://settings.cfg"
 const PRESETS_PATH := "res://data/quality_presets.json"
 const LEVELS := ["low", "medium", "high", "ultra"]
 const PRESET_IDS := ["auto", "low", "medium", "high", "ultra", "custom"]
-const OPTION_KEYS := ["res_scale", "msaa", "aniso", "torch_lights", "particles", "spell_lamps", "view_distance", "texture_hd", "flame_fps"]
-const INT_KEYS := ["msaa", "aniso", "torch_lights", "flame_fps"]
+const OPTION_KEYS := ["res_scale", "msaa", "aniso", "torch_lights", "particles", "spell_lamps", "view_distance", "texture_hd", "flame_fps",
+		"fx_grade", "fx_glow", "fx_shadows", "fx_ssao", "fx_reflect", "fx_decals", "fx_parallax"]
+const INT_KEYS := ["msaa", "aniso", "torch_lights", "flame_fps", "fx_shadows"]
 const FLOAT_KEYS := ["res_scale", "particles", "view_distance"]
-const BOOL_KEYS := ["spell_lamps", "texture_hd"]
+const BOOL_KEYS := ["spell_lamps", "texture_hd", "fx_grade", "fx_glow", "fx_ssao", "fx_reflect", "fx_decals", "fx_parallax"]
 const TARGETS := [30, 45, 60, 90, 120]
 const FPS_CAPS := [0, 30, 60, 90, 120, 144, 240]
 
@@ -38,7 +39,8 @@ const CALIB_HEADROOM := 1.3   # on ne tente le niveau supérieur que si la marge
 const CALIB_MAX_STEPS := 12   # garde-fou
 
 const _FALLBACK := {"res_scale": 1.0, "msaa": 0, "aniso": 4, "torch_lights": 5, "particles": 1.0, "spell_lamps": true,
-	"view_distance": 1.0, "texture_hd": true, "flame_fps": 60}
+	"view_distance": 1.0, "texture_hd": true, "flame_fps": 60,
+	"fx_grade": true, "fx_glow": true, "fx_shadows": 1, "fx_ssao": true, "fx_reflect": false, "fx_decals": true, "fx_parallax": false}
 
 var preset := "auto"
 var level := "high"              # niveau effectif (base des options ; en « custom », sert seulement de point de départ)

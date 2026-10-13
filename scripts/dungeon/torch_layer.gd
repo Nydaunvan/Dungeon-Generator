@@ -249,6 +249,9 @@ func _make_rig() -> TorchFx:
 	r.light.omni_range = LIGHT_RANGE
 	r.light.omni_attenuation = 1.3
 	r.light.shadow_enabled = false
+	r.light.shadow_bias = 0.08
+	r.light.shadow_normal_bias = 1.2
+	r.light.shadow_blur = 1.5
 	r.light.position = Vector3(0.0, FLAME_H * 0.65, 0.28)
 	r.root.add_child(r.light)
 	r.phase = randf() * TAU
@@ -338,6 +341,7 @@ func _assign(r: TorchFx, ti: int) -> void:
 	r.root.rotation.y = float(t.rot)
 	r.light.light_color = t.light_color
 	r.light.light_energy = 0.0
+	r.light.shadow_enabled = false
 	r.smoke.color = Color.WHITE.lerp(flame, 0.3)
 	r.sparks.color = Color.WHITE.lerp(flame, 0.3)
 	r.root.visible = true
@@ -366,8 +370,12 @@ func _refresh(cam_pos: Vector3) -> void:
 			cand.append([d2, i])
 	cand.sort_custom(func(a, b): return a[0] < b[0])
 	var want := {}
+	var shadow_n := int(Settings.opt("fx_shadows")) if VisualFx.is_forward() else 0
+	var shadowed := {}                  # les torches les plus proches projettent des ombres (option « Ombres des torches »)
 	for k in mini(Settings.torch_lights(), cand.size()):
 		want[int(cand[k][1])] = true
+		if k < shadow_n - 1:
+			shadowed[int(cand[k][1])] = true
 	for r in _rigs:
 		if r.torch >= 0 and not want.has(r.torch):
 			r.target = 0.0      # fondu sortant (la fumée cesse d'être émise), puis le rig est libéré
@@ -376,6 +384,7 @@ func _refresh(cam_pos: Vector3) -> void:
 	for ti in want:
 		var rig = _torches[ti].rig
 		if rig != null:
+			rig.light.shadow_enabled = shadowed.has(ti)
 			rig.target = 1.0
 			rig.smoke.emitting = true
 			rig.sparks.emitting = true
@@ -383,6 +392,7 @@ func _refresh(cam_pos: Vector3) -> void:
 			var free := _free_rig()
 			if free != null:
 				_assign(free, int(ti))
+				free.light.shadow_enabled = shadowed.has(ti)
 
 func _update_rig(r: TorchFx, delta: float) -> void:
 	if r.torch < 0:

@@ -230,6 +230,17 @@ func _graphics() -> void:
 	for v in FLAME_VALUES:
 		flame_opts.append([v, L.t("ui.settings.fps_unit") % v])
 	_row(L.t("ui.settings.opt_flame_fps"), _opt("flame_fps", flame_opts))
+	_section(L.t("ui.settings.fx_title"))
+	_hint(L.t("ui.settings.fx_hint") if VisualFx.is_forward() else L.t("ui.settings.fx_hint_compat"))
+	var onoff: Array = [[false, L.t("ui.settings.off")], [true, L.t("ui.settings.on")]]
+	_row(L.t("ui.settings.fx_grade"), _opt("fx_grade", onoff))
+	_row(L.t("ui.settings.fx_glow"), _opt("fx_glow", onoff))
+	_row(L.t("ui.settings.fx_shadows"), _opt("fx_shadows", [[0, L.t("ui.settings.off")], [1, L.t("ui.settings.fx_shadows_1")], [2, L.t("ui.settings.fx_shadows_2")], [3, L.t("ui.settings.fx_shadows_3")]]))
+	_row(L.t("ui.settings.fx_ssao"), _opt("fx_ssao", onoff))
+	_row(L.t("ui.settings.fx_reflect"), _opt("fx_reflect", onoff))
+	_row(L.t("ui.settings.fx_decals"), _opt("fx_decals", onoff))
+	_row(L.t("ui.settings.fx_parallax"), _opt("fx_parallax", onoff))
+	_section(L.t("ui.settings.anim_title"))
 	_check(L.t("ui.settings.monster_anim"), Settings.monster_anim, func(v: bool): Settings.set_monster_anim(v))
 	_hint(L.t("ui.settings.monster_anim_hint"))
 

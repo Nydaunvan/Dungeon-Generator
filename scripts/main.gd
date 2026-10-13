@@ -300,6 +300,7 @@ func _apply_quality() -> void:
 	var vp := layout.sub_viewport
 	vp.scaling_3d_scale = Settings.res_scale()
 	rig.camera.far = 100.0 * Settings.view_distance()
+	_apply_fx()
 	if Settings.auto_change:
 		_quality_dirty = true
 		return
@@ -308,6 +309,18 @@ func _apply_quality() -> void:
 	vp.msaa_3d = Settings.msaa_mode() as Viewport.MSAA
 	vp.anisotropic_filtering_level = Settings.aniso_mode() as Viewport.AnisotropicFiltering
 	rig.camera.far = 100.0 * Settings.view_distance()
+
+## Effets visuels Forward+ (étalonnage, halo, occlusion, reflets, ombre de la torche du groupe) pour le niveau affiché.
+var _fx_theme := "stone"
+var _fx_outdoor := false
+
+func _apply_fx() -> void:
+	if env == null or rig == null:
+		return
+	VisualFx.apply_environment(env, _fx_theme, _fx_outdoor)
+	rig.torch.shadow_enabled = VisualFx.is_forward() and int(Settings.opt("fx_shadows")) > 0 and not _fx_outdoor
+	rig.torch.shadow_bias = 0.08
+	rig.torch.shadow_normal_bias = 1.2
 
 func _has_merchant_level() -> bool:
 	for lv in gs.cfg.levels:
@@ -376,6 +389,9 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		if bool(m.get("startHidden", false)) and not mst.is_empty() and not mst.get("hidden", true):
 			level_node.entities.set_monster_visible(str(m.id), true)
 	_apply_outdoor(bool(level.get("outdoor", false)))
+	_fx_theme = str(level.get("theme", "stone"))
+	_fx_outdoor = bool(level.get("outdoor", false))
+	_apply_fx()
 	if not bool(level.get("outdoor", false)):
 		env.ambient_light_energy = float(level.get("lightAmbient", 1.1))
 		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4

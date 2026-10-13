@@ -9,7 +9,14 @@
    "spell_lamps": false,
    "view_distance": 0.7,
    "texture_hd": false,
-   "flame_fps": 20
+   "flame_fps": 20,
+   "fx_grade": false,
+   "fx_glow": false,
+   "fx_shadows": 0,
+   "fx_ssao": false,
+   "fx_reflect": false,
+   "fx_decals": false,
+   "fx_parallax": false
   },
   "medium": {
    "res_scale": 0.8,
@@ -20,7 +27,14 @@
    "spell_lamps": false,
    "view_distance": 0.85,
    "texture_hd": false,
-   "flame_fps": 30
+   "flame_fps": 30,
+   "fx_grade": true,
+   "fx_glow": true,
+   "fx_shadows": 0,
+   "fx_ssao": false,
+   "fx_reflect": false,
+   "fx_decals": true,
+   "fx_parallax": false
   },
   "high": {
    "res_scale": 1.0,
@@ -31,7 +45,14 @@
    "spell_lamps": true,
    "view_distance": 1.0,
    "texture_hd": true,
-   "flame_fps": 60
+   "flame_fps": 60,
+   "fx_grade": true,
+   "fx_glow": true,
+   "fx_shadows": 1,
+   "fx_ssao": true,
+   "fx_reflect": false,
+   "fx_decals": true,
+   "fx_parallax": false
   },
   "ultra": {
    "res_scale": 1.25,
@@ -42,7 +63,14 @@
    "spell_lamps": true,
    "view_distance": 1.3,
    "texture_hd": true,
-   "flame_fps": 60
+   "flame_fps": 60,
+   "fx_grade": true,
+   "fx_glow": true,
+   "fx_shadows": 3,
+   "fx_ssao": true,
+   "fx_reflect": true,
+   "fx_decals": true,
+   "fx_parallax": true
   }
  }
 }

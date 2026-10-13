@@ -17,7 +17,9 @@ static func for_theme(theme: String) -> Dictionary:
 	if not ResourceLoader.exists("res://assets/themes/%s_wall.jpg" % theme) \
 			and not ResourceLoader.exists("res://assets/themes/%s_wall.png" % theme):
 		theme = "stone"
-	var key := "%s|%d" % [theme, 1 if Settings.texture_hd() else 0]   # un jeu de matériaux par réglage de textures
+	var reflect: bool = VisualFx.is_forward() and bool(Settings.opt("fx_reflect")) and VisualFx.WET_THEMES.has(theme)
+	var relief: bool = VisualFx.is_forward() and bool(Settings.opt("fx_parallax"))
+	var key := "%s|%d|%d|%d" % [theme, 1 if Settings.texture_hd() else 0, 1 if reflect else 0, 1 if relief else 0]   # un jeu de matériaux par réglage de textures et d'effets
 	if _cache.has(key):
 		return _cache[key]
 	var pixel := PIXEL_THEMES.has(theme)
@@ -34,8 +36,42 @@ static func for_theme(theme: String) -> Dictionary:
 		var floor_ := _stone_pbr("floor", STONE_FLOOR_REPEAT)
 		if floor_ != null:
 			mats["floor"] = floor_
+	if reflect:
+		var fl: StandardMaterial3D = mats["floor"]
+		fl.roughness = float(VisualFx.WET_THEMES[theme])      # sol brillant : les reflets (SSR) y deviennent visibles
+		fl.metallic_specular = 0.8
+	if relief:
+		var wl: StandardMaterial3D = mats["wall"]
+		if wl.albedo_texture != null:
+			wl.heightmap_enabled = true
+			wl.heightmap_texture = _height_tex(wl.albedo_texture)
+			wl.heightmap_scale = 0.9
+			wl.heightmap_deep_parallax = false
 	_cache[key] = mats
 	return mats
+
+static var _heights: Dictionary = {}
+
+## Carte de relief déduite des niveaux de gris de la texture (les zones claires ressortent), calculée une fois par texture.
+static func _height_tex(tex: Texture2D) -> Texture2D:
+	var k := tex.get_rid().get_id()
+	if _heights.has(k):
+		return _heights[k]
+	var img := tex.get_image()
+	var out: Texture2D = null
+	if img != null:
+		if img.is_compressed():
+			img.decompress()
+		var big := maxi(img.get_width(), img.get_height())
+		if big > 512:
+			var sc := 512.0 / float(big)
+			img.resize(maxi(1, int(img.get_width() * sc)), maxi(1, int(img.get_height() * sc)), Image.INTERPOLATE_BILINEAR)
+		img.convert(Image.FORMAT_L8)
+		img.adjust_bcs(1.0, 1.35, 1.0)
+		img.generate_mipmaps()
+		out = ImageTexture.create_from_image(img)
+	_heights[k] = out
+	return out
 
 static func _make(theme: String, part: String, pixel: bool) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()

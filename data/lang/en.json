@@ -2421,7 +2421,21 @@
   "ui.update.vt_link": "report",
   "ui.update.vt_hint": "Number of antivirus engines flagging the file, out of the total scanned.",
   "ui.update.vt_hint_flag": "Number of antivirus engines flagging the file, out of the total scanned. Unsigned executables often trigger false positives: check the report if in doubt.",
-  "ui.settings.renderer_forward": "Forward+ (Vulkan)"
+  "ui.settings.renderer_forward": "Forward+ (Vulkan)",
+  "ui.settings.fx_title": "Visual effects",
+  "ui.settings.fx_hint": "Forward+ (Vulkan) effects: purely visual, they cost frames per second. Reflections and wall relief apply on the next level loaded. Custom mode sets them one by one.",
+  "ui.settings.fx_hint_compat": "The game is running in the OpenGL fallback: only color grading and glow are available; the other effects have no effect.",
+  "ui.settings.fx_grade": "Color grading per theme",
+  "ui.settings.fx_glow": "Glow (flames, spells)",
+  "ui.settings.fx_shadows": "Torch shadows",
+  "ui.settings.fx_shadows_1": "Party torch only",
+  "ui.settings.fx_shadows_2": "Party + 1 torch",
+  "ui.settings.fx_shadows_3": "Party + 2 torches",
+  "ui.settings.fx_ssao": "Ambient occlusion (darker corners)",
+  "ui.settings.fx_reflect": "Reflections (wet floors, ice, lava)",
+  "ui.settings.fx_decals": "Blood stains after a fight",
+  "ui.settings.fx_parallax": "Wall relief",
+  "ui.settings.anim_title": "Animations"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
