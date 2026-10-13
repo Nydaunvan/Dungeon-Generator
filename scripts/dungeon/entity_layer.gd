@@ -241,24 +241,11 @@ func _pose(n: Node3D, delta: float, fighting: bool, charge: float, idle: bool, c
 	var sx := 1.0
 	var dy := 0.0
 	var off := Vector3.ZERO
-	if idle:
+	if idle and not fighting:
 		var boss: bool = n.get_meta("boss", false)
-		if fighting:
-			# au combat : souffle plus ample et plus rapide, balancement d'un pied sur l'autre, léger pas en avant
-			sy += (0.03 if boss else 0.05) * sin(_clock * 3.4 + ph)
-			dy += 0.02 * sin(_clock * 2.6 + ph * 1.7)
-			off += cb.x * 0.055 * sin(_clock * 1.7 + ph)
-			off += cb.z * 0.05 * (0.5 + 0.5 * sin(_clock * 0.9 + ph))
-		else:
-			sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
-			dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
-	if fighting and charge > 0.7:
-		# annonce de l'attaque : le monstre se ramasse, gonfle et vibre quand sa jauge approche du plein
-		var wind := (charge - 0.7) / 0.3
-		sy += 0.07 * wind
-		sx += 0.04 * wind
-		off -= cb.z * 0.1 * wind
-		off += cb.x * 0.012 * wind * sin(_clock * 55.0)
+		sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
+		dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
+	# au combat (salle de combat) : le monstre reste immobile, seule l'attaque l'avance vers l'écran
 	var r: Variant = _react.get(n)
 	if r != null:
 		r["t"] = float(r.t) + delta
@@ -270,20 +257,25 @@ func _pose(n: Node3D, delta: float, fighting: bool, charge: float, idle: bool, c
 			var arc := sin(k * PI)
 			match str(r.kind):
 				"hit":
-					sy -= 0.16 * env
-					sx += 0.12 * env
-					off -= cb.z * 0.14 * env                     # recul (s'éloigne de la caméra)
+					if not fighting:
+						sy -= 0.16 * env
+						sx += 0.12 * env
+						off -= cb.z * 0.14 * env                 # recul (s'éloigne de la caméra)
 					var m := (n as MeshInstance3D).material_override as StandardMaterial3D
 					if m != null:
 						m.albedo_color = Color(1.0, 0.35 + 0.65 * k, 0.35 + 0.65 * k)
 				"attack":
-					sy += 0.16 * arc
-					sx += 0.16 * arc
-					dy += 0.06 * arc
-					off += cb.z * 0.28 * arc                     # bond vers la caméra
+					if fighting:
+						off += cb.z * 0.45 * arc                 # simple avancée vers l'écran
+					else:
+						sy += 0.16 * arc
+						sx += 0.16 * arc
+						dy += 0.06 * arc
+						off += cb.z * 0.28 * arc                 # bond vers la caméra
 				"stun":
-					off += cb.x * 0.045 * sin(_clock * 46.0) * env
-					sy -= 0.03 * env
+					if not fighting:
+						off += cb.x * 0.045 * sin(_clock * 46.0) * env
+						sy -= 0.03 * env
 	sx *= 1.0 - (sy - 1.0) * 0.5                                  # volume à peu près conservé
 	n.scale = Vector3(sx * float(n.get_meta("mirror", 1.0)), sy, 1.0)
 	n.position.y = float(n.get_meta("by")) + h * 0.5 * (sy - 1.0) + dy
