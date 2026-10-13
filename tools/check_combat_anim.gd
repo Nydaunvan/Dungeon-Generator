@@ -42,6 +42,8 @@ func _init() -> void:
 		await process_frame
 		if not is_instance_valid(node):
 			break
+		if not ents._react.is_empty():
+			continue          # une attaque du monstre est en cours : ce n'est pas le repos
 		lo = minf(lo, node.scale.y)
 		hi = maxf(hi, node.scale.y)
 		var off0: Vector3 = node.get_meta("off", Vector3.ZERO)
