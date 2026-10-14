@@ -400,6 +400,8 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		var mist := FogMist.new()
 		level_node.add_child(mist)
 		mist.setup(grid, env, str(level.id), gs.run_seed)
+		mist.combat_probe = func() -> bool:      # brume presque dissipée pendant un combat (purement visuel)
+			return level_node != null and level_node.stage != null and level_node.stage.active
 	layout.set_level_name(str(level.name))
 	layout.minimap.bind(grid, rig, gs)
 	layout.minimap.merchant_cell = func():

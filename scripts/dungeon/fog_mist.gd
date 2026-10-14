@@ -27,6 +27,13 @@ var grid: DungeonGrid
 var env: Environment
 var volume: FogVolume
 var _t := 0.0
+var _mat: ShaderMaterial
+var combat_probe: Callable = Callable()   ## renvoie true quand le combat est à l'écran (fourni par main.gd)
+var _clear := 0.0                         ## 0 = exploration (brume complète), 1 = combat (brume presque dissipée)
+
+const COMBAT_VOLUME := 0.15               # part de la brume volumétrique gardée pendant un combat
+const COMBAT_GENERAL := 0.25              # part du brouillard général gardée pendant un combat
+const CLEAR_SPEED := 0.6                  # vitesse de la transition (1 / seconde) : ~1,7 s pour se dissiper ou revenir
 
 func setup(g: DungeonGrid, e: Environment, _level_id: String, _run_seed: String) -> void:
 	grid = g
@@ -77,13 +84,19 @@ func _build_volume() -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = _get_shader()
 	mat.set_shader_parameter("noise", _get_noise())
+	_mat = mat
 	volume.material = mat
 	add_child(volume)
 
 func _process(delta: float) -> void:
 	_t += delta * Settings.motion_k()
+	# combat : la brume se dissipe presque entièrement, puis revient à la fin ; en exploration, rien ne change (_clear = 0)
+	var want := 1.0 if (combat_probe.is_valid() and bool(combat_probe.call())) else 0.0
+	_clear = move_toward(_clear, want, delta * CLEAR_SPEED)
+	if _mat != null:
+		_mat.set_shader_parameter("density", 0.9 * lerpf(1.0, COMBAT_VOLUME, _clear))
 	if env != null:
-		env.fog_density = BASE_DENSITY * (1.25 + 0.2 * sin(_t * 0.23))      # le brouillard général épaissit et s'éclaircit
+		env.fog_density = BASE_DENSITY * (1.25 + 0.2 * sin(_t * 0.23)) * lerpf(1.0, COMBAT_GENERAL, _clear)      # le brouillard général épaissit et s'éclaircit
 
 static func _get_noise() -> NoiseTexture3D:
 	if _noise == null:
