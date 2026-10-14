@@ -43,16 +43,15 @@ Structure du code, vérifications automatiques, publication des versions, partie
 ## Organisation du dépôt
 | Dossier | Contenu |
 |---|---|
-| `scripts/` | Tout le code GDScript du jeu. `rules/` : règles sans affichage (personnages, combat, générateur de donjon, état de partie, hasard et horloge déterministes, journal d'actions). `dungeon/` : couloir 3D (murs, portes, torches, brouillard, fontaines, sprites des monstres, salle de combat). `game/` : liaison entre règles et affichage (combat, actions, pièges et fenêtres de décision, monstres errants). `ui/` : fenêtres et interface (sac, forge, paramètres, comptes, défis, chat…). `core/` : services (données, textes, réglages graphiques, sauvegardes, son, mise à jour, compte en ligne, rejeu). `admin/` : éditeur de donjon et outils d'administration. |
-| `scenes/` | Les quatre scènes Godot : démarrage, accueil, partie, administration. |
-| `data/` | Données du jeu : configuration par défaut, talents des classes, constantes, niveaux de qualité graphique, journal des versions, `lang/` (textes français et anglais, guide, tutoriel) et la configuration publique du compte en ligne. |
-| `assets/` | Ressources utilisées par le jeu (environ 90 Mo) : `themes/` textures des sept thèmes de décor (murs, sols, plafonds, fontaine), `monsters/` sprites des monstres et boss, `portraits/` portraits des héros, `icons/` icônes d'objets, de sorts et de classes, `ui/` éléments d'interface (cadres, boutons, emplacements), `home/` écran d'accueil, `fonts/`, `music/`, `sounds/`, `sheets/` planches d'objets et de monstres, `misc/` textures diverses (dont l'étal du marchand), `splash.png` et `app_icon.png`. |
-| `assets_src/` | Images sources de l'épée du jeu (taille d'origine). Le jeu ne les charge pas : seules les versions retaillées de `assets/ui/` sont exportées. |
-| `supabase/migrations/` | Schéma de la base en ligne, un fichier SQL par évolution, à appliquer dans l'ordre : profils, donjons partagés, défis, classements, parties classées, récompenses, rôles. |
-| `tools/` | Outils de développement, hors jeu : vérifications automatiques (`check_*`), captures d'écran (`shot_*`), génération de textures et d'icônes (`gen_*`, `make_icon.py`), préparation des publications (versions, notes, paquets, VirusTotal) et vérificateur des parties classées. |
-| `installer/` | Installateur Windows (script Inno Setup, icône) et entrée de menu pour Linux. |
-| `.github/workflows/` | Publication automatique (exécutables, paquets, installateur) et vérification des parties classées. |
-| `docs/` | Documentation technique et images du README. |
-| `project.godot`, `export_presets.cfg` | Projet Godot (version du jeu incluse) et préréglages d'export Windows et Linux, générés par `tools/gen_export_presets.py`. |
+| `scripts/` | Le code du jeu (GDScript) : règles, donjon 3D, interface, services et éditeur de donjon. |
+| `scenes/` | Les scènes Godot du jeu. |
+| `data/` | Les données du jeu : configuration, textes, réglages graphiques, journal des versions. |
+| `assets/` | Les ressources utilisées par le jeu : images, textures, sons, musiques, polices. |
+| `assets_src/` | Les images sources, d'origine, dont sont tirées certaines ressources ; le jeu ne les charge pas. |
+| `supabase/` | Le schéma de la base de données de la partie en ligne. |
+| `tools/` | Les outils de développement : vérifications, captures, génération de ressources, préparation des publications. |
+| `installer/` | L'installateur Windows et l'entrée de menu Linux. |
+| `.github/` | La publication automatique des versions. |
+| `docs/` | La documentation technique et les images du README. |
 
-La branche `migration/donnees` est la branche de développement : les versions sont publiées depuis elle.
+Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQUE.md#sous-dossiers). La branche `migration/donnees` est la branche de développement : les versions sont publiées depuis elle.

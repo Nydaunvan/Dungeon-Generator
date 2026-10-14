@@ -15,6 +15,21 @@ Jeu en GDScript sous Godot Engine (rendu Forward+ (Vulkan, repli OpenGL si Vulka
 ## Utilisation
 Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer le projet (F5).
 
+## Sous-dossiers
+- `scripts/rules/` : règles sans affichage (personnages, combat, générateur de donjon, état de partie, hasard et horloge déterministes, journal d'actions).
+- `scripts/dungeon/` : couloir 3D (murs, portes, torches, brouillard, fontaines, sprites des monstres, salle de combat).
+- `scripts/game/` : liaison entre règles et affichage (combat, actions, pièges et fenêtres de décision, monstres errants).
+- `scripts/ui/` : fenêtres et interface (sac, forge, paramètres, comptes, défis, chat…).
+- `scripts/core/` : services (données, textes, réglages graphiques, sauvegardes, son, mise à jour, compte en ligne, rejeu).
+- `scripts/admin/` : éditeur de donjon et outils d'administration.
+- `scenes/` : démarrage, accueil, partie, administration.
+- `data/lang/` : textes français et anglais, guide et tutoriel ; `data/cloud_config.json` : configuration publique du compte en ligne.
+- `assets/themes/` : textures des sept thèmes de décor (murs, sols, plafonds, fontaine) ; `monsters/` : sprites des monstres et boss ; `portraits/` : portraits des héros ; `icons/` : icônes d'objets, de sorts et de classes ; `ui/` : cadres, boutons, emplacements ; `home/` : écran d'accueil ; `fonts/`, `music/`, `sounds/` ; `sheets/` : planches d'objets et de monstres ; `misc/` : textures diverses (dont l'étal du marchand).
+- `assets_src/` : images sources de l'épée (taille d'origine) ; seules les versions retaillées de `assets/ui/` sont exportées.
+- `supabase/migrations/` : un fichier SQL par évolution du schéma, à appliquer dans l'ordre.
+- `tools/` : `check_*` vérifications, `shot_*` captures, `gen_*` et `make_icon.py` génération de ressources, publication (versions, notes, paquets, VirusTotal), vérificateur des parties classées.
+- `export_presets.cfg` : généré par `tools/gen_export_presets.py`.
+
 ## Vérifications
 - Compilation : `godot --headless --path . res://tools/check_compile.tscn`
 - Fenêtre de compte (sans réseau) : `godot --headless --path . res://tools/check_account.tscn`
