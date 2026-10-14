@@ -1,8 +1,17 @@
-# ⚔ Dungeon Generator
+<p align="center"><img src="docs/img/epee.png" alt="L'épée du jeu" width="460"></p>
 
-![Version](https://img.shields.io/github/v/release/Nydaunvan/Dungeon-Generator?include_prereleases&label=version) ![Moteur](https://img.shields.io/badge/Godot-4.7-478cbf) ![Plateformes](https://img.shields.io/badge/Windows%20%7C%20Linux-exécutable-444)
+<h1 align="center">Éditeur de Donjon</h1>
+<p align="center"><em>Créez, explorez, survivez.</em></p>
 
-Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héros dans des labyrinthes générés ou créés soi-même, on combat, on récupère du butin et on descend toujours plus profond. Il est écrit en GDScript sous Godot Engine 4.7 ; il s'agit du portage de l'ancien « Éditeur de Donjon » (HTML/WebGL).
+<p align="center">
+<img alt="Version" src="https://img.shields.io/github/v/release/Nydaunvan/Dungeon-Generator?include_prereleases&label=version">
+<img alt="Moteur" src="https://img.shields.io/badge/Godot-4.7-478cbf">
+<img alt="Plateformes" src="https://img.shields.io/badge/Windows%20%7C%20Linux-ex%C3%A9cutable-444">
+</p>
+
+Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héros dans des labyrinthes générés au hasard ou créés soi-même, on combat, on récupère du butin et on descend toujours plus profond. C'est un jeu à part entière, écrit en GDScript sous Godot Engine 4.7.
+
+<p align="center"><img src="docs/img/accueil.jpg" alt="Écran d'accueil" width="48%"> <img src="docs/img/combat.jpg" alt="Combat contre un homme-lézard" width="48%"></p>
 
 **▶ Télécharger la dernière version : [Releases](https://github.com/Nydaunvan/Dungeon-Generator/releases)** (installateur Windows, archive Windows ou Linux). Le jeu se met ensuite à jour tout seul : il ne télécharge que les fichiers modifiés.
 

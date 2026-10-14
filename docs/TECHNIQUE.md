@@ -2,10 +2,10 @@
 
 Détails pour développeurs : structure du projet, vérifications, publication, partie en ligne (Supabase) et rejeu vérifié. Retour à la [présentation du jeu](../README.md).
 
-Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu Forward+ (Vulkan, repli OpenGL si Vulkan est absent) ; versions exécutables Windows et Linux uniquement, le Web est abandonné).
+Jeu en GDScript sous Godot Engine (rendu Forward+ (Vulkan, repli OpenGL si Vulkan est absent) ; versions exécutables Windows et Linux uniquement, le Web est abandonné).
 
 ## Structure
-- `data/` : données extraites du build HTML (config par défaut, talents, constantes)
+- `data/` : données du jeu (config par défaut, talents, constantes, textes, niveaux de qualité)
 - `assets/` : textures des 7 thèmes, icônes, portraits, planches (monstres, objets, torches)
 - `scripts/core/` : chargement des données (autoload `Data`)
 - `scripts/rules/` : moteur de règles sans affichage (formules de stats, puis combat, statuts…)
@@ -13,10 +13,7 @@ Portage du jeu HTML/WebGL « Donjon3D » vers Godot Engine (GDScript, rendu Forw
 - `data/quality_presets.json` : niveaux graphiques Faible / Moyen / Élevé / Ultra (menu « ⚙ Paramètres », autoload `Settings` : détection de la machine et adaptation automatique)
 
 ## Utilisation
-Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer la scène principale (F5) : la console affiche le donjon chargé et les stats des 4 personnages.
-
-## Plan de migration
-1. Données en JSON ✔ 2. Moteur de règles 3. Couloir 3D (✔ murs, torches, portes, escaliers, monstres et objets en sprites) 4. Interface adaptative 5. Boutique/forge/talents 6. Audio 7. Éditeur intégré + sauvegardes
+Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer le projet (F5).
 
 ## Vérifications
 - Compilation : `godot --headless --path . res://tools/check_compile.tscn`
