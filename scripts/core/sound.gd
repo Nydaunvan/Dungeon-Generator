@@ -151,12 +151,12 @@ const SFX_GAIN_DB := {
 	"stairs|true": 1.0, "stairs|false": 1.0,
 	"swing|axe": 12.0, "swing|bow": 10.5, "swing|dagger": 11.5, "swing|mace": 12.0,
 	"swing|staff": 12.0, "swing|sword": 11.5, "swing|unarmed": 12.0,
-	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0,
+	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0,
 }
 
 ## Bruit de dés qui roulent (fichier OGG, chargé une fois).
 const FILE_SOUNDS := {"dice": "res://assets/sounds/dice.ogg", "coins": "res://assets/sounds/coins.ogg", "map_open": "res://assets/sounds/map_open.ogg",
-		"door_open": "res://assets/sounds/door_open.ogg"}
+		"door_open": "res://assets/sounds/door_open.ogg", "trap_snap": "res://assets/sounds/trap_snap.ogg"}
 
 func _file_sfx(key: String) -> void:
 	if not _cache.has(key):
@@ -173,6 +173,10 @@ func coins() -> void:
 ## Ouverture de la grande carte.
 func map_open() -> void:
 	_file_sfx("map_open")
+
+## Piège qui se referme sur le groupe (jet de dés raté ; fichier OGG ~0,55 s, niveau ramené à -34 LUFS comme les autres effets).
+func trap_snap() -> void:
+	_file_sfx("trap_snap")
 
 ## Grille / porte qui s'ouvre (fichier OGG ~4,4 s).
 func door_open() -> void:

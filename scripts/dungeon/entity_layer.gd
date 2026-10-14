@@ -447,6 +447,17 @@ func _die(n: MeshInstance3D) -> void:
 	tw.tween_property(m, "albedo_color:a", 0.0, 0.5)
 	tw.chain().tween_callback(n.queue_free)
 
+## Piège désamorcé : les pointes rentrent dans leur plaque (le piège reste en place, inoffensif) ; les autres objets disparaissent.
+func disarm_item(id: String, animate: bool = true) -> void:
+	var done := false
+	for p in items.keys():
+		for e in items[p]:
+			if str(e.def.id) == id and is_instance_valid(e.node) and e.node.has_meta("spikes"):
+				TrapSpikes.retract(e.node, animate)
+				done = true
+	if not done:
+		remove_item(id)
+
 func remove_item(id: String) -> void:
 	for p in items.keys():
 		var keep: Array = []

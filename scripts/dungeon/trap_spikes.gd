@@ -9,17 +9,27 @@ const GRID := 5
 const SPACING := 0.27
 const SIDES := 8
 
-static var _mesh: ArrayMesh
+static var _plate_mesh: ArrayMesh
+static var _spike_mesh: ArrayMesh
 static var _mat_spikes: StandardMaterial3D
 static var _mat_plate: StandardMaterial3D
 static var _stain: Texture2D
 
 static func make() -> MeshInstance3D:
+	_build_meshes()
 	var mi := MeshInstance3D.new()
-	mi.mesh = _get_mesh()
-	mi.set_surface_override_material(0, _plate_mat())
-	mi.set_surface_override_material(1, _spike_mat())
+	mi.mesh = _plate_mesh
+	mi.material_override = _plate_mat()
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	mi.set_meta("spikes", true)
+	# les pointes sont un nœud à part : elles peuvent rentrer dans la plaque (piège désamorcé)
+	var sp := MeshInstance3D.new()
+	sp.name = "Spikes"
+	sp.mesh = _spike_mesh
+	sp.material_override = _spike_mat()
+	sp.position.y = PLATE_H
+	sp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	mi.add_child(sp)
 	# ombre de contact douce autour de la plaque (le sol paraît légèrement noirci)
 	var q := MeshInstance3D.new()
 	var qm := QuadMesh.new()
@@ -36,6 +46,21 @@ static func make() -> MeshInstance3D:
 	q.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.add_child(q)
 	return mi
+
+## Rentre les pointes dans la plaque (piège désamorcé), avec ou sans animation ; `retract(node, false)` : état de chargement du niveau.
+static func retract(root: Node, animate: bool = true) -> void:
+	var sp := root.get_node_or_null("Spikes") as Node3D
+	if sp == null:
+		return
+	if not animate or not root.is_inside_tree():
+		sp.scale.y = 0.001
+		sp.visible = false
+		return
+	var tw := root.create_tween()
+	tw.tween_property(sp, "scale:y", 0.001, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func():
+		if is_instance_valid(sp):
+			sp.visible = false)
 
 static func _stain_tex() -> Texture2D:
 	if _stain == null:
@@ -67,11 +92,11 @@ static func _spike_mat() -> StandardMaterial3D:
 		_mat_spikes = m
 	return _mat_spikes
 
-static func _get_mesh() -> ArrayMesh:
-	if _mesh != null:
-		return _mesh
+static func _build_meshes() -> void:
+	if _plate_mesh != null:
+		return
 	var mesh := ArrayMesh.new()
-	# surface 0 : plaque et douilles (normales explicites)
+	# plaque et douilles (normales explicites)
 	var pl := SurfaceTool.new()
 	pl.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var h := PLATE * 0.5
@@ -88,7 +113,9 @@ static func _get_mesh() -> ArrayMesh:
 		for iz in GRID:
 			_prism(pl, _spike_pos(ix, iz) + Vector3(0, PLATE_H, 0), 0.075, 0.018, 10, Color(0.045, 0.04, 0.04))
 	pl.commit(mesh)
-	# surface 1 : pointes (normales lissées)
+	_plate_mesh = mesh
+	# pointes (normales lissées), base à y = 0 : le nœud des pointes est posé sur la plaque
+	var smesh := ArrayMesh.new()
 	var sp := SurfaceTool.new()
 	sp.begin(Mesh.PRIMITIVE_TRIANGLES)
 	sp.set_smooth_group(0)
@@ -100,11 +127,10 @@ static func _get_mesh() -> ArrayMesh:
 			var hsh2 := float((idx * 104729 + 7) % 89) / 89.0
 			var hgt := 0.30 + 0.12 * hsh + (0.06 if (ix + iz) % 2 == 0 else 0.0)
 			var lean := Vector3((hsh2 - 0.5) * 0.07, 0, (hsh - 0.5) * 0.07)
-			_spike(sp, _spike_pos(ix, iz) + Vector3(0, PLATE_H, 0), 0.058, hgt, lean, blood.has(idx))
+			_spike(sp, _spike_pos(ix, iz), 0.058, hgt, lean, blood.has(idx))
 	sp.generate_normals()
-	sp.commit(mesh)
-	_mesh = mesh
-	return mesh
+	sp.commit(smesh)
+	_spike_mesh = smesh
 
 static func _spike_pos(ix: int, iz: int) -> Vector3:
 	var o := float(GRID - 1) * 0.5

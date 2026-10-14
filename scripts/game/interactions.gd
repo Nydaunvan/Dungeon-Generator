@@ -510,7 +510,7 @@ func _trap_resolved(it: Dictionary, res: Dictionary) -> void:
 		bag_changed.emit()
 	if bool(res.get("disarm", false)):
 		gs.item_state(_lid(), str(it.id))["disarmed"] = true
-		view.entities.remove_item(str(it.id))
+		view.entities.disarm_item(str(it.id))
 		_log(L.fa(L.t("game.interactions.desamorce_par_le_groupe"), it.get("name", L.t("game.interactions.le_piege"))))
 	else:
 		_apply_trap_hits(it, res.get("hits", []))

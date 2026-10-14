@@ -358,7 +358,9 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		level_node.open_door(str(id), true)
 	for it in level.get("items", []):
 		var ist := gs.item_state(str(level.id), str(it.id))
-		if ist.get("taken", false) or ist.get("disarmed", false):
+		if ist.get("disarmed", false) and not ist.get("taken", false):
+			level_node.entities.disarm_item(str(it.id), false)     # pointes rentrées dès le chargement
+		elif ist.get("taken", false):
 			level_node.entities.remove_item(str(it.id))
 		elif bool(it.get("startHidden", false)) and not ist.get("hidden", true):
 			level_node.entities.set_item_visible(str(it.id), true)

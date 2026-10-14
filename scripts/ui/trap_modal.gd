@@ -647,7 +647,10 @@ func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dicti
 			_die.dim = Color(0.45, 0.45, 0.45)
 			_set_glow(Color("969696"), 20, 0.4, 20, 0.4, false)
 			_shake([Vector2(-4, 0), Vector2(4, 0), Vector2(-3, 0), Vector2(2, 0)], 0.5)
-			Sound.sfx("hit")
+			if id == "probe":
+				Sound.sfx("hit")
+			else:
+				Sound.trap_snap()      # jet raté : le piège se referme
 		_:
 			_die.dim = Color(0.6, 0.55, 0.55)
 			_die.glow = Color("b3111a")
@@ -655,7 +658,7 @@ func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dicti
 			_shake([Vector2(-11, 4), Vector2(10, -5), Vector2(-9, 3), Vector2(7, -3), Vector2(-4, 2)], 0.6)
 			_set_glow(Color(0.59, 0.04, 0.08), 16, 0.6, 42, 0.95, true)
 			_red_flash()
-			Sound.sfx("hit")
+			Sound.trap_snap()
 			Sound.sfx_later(0.13, "hit")
 	_die.queue_redraw()
 	if id == "probe":
