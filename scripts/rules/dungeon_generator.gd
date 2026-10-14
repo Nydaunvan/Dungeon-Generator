@@ -42,6 +42,7 @@ const TRAP_KINDS := [
 	{"kind": "dart", "name": "Fléchettes dissimulées", "icon": "🎯", "permanent": true},
 	{"kind": "pit", "name": "Fosse dissimulée", "icon": "🕳️", "permanent": true},
 	{"kind": "gas", "name": "Vapeurs toxiques", "icon": "☠️", "permanent": true},
+	{"kind": "rune", "name": "Rune de flammes", "icon": "🔥", "permanent": true},
 ]
 
 var cfg: Dictionary

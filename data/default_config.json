@@ -1690,6 +1690,30 @@
      "permanent": true,
      "trapDmgMin": 2,
      "trapDmgMax": 4
+    },
+    {
+     "id": "trap6",
+     "name": "Fosse dissimulée",
+     "icon": "🕳️",
+     "x": 7,
+     "y": 4,
+     "type": "trap",
+     "trapKind": "pit",
+     "permanent": true,
+     "trapDmgMin": 2,
+     "trapDmgMax": 4
+    },
+    {
+     "id": "trap7",
+     "name": "Rune de flammes",
+     "icon": "🔥",
+     "x": 3,
+     "y": 7,
+     "type": "trap",
+     "trapKind": "rune",
+     "permanent": true,
+     "trapDmgMin": 2,
+     "trapDmgMax": 4
     }
    ]
   },
@@ -1831,6 +1855,18 @@
      "type": "armor",
      "slot": "feet",
      "bonusHp": 3
+    },
+    {
+     "id": "trap8",
+     "name": "Fosse dissimulée",
+     "icon": "🕳️",
+     "x": 3,
+     "y": 7,
+     "type": "trap",
+     "trapKind": "pit",
+     "permanent": true,
+     "trapDmgMin": 3,
+     "trapDmgMax": 5
     }
    ]
   },
@@ -1977,6 +2013,30 @@
      "legendary": true,
      "legendaryPerk": "lifesteal",
      "legendaryValue": 15
+    },
+    {
+     "id": "trap9",
+     "name": "Fosse dissimulée",
+     "icon": "🕳️",
+     "x": 3,
+     "y": 5,
+     "type": "trap",
+     "trapKind": "pit",
+     "permanent": true,
+     "trapDmgMin": 3,
+     "trapDmgMax": 5
+    },
+    {
+     "id": "trap10",
+     "name": "Rune de flammes",
+     "icon": "🔥",
+     "x": 9,
+     "y": 7,
+     "type": "trap",
+     "trapKind": "rune",
+     "permanent": true,
+     "trapDmgMin": 3,
+     "trapDmgMax": 5
     }
    ]
   }

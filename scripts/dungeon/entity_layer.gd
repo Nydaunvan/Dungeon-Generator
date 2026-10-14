@@ -69,8 +69,11 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			var wd := Vector2i.ZERO         # fléchettes : mécanisme fixé au mur voisin de la dalle (à défaut de mur, simple décalque au sol)
 			if tkind == "dart" and grid != null and not bool(level.get("outdoor", false)):
 				wd = LevelBuilder.dart_wall_dir(grid, level, int(it.x), int(it.y), str(it.id))
-			var dec: MeshInstance3D
-			if wd != Vector2i.ZERO:
+			var dec: Node3D
+			if tkind == "rune":      # cercle de runes gravé dans le sol (au niveau du sol, pas de décalque plat)
+				dec = TrapRune.make()
+				dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.0, int(it.y) * LevelBuilder.CELL)
+			elif wd != Vector2i.ZERO:
 				dec = TrapDart.make(LevelBuilder.dart_height(int(it.x), int(it.y)))
 				dec.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL, LevelBuilder.dart_height(int(it.x), int(it.y)), (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL)
 				dec.rotation.y = TrapDart.yaw_for(wd)
@@ -478,15 +481,22 @@ func disarm_item(id: String, animate: bool = true) -> void:
 				elif e.node.has_meta("trap_pit"):
 					TrapPit.cover(e.node, animate)
 					done = true
+				elif e.node.has_meta("trap_rune"):
+					TrapRune.stop(e.node, animate)
+					done = true
 	if not done:
 		remove_item(id)
 
-## Piège à fléchettes déclenché : la salve part du mur (le piège reste en place et se recharge).
+## Piège déclenché qui reste en place : salve de fléchettes tirée du mur, gerbe de flammes de la rune (il se recharge).
 func fire_item(id: String) -> void:
 	for p in items.keys():
 		for e in items[p]:
-			if str(e.def.id) == id and is_instance_valid(e.node) and e.node.has_meta("trap_dart"):
+			if str(e.def.id) != id or not is_instance_valid(e.node):
+				continue
+			if e.node.has_meta("trap_dart"):
 				TrapDart.fire(e.node)
+			elif e.node.has_meta("trap_rune"):
+				TrapRune.fire(e.node)
 
 func remove_item(id: String) -> void:
 	for p in items.keys():

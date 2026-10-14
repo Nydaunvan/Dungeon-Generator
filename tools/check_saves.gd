@@ -61,6 +61,12 @@ func _ready() -> void:
 	checks["fléchettes permanentes (niveau)"] = bool(dt.config.levels[0].items[0].permanent)
 	checks["fléchettes permanentes (bibliothèque)"] = bool(dt.config.itemLibrary[0].permanent)
 	checks["fosse permanente au passage v6 → v7"] = bool(dt.config.levels[0].items[1].permanent)
+	var ru := {"config": {"levels": [{"items": [{"id": "r", "type": "trap", "trapKind": "rune", "permanent": false}, {"id": "s", "type": "trap", "trapKind": "spikes", "permanent": false}]}],
+		"itemLibrary": [{"id": "lr", "type": "trap", "trapKind": "rune", "permanent": false}]}, "save": {}, "schema": 7, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(ru, Data.original_config)
+	checks["rune permanente (niveau)"] = bool(ru.config.levels[0].items[0].permanent)
+	checks["rune permanente (bibliothèque)"] = bool(ru.config.itemLibrary[0].permanent)
+	checks["pointes inchangées par v8"] = not bool(ru.config.levels[0].items[1].permanent)
 	# icônes de classes (v4 → v5) : un emoji ou une icône introuvable sur une classe du jeu devient l'image du jeu ; classe du créateur et héros personnalisé intacts
 	var ci := {"config": {"classes": [{"id": "class_thief", "icon": "🗝️"}, {"id": "class_cleric", "icon": ""}, {"id": "class_assassin", "icon": "@icon:dagger_void"},
 		{"id": "class_perso", "icon": "🧝"}], "party": [{"classId": "class_thief", "icon": "🗝️"}, {"classId": "class_thief", "icon": "🐱"}]},
