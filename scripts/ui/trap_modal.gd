@@ -647,7 +647,8 @@ func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dicti
 			_die.dim = Color(0.45, 0.45, 0.45)
 			_set_glow(Color("969696"), 20, 0.4, 20, 0.4, false)
 			_shake([Vector2(-4, 0), Vector2(4, 0), Vector2(-3, 0), Vector2(2, 0)], 0.5)
-			Sound.trap_fail(str(_offer.kind.id))      # jet raté : le piège se déclenche (son propre à chaque type)
+			if id != "probe":      # un jet raté qui ne déclenche rien (la sonde) laisse encore un choix : pas de son propre au piège
+				Sound.trap_fail(str(_offer.kind.id))      # le piège se déclenche (son propre à chaque type)
 		_:
 			_die.dim = Color(0.6, 0.55, 0.55)
 			_die.glow = Color("b3111a")
@@ -744,6 +745,7 @@ func _puzzle_done(ok: bool) -> void:
 		_end_with("", Color("8fd0ff"), "puzzle", "puzzle", true)
 	else:
 		_hit_random(1.0)
+		Sound.trap_fail(str(_offer.kind.id))      # puzzle raté : le piège se déclenche
 		_set_glow(Color(0.59, 0.04, 0.08), 16, 0.6, 42, 0.95, true)
 		_red_flash()
 		var h: Array = _res.hits
