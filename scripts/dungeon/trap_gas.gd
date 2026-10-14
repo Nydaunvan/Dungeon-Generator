@@ -38,6 +38,7 @@ static func make() -> MeshInstance3D:
 	l.light_energy = 1.3
 	l.omni_range = 5.5
 	l.shadow_enabled = false
+	l.light_specular = 0.0     # sur un sol mouillé, le reflet spéculaire de la lampe dessinait une traînée verte sous la bouche
 	l.position = Vector3(0, 0.55, 0)
 	cloud.add_child(l)
 	var tw := l.create_tween().set_loops()
