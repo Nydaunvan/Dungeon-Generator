@@ -28,7 +28,7 @@ var env: Environment
 var volume: FogVolume
 var _t := 0.0
 var _mat: ShaderMaterial
-var combat_probe: Callable = Callable()   ## renvoie true quand le combat est à l'écran (fourni par main.gd)
+var combat_probe: Callable = Callable()   ## renvoie true quand la brume doit se dissiper : combat à l'écran ou groupe devant le marchand (fourni par main.gd)
 var _clear := 0.0                         ## 0 = exploration (brume complète), 1 = combat (brume presque dissipée)
 
 const COMBAT_VOLUME := 0.15               # part de la brume volumétrique gardée pendant un combat
