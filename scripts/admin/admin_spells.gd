@@ -37,6 +37,7 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	for s in cfg.get("spells", []):
 		_row(grid, admin, s)
 	Form.hint(p, L.t("admin.spells.le_temps_de_recharge_limite"))
+	Form.hint(p, L.t("admin.spells.effets_hint"))
 	var status_ref := [null]
 	AdminCells.actions(p, [
 		{"text": L.t("admin.spells.ajouter_un_sort"), "cb": func(): _add(admin)},
@@ -50,11 +51,8 @@ static func _row(grid: GridContainer, admin: Node, s: Dictionary) -> void:
 	AdminTable.cell(grid, IconPicker.button(admin.modals(), s, "icon", Callable(), 38.0))
 	# nom
 	AdminTable.cell(grid, _stretch(AdminCells.text(s, "name", "", Callable(), 80.0), 1))
-	# style (le premier est affiché si le sort n'en a pas, comme un <select> HTML)
-	var styles: Array = []
-	for st in Data.constants.get("SPELL_STYLES", []):
-		styles.append([st.id, st.label])
-	AdminTable.cell(grid, _stretch(AdminCells.option(styles, s.get("style", ""), func(v): s["style"] = v, 90.0), 2))
+	# style (le premier est affiché si le sort n'en a pas, comme un <select> HTML) + effet visuel du sort
+	AdminTable.cell(grid, _stretch(_style_cell(s, admin, refresh), 2))
 	# mode
 	var mode := str(s.get("mode", "damage"))
 	if mode == "":
@@ -83,6 +81,56 @@ static func _stretch(c: Control, col: int) -> Control:
 	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	c.size_flags_stretch_ratio = STRETCH[col]
 	return c
+
+## Colonne « Style (animation) » : le style (école du sort, qui décide aussi de la logique de combat) et, dessous, l'effet visuel.
+## Changer de style remet l'effet par défaut du nouveau style. La teinte et l'intensité n'apparaissent que pour un effet avancé.
+static func _style_cell(s: Dictionary, admin: Node, refresh: Callable) -> Control:
+	var styles: Array = []
+	for st in Data.constants.get("SPELL_STYLES", []):
+		styles.append([st.id, st.label])
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	var style_opt := AdminCells.option(styles, s.get("style", ""), func(v):
+		s["style"] = v
+		s["fx"] = ""
+		refresh.call(), 90.0)
+	style_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(style_opt)
+	var style := str(s.get("style", "arcane"))
+	if style == "":
+		style = "arcane"
+	var mode := str(s.get("mode", "damage"))
+	if mode == "":
+		mode = "damage"
+	var fxs := SpellFxLibrary.options(style, mode)
+	if fxs.size() <= 1:
+		return box     # ce style n'a pas encore d'effet avancé : seul l'effet d'origine existe
+	var cur := SpellFxLibrary.resolve(s)
+	var fx_opt := AdminCells.option(fxs, cur, func(v):
+		s["fx"] = v
+		refresh.call(), 90.0, L.t("admin.spells.effet_tip"))
+	fx_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(fx_opt)
+	if cur != SpellFxLibrary.CLASSIC:
+		var tints: Array = []
+		for t in SpellFxLibrary.TINTS:
+			tints.append([t[0], L.t(str(t[1]))])
+		var tint_opt := AdminCells.option(tints, str(s.get("fxTint", "")), func(v): s["fxTint"] = v, 90.0, L.t("admin.spells.teinte"))
+		tint_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(tint_opt)
+		var powers: Array = []
+		for p in SpellFxLibrary.POWERS:
+			powers.append([p[0], L.t(str(p[1]))])
+		var power_opt := AdminCells.option(powers, float(s.get("fxPower", 1.0)), func(v): s["fxPower"] = float(v), 90.0, L.t("admin.spells.intensite"))
+		power_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(power_opt)
+	var preview := Button.new()
+	preview.text = L.t("admin.spells.apercu")
+	preview.focus_mode = Control.FOCUS_NONE
+	preview.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
+	preview.pressed.connect(func(): SpellFxPreview.open(admin.modals(), s))
+	box.add_child(preview)
+	return box
 
 ## Colonne « Valeurs » selon le mode (`spellStatsHtml`).
 static func _stats(s: Dictionary, mode: String) -> Control:
@@ -144,7 +192,7 @@ static func _add(admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	if not (cfg.get("spells") is Array):
 		cfg["spells"] = []
-	(cfg.spells as Array).append({"id": AdminUtil.new_id("spell"), "name": L.t("admin.spells.nouveau_sort"), "icon": "✨", "style": "arcane", "mode": "damage", "dmgMin": 3, "dmgMax": 7, "healMin": 5, "healMax": 10, "staminaCost": 15, "cooldownSec": 6})
+	(cfg.spells as Array).append({"id": AdminUtil.new_id("spell"), "name": L.t("admin.spells.nouveau_sort"), "icon": "✨", "style": "arcane", "mode": "damage", "fx": "", "fxTint": "", "fxPower": 1.0, "dmgMin": 3, "dmgMax": 7, "healMin": 5, "healMax": 10, "staminaCost": 15, "cooldownSec": 6})
 	admin.refresh_tab()
 
 ## `removeSpell` : confirmation sans titre, puis retrait du sort des classes (sorts autorisés) et des personnages (sorts connus).

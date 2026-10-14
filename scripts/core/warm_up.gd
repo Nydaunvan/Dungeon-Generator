@@ -168,6 +168,14 @@ static func run(host: Node, progress: Callable) -> void:
 			if SpellFx3D.has(st.id):
 				SpellFx3D.cast(root, rig.camera, st.id, {})
 			SpellFxStyles.cast_spell(root, rig.camera, st.id, {}, ctx))
+	# effets avancés du catalogue (shaders, particules GPU, rubans, lentille) : compilés eux aussi avant la première partie
+	for fxid in SpellFxLibrary.CATALOG:
+		var fe: Dictionary = SpellFxLibrary.CATALOG[fxid]
+		steps.append(func():
+			rig.place(grid, 3, 3, 0)
+			var fctx := {"style": str((fe.styles as Array)[0]), "mode": str((fe.modes as Array)[0]), "status": "", "targets": [], "ally": 0, "caster": 0,
+				"fx": str(fxid), "fxTint": "", "fxPower": 1.0}
+			SpellFxLibrary.cast(root, rig.camera, "warm_" + str(fxid), {}, fctx))
 	for kind in SpellFxStyles.ACTIONS:
 		steps.append(func():
 			SpellFxStyles.cast_action(root, rig.camera, kind, {}))

@@ -1005,9 +1005,10 @@ func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
 				c["style"] = str(sp.get("style", "arcane"))
 				c["mode"] = str(sp.get("mode", "damage"))
 				c["status"] = str(sp.get("statusEffect", ""))
+				c.merge(SpellFxLibrary.fx_keys(sp))
 				break
 	c["targets"] = st.target_points() if active else []
-	SpellFxStyles.cast_spell(layout.world, rig.camera, spell_id, tgt, c)
+	SpellFxLibrary.cast(layout.world, rig.camera, spell_id, tgt, c)
 
 func layout_stage_target() -> Dictionary:
 	var st: CombatStage = level_node.stage if level_node != null else null

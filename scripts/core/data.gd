@@ -388,6 +388,13 @@ func ensure_defaults(cfg: Dictionary) -> void:
 			s["staminaCost"] = 15
 		if str(s.get("mode", "")) == "":
 			s["mode"] = "damage"
+		# effet visuel du sort (voir SpellFxLibrary) : vide = effet par défaut du style ; les anciens sorts et sauvegardes sont complétés ici
+		if not s.has("fx"):
+			s["fx"] = ""
+		if not s.has("fxTint"):
+			s["fxTint"] = ""
+		if not s.has("fxPower"):
+			s["fxPower"] = 1.0
 	for c in cfg.get("classes", []):
 		if not (c.get("spellProgression") is Array):
 			c["spellProgression"] = []

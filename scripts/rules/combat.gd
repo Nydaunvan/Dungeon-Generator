@@ -494,8 +494,10 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			caster_idx = pi
 		if not ally.is_empty() and str(gs.party[pi].id) == str(ally.id):
 			ally_idx = pi
-	events.append({"type": "fx3d", "spell": spell_id, "ctx": {"style": str(spell.get("style", "arcane")), "mode": mode,
-		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", ""))}})
+	var fx_ctx := {"style": str(spell.get("style", "arcane")), "mode": mode,
+		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", ""))}
+	fx_ctx.merge(SpellFxLibrary.fx_keys(spell))      # effet visuel choisi dans l'éditeur (fx, teinte, intensité)
+	events.append({"type": "fx3d", "spell": spell_id, "ctx": fx_ctx})
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:

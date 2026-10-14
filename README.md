@@ -32,6 +32,8 @@ Le jeu reste entièrement jouable hors ligne. Avec un compte, on peut partager s
 ## Graphismes
 Rendu Forward+ (Vulkan) avec repli automatique sur OpenGL. Quatre niveaux de qualité (Faible, Moyen, Élevé, Ultra) et un réglage Auto qui s'adapte à la machine. Les effets (occlusion ambiante, reflets, relief, brouillard volumétrique, étalonnage des couleurs) se règlent un par un dans **⚙ Paramètres › Graphismes**. F3 affiche le compteur d'images par seconde et la mémoire utilisée.
 
+**Effets de sorts** : l'éditeur de sorts propose, pour chaque sort, un effet visuel au choix (aujourd'hui le cristal, l'orbe de mana et le rayon pour les sorts d'arcane de dégâts), avec une teinte, une intensité et un aperçu. Ces effets avancés (lumière HDR, particules GPU, distorsion, rune gravée au sol, lumière qui éclaire la brume) s'adaptent au niveau graphique ; l'effet d'origine reste disponible.
+
 ## Commandes
 Au clavier (touches physiques, libellés AZERTY) : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner. Tout est réassignable dans les paramètres, et des boutons à l'écran permettent le jeu tactile.
 
