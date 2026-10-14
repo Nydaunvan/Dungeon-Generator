@@ -141,34 +141,113 @@ static func _w_soft() -> Texture2D:
 static func _w_spark() -> Texture2D:
 	return _radial("fxa_spark", [[0.0, Color(1, 1, 1, 1)], [0.2, Color(1, 1, 1, 0.9)], [1.0, Color(1, 1, 1, 0)]])
 
-## Cercle de runes (deux cercles gradués, hexagramme, point central) : texture du décalque gravé au sol.
+## Alphabet runique (futhark ancien, 24 signes) : chaque rune est une suite de traits dans un carré 1 x 1 (x vers la droite, y vers le bas).
+const RUNES := [
+	[[[0.2, 1], [0.2, 0]], [[0.2, 0.3], [0.85, 0]], [[0.2, 0.6], [0.85, 0.3]]],
+	[[[0.15, 1], [0.15, 0], [0.8, 0.3], [0.8, 1]]],
+	[[[0.2, 0], [0.2, 1]], [[0.2, 0.25], [0.8, 0.5], [0.2, 0.75]]],
+	[[[0.2, 0], [0.2, 1]], [[0.2, 0.1], [0.8, 0.35]], [[0.2, 0.4], [0.8, 0.65]]],
+	[[[0.2, 0], [0.2, 1]], [[0.2, 0], [0.8, 0.25], [0.2, 0.55], [0.85, 1]]],
+	[[[0.8, 0.2], [0.2, 0.5], [0.8, 0.8]]],
+	[[[0.15, 0], [0.85, 1]], [[0.85, 0], [0.15, 1]]],
+	[[[0.2, 0], [0.2, 1]], [[0.2, 0], [0.8, 0.3], [0.2, 0.6]]],
+	[[[0.2, 0], [0.2, 1]], [[0.8, 0], [0.8, 1]], [[0.2, 0.35], [0.8, 0.65]]],
+	[[[0.5, 0], [0.5, 1]], [[0.2, 0.3], [0.8, 0.6]]],
+	[[[0.5, 0], [0.5, 1]]],
+	[[[0.25, 0.1], [0.5, 0.3], [0.25, 0.5]], [[0.75, 0.5], [0.5, 0.7], [0.75, 0.9]]],
+	[[[0.5, 0], [0.5, 1]], [[0.5, 0], [0.8, 0.25]], [[0.5, 1], [0.2, 0.75]]],
+	[[[0.2, 0], [0.2, 1]], [[0.2, 0], [0.75, 0.3], [0.4, 0.5], [0.75, 0.7], [0.2, 1]]],
+	[[[0.5, 0], [0.5, 1]], [[0.15, 0.15], [0.5, 0.5], [0.85, 0.15]]],
+	[[[0.7, 0], [0.3, 0.35], [0.7, 0.65], [0.3, 1]]],
+	[[[0.5, 0], [0.5, 1]], [[0.15, 0.3], [0.5, 0], [0.85, 0.3]]],
+	[[[0.2, 0], [0.2, 1]], [[0.2, 0], [0.75, 0.25], [0.2, 0.5], [0.75, 0.75], [0.2, 1]]],
+	[[[0.2, 0], [0.2, 1]], [[0.8, 0], [0.8, 1]], [[0.2, 0], [0.5, 0.35], [0.8, 0]]],
+	[[[0.2, 0], [0.2, 1]], [[0.8, 0], [0.8, 1]], [[0.2, 0], [0.8, 0.5]], [[0.8, 0], [0.2, 0.5]]],
+	[[[0.3, 0], [0.3, 1]], [[0.3, 0], [0.8, 0.3]]],
+	[[[0.5, 0], [0.85, 0.5], [0.5, 1], [0.15, 0.5], [0.5, 0]]],
+	[[[0.2, 0], [0.2, 1]], [[0.8, 0], [0.8, 1]], [[0.2, 0], [0.8, 1]], [[0.8, 0], [0.2, 1]]],
+	[[[0.5, 0], [0.8, 0.35], [0.2, 1]], [[0.5, 0], [0.2, 0.35], [0.8, 1]]],
+]
+
+## Pose un point doux (pinceau) de rayon `rad` pixels ; on garde la valeur la plus forte.
+static func _dab(img: PackedFloat32Array, n: int, x: float, y: float, rad: float) -> void:
+	var x0 := maxi(int(x - rad - 1.0), 0)
+	var x1 := mini(int(x + rad + 1.0), n - 1)
+	var y0 := maxi(int(y - rad - 1.0), 0)
+	var y1 := mini(int(y + rad + 1.0), n - 1)
+	for py in range(y0, y1 + 1):
+		for px in range(x0, x1 + 1):
+			var d := Vector2(float(px) + 0.5 - x, float(py) + 0.5 - y).length()
+			var v := clampf(rad + 0.5 - d, 0.0, 1.0)
+			if v > img[py * n + px]:
+				img[py * n + px] = v
+
+static func _stroke(img: PackedFloat32Array, n: int, a: Vector2, b: Vector2, rad: float) -> void:
+	var steps := maxi(int(a.distance_to(b) / 0.8), 1)
+	for i in steps + 1:
+		var p := a.lerp(b, float(i) / float(steps))
+		_dab(img, n, p.x, p.y, rad)
+
+static func _rune_ring(img: PackedFloat32Array, n: int, r: float, rad: float) -> void:
+	var c := float(n) * 0.5
+	var steps := int(TAU * r * c / 0.8)
+	for i in steps:
+		var ang := float(i) / float(steps) * TAU
+		_dab(img, n, c + cos(ang) * r * c, c + sin(ang) * r * c, rad)
+
+## Cercle magique : double anneau extérieur portant les 24 runes du futhark, anneau intérieur, hexagramme, cercles et point central.
+## Les couleurs sont multipliées par l'opacité : l'émission du décalque ignore l'alpha, sinon tout le carré brillerait.
 static func _rune_tex() -> Texture2D:
 	if _rune_t == null:
-		var n := 192
-		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
-		var seg := TAU / 3.0
-		for y in n:
-			for x in n:
-				var px := (float(x) + 0.5) / n * 2.0 - 1.0
-				var py := (float(y) + 0.5) / n * 2.0 - 1.0
-				var r := sqrt(px * px + py * py)
-				var a := 0.0
-				if r < 1.0:
-					var ang := atan2(py, px)
-					a = maxf(a, 1.0 - absf(r - 0.94) / 0.025)
-					a = maxf(a, 1.0 - absf(r - 0.80) / 0.015)
-					if r > 0.81 and r < 0.93 and absf(fposmod(ang, TAU / 24.0) - TAU / 48.0) > TAU / 48.0 - 0.03:
-						a = maxf(a, 0.85)
-					for k in 2:
-						var v0 := -PI * 0.5 + float(k) * PI
-						var edge := 0.36 / cos(fposmod(ang - v0, seg) - seg * 0.5)
-						if r < 0.78:
-							a = maxf(a, 1.0 - absf(r - edge) / 0.014)
-					a = maxf(a, 1.0 - absf(r - 0.12) / 0.012)
-					a = maxf(a, 1.0 - r / 0.05)
-				var v := clampf(a, 0.0, 1.0)
-				img.set_pixel(x, y, Color(v, v, v, v))     # couleur multipliée par l'opacité : l'émission du décalque ignore l'alpha, sinon tout le carré brille
-		_rune_t = ImageTexture.create_from_image(img)
+		var n := 512
+		var c := float(n) * 0.5
+		var img := PackedFloat32Array()
+		img.resize(n * n)
+		_rune_ring(img, n, 0.975, 2.6)
+		_rune_ring(img, n, 0.93, 1.3)
+		_rune_ring(img, n, 0.79, 1.3)
+		_rune_ring(img, n, 0.765, 2.0)
+		# runes, têtes vers l'extérieur
+		var rm := 0.862
+		var rh := 0.088 * c
+		var rw := 0.056 * c
+		for i in RUNES.size():
+			var ang := float(i) / float(RUNES.size()) * TAU - PI * 0.5
+			var u := Vector2(cos(ang), sin(ang))
+			var t := Vector2(-u.y, u.x)
+			var mid := Vector2(c, c) + u * rm * c
+			for st in RUNES[i]:
+				var prev := Vector2.ZERO
+				for k in (st as Array).size():
+					var q: Array = st[k]
+					var p := mid + t * (float(q[0]) - 0.5) * rw + u * (0.5 - float(q[1])) * rh
+					if k > 0:
+						_stroke(img, n, prev, p, 1.7)
+					prev = p
+		# hexagramme (deux triangles) et points aux sommets
+		var hr := 0.70 * c
+		for tri in 2:
+			var pts: Array = []
+			for k in 3:
+				var ang := -PI * 0.5 + float(tri) * PI + float(k) * TAU / 3.0
+				pts.append(Vector2(c, c) + Vector2(cos(ang), sin(ang)) * hr)
+			for k in 3:
+				_stroke(img, n, pts[k], pts[(k + 1) % 3], 1.8)
+			for k in 3:
+				var p: Vector2 = pts[k]
+				_dab(img, n, p.x, p.y, 4.0)
+		_rune_ring(img, n, 0.35, 1.5)
+		_rune_ring(img, n, 0.10, 1.5)
+		_dab(img, n, c, c, 5.0)
+		var bytes := PackedByteArray()
+		bytes.resize(n * n * 4)
+		for i in n * n:
+			var b := int(clampf(img[i], 0.0, 1.0) * 255.0)
+			bytes[i * 4] = b
+			bytes[i * 4 + 1] = b
+			bytes[i * 4 + 2] = b
+			bytes[i * 4 + 3] = b
+		_rune_t = ImageTexture.create_from_image(Image.create_from_data(n, n, false, Image.FORMAT_RGBA8, bytes))
 	return _rune_t
 
 static func _shader(key: String, code: String) -> Shader:
