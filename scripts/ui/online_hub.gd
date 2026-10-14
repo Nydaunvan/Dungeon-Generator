@@ -1018,11 +1018,18 @@ func _rw_render() -> void:
 		if _rw_filter == "done" and not e.have:
 			continue
 		shown.append(e)
-	# à obtenir d'abord, puis par rareté croissante
+	# obtenues d'abord, puis celles à obtenir ; dans chaque groupe, par rareté croissante (tri stable : ordre du catalogue à rareté égale)
+	var rank := {}
+	for i in shown.size():
+		rank[shown[i]] = i
 	shown.sort_custom(func(a, b):
 		if a.have != b.have:
-			return not a.have
-		return int(a.b.get("rarity", 1)) < int(b.b.get("rarity", 1)))
+			return a.have
+		var ra := int(a.b.get("rarity", 1))
+		var rb := int(b.b.get("rarity", 1))
+		if ra != rb:
+			return ra < rb
+		return int(rank[a]) < int(rank[b]))
 	if shown.is_empty():
 		_rw_box.add_child(HubKit.label(L.t("ui.rewards.empty"), UiTheme.DIM, 13, false, true, HORIZONTAL_ALIGNMENT_CENTER))
 		return
