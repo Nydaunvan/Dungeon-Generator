@@ -32,6 +32,13 @@ func _process(delta: float) -> void:
 		if _choice_poll <= 0.0:
 			_choice_poll = 0.25
 			_check_choices()
+	if _pending_cmd != "":
+		if Time.get_ticks_msec() > _pending_until or gs == null or gs.game_over:
+			_pending_cmd = ""
+		elif settled() and not is_game_paused():
+			var c := _pending_cmd
+			_pending_cmd = ""
+			_on_command(c)
 	if gs != null:
 		GameClock.advance(delta)         # horloge de jeu : la seule référence de temps de la logique (recharges, fontaines)
 	if gs != null and Data.play_origin == "random" and not gs.game_over and not gs.won and not gs.in_village:
@@ -543,11 +550,20 @@ func settled() -> bool:
 func is_game_paused() -> bool:
 	return (dock != null and dock.is_open) or not get_tree().get_nodes_in_group("modal").is_empty()
 
+var _pending_cmd := ""
+var _pending_until := 0
+const PENDING_MS := 3000
+
 func _on_command(cmd: String) -> void:
 	if gs.game_over:
 		return
 	if RunLog.ranked() and not settled():
-		return          # partie classée : une commande n'est acceptée qu'au repos (voir RunLog)
+		# partie classée : une commande n'est acceptée qu'au repos (voir RunLog). Un déplacement ou un quart de tour demandé pendant
+		# un effet en cours (fontaine, coup…) est gardé en attente trois secondes puis exécuté dès que le jeu est au repos, au lieu d'être perdu
+		if cmd in ["forward", "right", "back", "left", "turn_left", "turn_right"]:
+			_pending_cmd = cmd
+			_pending_until = Time.get_ticks_msec() + PENDING_MS
+		return
 	if is_game_paused() and cmd in ["forward", "right", "back", "left", "turn_left", "turn_right"]:
 		return
 	match cmd:
