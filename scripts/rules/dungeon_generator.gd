@@ -39,7 +39,7 @@ const ARMOR_SLOTS := ["head", "body", "hands", "feet"]
 const THEMES := ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]
 const TRAP_KINDS := [
 	{"kind": "spikes", "name": "Pointes au sol", "icon": "🔺", "permanent": true},
-	{"kind": "dart", "name": "Fléchettes dissimulées", "icon": "🎯", "permanent": false},
+	{"kind": "dart", "name": "Fléchettes dissimulées", "icon": "🎯", "permanent": true},
 	{"kind": "pit", "name": "Fosse dissimulée", "icon": "🕳️", "permanent": false},
 	{"kind": "gas", "name": "Vapeurs toxiques", "icon": "☠️", "permanent": true},
 ]

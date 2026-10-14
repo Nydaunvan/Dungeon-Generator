@@ -1687,7 +1687,7 @@
      "y": 5,
      "type": "trap",
      "trapKind": "dart",
-     "permanent": false,
+     "permanent": true,
      "trapDmgMin": 2,
      "trapDmgMax": 4
     }
@@ -1806,7 +1806,7 @@
      "y": 7,
      "type": "trap",
      "trapKind": "dart",
-     "permanent": false,
+     "permanent": true,
      "trapDmgMin": 2,
      "trapDmgMax": 5
     },

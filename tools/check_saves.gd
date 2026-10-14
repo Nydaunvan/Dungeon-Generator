@@ -52,8 +52,15 @@ func _ready() -> void:
 		"itemLibrary": [{"id": "lg", "type": "trap", "trapKind": "gas", "permanent": false}]}, "save": {}, "schema": 3, "dungeonOrigin": "random"}
 	SaveMigrations.migrate(gas, Data.original_config)
 	checks["vapeur permanente (niveau)"] = bool(gas.config.levels[0].items[0].permanent)
-	checks["fléchettes inchangées"] = not bool(gas.config.levels[0].items[1].permanent)
+	checks["fléchettes permanentes au passage v5 → v6"] = bool(gas.config.levels[0].items[1].permanent)
 	checks["vapeur permanente (bibliothèque)"] = bool(gas.config.itemLibrary[0].permanent)
+	# fléchettes murales (v5 → v6) : permanentes (niveaux et bibliothèque) ; fosse et pointes inchangées
+	var dt := {"config": {"levels": [{"items": [{"id": "d", "type": "trap", "trapKind": "dart", "permanent": false}, {"id": "p", "type": "trap", "trapKind": "pit", "permanent": false}]}],
+		"itemLibrary": [{"id": "ld", "type": "trap", "trapKind": "dart", "permanent": false}]}, "save": {}, "schema": 5, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(dt, Data.original_config)
+	checks["fléchettes permanentes (niveau)"] = bool(dt.config.levels[0].items[0].permanent)
+	checks["fléchettes permanentes (bibliothèque)"] = bool(dt.config.itemLibrary[0].permanent)
+	checks["fosse inchangée"] = not bool(dt.config.levels[0].items[1].permanent)
 	# icônes de classes (v4 → v5) : un emoji ou une icône introuvable sur une classe du jeu devient l'image du jeu ; classe du créateur et héros personnalisé intacts
 	var ci := {"config": {"classes": [{"id": "class_thief", "icon": "🗝️"}, {"id": "class_cleric", "icon": ""}, {"id": "class_assassin", "icon": "@icon:dagger_void"},
 		{"id": "class_perso", "icon": "🧝"}], "party": [{"classId": "class_thief", "icon": "🗝️"}, {"classId": "class_thief", "icon": "🐱"}]},

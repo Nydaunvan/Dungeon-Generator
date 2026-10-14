@@ -18,7 +18,7 @@ Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héro
 **▶ Télécharger la dernière version : [Releases](https://github.com/Nydaunvan/Dungeon-Generator/releases)** (installateur Windows, archive Windows ou Linux). Le jeu se met ensuite à jour tout seul : il ne télécharge que les fichiers modifiés.
 
 ## Le jeu
-- **Exploration 3D** au pas à pas : couloirs, portes et grilles, escaliers, niches, torches, fontaines, pièges (pointes d'acier et vapeur verte en vrai volume, qui cessent quand le piège est désamorcé, avec un son propre à chaque piège) et énigmes, avec carte du niveau.
+- **Exploration 3D** au pas à pas : couloirs, portes et grilles, escaliers, niches, torches, fontaines, pièges (pointes d'acier, vapeur verte et mécanisme mural à fléchettes en vrai volume, inoffensifs une fois désamorcés, avec un son propre à chaque piège) et énigmes, avec carte du niveau.
 - **Un groupe de quatre héros** : caractéristiques, équipement, sacs, évolutions et arbre de talents.
 - **Combat au tour par tour** avec jauges d'initiative, sorts et effets visuels en 3D, statuts, monstres de groupe et boss.
 - **Donjons aléatoires** réglables (difficulté, taille, nombre de niveaux) et **éditeur de niveaux** intégré ; les donjons se partagent par code.

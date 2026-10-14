@@ -562,6 +562,7 @@ func _apply_trap_hits(it: Dictionary, hits: Array) -> void:
 	if not bool(it.get("permanent", false)):
 		gs.item_state(_lid(), str(it.id))["taken"] = true
 		view.entities.remove_item(str(it.id))     # piège à usage unique : il disparaît une fois déclenché
+	view.entities.fire_item(str(it.id))
 	ctrl.fx.emit("trap")
 	gs.stats["trapsTriggered"] = int(gs.stats.get("trapsTriggered", 0)) + 1
 	for hit in hits:

@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 5
+const SCHEMA := 6
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -46,6 +46,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v3_to_v4(d))
 			4:
 				notes.append_array(_v4_to_v5(d, defaults))
+			5:
+				notes.append_array(_v5_to_v6(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -144,9 +146,17 @@ static func _fix_class_icons(list: Variant, key: String) -> int:
 				n += 1
 	return n
 
+## v5 → v6 : le piège à fléchettes devient un mécanisme mural qui reste en place (comme la vapeur) : réussite = désactivé, échec = toujours actif.
+static func _v5_to_v6(d: Dictionary) -> Array[String]:
+	return _make_permanent(d, "dart", "pièges à fléchettes permanents : %d")
+
 ## v3 → v4 : le piège de vapeur reste en place quand le jet échoue (il se redéclenche si on repasse dessus) : ses objets deviennent « permanents »
 ## (objets des niveaux et de la bibliothèque). Une seule fois : le choix du créateur reste libre ensuite.
 static func _v3_to_v4(d: Dictionary) -> Array[String]:
+	return _make_permanent(d, "gas", "pièges de vapeur permanents : %d")
+
+## Rend permanents les pièges d'un type (objets des niveaux et de la bibliothèque) ; renvoie la note de migration s'il y en a.
+static func _make_permanent(d: Dictionary, kind: String, note: String) -> Array[String]:
 	var notes: Array[String] = []
 	var cfg = d.get("config")
 	if not (cfg is Dictionary):
@@ -160,11 +170,11 @@ static func _v3_to_v4(d: Dictionary) -> Array[String]:
 		if not (lst is Array):
 			continue
 		for it in lst:
-			if it is Dictionary and str(it.get("type", "")) == "trap" and str(it.get("trapKind", "")) == "gas" and not bool(it.get("permanent", false)):
+			if it is Dictionary and str(it.get("type", "")) == "trap" and str(it.get("trapKind", "")) == kind and not bool(it.get("permanent", false)):
 				it["permanent"] = true
 				n += 1
 	if n > 0:
-		notes.append("pièges de vapeur permanents : %d" % n)
+		notes.append(note % n)
 	return notes
 
 ## v4 → v5 : toute classe fournie par le jeu doit avoir une icône en image. Les anciennes icônes emoji (ou introuvables) des classes évoluées
