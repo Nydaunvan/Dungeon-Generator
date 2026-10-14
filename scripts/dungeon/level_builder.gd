@@ -36,6 +36,10 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		parts[k].begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var half := CELL * 0.5
+	var pits := {}        # Vector2i(case) -> true : cases dont le sol est percé par un piège de fosse
+	for it in level.get("items", []):
+		if str(it.get("type", "")) == "trap" and str(TrapRules.kind_of(it).id) == "pit":
+			pits[Vector2i(int(it.x), int(it.y))] = true
 	var nd_data := niche_data(grid, level, outdoor)
 	var niches: Dictionary = nd_data.niches
 	var holes: Dictionary = nd_data.holes
@@ -47,11 +51,12 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 			if ch == "#" or ch == "S":
 				continue
 			var c := Vector3(x * CELL, 0.0, y * CELL)
+			var pit := pits.has(Vector2i(x, y))     # fosse : le sol de la case est percé d'un trou (voir TrapPit)
 			if outdoor and path_cells.has("%d,%d" % [x, y]):
-				_quad(parts["path"], c, Vector3(0, 0, -1), Vector3.UP, half)
+				_floor_cell(parts["path"], c, half, pit)
 				counts["path"] += 1
 			else:
-				_quad(parts["floor"], c, Vector3(0, 0, -1), Vector3.UP, half)
+				_floor_cell(parts["floor"], c, half, pit)
 				counts["floor"] += 1
 			if not outdoor:
 				_quad(parts["ceil"], c + Vector3(0, CELL, 0), Vector3(0, 0, 1), Vector3.DOWN, half)
@@ -436,6 +441,34 @@ static func _add_arch(view: LevelView, torches: TorchLayer, edge: Vector3, d: Ve
 
 ## Ajoute un carré (2 triangles) centré en c, de demi-côté `half`,
 ## `up` = direction « haut » de la texture, `n` = normale (face visible).
+## Sol d'une case ; avec `pit`, quatre bandes autour d'un trou carré de TrapPit.HALF de demi-côté (mêmes UV que `_quad`).
+static func _floor_cell(st: SurfaceTool, c: Vector3, half: float, pit: bool) -> void:
+	if not pit:
+		_quad(st, c, Vector3(0, 0, -1), Vector3.UP, half)
+		return
+	var hh := TrapPit.HALF
+	var xs := [-half, -hh, hh, half]
+	var zs := [-half, -hh, hh, half]
+	for i in 3:
+		for j in 3:
+			if i == 1 and j == 1:
+				continue
+			var x0: float = xs[i]
+			var x1: float = xs[i + 1]
+			var z0: float = zs[j]
+			var z1: float = zs[j + 1]
+			var uv := func(x: float, z: float) -> Vector2: return Vector2((x + half) / CELL, (z + half) / CELL)
+			var bl := c + Vector3(x0, 0, z1)
+			var br := c + Vector3(x1, 0, z1)
+			var tr := c + Vector3(x1, 0, z0)
+			var tl := c + Vector3(x0, 0, z0)
+			_v(st, bl, Vector3.UP, uv.call(x0, z1))
+			_v(st, tl, Vector3.UP, uv.call(x0, z0))
+			_v(st, tr, Vector3.UP, uv.call(x1, z0))
+			_v(st, bl, Vector3.UP, uv.call(x0, z1))
+			_v(st, tr, Vector3.UP, uv.call(x1, z0))
+			_v(st, br, Vector3.UP, uv.call(x1, z1))
+
 static func _quad(st: SurfaceTool, c: Vector3, up: Vector3, n: Vector3, half: float) -> void:
 	var right := up.cross(n)
 	var u := up * half

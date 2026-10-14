@@ -60,7 +60,7 @@ func _ready() -> void:
 	SaveMigrations.migrate(dt, Data.original_config)
 	checks["fléchettes permanentes (niveau)"] = bool(dt.config.levels[0].items[0].permanent)
 	checks["fléchettes permanentes (bibliothèque)"] = bool(dt.config.itemLibrary[0].permanent)
-	checks["fosse inchangée"] = not bool(dt.config.levels[0].items[1].permanent)
+	checks["fosse permanente au passage v6 → v7"] = bool(dt.config.levels[0].items[1].permanent)
 	# icônes de classes (v4 → v5) : un emoji ou une icône introuvable sur une classe du jeu devient l'image du jeu ; classe du créateur et héros personnalisé intacts
 	var ci := {"config": {"classes": [{"id": "class_thief", "icon": "🗝️"}, {"id": "class_cleric", "icon": ""}, {"id": "class_assassin", "icon": "@icon:dagger_void"},
 		{"id": "class_perso", "icon": "🧝"}], "party": [{"classId": "class_thief", "icon": "🗝️"}, {"classId": "class_thief", "icon": "🐱"}]},

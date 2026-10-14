@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 6
+const SCHEMA := 7
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -48,6 +48,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v4_to_v5(d, defaults))
 			5:
 				notes.append_array(_v5_to_v6(d))
+			6:
+				notes.append_array(_v6_to_v7(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -149,6 +151,10 @@ static func _fix_class_icons(list: Variant, key: String) -> int:
 ## v5 → v6 : le piège à fléchettes devient un mécanisme mural qui reste en place (comme la vapeur) : réussite = désactivé, échec = toujours actif.
 static func _v5_to_v6(d: Dictionary) -> Array[String]:
 	return _make_permanent(d, "dart", "pièges à fléchettes permanents : %d")
+
+## v6 → v7 : la fosse devient un trou béant qui reste en place : réussite = franchie (planches) et désactivée, échec = toujours ouverte.
+static func _v6_to_v7(d: Dictionary) -> Array[String]:
+	return _make_permanent(d, "pit", "fosses permanentes : %d")
 
 ## v3 → v4 : le piège de vapeur reste en place quand le jet échoue (il se redéclenche si on repasse dessus) : ses objets deviennent « permanents »
 ## (objets des niveaux et de la bibliothèque). Une seule fois : le choix du créateur reste libre ensuite.

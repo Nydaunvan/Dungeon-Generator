@@ -120,6 +120,8 @@ static func _gas(img: Image) -> void:
 static func make_mesh(kind: String) -> MeshInstance3D:
 	if kind == "spikes":      # vraies pointes en volume (plaque, douilles, pointes d'acier)
 		return TrapSpikes.make()
+	if kind == "pit":         # fosse béante en volume (le sol de la case est découpé par LevelBuilder)
+		return TrapPit.make()
 	if kind == "gas":         # vapeur verte en volume (bouche d'aération et nuage de particules)
 		return TrapGas.make()
 	var mi := MeshInstance3D.new()

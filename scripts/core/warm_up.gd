@@ -44,6 +44,7 @@ static func _mini_level(cfg: Dictionary, theme: String) -> Dictionary:
 			{"id": "w_tr", "type": "trap", "trapKind": "spikes", "x": 5, "y": 1},
 			{"id": "w_tg", "type": "trap", "trapKind": "gas", "x": 1, "y": 3},
 			{"id": "w_td", "type": "trap", "trapKind": "dart", "x": 1, "y": 2},
+			{"id": "w_tp", "type": "trap", "trapKind": "pit", "x": 5, "y": 2},
 			{"id": "w_it", "type": "chest", "icon": icon_i, "x": 5, "y": 3},
 		],
 		"monsters": [{"id": "w_mo", "x": 3, "y": 1, "icon": icon_m}],

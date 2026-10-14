@@ -73,7 +73,7 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 				dec.rotation.y = TrapDart.yaw_for(wd)
 			else:
 				dec = TrapDecals.make_mesh(tkind)
-				dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.015, int(it.y) * LevelBuilder.CELL)
+				dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.0 if tkind == "pit" else 0.015, int(it.y) * LevelBuilder.CELL)
 			dec.name = "Trap_" + str(it.id)
 			dec.visible = not bool(it.get("startHidden", false))
 			add_child(dec)
@@ -471,6 +471,9 @@ func disarm_item(id: String, animate: bool = true) -> void:
 					done = true
 				elif e.node.has_meta("trap_dart"):
 					TrapDart.retract(e.node, animate)
+					done = true
+				elif e.node.has_meta("trap_pit"):
+					TrapPit.cover(e.node, animate)
 					done = true
 	if not done:
 		remove_item(id)

@@ -151,13 +151,13 @@ const SFX_GAIN_DB := {
 	"stairs|true": 1.0, "stairs|false": 1.0,
 	"swing|axe": 12.0, "swing|bow": 10.5, "swing|dagger": 11.5, "swing|mace": 12.0,
 	"swing|staff": 12.0, "swing|sword": 11.5, "swing|unarmed": 12.0,
-	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5,
+	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5, "wood_thud": -13.5,
 }
 
 ## Bruit de dés qui roulent (fichier OGG, chargé une fois).
 const FILE_SOUNDS := {"dice": "res://assets/sounds/dice.ogg", "coins": "res://assets/sounds/coins.ogg", "map_open": "res://assets/sounds/map_open.ogg",
 		"door_open": "res://assets/sounds/door_open.ogg", "trap_snap": "res://assets/sounds/trap_snap.ogg", "steam_hiss": "res://assets/sounds/steam_hiss.ogg",
-		"dart_swish": "res://assets/sounds/dart_swish.ogg"}
+		"dart_swish": "res://assets/sounds/dart_swish.ogg", "wood_thud": "res://assets/sounds/wood_thud.ogg"}
 
 func _file_sfx(key: String) -> void:
 	if not _cache.has(key):
@@ -176,8 +176,8 @@ func map_open() -> void:
 	_file_sfx("map_open")
 
 ## Son propre à chaque type de piège quand on rate le jet de dés (fichiers OGG, niveau ramené à -34 LUFS comme les autres effets).
-## Un type sans son attitré joue le coup habituel ; à compléter au fur et à mesure (fosse…).
-const TRAP_FAIL_SOUNDS := {"spikes": "trap_snap", "gas": "steam_hiss", "dart": "dart_swish"}
+## Un type sans son attitré joue le coup habituel ; à compléter au fur et à mesure.
+const TRAP_FAIL_SOUNDS := {"spikes": "trap_snap", "gas": "steam_hiss", "dart": "dart_swish", "pit": "wood_thud"}
 
 func trap_fail(kind: String) -> void:
 	if TRAP_FAIL_SOUNDS.has(kind):
