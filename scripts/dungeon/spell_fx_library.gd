@@ -10,12 +10,23 @@ extends RefCounted
 
 const CLASSIC := "classic"
 const ARCANE_SCRIPT := "res://scripts/dungeon/spell_fx_arcane.gd"
+const FIRE_SCRIPT := "res://scripts/dungeon/spell_fx_fire.gd"
 
 ## id -> {label (clé de langue), styles, modes, script}. Le premier effet compatible est l'effet par défaut du style.
 const CATALOG := {
 	"arcane_crystal": {"label": "admin.spells.fx_arcane_crystal", "styles": ["arcane"], "modes": ["damage"], "script": ARCANE_SCRIPT},
 	"arcane_orb": {"label": "admin.spells.fx_arcane_orb", "styles": ["arcane"], "modes": ["damage"], "script": ARCANE_SCRIPT},
 	"arcane_beam": {"label": "admin.spells.fx_arcane_beam", "styles": ["arcane"], "modes": ["damage"], "script": ARCANE_SCRIPT},
+	"fire_ball": {"label": "admin.spells.fx_fire_ball", "styles": ["fire"], "modes": ["damage"], "script": FIRE_SCRIPT},
+	"fire_meteor": {"label": "admin.spells.fx_fire_meteor", "styles": ["fire"], "modes": ["damage", "damageGroup"], "script": FIRE_SCRIPT},
+	"fire_column": {"label": "admin.spells.fx_fire_column", "styles": ["fire"], "modes": ["damage"], "script": FIRE_SCRIPT},
+}
+
+## Effet par défaut de chaque sort d'origine (quand le sort n'en a pas choisi un) ; sinon l'effet par défaut du style.
+const SPELL_DEFAULT := {
+	"spell_fire1": "fire_ball",
+	"spell_elementalist1": "fire_meteor",
+	"spell_elementalist3": "fire_column",
 }
 
 ## Teintes proposées dans l'éditeur : [couleur, clé de langue]. La teinte tourne les couleurs de l'effet en gardant ses nuances.
@@ -71,6 +82,9 @@ static func resolve(spell: Dictionary) -> String:
 		return CLASSIC
 	if CATALOG.has(fx) and _fits(fx, _norm_style(spell), _norm_mode(spell)):
 		return fx
+	var own := str(SPELL_DEFAULT.get(str(spell.get("id", "")), ""))
+	if own != "" and CATALOG.has(own) and _fits(own, _norm_style(spell), _norm_mode(spell)):
+		return own
 	return default_for(_norm_style(spell), _norm_mode(spell))
 
 ## Clés d'effet à ajouter au contexte d'un sort lancé.

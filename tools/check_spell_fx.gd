@@ -20,7 +20,9 @@ func _init() -> void:
 		[{"style": "arcane", "mode": "damage", "fx": "arcane_orb"}, "arcane_orb", "effet choisi"],
 		[{"style": "arcane", "mode": "damage", "fx": "classic"}, "classic", "effet classique choisi"],
 		[{"style": "arcane", "mode": "damage", "fx": "effet_du_futur"}, "arcane_crystal", "effet inconnu : retombe sur le défaut"],
-		[{"style": "fire", "mode": "damage", "fx": "arcane_beam"}, "classic", "effet d'un autre style : retombe sur le classique"],
+		[{"style": "fire", "mode": "damage", "fx": "arcane_beam"}, "fire_ball", "effet d'un autre style : retombe sur le défaut du style"],
+		[{"id": "spell_elementalist3", "style": "fire", "mode": "damage"}, "fire_column", "effet propre au sort d'origine"],
+		[{"id": "spell_elementalist1", "style": "fire", "mode": "damageGroup"}, "fire_meteor", "effet propre au sort de zone"],
 		[{"style": "arcane", "mode": "healSingle", "fx": "arcane_beam"}, "classic", "effet d'un autre mode : retombe sur le classique"],
 		[{"mode": "damage"}, "arcane_crystal", "sans style : arcane, comme en combat"],
 	]
@@ -33,7 +35,7 @@ func _init() -> void:
 	if keys.fx != "arcane_crystal" or keys.fxTint != "#4be07a" or not is_equal_approx(float(keys.fxPower), 1.5):
 		bad += 1
 		print("ÉCHEC : clés d'effet du contexte : ", keys)
-	for style in ["fire", "ice", "holy", "shadow", "physical", "bard", "nature"]:
+	for style in ["ice", "holy", "shadow", "physical", "bard", "nature"]:
 		var opts: Array = lib.options(style, "damage")
 		if opts.size() != 1 or opts[0][0] != "classic":
 			bad += 1
@@ -76,11 +78,11 @@ func _init() -> void:
 					"fx": id, "fxTint": tint, "fxPower": 1.5}
 				lib.cast(host, cam, "check", target, ctx)
 			lib.cast(host, cam, "check", {}, {"style": e.styles[0], "mode": e.modes[0], "fx": id, "fxTint": "", "fxPower": 0.6})
-		await create_timer(3.0).timeout
+		await create_timer(4.5).timeout
 		var spell_fx = load("res://scripts/dungeon/spell_fx_3d.gd")
 		if spell_fx.busy():
 			bad += 1
-			print("ÉCHEC : des effets sont encore en cours après 3 s (niveau ", level, ")")
+			print("ÉCHEC : des effets sont encore en cours après 4,5 s (niveau ", level, ")")
 		if not is_zero_approx(cam.h_offset) or not is_zero_approx(cam.v_offset):
 			bad += 1
 			print("ÉCHEC : caméra décalée après la secousse (niveau ", level, ")")
