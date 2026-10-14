@@ -80,3 +80,6 @@ Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓
 ### Compteur de performances
 `scripts/core/perf_overlay.gd` : un seul `Label` (couche 120) en haut à gauche, sans panneau ni cadre ; lisibilité assurée par un liseré de texte sombre. Une ligne : images/s, RAM, VRAM, appels de dessin (couleur selon les images/s). F3 ou bouton 📊.
 Taille constante : la ligne est compensée par le rapport entre l'échelle de la scène de jeu (zone de conception 1600 x 1000) et l'échelle courante (`content_scale_factor`), donc elle garde la taille qu'elle a dans le donjon au lancement et dans le menu d'accueil.
+
+## Pièges : pointes au sol
+`scripts/dungeon/trap_spikes.gd` (`TrapSpikes`) : le piège `spikes` est un vrai volume, plus un décalque. Un maillage unique (`ArrayMesh`, construit par `SurfaceTool` puis partagé par tous les pièges) : surface 0 = plaque de fer biseautée, rivets et douilles (normales explicites) ; surface 1 = 25 pointes d'acier à trois anneaux (hauteurs et inclinaisons variées, dégradé rouille → acier, quelques-unes tachées de sang), normales lissées. Elles projettent des ombres sous la lumière des torches. Une ombre de contact douce (texture générée) noircit le sol autour. `TrapDecals.make_mesh("spikes")` y renvoie ; les autres pièges (fléchettes, fosse, vapeurs) restent des décalques.

@@ -118,6 +118,8 @@ static func _gas(img: Image) -> void:
 
 ## Plan posé à plat sur le sol.
 static func make_mesh(kind: String) -> MeshInstance3D:
+	if kind == "spikes":      # vraies pointes en volume (plaque, douilles, pointes d'acier)
+		return TrapSpikes.make()
 	var mi := MeshInstance3D.new()
 	var q := QuadMesh.new()
 	var s := 1.9 if (kind == "pit" or kind == "gas") else 1.5
