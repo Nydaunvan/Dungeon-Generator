@@ -44,7 +44,7 @@ func _ready() -> void:
 		"schema": 2, "dungeonOrigin": "random"}
 	SaveMigrations.migrate(oldc, Data.original_config)
 	checks["icône de classe skalde"] = oldc.config.classes[0].icon == "@icon:class_skald"
-	checks["hache du berserker intacte"] = oldc.config.classes[1].icon == "🪓"
+	checks["berserker : emoji → image du jeu (v5)"] = oldc.config.classes[1].icon == "@icon:axe_double"
 	checks["icône de classe barde (équipe)"] = oldc.config.party[0].icon == "@icon:class_bard"
 	checks["icône de classe ménestrel (sauvegarde)"] = oldc.save.party[0].icon == "@icon:class_minstrel"
 	# piège de vapeur permanent (v3 → v4) : niveaux et bibliothèque ; les autres pièges ne changent pas
@@ -54,6 +54,18 @@ func _ready() -> void:
 	checks["vapeur permanente (niveau)"] = bool(gas.config.levels[0].items[0].permanent)
 	checks["fléchettes inchangées"] = not bool(gas.config.levels[0].items[1].permanent)
 	checks["vapeur permanente (bibliothèque)"] = bool(gas.config.itemLibrary[0].permanent)
+	# icônes de classes (v4 → v5) : un emoji ou une icône introuvable sur une classe du jeu devient l'image du jeu ; classe du créateur et héros personnalisé intacts
+	var ci := {"config": {"classes": [{"id": "class_thief", "icon": "🗝️"}, {"id": "class_cleric", "icon": ""}, {"id": "class_assassin", "icon": "@icon:dagger_void"},
+		{"id": "class_perso", "icon": "🧝"}], "party": [{"classId": "class_thief", "icon": "🗝️"}, {"classId": "class_thief", "icon": "🐱"}]},
+		"save": {"party": [{"classId": "class_cleric", "icon": ""}]}, "schema": 4, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(ci, Data.original_config)
+	checks["icône voleur (emoji → image)"] = ci.config.classes[0].icon == "@icon:dagger_wavy"
+	checks["icône clerc (vide → image)"] = ci.config.classes[1].icon == "@icon:helm_winged"
+	checks["icône assassin intacte"] = ci.config.classes[2].icon == "@icon:dagger_void"
+	checks["classe du créateur intacte"] = ci.config.classes[3].icon == "🧝"
+	checks["héros qui suivait l'icône de sa classe"] = ci.config.party[0].icon == "@icon:dagger_wavy"
+	checks["héros à icône perso intact"] = ci.config.party[1].icon == "🐱"
+	checks["héros de la sauvegarde"] = ci.save.party[0].icon == "@icon:helm_winged"
 	# un donjon personnalisé garde sa bibliothèque
 	var cu := {"config": {"itemLibrary": [], "spells": []}, "save": {}, "dungeonOrigin": "custom"}
 	SaveMigrations.migrate(cu, Data.original_config)

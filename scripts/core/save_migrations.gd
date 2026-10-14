@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 4
+const SCHEMA := 5
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -44,6 +44,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v2_to_v3(d))
 			3:
 				notes.append_array(_v3_to_v4(d))
+			4:
+				notes.append_array(_v4_to_v5(d, defaults))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -164,3 +166,49 @@ static func _v3_to_v4(d: Dictionary) -> Array[String]:
 	if n > 0:
 		notes.append("pièges de vapeur permanents : %d" % n)
 	return notes
+
+## v4 → v5 : toute classe fournie par le jeu doit avoir une icône en image. Les anciennes icônes emoji (ou introuvables) des classes évoluées
+## n'apparaissaient pas dans le choix d'évolution : elles reprennent l'icône du jeu. Les héros qui portaient l'ancienne icône de leur classe
+## la suivent ; une icône choisie par le créateur sur une classe à lui (ou sur un héros) n'est jamais touchée.
+static func _v4_to_v5(d: Dictionary, defaults: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary):
+		return notes
+	var changed := repair_class_icons(cfg, defaults)
+	var n := 0
+	for k in changed:
+		var pair: Array = changed[k]
+		var lists: Array = [(cfg as Dictionary).get("party", [])]
+		var sv = d.get("save")
+		if sv is Dictionary:
+			lists.append((sv as Dictionary).get("party", []))
+		for lst in lists:
+			if lst is Array:
+				for h in lst:
+					if h is Dictionary and str(h.get("classId", "")) == str(k) and str(h.get("icon", "")) == str(pair[0]):
+						h["icon"] = pair[1]
+						n += 1
+	if not changed.is_empty():
+		notes.append("icônes de classes : %d mise(s) à jour" % (changed.size() + n))
+	return notes
+
+## Icône en image qui s'affiche vraiment ?
+static func class_icon_ok(icon: String) -> bool:
+	return icon.begins_with("@icon:") and IconResolver.texture(icon) != null
+
+## Redonne l'icône du jeu aux classes fournies par le jeu dont l'icône n'est pas une image qui s'affiche. Renvoie {id de classe : [ancienne, nouvelle]}.
+static func repair_class_icons(cfg: Dictionary, defaults: Dictionary) -> Dictionary:
+	var out := {}
+	var ref := {}
+	for c in defaults.get("classes", []):
+		if c is Dictionary:
+			ref[str(c.get("id", ""))] = str(c.get("icon", ""))
+	for c in cfg.get("classes", []):
+		if not (c is Dictionary) or not ref.has(str(c.get("id", ""))):
+			continue
+		var cur := str(c.get("icon", ""))
+		if not class_icon_ok(cur) and class_icon_ok(str(ref[str(c.id)])):
+			out[str(c.id)] = [cur, str(ref[str(c.id)])]
+			c["icon"] = str(ref[str(c.id)])
+	return out

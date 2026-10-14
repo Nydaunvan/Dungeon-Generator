@@ -449,10 +449,15 @@ static func _add_modal(admin: Node, cfg: Dictionary) -> void:
 	m.content.add_child(mh)
 	var go := func():
 		var cls: Dictionary
+		var parent_icon := "@icon:misc_shield"       # une nouvelle classe reçoit toujours une icône en image : celle de la classe dont elle dépend
+		for pc in cfg.classes:
+			if str(pc.get("name", "")) == str(st.dep) or str(pc.get("id", "")) == str(st.dep):
+				if SaveMigrations.class_icon_ok(str(pc.get("icon", ""))):
+					parent_icon = str(pc.icon)
 		if st.type == "base":
-			cls = {"id": AdminUtil.new_id("class"), "name": "Guerrier", "icon": "🧝", "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": [], "evolvesTo": [null, null], "evolveLevel": 5}
+			cls = {"id": AdminUtil.new_id("class"), "name": "Guerrier", "icon": "@icon:misc_shield", "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": [], "evolvesTo": [null, null], "evolveLevel": 5}
 		else:
-			cls = {"id": AdminUtil.new_id("class"), "name": L.t("admin.classes.nouvelle_evolution"), "icon": "🧝", "evolvesFrom": st.dep, "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": []}
+			cls = {"id": AdminUtil.new_id("class"), "name": L.t("admin.classes.nouvelle_evolution"), "icon": parent_icon, "evolvesFrom": st.dep, "allowedWeaponTypes": [], "allowedSpellIds": [], "spellProgression": []}
 		cfg.classes.append(cls)
 		m.close()
 		await admin.refresh_tab()

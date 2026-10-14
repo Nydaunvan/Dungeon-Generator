@@ -402,6 +402,7 @@ func ensure_defaults(cfg: Dictionary) -> void:
 			c["evolvesTo"] = [null, null]
 		c.erase("isBase")
 	repair_evolved_classes(cfg)
+	SaveMigrations.repair_class_icons(cfg, original_config)       # chaque classe du jeu garde une icône en image (voir SaveMigrations._v4_to_v5)
 
 ## `ensureGrowthDefaults` : réglages d'endurance, progression au niveau, coût du Maître des Talents.
 func _ensure_growth_defaults(cfg: Dictionary) -> void:
