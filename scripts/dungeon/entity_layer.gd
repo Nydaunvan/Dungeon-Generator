@@ -77,6 +77,9 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 				dec = TrapDart.make(LevelBuilder.dart_height(int(it.x), int(it.y)))
 				dec.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL, LevelBuilder.dart_height(int(it.x), int(it.y)), (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL)
 				dec.rotation.y = TrapDart.yaw_for(wd)
+			elif tkind == "pit":      # fosse : pierre du thème du niveau
+				dec = TrapPit.make(str(level.get("theme", "stone")))
+				dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.0, int(it.y) * LevelBuilder.CELL)
 			else:
 				dec = TrapDecals.make_mesh(tkind)
 				dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.0 if tkind == "pit" else 0.015, int(it.y) * LevelBuilder.CELL)
