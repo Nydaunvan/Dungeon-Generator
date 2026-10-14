@@ -24,6 +24,7 @@ const F_DISPLAY_BOLD := "res://assets/fonts/CormorantGaramond-Bold.ttf"
 
 static var _fonts: Dictionary = {}
 static var _circle: ShaderMaterial = null
+static var _circle_gray: ShaderMaterial = null
 
 const F_EMOJI := "res://assets/fonts/EmojiSubset.ttf"
 
@@ -222,8 +223,20 @@ static func circle_material() -> ShaderMaterial:
 		_circle.shader = sh
 	return _circle
 
+## Même découpe en disque, en niveaux de gris et un peu assombri (personnage à terre).
+static func circle_gray_material() -> ShaderMaterial:
+	if _circle_gray == null:
+		var sh := Shader.new()
+		sh.code = "shader_type canvas_item;\nvoid fragment(){ vec4 c = texture(TEXTURE, UV); float g = dot(c.rgb, vec3(0.299, 0.587, 0.114)) * 0.85; COLOR = vec4(vec3(g), c.a * step(distance(UV, vec2(0.5)), 0.5)); }"
+		_circle_gray = ShaderMaterial.new()
+		_circle_gray.shader = sh
+	return _circle_gray
+
 ## Portrait rond dans un anneau. Redimensionner via custom_minimum_size du contrôle renvoyé.
-static func portrait(img: Texture2D, ring: Color = BRONZE, size: float = 64.0) -> Control:
+static func portrait(img: Texture2D, ring: Color = BRONZE, size: float = 64.0, gray: bool = false) -> Control:
+	if gray:
+		var gv := ring.get_luminance()
+		ring = Color(gv, gv, gv, ring.a)
 	var root := Control.new()
 	root.custom_minimum_size = Vector2(size, size)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -247,7 +260,7 @@ static func portrait(img: Texture2D, ring: Color = BRONZE, size: float = 64.0) -
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pic.texture = img
-	pic.material = circle_material()
+	pic.material = circle_gray_material() if gray else circle_material()
 	root.add_child(pic)
 	root.set_meta("ring_style", sb)
 	return root

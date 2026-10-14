@@ -187,7 +187,7 @@ func _stats(p: Control, c: Dictionary) -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
-	var port := UiTheme.portrait(load(pp) if pp != "" else IconResolver.texture(str(c.get("icon", ""))), UiTheme.BRONZE_LIGHT, 64)
+	var port := UiTheme.portrait(load(pp) if pp != "" else IconResolver.texture(str(c.get("icon", ""))), UiTheme.BRONZE_LIGHT, 64, int(c.hp) <= 0)
 	head.add_child(port)
 	var t := VBoxContainer.new()
 	var nm := Label.new()

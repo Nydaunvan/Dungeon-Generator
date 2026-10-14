@@ -336,11 +336,14 @@ func _icon_node(icon: String, inset: float, font_px: int = 30) -> Control:
 	return l
 
 ## Médaillon rond (anneau + contenu découpé en disque). `content` = texture de portrait ou emblème (icône / emoji).
-func _round_medal(size: float, ring: Color, ring_w: int, portrait: Texture2D, emblem: String, glow: bool = false) -> Control:
+func _round_medal(size: float, ring: Color, ring_w: int, portrait: Texture2D, emblem: String, glow: bool = false, gray: bool = false) -> Control:
 	var root := Control.new()
 	root.custom_minimum_size = Vector2(size, size)
 	root.size = Vector2(size, size)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if gray:        # personnage à terre : l'anneau passe aussi en gris
+		var gv := ring.get_luminance()
+		ring = Color(gv, gv, gv, ring.a)
 	var bg := Panel.new()
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -370,7 +373,7 @@ func _round_medal(size: float, ring: Color, ring_w: int, portrait: Texture2D, em
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pic.texture = portrait
-		pic.material = UiTheme.circle_material()
+		pic.material = UiTheme.circle_gray_material() if gray else UiTheme.circle_material()
 		clip.add_child(pic)
 	else:
 		# emblème : icône (cellule d'atlas → pas de masque par shader) inscrite dans le disque, ou emoji
@@ -397,9 +400,9 @@ func _build_head(c: Dictionary, cls: Dictionary) -> Control:
 		b.custom_minimum_size = Vector2(38, 38)
 		b.tooltip_text = str(m.name)
 		b.mouse_default_cursor_shape = Control.CURSOR_ARROW if dead else Control.CURSOR_POINTING_HAND
-		b.add_child(_round_medal(38.0, UiTheme.GOLD if on else Color("3b2d18"), 2, load(pp) if pp != "" else null, "?", on))
+		b.add_child(_round_medal(38.0, UiTheme.GOLD if on else Color("3b2d18"), 2, load(pp) if pp != "" else null, "?", on, dead))
 		b.pivot_offset = Vector2(19, 19)
-		b.modulate = Color(1, 1, 1, 1.0 if on else (0.35 if dead else 0.65))
+		b.modulate = Color(1, 1, 1, 1.0 if on else (0.8 if dead else 0.65))      # à terre : grisé (voir _round_medal), pas seulement estompé
 		var mid: String = str(m.id)
 		b.gui_input.connect(func(ev: InputEvent):
 			if not dead and ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
@@ -501,7 +504,7 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 			stage.draw_circle(stage.size * 0.5, 130.0 * (1.0 - k), Color(0.91, 0.7, 0.36, 0.0095)))
 	col.add_child(stage)
 	var pp := IconResolver.portrait_path(c, gs.cfg)
-	var port := _round_medal(124.0, UiTheme.BRONZE_LIGHT, 3, load(pp) if pp != "" else null, "?")
+	var port := _round_medal(124.0, UiTheme.BRONZE_LIGHT, 3, load(pp) if pp != "" else null, "?", false, int(c.hp) <= 0)
 	port.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	port.offset_left = -62
 	port.offset_right = 62
