@@ -13,6 +13,8 @@ Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héro
 
 <p align="center"><img src="docs/img/accueil.jpg" alt="Écran d'accueil" width="48%"> <img src="docs/img/combat.jpg" alt="Combat contre un homme-lézard" width="48%"></p>
 
+<p align="center"><img src="docs/img/en-ligne.jpg" alt="Mode en ligne" width="48%"> <img src="docs/img/creation.jpg" alt="Éditeur de donjon" width="48%"></p>
+
 **▶ Télécharger la dernière version : [Releases](https://github.com/Nydaunvan/Dungeon-Generator/releases)** (installateur Windows, archive Windows ou Linux). Le jeu se met ensuite à jour tout seul : il ne télécharge que les fichiers modifiés.
 
 ## Le jeu
