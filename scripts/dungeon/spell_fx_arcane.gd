@@ -5,6 +5,7 @@ extends SpellFxStyles
 ## légère secousse de caméra. Tout se règle avec la teinte et l'intensité du sort et se réduit selon le niveau graphique :
 ##   palier 1 : particules GPU + halo · palier 2 : + lumière, brume éclairée, rune au sol · palier 3 : + distorsion de l'écran.
 
+const DEFAULT_HUE := 0.615    # teinte par défaut : bleu et blanc, comme l'icône 💠 d'Éclat Arcanique
 const BASE_HUE := 0.74       # teinte d'origine (violet) : `fxTint` la remplace en conservant les nuances
 
 # En-tête et billboard communs : le quad fait toujours face à la caméra, en gardant son échelle.
@@ -100,7 +101,7 @@ var _pw: float = 1.0           # intensité du sort
 var _g: float = 1.0            # multiplicateur de lumière (dérivé de l'intensité)
 var _s: float = 1.0            # multiplicateur de taille (dérivé de l'intensité)
 var _tinted: bool = false
-var _tint_h: float = BASE_HUE
+var _tint_h: float = DEFAULT_HUE
 
 ## Point d'entrée (appelé par SpellFxLibrary). `ctx` : style, mode, fx, fxTint, fxPower…
 func play(_spell_id: String, target: Dictionary, ctx: Dictionary) -> void:
@@ -110,9 +111,9 @@ func play(_spell_id: String, target: Dictionary, ctx: Dictionary) -> void:
 	_s = 0.8 + 0.2 * _pw
 	if _tier >= 2:
 		_rune_tex()      # la texture se génère au premier lancer (préchauffage) : pas d'à-coup au premier vrai sort
+	_tinted = true       # la palette de base est violette : sans teinte choisie, on la tourne vers le bleu de l'icône
 	var t := str(ctx.get("fxTint", ""))
 	if t != "" and Color.html_is_valid(t):
-		_tinted = true
 		_tint_h = Color.html(t).h
 	match str(ctx.get("fx", "arcane_crystal")):
 		"arcane_orb":
@@ -499,11 +500,11 @@ func _crystal_cast(target: Dictionary) -> void:
 	var body := MeshInstance3D.new()
 	body.mesh = _shard_pal(key, _c(1.0, 1.0, 1.0), _c(0.78, 0.62, 1.0), _c(0.42, 0.22, 0.85))
 	body.material_override = _vcol_mat(1.25 * _g)
-	body.scale = Vector3.ONE * 1.6 * _s
+	body.scale = Vector3.ONE * 1.05 * _s
 	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(body)
-	var halo := _sprite(_w_soft(), _hdr(_c(0.72, 0.55, 1.0, 0.55), 0.9 * _g), 0.6 * _s, start)
-	var core := _sprite(_w_soft(), Color(1.5, 1.5, 1.7, 1.0), 0.16 * _s, start)
+	var halo := _sprite(_w_soft(), _hdr(_c(0.72, 0.55, 1.0, 0.5), 0.9 * _g), 0.4 * _s, start)
+	var core := _sprite(_w_soft(), Color(1.5, 1.5, 1.7, 1.0), 0.12 * _s, start)
 	var tr_ramp := _ramp(_c(0.85, 0.7, 1.0, 0.0), _c(0.65, 0.45, 1.0, 0.85), _c(0.4, 0.2, 0.9, 0.0))
 	var trail := _gpu(40, 0.28, false, _soft_mesh(_c(0.8, 0.6, 1.0), 1.2 * _g, _w_spark()),
 		_pmat(0.05, Vector3.UP, 180.0, 0.05, 0.4, Vector3.ZERO, 0.12 * _s, 0.28 * _s, tr_ramp, 1.0), start)
@@ -518,12 +519,12 @@ func _crystal_cast(target: Dictionary) -> void:
 		holder.position = pos
 		body.rotation.z = u * TAU * 3.0
 		(halo.node as Node3D).position = pos
-		(halo.node as Node3D).scale = Vector3.ONE * 0.6 * _s * (1.0 + sin(u * 40.0) * 0.12)
+		(halo.node as Node3D).scale = Vector3.ONE * 0.4 * _s * (1.0 + sin(u * 40.0) * 0.12)
 		(core.node as Node3D).position = pos
 		trail.position = pos
 		for i in motes.size():
 			var ang := u * 24.0 + float(i) * TAU / 3.0
-			var rad := 0.17 * (1.0 - u * 0.4)
+			var rad := 0.12 * (1.0 - u * 0.4)
 			(motes[i].node as Node3D).position = pos + right * cos(ang) * rad + up * sin(ang) * rad
 		if lens != null:
 			lens.position = pos
@@ -566,7 +567,7 @@ func _orb_cast(target: Dictionary) -> void:
 	sphere.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	sphere.position = start
 	add_child(sphere)
-	var halo := _sprite(_w_soft(), _hdr(_c(0.6, 0.4, 1.0, 0.6), 1.0 * _g), 1.0 * _s, start)
+	var halo := _sprite(_w_soft(), _hdr(_c(0.6, 0.4, 1.0, 0.6), 1.0 * _g), 0.7 * _s, start)
 	var wisp_ramp := _ramp(_c(0.8, 0.65, 1.0, 0.0), _c(0.7, 0.5, 1.0, 0.8), _c(0.4, 0.2, 0.9, 0.0))
 	var wisps := _gpu(36, 0.5, false, _soft_mesh(_c(0.75, 0.6, 1.0), 1.6 * _g, _w_spark()),
 		_pmat(0.28, Vector3.UP, 180.0, 0.1, 0.5, Vector3.ZERO, 0.1 * _s, 0.24 * _s, wisp_ramp, 1.5, 1.2), start)
@@ -577,10 +578,10 @@ func _orb_cast(target: Dictionary) -> void:
 		var pos := start.lerp(end, k) + right * (sin(k * PI) * arc) + up * (sin(k * PI) * 0.12)
 		sphere.position = pos
 		var pulse := 1.0 + sin(u * 30.0) * 0.1
-		sphere.scale = Vector3.ONE * 0.42 * _s * pulse * (1.0 + 0.3 * k)
+		sphere.scale = Vector3.ONE * 0.3 * _s * pulse * (1.0 + 0.25 * k)
 		om.set_shader_parameter("time_s", u * dur)
 		(halo.node as Node3D).position = pos
-		(halo.node as Node3D).scale = Vector3.ONE * 1.0 * _s * pulse
+		(halo.node as Node3D).scale = Vector3.ONE * 0.7 * _s * pulse
 		wisps.position = pos
 		if lens != null:
 			lens.position = pos
