@@ -65,11 +65,11 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			var tkind := str(TrapRules.kind_of(it).id)
 			var wd := Vector2i.ZERO         # fléchettes : mécanisme fixé au mur voisin de la dalle (à défaut de mur, simple décalque au sol)
 			if tkind == "dart" and grid != null and not bool(level.get("outdoor", false)):
-				wd = LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id))
+				wd = LevelBuilder.dart_wall_dir(grid, level, int(it.x), int(it.y), str(it.id))
 			var dec: MeshInstance3D
 			if wd != Vector2i.ZERO:
-				dec = TrapDart.make()
-				dec.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL, TrapDart.HEIGHT, (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL)
+				dec = TrapDart.make(LevelBuilder.dart_height(int(it.x), int(it.y)))
+				dec.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL, LevelBuilder.dart_height(int(it.x), int(it.y)), (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL)
 				dec.rotation.y = TrapDart.yaw_for(wd)
 			else:
 				dec = TrapDecals.make_mesh(tkind)

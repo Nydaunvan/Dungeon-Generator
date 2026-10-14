@@ -13,12 +13,14 @@ const PITCH := 0.34
 const DART_LEN := 0.42
 
 static var _plate_mesh: ArrayMesh
+static var _slab_mesh: ArrayMesh
 static var _dart_mesh: ArrayMesh
 static var _mat_plate: StandardMaterial3D
 static var _mat_dart: StandardMaterial3D
 
 ## `yaw` : rotation du nœud pour que +Z regarde vers la case (voir `yaw_for`).
-static func make() -> MeshInstance3D:
+## `height` : hauteur de la plaque au-dessus du sol (la dalle reste posée au sol, quelle que soit la hauteur).
+static func make(height: float = HEIGHT) -> MeshInstance3D:
 	_build_meshes()
 	var mi := MeshInstance3D.new()
 	mi.mesh = _plate_mesh
@@ -32,6 +34,13 @@ static func make() -> MeshInstance3D:
 	darts.position.z = 0.07
 	darts.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	mi.add_child(darts)
+	var slab := MeshInstance3D.new()
+	slab.name = "Slab"
+	slab.mesh = _slab_mesh
+	slab.material_override = _plate_mat()
+	slab.position.y = -height
+	slab.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.add_child(slab)
 	return mi
 
 ## Angle (autour de Y) qui oriente +Z vers l'intérieur de la case, le mur étant dans la direction `d` depuis la case.
@@ -118,13 +127,17 @@ static func _build_meshes() -> void:
 			var h := _hole_pos(c, r)
 			_cyl(st, Vector3(h.x, h.y, 0.07), 0.085, 0.07, 0.03, 12, edge)        # collerette
 			_cyl(st, Vector3(h.x, h.y, 0.1), 0.058, 0.058, 0.004, 12, dark)       # trou
-	# dalle de déclenchement : sur la case voisine, au sol
-	var fy := -HEIGHT
-	TrapSpikes.add_box(st, Vector3(0, fy + 0.02, CELL_DEPTH), Vector3(0.62, 0.02, 0.62), stone)
-	TrapSpikes.add_box(st, Vector3(0, fy + 0.045, CELL_DEPTH), Vector3(0.52, 0.012, 0.52), edge)
-	TrapSpikes.add_box(st, Vector3(0, fy + 0.059, CELL_DEPTH), Vector3(0.14, 0.005, 0.14), rust)
 	_plate_mesh = ArrayMesh.new()
 	st.commit(_plate_mesh)
+	# dalle de déclenchement : sur la case voisine, au sol
+	var sl := SurfaceTool.new()
+	sl.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var fy := 0.0
+	TrapSpikes.add_box(sl, Vector3(0, fy + 0.02, CELL_DEPTH), Vector3(0.62, 0.02, 0.62), stone)
+	TrapSpikes.add_box(sl, Vector3(0, fy + 0.045, CELL_DEPTH), Vector3(0.52, 0.012, 0.52), edge)
+	TrapSpikes.add_box(sl, Vector3(0, fy + 0.059, CELL_DEPTH), Vector3(0.14, 0.005, 0.14), rust)
+	_slab_mesh = ArrayMesh.new()
+	sl.commit(_slab_mesh)
 	# fléchettes : une par trou, pointe vers +Z
 	var ds := SurfaceTool.new()
 	ds.begin(Mesh.PRIMITIVE_TRIANGLES)

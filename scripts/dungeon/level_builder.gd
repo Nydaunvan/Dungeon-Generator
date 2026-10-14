@@ -36,34 +36,9 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		parts[k].begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var half := CELL * 0.5
-	var niches := {}      # Vector2i(case) -> {d: direction du mur évidé, w: demi-largeur, h: hauteur}
-	if not outdoor:
-		for it in level.get("items", []):
-			if str(it.get("type", "")) == "fountain":
-				var nd := fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id))
-				if nd != Vector2i.ZERO:
-					niches[Vector2i(int(it.x), int(it.y))] = {"d": nd, "w": NICHE_HALF_W, "h": NICHE_H}
-		var tm = level.get("travelingMerchant")
-		if tm is Dictionary:
-			var mp := Vector2i(int(tm.x), int(tm.y))
-			var spec := merchant_niche_spec(grid, mp.x, mp.y)
-			if not spec.is_empty() and not niches.has(mp):
-				niches[mp] = {"d": spec.d, "w": spec.w, "h": spec.h, "t": 0.28, "dp": merchant_niche_depth(float(spec.w))}
-	# les creux plus larges qu'une case entament le mur des cases voisines : intervalle évidé (le long du mur) de chaque face concernée
-	var holes := {}       # "x,y,dx,dy" -> Vector3(s0, s1, haut du creux)
-	for cell in niches:
-		var ni: Dictionary = niches[cell]
-		var w: float = ni.w
-		if w <= half:
-			continue
-		var dd: Vector2i = ni.d
-		var rc := Vector2i(-dd.y, dd.x)
-		for k in [-1, 0, 1]:
-			var s0 := maxf(-w - CELL * k, -half)
-			var s1 := minf(w - CELL * k, half)
-			if s1 > s0:
-				var nc: Vector2i = cell + rc * k
-				holes["%d,%d,%d,%d" % [nc.x, nc.y, dd.x, dd.y]] = Vector3(s0, s1, float(ni.h) - half)
+	var nd_data := niche_data(grid, level, outdoor)
+	var niches: Dictionary = nd_data.niches
+	var holes: Dictionary = nd_data.holes
 	for y in grid.height:
 		if sliced:
 			await Loader.slice()
@@ -145,6 +120,62 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 	else:
 		_add_columns(view, grid, theme.get("wall"))
 	return view
+
+## Creux des murs du niveau : `niches` (case -> {d, w, h, ...}, pour les fontaines et le marchand) et `holes` ("x,y,dx,dy" -> intervalle évidé
+## des murs voisins quand le creux dépasse la case). Sert à la construction du niveau et à la pose du piège mural.
+static func niche_data(grid: DungeonGrid, level: Dictionary, outdoor: bool) -> Dictionary:
+	var half := CELL * 0.5
+	var niches := {}      # Vector2i(case) -> {d: direction du mur évidé, w: demi-largeur, h: hauteur}
+	if not outdoor:
+		for it in level.get("items", []):
+			if str(it.get("type", "")) == "fountain":
+				var nd := fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id))
+				if nd != Vector2i.ZERO:
+					niches[Vector2i(int(it.x), int(it.y))] = {"d": nd, "w": NICHE_HALF_W, "h": NICHE_H}
+		var tm = level.get("travelingMerchant")
+		if tm is Dictionary:
+			var mp := Vector2i(int(tm.x), int(tm.y))
+			var spec := merchant_niche_spec(grid, mp.x, mp.y)
+			if not spec.is_empty() and not niches.has(mp):
+				niches[mp] = {"d": spec.d, "w": spec.w, "h": spec.h, "t": 0.28, "dp": merchant_niche_depth(float(spec.w))}
+	# les creux plus larges qu'une case entament le mur des cases voisines : intervalle évidé (le long du mur) de chaque face concernée
+	var holes := {}       # "x,y,dx,dy" -> Vector3(s0, s1, haut du creux)
+	for cell in niches:
+		var ni: Dictionary = niches[cell]
+		var w: float = ni.w
+		if w <= half:
+			continue
+		var dd: Vector2i = ni.d
+		var rc := Vector2i(-dd.y, dd.x)
+		for k in [-1, 0, 1]:
+			var s0 := maxf(-w - CELL * k, -half)
+			var s1 := minf(w - CELL * k, half)
+			if s1 > s0:
+				var nc: Vector2i = cell + rc * k
+				holes["%d,%d,%d,%d" % [nc.x, nc.y, dd.x, dd.y]] = Vector3(s0, s1, float(ni.h) - half)
+	return {"niches": niches, "holes": holes}
+
+## Mur qui accueille le piège à fléchettes de la case (x, y) : jamais un mur évidé (niche de fontaine ou de marchand, creux voisin), jamais
+## celui d'un escalier ou d'une porte ; ZERO s'il n'en reste aucun. Choix stable d'après l'identifiant.
+static func dart_wall_dir(grid: DungeonGrid, level: Dictionary, x: int, y: int, id: String) -> Vector2i:
+	var nd := niche_data(grid, level, false)
+	var cands: Array[Vector2i] = []
+	for d in DungeonGrid.DIRS:
+		if grid.cell(x + d.x, y + d.y) != "#":
+			continue
+		var ni: Dictionary = nd.niches.get(Vector2i(x, y), {})
+		if not ni.is_empty() and ni.d == d:
+			continue
+		if nd.holes.has("%d,%d,%d,%d" % [x, y, d.x, d.y]):
+			continue
+		cands.append(d)
+	if cands.is_empty():
+		return Vector2i.ZERO
+	return cands[absi(id.hash()) % cands.size()]
+
+## Hauteur de pose du piège mural : plus bas quand ce pan de mur porte une torche (une torche tous les deux pans, au centre et en haut).
+static func dart_height(x: int, y: int) -> float:
+	return 1.15 if (x + y) % 2 == 0 else 1.5
 
 ## Direction du mur à évider pour loger la fontaine de la case (x, y), ou ZERO s'il n'y a aucun mur autour.
 ## Le décroché (2,5 × 1,9 u) tient tout entier dans la case pleine voisine ; le côté est choisi de façon stable d'après l'id.
