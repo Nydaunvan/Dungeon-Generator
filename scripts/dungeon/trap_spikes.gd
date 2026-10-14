@@ -102,16 +102,16 @@ static func _build_meshes() -> void:
 	var h := PLATE * 0.5
 	var iron := Color(0.17, 0.155, 0.15)
 	var edge := Color(0.26, 0.23, 0.2)
-	_box(pl, Vector3(0, PLATE_H * 0.25, 0), Vector3(h, PLATE_H * 0.25, h), edge)                     # socle large
-	_box(pl, Vector3(0, PLATE_H * 0.75, 0), Vector3(h - 0.045, PLATE_H * 0.25, h - 0.045), iron)     # dessus en retrait (biseau)
+	add_box(pl, Vector3(0, PLATE_H * 0.25, 0), Vector3(h, PLATE_H * 0.25, h), edge)                     # socle large
+	add_box(pl, Vector3(0, PLATE_H * 0.75, 0), Vector3(h - 0.045, PLATE_H * 0.25, h - 0.045), iron)     # dessus en retrait (biseau)
 	# rivets aux quatre coins
 	for sx in [-1, 1]:
 		for sz in [-1, 1]:
-			_prism(pl, Vector3(sx * (h - 0.09), PLATE_H, sz * (h - 0.09)), 0.028, 0.02, 8, edge)
+			add_prism(pl, Vector3(sx * (h - 0.09), PLATE_H, sz * (h - 0.09)), 0.028, 0.02, 8, edge)
 	# douilles sombres autour de chaque pointe
 	for ix in GRID:
 		for iz in GRID:
-			_prism(pl, _spike_pos(ix, iz) + Vector3(0, PLATE_H, 0), 0.075, 0.018, 10, Color(0.045, 0.04, 0.04))
+			add_prism(pl, _spike_pos(ix, iz) + Vector3(0, PLATE_H, 0), 0.075, 0.018, 10, Color(0.045, 0.04, 0.04))
 	pl.commit(mesh)
 	_plate_mesh = mesh
 	# pointes (normales lissées), base à y = 0 : le nœud des pointes est posé sur la plaque
@@ -175,7 +175,7 @@ static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, ca: Color,
 	st.add_vertex(c)
 
 ## Boîte alignée sur les axes, normales plates.
-static func _box(st: SurfaceTool, c: Vector3, e: Vector3, col: Color) -> void:
+static func add_box(st: SurfaceTool, c: Vector3, e: Vector3, col: Color) -> void:
 	var faces := [
 		[Vector3.UP, Vector3.RIGHT, Vector3.BACK], [Vector3.DOWN, Vector3.RIGHT, Vector3.FORWARD],
 		[Vector3.RIGHT, Vector3.UP, Vector3.FORWARD], [Vector3.LEFT, Vector3.UP, Vector3.BACK],
@@ -200,7 +200,7 @@ static func _box(st: SurfaceTool, c: Vector3, e: Vector3, col: Color) -> void:
 			st.add_vertex(p)
 
 ## Petit cylindre vertical (douille, rivet) posé en `base`, avec dessus plat.
-static func _prism(st: SurfaceTool, base: Vector3, r: float, height: float, sides: int, col: Color) -> void:
+static func add_prism(st: SurfaceTool, base: Vector3, r: float, height: float, sides: int, col: Color) -> void:
 	var top := base + Vector3(0, height, 0)
 	for k in sides:
 		var a0 := float(k) / float(sides) * TAU

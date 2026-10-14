@@ -62,7 +62,7 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			await Loader.slice()
 		var type := str(it.get("type", ""))
 		if type == "trap":
-			var dec := TrapDecals.make_mesh(str(it.get("trapKind", "spikes")))
+			var dec := TrapDecals.make_mesh(str(TrapRules.kind_of(it).id))
 			dec.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.015, int(it.y) * LevelBuilder.CELL)
 			dec.name = "Trap_" + str(it.id)
 			dec.visible = not bool(it.get("startHidden", false))
@@ -447,14 +447,18 @@ func _die(n: MeshInstance3D) -> void:
 	tw.tween_property(m, "albedo_color:a", 0.0, 0.5)
 	tw.chain().tween_callback(n.queue_free)
 
-## Piège désamorcé : les pointes rentrent dans leur plaque (le piège reste en place, inoffensif) ; les autres objets disparaissent.
+## Piège désamorcé : les pointes rentrent dans leur plaque, la vapeur cesse (le piège reste en place, inoffensif) ; les autres objets disparaissent.
 func disarm_item(id: String, animate: bool = true) -> void:
 	var done := false
 	for p in items.keys():
 		for e in items[p]:
-			if str(e.def.id) == id and is_instance_valid(e.node) and e.node.has_meta("spikes"):
-				TrapSpikes.retract(e.node, animate)
-				done = true
+			if str(e.def.id) == id and is_instance_valid(e.node):
+				if e.node.has_meta("spikes"):
+					TrapSpikes.retract(e.node, animate)
+					done = true
+				elif e.node.has_meta("trap_gas"):
+					TrapGas.stop(e.node, animate)
+					done = true
 	if not done:
 		remove_item(id)
 
