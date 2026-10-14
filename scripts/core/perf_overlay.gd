@@ -3,27 +3,21 @@ extends CanvasLayer
 ## Le choix est mémorisé entre deux sessions (user://settings.cfg, via `Settings`).
 
 var _label: Label
-var _panel: PanelContainer
 var _t := 0.0
 var _on := false
 
 func _ready() -> void:
 	layer = 120
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_panel = PanelContainer.new()
-	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0, 0, 0, 0.62)
-	sb.border_color = Color("7a5a2c")
-	sb.set_border_width_all(1)
-	sb.set_content_margin_all(6)
-	_panel.add_theme_stylebox_override("panel", sb)
+	# une seule ligne, tout en haut à gauche, sans cadre ni fond : le texte porte son propre liseré sombre pour rester lisible
 	_label = Label.new()
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label.position = Vector2(6, 2)
 	_label.add_theme_font_size_override("font_size", 13)
 	_label.add_theme_color_override("font_color", Color("e8dcc0"))
-	_panel.add_child(_label)
-	add_child(_panel)
+	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_label.add_theme_constant_override("outline_size", 4)
+	add_child(_label)
 	_on = Settings.perf_overlay
 	_apply()
 
@@ -41,7 +35,7 @@ func toggle() -> void:
 	_apply()
 
 func _apply() -> void:
-	_panel.visible = _on
+	_label.visible = _on
 	set_process(_on)
 	if _on:
 		_t = 0.0
@@ -59,7 +53,5 @@ func _refresh() -> void:
 	var vram := float(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED)) / 1048576.0
 	var calls := int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
 	var ram_txt := "%.0f Mo" % ram if ram > 0.0 else "…"          # « … » : première mesure en cours (Windows / macOS)
-	_label.text = "FPS  %d\nRAM  %s\nVRAM %.0f Mo\nDraw %d" % [fps, ram_txt, vram, calls]
-	_panel.reset_size()
-	_panel.position = Vector2(8, get_viewport().get_visible_rect().size.y - _panel.size.y - 8)   # coin bas-gauche : ne masque ni l'en-tête ni la vue 3D
+	_label.text = "FPS %d  ·  RAM %s  ·  VRAM %.0f Mo  ·  Draw %d" % [fps, ram_txt, vram, calls]
 	_label.add_theme_color_override("font_color", Color("9be07a") if fps >= 55 else (Color("ffd98a") if fps >= 30 else Color("ff7a6a")))

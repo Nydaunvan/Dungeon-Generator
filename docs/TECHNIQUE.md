@@ -76,3 +76,6 @@ Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓
 - Windows : le workflow de publication applique `installer/app.ico` et les informations de version à l'exécutable avec rcedit sous Wine (`tools/patch_windows_exe.sh`, vérifié par `tools/check_exe_icon.py` : simple avertissement en cas d'échec) ; l'installateur Inno Setup, ses raccourcis et la désinstallation utilisent la même icône (`installer/app.ico`).
 - Linux : l'exécutable ELF ne porte pas d'icône ; l'archive complète contient `Dungeon Generator.png` et `install-menu.sh` (entrée du menu des applications avec l'icône, sans droits administrateur ; `--remove` pour la retirer).
 
+
+### Compteur de performances
+`scripts/core/perf_overlay.gd` : un seul `Label` (couche 120) en haut à gauche, sans panneau ni cadre ; lisibilité assurée par un liseré de texte sombre. Une ligne : images/s, RAM, VRAM, appels de dessin (couleur selon les images/s). F3 ou bouton 📊.

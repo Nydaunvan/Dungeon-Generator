@@ -30,7 +30,7 @@ Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héro
 Le jeu reste entièrement jouable hors ligne. Avec un compte, on peut partager ses donjons, relever les défis, jouer des parties classées vérifiées (chaque partie est rejouée côté serveur), tenter le Hardcore du mois, gagner des badges, titres et cadres cosmétiques, et discuter avec les autres joueurs.
 
 ## Graphismes
-Rendu Forward+ (Vulkan) avec repli automatique sur OpenGL. Quatre niveaux de qualité (Faible, Moyen, Élevé, Ultra) et un réglage Auto qui s'adapte à la machine. Les effets (occlusion ambiante, reflets, relief, brouillard volumétrique, étalonnage des couleurs) se règlent un par un dans **⚙ Paramètres › Graphismes**. F3 affiche le compteur d'images par seconde et la mémoire utilisée.
+Rendu Forward+ (Vulkan) avec repli automatique sur OpenGL. Quatre niveaux de qualité (Faible, Moyen, Élevé, Ultra) et un réglage Auto qui s'adapte à la machine. Les effets (occlusion ambiante, reflets, relief, brouillard volumétrique, étalonnage des couleurs) se règlent un par un dans **⚙ Paramètres › Graphismes**. F3 affiche, sur une seule ligne tout en haut à gauche (sans cadre), les images par seconde, la mémoire et le nombre d'appels de dessin.
 
 **Effets de sorts** : l'éditeur de sorts propose, pour chaque sort, un effet visuel au choix (aujourd'hui le cristal, l'orbe de mana et le rayon pour les sorts d'arcane de dégâts), avec une teinte, une intensité et un aperçu. Ces effets avancés (lumière HDR, particules GPU, distorsion, rune gravée au sol, lumière qui éclaire la brume) s'adaptent au niveau graphique ; l'effet d'origine reste disponible.
 
