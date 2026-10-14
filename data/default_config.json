@@ -1818,7 +1818,7 @@
      "y": 5,
      "type": "trap",
      "trapKind": "gas",
-     "permanent": false,
+     "permanent": true,
      "trapDmgMin": 3,
      "trapDmgMax": 6
     },

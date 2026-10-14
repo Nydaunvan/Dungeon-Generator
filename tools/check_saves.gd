@@ -47,6 +47,13 @@ func _ready() -> void:
 	checks["hache du berserker intacte"] = oldc.config.classes[1].icon == "🪓"
 	checks["icône de classe barde (équipe)"] = oldc.config.party[0].icon == "@icon:class_bard"
 	checks["icône de classe ménestrel (sauvegarde)"] = oldc.save.party[0].icon == "@icon:class_minstrel"
+	# piège de vapeur permanent (v3 → v4) : niveaux et bibliothèque ; les autres pièges ne changent pas
+	var gas := {"config": {"levels": [{"items": [{"id": "g", "type": "trap", "trapKind": "gas", "permanent": false}, {"id": "d", "type": "trap", "trapKind": "dart", "permanent": false}]}],
+		"itemLibrary": [{"id": "lg", "type": "trap", "trapKind": "gas", "permanent": false}]}, "save": {}, "schema": 3, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(gas, Data.original_config)
+	checks["vapeur permanente (niveau)"] = bool(gas.config.levels[0].items[0].permanent)
+	checks["fléchettes inchangées"] = not bool(gas.config.levels[0].items[1].permanent)
+	checks["vapeur permanente (bibliothèque)"] = bool(gas.config.itemLibrary[0].permanent)
 	# un donjon personnalisé garde sa bibliothèque
 	var cu := {"config": {"itemLibrary": [], "spells": []}, "save": {}, "dungeonOrigin": "custom"}
 	SaveMigrations.migrate(cu, Data.original_config)

@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 3
+const SCHEMA := 4
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -42,6 +42,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v1_to_v2(d, defaults))
 			2:
 				notes.append_array(_v2_to_v3(d))
+			3:
+				notes.append_array(_v3_to_v4(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -139,3 +141,26 @@ static func _fix_class_icons(list: Variant, key: String) -> int:
 				e["icon"] = ch[1]
 				n += 1
 	return n
+
+## v3 → v4 : le piège de vapeur reste en place quand le jet échoue (il se redéclenche si on repasse dessus) : ses objets deviennent « permanents »
+## (objets des niveaux et de la bibliothèque). Une seule fois : le choix du créateur reste libre ensuite.
+static func _v3_to_v4(d: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary):
+		return notes
+	var n := 0
+	var lists: Array = [(cfg as Dictionary).get("itemLibrary", [])]
+	for lvl in (cfg as Dictionary).get("levels", []):
+		if lvl is Dictionary:
+			lists.append(lvl.get("items", []))
+	for lst in lists:
+		if not (lst is Array):
+			continue
+		for it in lst:
+			if it is Dictionary and str(it.get("type", "")) == "trap" and str(it.get("trapKind", "")) == "gas" and not bool(it.get("permanent", false)):
+				it["permanent"] = true
+				n += 1
+	if n > 0:
+		notes.append("pièges de vapeur permanents : %d" % n)
+	return notes
