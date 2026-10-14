@@ -23,11 +23,11 @@ void fragment() {
 	float ang = atan(uvp.y, uvp.x);
 	float wob = sin(ang * 7.0 + progress * 9.0) * 0.025 + sin(ang * 13.0 - progress * 14.0) * 0.015;
 	float radius = 0.15 + progress * 0.8;
-	float width = mix(0.16, 0.05, progress);
+	float width = mix(0.09, 0.04, progress);
 	float ring = smoothstep(width, 0.0, abs(r - radius + wob));
 	float fade = (1.0 - progress) * (1.0 - progress);
 	float core = smoothstep(0.5, 0.0, r) * (1.0 - progress) * 0.6;
-	ALBEDO = col.rgb * (ring * 2.6 + core * 1.4) * power;
+	ALBEDO = col.rgb * (ring * 1.9 + core * 0.9) * power;
 	ALPHA = clamp((ring + core) * fade, 0.0, 1.0);
 }
 """
@@ -785,10 +785,10 @@ func _ground_shock(at: Vector3, col: Color, size: float, dur: float, delay: floa
 		m.set_shader_parameter("progress", w))
 
 ## Lueur sphérique de dôme / bulle (shader `SH_DOME`) autour de `at`.
-func _dome(at: Vector3, radius: float, col: Color, dur: float) -> void:
+func _dome(at: Vector3, radius: float, col: Color, dur: float, power: float = 1.0) -> void:
 	var m := _smat("dome", SH_DOME, 5).duplicate() as ShaderMaterial
 	m.set_shader_parameter("col", col)
-	m.set_shader_parameter("power", _g)
+	m.set_shader_parameter("power", _g * power)
 	var mi := _mesh_node(_unit_sphere(), m, at, 0.01)
 	_add({"node": mi}, dur, func(u: float):
 		var grow := 1.0 - pow(1.0 - clampf(u / 0.25, 0.0, 1.0), 3.0)
@@ -1040,3 +1040,89 @@ static func _rock_mesh(seed_i: int = 3) -> ArrayMesh:
 	st.generate_normals()
 	_rock_m[seed_i] = st.commit()
 	return _rock_m[seed_i]
+
+# ------------------------------------------------------------------------------------------ autres briques
+
+## Étoile à quatre branches (éclat de lentille) : cœur lumineux et deux traits fins en croix.
+static func _flare4_tex() -> Texture2D:
+	if _tex.has("flare4"):
+		return _tex["flare4"]
+	var n := 128
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	for y in n:
+		for x in n:
+			var dx := absf((float(x) + 0.5) / float(n) * 2.0 - 1.0)
+			var dy := absf((float(y) + 0.5) / float(n) * 2.0 - 1.0)
+			var arms := maxf(exp(-dx * 26.0 - dy * 2.4), exp(-dy * 26.0 - dx * 2.4))
+			var core := exp(-sqrt(dx * dx + dy * dy) * 7.0)
+			var edge := clampf((1.0 - maxf(dx, dy)) / 0.15, 0.0, 1.0)
+			img.set_pixel(x, y, Color(1, 1, 1, clampf(arms * 0.95 + core * 0.8, 0.0, 1.0) * edge))
+	var t := ImageTexture.create_from_image(img)
+	_tex["flare4"] = t
+	return t
+
+## Éclat de lentille à quatre branches qui gonfle puis s'éteint.
+func _flare4(at: Vector3, col: Color, size: float, dur: float, spin: float = 0.0) -> void:
+	var f := _sprite(_flare4_tex(), _hdr(col, 1.3 * _g), size * 0.3, at)
+	(f.mat as StandardMaterial3D).no_depth_test = true
+	_add(f, dur, func(u: float):
+		var e := 1.0 - pow(1.0 - minf(u * 2.5, 1.0), 2.0)
+		(f.node as Node3D).scale = Vector3.ONE * size * (0.3 + 0.7 * e)
+		(f.node as Node3D).rotation.z = u * spin
+		(f.mat as StandardMaterial3D).albedo_color.a = (1.0 - u) * (1.0 - u))
+
+## Rayon de lumière entre deux points (shader `SH_BEAM`), qui apparaît de `a` vers `b` puis s'efface dans le même sens.
+func _beam(a: Vector3, b: Vector3, col: Color, width: float, dur: float, delay: float = 0.0) -> void:
+	var axis := b - a
+	var length := axis.length()
+	if length < 0.05:
+		return
+	var x := axis / length
+	var mid := (a + b) * 0.5
+	var to_cam := cam.global_position - mid
+	var z := (to_cam - x * to_cam.dot(x)).normalized()
+	var y := z.cross(x)
+	var m := _smat("beam", SH_BEAM, 5).duplicate() as ShaderMaterial
+	m.set_shader_parameter("col", Color(col.r, col.g, col.b, 1.0))
+	m.set_shader_parameter("power", _g)
+	var mi := _mesh_node(QuadMesh.new(), m, mid, 1.0)
+	(mi.mesh as QuadMesh).size = Vector2.ONE
+	mi.transform = Transform3D(Basis(x * length, y * width, z), mid)
+	mi.visible = delay <= 0.0
+	_add({"node": mi}, dur + delay, func(u: float):
+		var w := clampf((u * (dur + delay) - delay) / dur, 0.0, 1.0)
+		mi.visible = delay <= 0.0 or w > 0.0
+		m.set_shader_parameter("head", clampf(w / 0.3, 0.0, 1.0))
+		m.set_shader_parameter("tail", clampf((w - 0.45) / 0.55, 0.0, 1.0))
+		m.set_shader_parameter("progress", w)
+		mi.transform = Transform3D(Basis(x * length, y * width * (1.0 - clampf((w - 0.6) / 0.4, 0.0, 1.0) * 0.6), z), mid))
+
+## Hélice de particules qui montent en tournant autour de `at` (soins, protections, bonus). Retourne l'émetteur (déjà programmé pour s'arrêter).
+func _helix(at: Vector3, cs: Array, radius: float, rise: float, orbit: float, n: int, dur: float, tex: Texture2D = null, sz: Array = [0.05, 0.11]) -> GPUParticles3D:
+	var pm := _pmat(0.05, Vector3.UP, 6.0, rise * 0.8, rise * 1.2, Vector3.ZERO, float(sz[0]) * _s, float(sz[1]) * _s, _ramp(cs[0], cs[1], cs[2]), 0.0, 0.0)
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	pm.emission_ring_axis = Vector3.UP
+	pm.emission_ring_radius = radius
+	pm.emission_ring_inner_radius = radius * 0.85
+	pm.emission_ring_height = 0.05
+	pm.orbit_velocity_min = orbit * 0.8
+	pm.orbit_velocity_max = orbit * 1.2
+	var p := _gpu(n, 1.0, false, _soft_mesh(cs[1], 1.5 * _g, tex if tex != null else _w_spark()), pm, at)
+	_later(dur, func():
+		p.emitting = false
+		_free_after(p, 1.2))
+	return p
+
+## Anneau incliné (auréole, cercle de lumière) qui s'élargit et s'éteint, autour de `at`.
+func _halo_ring(at: Vector3, col: Color, size: float, dur: float, tilt: float = 1.1, delay: float = 0.0) -> void:
+	var m := _smat("gshock", _ground_shock_code()).duplicate() as ShaderMaterial
+	m.set_shader_parameter("col", Color(col.r, col.g, col.b, 1.0))
+	m.set_shader_parameter("power", _g)
+	m.set_shader_parameter("progress", 0.0)
+	var mi := _quad_node(m, size, at)
+	mi.rotation.x = -tilt
+	mi.visible = delay <= 0.0
+	_add({"node": mi}, dur + delay, func(u: float):
+		var w := clampf((u * (dur + delay) - delay) / dur, 0.0, 1.0)
+		mi.visible = delay <= 0.0 or w > 0.0
+		m.set_shader_parameter("progress", w))

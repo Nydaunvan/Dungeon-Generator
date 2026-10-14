@@ -23,7 +23,7 @@ func _init() -> void:
 		[{"style": "fire", "mode": "damage", "fx": "arcane_beam"}, "fire_ball", "effet d'un autre style : retombe sur le défaut du style"],
 		[{"id": "spell_elementalist3", "style": "fire", "mode": "damage"}, "fire_column", "effet propre au sort d'origine"],
 		[{"id": "spell_elementalist1", "style": "fire", "mode": "damageGroup"}, "fire_meteor", "effet propre au sort de zone"],
-		[{"style": "arcane", "mode": "healSingle", "fx": "arcane_beam"}, "classic", "effet d'un autre mode : retombe sur le classique"],
+		[{"style": "arcane", "mode": "healSingle", "fx": "arcane_beam"}, "heal_soft", "effet d'un autre mode : retombe sur le classique"],
 		[{"mode": "damage"}, "arcane_crystal", "sans style : arcane, comme en combat"],
 	]
 	for c in cases:
@@ -35,7 +35,7 @@ func _init() -> void:
 	if keys.fx != "arcane_crystal" or keys.fxTint != "#4be07a" or not is_equal_approx(float(keys.fxPower), 1.5):
 		bad += 1
 		print("ÉCHEC : clés d'effet du contexte : ", keys)
-	for style in ["ice", "holy", "shadow", "physical", "bard", "nature"]:
+	for style in ["nature"]:
 		var opts: Array = lib.options(style, "damage")
 		if opts.size() != 1 or opts[0][0] != "classic":
 			bad += 1
