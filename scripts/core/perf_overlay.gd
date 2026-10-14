@@ -39,9 +39,26 @@ func _apply() -> void:
 	set_process(_on)
 	if _on:
 		_t = 0.0
+		_fit()
 		_refresh()
 
+## Taille constante partout : celle de la scène de jeu (zone de conception 1600 x 1000), même au lancement et dans le menu d'accueil,
+## où l'échelle de l'interface est différente. Le texte est donc compensé par le rapport entre les deux échelles.
+func _fit() -> void:
+	var win := get_window()
+	var sz := Vector2(win.size)
+	if sz.x <= 0.0 or sz.y <= 0.0:
+		return
+	var f := maxf(win.content_scale_factor, 0.001)
+	var g := f
+	if sz.x >= sz.y * 1.05:      # paysage : facteur de la scène de jeu (voir Data._update_scale) ; en portrait, l'échelle est déjà la même
+		g = minf(sz.x / Data.GAME_DESIGN.x, sz.y / Data.GAME_DESIGN.y) / minf(sz.x / 1280.0, sz.y / 720.0)
+	var k := g / f
+	_label.scale = Vector2.ONE * k
+	_label.position = Vector2(6.0, 2.0) * k
+
 func _process(d: float) -> void:
+	_fit()
 	_t -= d
 	if _t <= 0.0:
 		_t = 0.5

@@ -79,3 +79,4 @@ Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓
 
 ### Compteur de performances
 `scripts/core/perf_overlay.gd` : un seul `Label` (couche 120) en haut à gauche, sans panneau ni cadre ; lisibilité assurée par un liseré de texte sombre. Une ligne : images/s, RAM, VRAM, appels de dessin (couleur selon les images/s). F3 ou bouton 📊.
+Taille constante : la ligne est compensée par le rapport entre l'échelle de la scène de jeu (zone de conception 1600 x 1000) et l'échelle courante (`content_scale_factor`), donc elle garde la taille qu'elle a dans le donjon au lancement et dans le menu d'accueil.
