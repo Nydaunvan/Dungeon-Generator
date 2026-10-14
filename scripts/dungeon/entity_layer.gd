@@ -63,6 +63,9 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 		var type := str(it.get("type", ""))
 		if type == "trap":
 			var tkind := str(TrapRules.kind_of(it).id)
+			if tkind == "dart" and (grid == null or bool(level.get("outdoor", false)) or LevelBuilder.dart_wall_dir(grid, level, int(it.x), int(it.y), str(it.id)) == Vector2i.ZERO):
+				it["trapKind"] = "spikes"      # pas de mur où fixer le mécanisme (intersection, plein air) : ce piège devient des pointes au sol
+				tkind = "spikes"
 			var wd := Vector2i.ZERO         # fléchettes : mécanisme fixé au mur voisin de la dalle (à défaut de mur, simple décalque au sol)
 			if tkind == "dart" and grid != null and not bool(level.get("outdoor", false)):
 				wd = LevelBuilder.dart_wall_dir(grid, level, int(it.x), int(it.y), str(it.id))

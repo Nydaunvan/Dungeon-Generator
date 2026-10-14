@@ -531,9 +531,13 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 				items.append(make_jewelry("jw_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
 				equip_here = true
 	for ti in randi_range(2, 3):
-		var r: Dictionary = take.call()
+		var tk: Dictionary = choice(TRAP_KINDS)
+		# fléchettes : mécanisme fixé au mur, donc seulement sur une case adossée à un mur (jamais à une intersection) ; à défaut, des pointes
+		var walled_cells := item_pool.filter(func(c): return _has_wall_side(grid, c.x, c.y)) if tk.kind == "dart" else []
+		if tk.kind == "dart" and walled_cells.is_empty():
+			tk = TRAP_KINDS[0]
+		var r: Dictionary = take_walled.call() if tk.kind == "dart" else take.call()
 		if not r.is_empty():
-			var tk: Dictionary = choice(TRAP_KINDS)
 			items.append({"id": "trap_gen_%d_%d" % [i, ti], "name": tk.name, "icon": tk.icon, "x": r.x, "y": r.y, "type": "trap", "trapKind": tk.kind, "permanent": tk.permanent,
 				"trapDmgMin": 2 + int(i * 0.8) + int(run_bonus * 0.5), "trapDmgMax": 5 + int(i * 1.2) + run_bonus})
 	if not equip_here:
