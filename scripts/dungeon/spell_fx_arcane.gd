@@ -166,7 +166,8 @@ static func _rune_tex() -> Texture2D:
 							a = maxf(a, 1.0 - absf(r - edge) / 0.014)
 					a = maxf(a, 1.0 - absf(r - 0.12) / 0.012)
 					a = maxf(a, 1.0 - r / 0.05)
-				img.set_pixel(x, y, Color(1, 1, 1, clampf(a, 0.0, 1.0)))
+				var v := clampf(a, 0.0, 1.0)
+				img.set_pixel(x, y, Color(v, v, v, v))     # couleur multipliée par l'opacité : l'émission du décalque ignore l'alpha, sinon tout le carré brille
 		_rune_t = ImageTexture.create_from_image(img)
 	return _rune_t
 
