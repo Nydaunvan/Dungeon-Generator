@@ -85,6 +85,9 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer le projet (F5).
 ## Fenêtre du marchand (`scripts/ui/shop_modal.gd`)
 Sélection : chaque carte a une clé (`_gkey`) ; les piles (potions, parchemins identiques) se regroupent par `Inventory.stack_key`, mais un objet non empilable est désigné par son indice dans la besace, car deux exemplaires d'une même définition partagent le même `id` (ancien bug : en vendre un en sélectionnait un autre). Le bouton Acheter/Vendre, avec son prix, est tout en haut de la fiche (sous le titre), suivi du motif de refus, de la quantité (piles) et des caractéristiques. Sélection multiple (onglet Vendre, bouton « ☑ Sélection multiple », ou Ctrl/Maj + clic) : cartes cochées ☐/✓, « Tout sélectionner/désélectionner », total en or, une seule transaction par objet via `Flows.input("shop", …)` (donc journalisée et rejouable) ; les clés sont refusées. État d'interface seulement : aucune migration de sauvegarde (schéma inchangé).
 
+## Potions (équilibrage)
+Valeurs à la génération (`DungeonGenerator`, `Shop`) : au sol, soin `12 + 8 × palier + 2 × bonus de partie`, endurance `18 + 9 × palier + 3 × bonus` (palier = niveau ÷ 3) ; butin des monstres, soin `10 + 4 × niveau + 2 × bonus`, endurance `15 + 5 × niveau + 3 × bonus` ; marchands, soin `16 + 4 × niveau`, endurance `min(60, 12 + 3 × niveau)`. Le prix (`Shop.price`) vaut `3 + 0,4 × (soin + endurance)` : une potion plus forte coûte à peu près le même prix qu'avant. Les objets déjà générés (niveaux d'une partie en cours, sauvegardes, configurations, objets de la bibliothèque de l'administration) gardent leur valeur : seules les nouvelles générations changent, donc aucune migration (schéma inchangé).
+
 ## Commandes (couloir 3D)
 Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner (libellés AZERTY).
 

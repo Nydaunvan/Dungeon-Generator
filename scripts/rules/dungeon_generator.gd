@@ -513,11 +513,11 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			for pi in randi_range(1, 2):
 				var r: Dictionary = take.call()
 				if not r.is_empty():
-					items.append({"id": "pot_gen_%d_%d_%d" % [i, lr, pi], "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": r.x, "y": r.y, "type": "potion", "heal": 6 + heal_tier * 4 + run_bonus})
+					items.append({"id": "pot_gen_%d_%d_%d" % [i, lr, pi], "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": r.x, "y": r.y, "type": "potion", "heal": 12 + heal_tier * 8 + run_bonus * 2})
 		if randf() < minf(1.0, 0.5 * item_mult):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
-				items.append({"id": "pot_sta_gen_%d_%d" % [i, lr], "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": r.x, "y": r.y, "type": "potion", "staminaRestore": 12 + sta_tier * 6 + run_bonus * 2})
+				items.append({"id": "pot_sta_gen_%d_%d" % [i, lr], "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": r.x, "y": r.y, "type": "potion", "staminaRestore": 18 + sta_tier * 9 + run_bonus * 3})
 		if randf() < minf(1.0, 0.85 * item_mult):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
@@ -575,8 +575,8 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		var lid := "loot_%d_%d" % [i, li]
 		var loot: Dictionary
 		match choice(["potion", "potion_sta", "weapon", "armor", "jewelry"]):
-			"potion": loot = {"id": lid, "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": sx, "y": sy, "type": "potion", "heal": 5 + i * 2 + run_bonus}
-			"potion_sta": loot = {"id": lid, "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": sx, "y": sy, "type": "potion", "staminaRestore": 10 + i * 3 + run_bonus * 2}
+			"potion": loot = {"id": lid, "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": sx, "y": sy, "type": "potion", "heal": 10 + i * 4 + run_bonus * 2}
+			"potion_sta": loot = {"id": lid, "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": sx, "y": sy, "type": "potion", "staminaRestore": 15 + i * 5 + run_bonus * 3}
 			"weapon": loot = make_weapon(lid, L.t("rules.dungeon_generator.arme_du_butin"), sx, sy, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2)
 			"armor": loot = make_armor(lid, L.t("rules.dungeon_generator.equipement_du_butin"), sx, sy)
 			_: loot = make_jewelry(lid, L.t("rules.dungeon_generator.bijou_du_butin"), sx, sy)

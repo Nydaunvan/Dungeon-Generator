@@ -14,7 +14,7 @@ static func price(item: Dictionary) -> int:
 			+ (int(item.get("bonusForce", 0)) + int(item.get("bonusDex", 0)) + int(item.get("bonusCon", 0)) + int(item.get("bonusInt", 0))) * 3.0 \
 			+ (int(item.get("bonusAtkMin", 0)) + int(item.get("bonusAtkMax", 0))) * 3.0
 	elif t == "potion":
-		p = 3.0 + int(item.get("heal", 0)) * 0.8 + int(item.get("staminaRestore", 0)) * 0.6
+		p = 3.0 + int(item.get("heal", 0)) * 0.4 + int(item.get("staminaRestore", 0)) * 0.4
 	elif t == "scroll":
 		p = 30.0
 	return maxi(3, int(round(p)))
@@ -105,7 +105,7 @@ static func random_offers(cfg: Dictionary, run: int) -> Array:
 	for k in 2:
 		offers.append(_gear_offer(run))
 	for k in 2:
-		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 8 + run * 2})
+		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 16 + run * 4})
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
 	GameRng.shuffle("loot", spells)
 	for i in mini(GameRng.range_i("loot", 2, 3), spells.size()):
@@ -140,8 +140,8 @@ static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
 		c["id"] = "merchant_offer_%d" % offers.size()
 		offers.append(c)
 	# potions de soin et d'endurance : toujours en vente, hors des emplacements d'objets (les lots se regroupent à l'écran)
-	var heal := 8 + run * 2
-	for pot in potion_lots(heal, mini(40, 8 + run * 2)):
+	var heal := 16 + run * 4
+	for pot in potion_lots(heal, mini(60, 12 + run * 3)):
 		var c2: Dictionary = pot
 		c2["id"] = "merchant_offer_%d" % offers.size()
 		c2["price"] = price(c2)
