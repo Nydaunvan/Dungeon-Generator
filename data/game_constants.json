@@ -227,9 +227,11 @@
    "icon": "🥂",
    "labelFr": "Verre brisé",
    "labelEn": "Glass Cannon",
-   "descFr": "PV max du groupe -50 %. Un seul faux pas peut être fatal.",
-   "descEn": "Party max HP -50%. A single misstep can be fatal.",
+   "descFr": "PV max du groupe -50 %, mais chances de coup critique du groupe +5 % et des groupes de 2 monstres au maximum (jamais 3). Un seul faux pas peut être fatal.",
+   "descEn": "Party max HP -50%, but party critical hit chance +5% and monster groups of 2 at most (never 3). A single misstep can be fatal.",
    "hpMult": 0.5,
+   "critChanceBonus": 5,
+   "maxGroupSize": 2,
    "weeklyOnly": true,
    "unlockBadge": "wk_r_glass"
   },

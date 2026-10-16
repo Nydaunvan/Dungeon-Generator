@@ -82,7 +82,7 @@ static func all_modifiers() -> Array:
 ## Effets cumulés des modificateurs d'expédition choisis (ids).
 static func combine_mods(ids: Array) -> Dictionary:
 	var eff := {"attackSpeedMult": 1.0, "xpMult": 1.0, "goldMult": 1.0, "monsterCountMult": 1.0, "itemMult": 1.0, "staminaMult": 1.0,
-		"hpMult": 1.0, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
+		"hpMult": 1.0, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
 	for id in ids:
 		for m in all_modifiers():
 			if m.id != id:
@@ -90,6 +90,8 @@ static func combine_mods(ids: Array) -> Dictionary:
 			for k in ["attackSpeedMult", "xpMult", "goldMult", "monsterCountMult", "itemMult", "staminaMult", "hpMult", "groupChanceMult"]:
 				if m.has(k):
 					eff[k] = float(eff[k]) * float(m[k])
+			if m.has("maxGroupSize"):
+				eff["maxGroupSize"] = mini(int(eff["maxGroupSize"]), int(m.maxGroupSize))
 			if m.has("critChanceBonus"):
 				eff["critChanceBonus"] = float(eff["critChanceBonus"]) + float(m.critChanceBonus)
 			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells"]:
@@ -413,7 +415,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		used[_key(room.x, room.y)] = true
 		var fl: Array = pick_tiered_monster(i, num_levels)
 		var is_group := randf() < 0.3 * float(mod.groupChanceMult)
-		var group_size := (2 if randf() < 0.6 else 3) if is_group else 0
+		var group_size := mini((2 if randf() < 0.6 else 3), int(mod.maxGroupSize)) if is_group else 0
 		var m_force := maxi(4, int(round((base_force + randi_range(-2, 2)) * party_pow * diff_mult)))
 		var m_dex := maxi(4, int(round((base_dex + randi_range(-2, 2)) * party_pow * diff_mult)))
 		var m_con := maxi(4, int(round((base_con + randi_range(-2, 2)) * party_pow * diff_mult)))

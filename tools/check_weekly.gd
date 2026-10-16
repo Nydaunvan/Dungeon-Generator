@@ -60,6 +60,25 @@ func _ready() -> void:
 	var gg := GameState.create(glass)
 	check("verre brisé : PV divisés par deux", int(gg.party[0].maxHp) * 2 <= int(gb.party[0].maxHp) + 1)
 	check("héros solitaire : PV doublés", int(gs1.party[0].maxHp) == int(gb.party[0].maxHp) * 2)
+	var eff: Dictionary = DungeonGenerator.combine_mods(["mod_glass"])
+	check("verre brisé : critique +5 %, groupes de 2 au maximum", int(eff.critChanceBonus) == 5 and int(eff.maxGroupSize) == 2 and int(DungeonGenerator.combine_mods([]).maxGroupSize) == 3)
+	var g3_glass := 0
+	var g3_base := 0
+	var groups_glass := 0
+	for n in 12:
+		var cg := DungeonGenerator.build_config(Data.original_config, 4, 15, 13, "normal", ["mod_glass"], 1, 500 + n)
+		var cn := DungeonGenerator.build_config(Data.original_config, 4, 15, 13, "normal", [], 1, 500 + n)
+		for lv in cg.levels:
+			for m in lv.monsters:
+				if bool(m.get("isGroup", false)):
+					groups_glass += 1
+					if int(m.groupSize) == 3:
+						g3_glass += 1
+		for lv in cn.levels:
+			for m in lv.monsters:
+				if bool(m.get("isGroup", false)) and int(m.groupSize) == 3:
+					g3_base += 1
+	check("verre brisé : aucun groupe de 3 (%d groupes de 2 vus), alors qu'il y en a %d sans le modificateur" % [groups_glass, g3_base], g3_glass == 0 and groups_glass > 0 and g3_base > 0)
 	var ns := _party_of(["mod_nospells"])
 	var gn := GameState.create(ns)
 	var cb := Combat.new(gn, {}, null)
