@@ -180,6 +180,13 @@ static func run(host: Node, progress: Callable) -> void:
 			var fctx := {"style": str((fe.styles as Array)[0]), "mode": str((fe.modes as Array)[0]), "status": "", "targets": [], "ally": 0, "caster": 0,
 				"fx": str(fxid), "fxTint": "", "fxPower": 1.0}
 			SpellFxLibrary.cast(root, rig.camera, "warm_" + str(fxid), {}, fctx))
+	# capacités de monstres (autre script, autre sens de tir) : une famille par école
+	for school in ["fire", "ice", "nature", "physical"]:
+		steps.append(func():
+			rig.place(grid, 3, 3, 0)
+			var mctx := {"style": school, "mode": "damage", "status": "", "targets": [], "ally": 1, "caster": 0, "fx": "", "fxTint": "", "fxPower": 1.0,
+				"fromMonster": true, "victim": 1}
+			SpellFxLibrary.cast(root, rig.camera, "warm_monster", {"pos": Vector3(0, 0.95, -4.0), "h": 1.7, "w": 1.0}, mctx))
 	for kind in SpellFxStyles.ACTIONS:
 		steps.append(func():
 			SpellFxStyles.cast_action(root, rig.camera, kind, {}))

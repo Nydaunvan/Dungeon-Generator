@@ -809,6 +809,15 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.add_log(L.fa(L.t("rules.combat.utilise_sur_degats"), [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""]), true)
 	Sound.sfx("monster_attack")
+	# effet visuel de la capacité : part du monstre vers la place du héros visé (SpellFxLibrary, famille « monstre »)
+	var victim_idx := 0
+	for pi in gs.party.size():
+		if str(gs.party[pi].id) == str(victim.id):
+			victim_idx = pi
+	var mfx := {"style": str(spell.get("style", "arcane")), "mode": "damage", "fromMonster": true, "victim": victim_idx,
+		"status": str(spell.get("statusEffect", "")), "ally": victim_idx, "caster": 0}
+	mfx.merge(SpellFxLibrary.fx_keys(spell))
+	events.append({"type": "fx3d", "spell": str(spell.get("id", "")), "ctx": mfx})
 	events.append({"type": "fx", "fx": "hit"})
 	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)

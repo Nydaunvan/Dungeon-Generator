@@ -16,6 +16,8 @@ const HOLY_SCRIPT := "res://scripts/dungeon/spell_fx_holy.gd"
 const SHADOW_SCRIPT := "res://scripts/dungeon/spell_fx_shadow.gd"
 const BARD_SCRIPT := "res://scripts/dungeon/spell_fx_bard.gd"
 const PHYS_SCRIPT := "res://scripts/dungeon/spell_fx_physical.gd"
+const NATURE_SCRIPT := "res://scripts/dungeon/spell_fx_nature.gd"
+const MONSTER_SCRIPT := "res://scripts/dungeon/spell_fx_monster.gd"      # capacités lancées par un monstre (contexte « fromMonster »)
 
 ## id -> {label (clé de langue), styles, modes, script}. Le premier effet compatible est l'effet par défaut du style.
 const CATALOG := {
@@ -77,6 +79,12 @@ const CATALOG := {
 	"arcane_arrow": {"label": "admin.spells.fx_arcane_arrow", "styles": ["arcane"], "modes": ["damage"], "script": PHYS_SCRIPT},
 	"arcane_volley": {"label": "admin.spells.fx_arcane_volley", "styles": ["arcane"], "modes": ["damage"], "script": PHYS_SCRIPT},
 	"arcane_stars": {"label": "admin.spells.fx_arcane_stars", "styles": ["arcane"], "modes": ["damage"], "script": PHYS_SCRIPT},
+	"nature_thorn": {"label": "admin.spells.fx_nature_thorn", "styles": ["nature"], "modes": ["damage"], "script": NATURE_SCRIPT},
+	"nature_vines": {"label": "admin.spells.fx_nature_vines", "styles": ["nature"], "modes": ["damage"], "script": NATURE_SCRIPT},
+	"nature_lightning": {"label": "admin.spells.fx_nature_lightning", "styles": ["nature"], "modes": ["damage"], "script": NATURE_SCRIPT},
+	"nature_swarm": {"label": "admin.spells.fx_nature_swarm", "styles": ["nature"], "modes": ["damage", "damageGroup"], "script": NATURE_SCRIPT},
+	"nature_bloom": {"label": "admin.spells.fx_nature_bloom", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["healSingle"], "script": NATURE_SCRIPT},
+	"nature_grove": {"label": "admin.spells.fx_nature_grove", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["healParty"], "script": NATURE_SCRIPT},
 }
 
 ## Effet par défaut de chaque sort d'origine (quand le sort n'en a pas choisi un) ; sinon l'effet par défaut du style.
@@ -135,6 +143,12 @@ const SPELL_DEFAULT := {
 	"spell_magearcher1": "arcane_arrow",
 	"spell_magearcher2": "arcane_volley",
 	"spell_magearcher3": "arcane_stars",
+	"spell_nature1": "nature_thorn",
+	"spell_nature2": "nature_vines",
+	"spell_nature3": "nature_lightning",
+	"spell_nature4": "nature_swarm",
+	"spell_nature5": "nature_bloom",
+	"spell_nature6": "nature_grove",
 }
 
 ## Teintes proposées dans l'éditeur : [couleur, clé de langue]. La teinte tourne les couleurs de l'effet en gardant ses nuances.
@@ -222,15 +236,21 @@ static func tier() -> int:
 static func cast(host: Node, camera: Camera3D, spell_id: String, target: Dictionary, ctx: Dictionary) -> void:
 	if camera == null:
 		return
+	if bool(ctx.get("fromMonster", false)):
+		# capacité d'un monstre : `target` est le monstre, `ctx.victim` la place du héros visé. Pas d'effet d'origine pour ce sens de tir
+		# (celui des héros va vers les monstres) : sans rendu avancé, seule l'animation du coup reçu joue.
+		if tier() > 0 and VisualFx.is_forward():
+			_play_script(host, camera, spell_id, target, ctx, MONSTER_SCRIPT)
+		return
 	var fx := str(ctx.get("fx", CLASSIC))
 	if fx != CLASSIC and CATALOG.has(fx) and tier() > 0 and VisualFx.is_forward():
-		if _play_custom(host, camera, spell_id, target, ctx, fx):
+		if _play_script(host, camera, spell_id, target, ctx, str(CATALOG[fx].script)):
 			return
 	SpellFxStyles.cast_spell(host, camera, spell_id, target, ctx)
 
 ## Charge le script de l'effet à l'exécution : si ce script ne peut pas se charger, l'effet d'origine prend le relais.
-static func _play_custom(host: Node, camera: Camera3D, spell_id: String, target: Dictionary, ctx: Dictionary, fx: String) -> bool:
-	var scr := load(str(CATALOG[fx].script)) as GDScript
+static func _play_script(host: Node, camera: Camera3D, spell_id: String, target: Dictionary, ctx: Dictionary, script_path: String) -> bool:
+	var scr := load(script_path) as GDScript
 	if scr == null or not scr.can_instantiate():
 		return false
 	var node = scr.new()

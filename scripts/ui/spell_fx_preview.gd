@@ -63,6 +63,7 @@ static func open(host: Node, spell: Dictionary) -> void:
 	# cibles : trois mannequins sombres de 1,7 m (même dictionnaires qu'un monstre en combat) : les effets de groupe les touchent tous
 	var target := {"pos": Vector3(0, 0.95, -4.0), "h": 1.7, "w": 1.0}
 	var points: Array = [{"pos": Vector3(-1.7, 0.95, -4.3), "h": 1.7, "w": 1.0}, target, {"pos": Vector3(1.7, 0.95, -4.3), "h": 1.7, "w": 1.0}]
+	var as_monster := [false]      # « version monstre » : le mannequin lance le sort sur la place 2 du groupe (sorts de dégâts seulement)
 	var play := func():
 		if not is_instance_valid(root):
 			return
@@ -70,6 +71,9 @@ static func open(host: Node, spell: Dictionary) -> void:
 		ctx["targets"] = points
 		ctx["ally"] = 1       # allié visé : deuxième place du groupe ; lanceur : troisième
 		ctx["caster"] = 2
+		if as_monster[0]:
+			ctx["fromMonster"] = true
+			ctx["victim"] = 1
 		SpellFxLibrary.cast(root, cam, str(spell.get("id", "preview")), target, ctx)
 	var timer := Timer.new()
 	timer.wait_time = LOOP_SECONDS
@@ -77,10 +81,13 @@ static func open(host: Node, spell: Dictionary) -> void:
 	timer.timeout.connect(play)
 	m.add_child(timer)
 	m.get_tree().create_timer(0.4).timeout.connect(play)
-	m.set_buttons([
-		{"text": L.t("admin.spells.apercu_rejouer"), "cb": play},
-		{"text": L.t("common.fermer"), "cb": func(): m.close()},
-	], true)
+	var buttons: Array = [{"text": L.t("admin.spells.apercu_rejouer"), "cb": play}]
+	if str(SpellFxLibrary.ctx_for(spell).mode) == "damage":
+		buttons.append({"text": L.t("admin.spells.apercu_monstre"), "cb": func():
+			as_monster[0] = not as_monster[0]
+			play.call()})
+	buttons.append({"text": L.t("common.fermer"), "cb": func(): m.close()})
+	m.set_buttons(buttons, true)
 
 ## Décor minimal : sol et fond de pierre sombre, mannequin.
 static func _build_set(root: Node3D) -> void:

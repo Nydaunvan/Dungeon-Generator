@@ -35,11 +35,14 @@ func _init() -> void:
 	if keys.fx != "arcane_crystal" or keys.fxTint != "#4be07a" or not is_equal_approx(float(keys.fxPower), 1.5):
 		bad += 1
 		print("ÉCHEC : clés d'effet du contexte : ", keys)
-	for style in ["nature"]:
-		var opts: Array = lib.options(style, "damage")
-		if opts.size() != 1 or opts[0][0] != "classic":
-			bad += 1
-			print("ÉCHEC : ", style, " ne doit proposer que l'effet classique pour l'instant : ", opts)
+	var nat_opts: Array = lib.options("nature", "damage")
+	var nat_ids: Array = nat_opts.map(func(o): return o[0])
+	if not (nat_ids.has("nature_thorn") and nat_ids.has("nature_vines") and nat_ids.has("nature_lightning") and nat_ids.has("classic")):
+		bad += 1
+		print("ÉCHEC : l'école de nature doit proposer ses effets : ", nat_opts)
+	if lib.default_for("nature", "healParty") != "nature_grove":
+		bad += 1
+		print("ÉCHEC : effet par défaut de nature (soin de groupe) : ", lib.default_for("nature", "healParty"))
 
 	# 2. anciens sorts et sauvegardes : les champs sont ajoutés, rien d'autre ne change
 	var cfg: Dictionary = data.original_config.duplicate(true)
@@ -78,6 +81,11 @@ func _init() -> void:
 					"fx": id, "fxTint": tint, "fxPower": 1.5}
 				lib.cast(host, cam, "check", target, ctx)
 			lib.cast(host, cam, "check", {}, {"style": e.styles[0], "mode": e.modes[0], "fx": id, "fxTint": "", "fxPower": 0.6})
+		# capacités de monstres : toutes les écoles, quatre familles de mise en scène, avec et sans monstre à l'écran
+		for school in ["fire", "ice", "holy", "shadow", "nature", "arcane", "physical", "bard"]:
+			for fxid in ["", "fire_meteor", "fire_column", "phys_power"]:
+				lib.cast(host, cam, "check", target, {"style": school, "mode": "damage", "fx": fxid, "fxTint": "", "fxPower": 1.0, "fromMonster": true, "victim": 2, "targets": []})
+		lib.cast(host, cam, "check", {}, {"style": "nature", "mode": "damage", "fx": "", "fxTint": "#e04b4b", "fxPower": 1.5, "fromMonster": true, "victim": 0, "targets": []})
 		await create_timer(4.5).timeout
 		var spell_fx = load("res://scripts/dungeon/spell_fx_3d.gd")
 		if spell_fx.busy():

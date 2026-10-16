@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 8
+const SCHEMA := 9
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -52,6 +52,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v6_to_v7(d))
 			7:
 				notes.append_array(_v7_to_v8(d))
+			8:
+				notes.append_array(_v8_to_v9(d, defaults))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -161,6 +163,31 @@ static func _v6_to_v7(d: Dictionary) -> Array[String]:
 ## v7 → v8 : la rune de flammes devient un cercle gravé qui reste en place : réussite = éteinte, échec = toujours active.
 static func _v7_to_v8(d: Dictionary) -> Array[String]:
 	return _make_permanent(d, "rune", "pièges à runes permanents : %d")
+
+## v8 → v9 : l'école de nature (6 sorts : épine venimeuse, ronces, foudre sauvage, essaim, bourgeon de vie, souffle de la forêt) : les sorts
+## du jeu qui manquent à la configuration de la partie ou de l'appareil y sont ajoutés (un donjon « custom » garde ses sorts tels quels).
+## Aucune classe ne les reçoit : les monstres peuvent les utiliser (capacité spéciale) et le créateur peut les attribuer à une classe.
+static func _v8_to_v9(d: Dictionary, defaults: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	var theirs = defaults.get("spells")
+	if not (cfg is Dictionary) or not (theirs is Array) or str(d.get("dungeonOrigin", "random")) == "custom":
+		return notes
+	var mine = (cfg as Dictionary).get("spells")
+	if not (mine is Array):
+		return notes
+	var have := {}
+	for e in mine:
+		if e is Dictionary:
+			have[str(e.get("id", ""))] = true
+	var added := 0
+	for e in theirs:
+		if e is Dictionary and not have.has(str(e.get("id", ""))):
+			(mine as Array).append((e as Dictionary).duplicate(true))
+			added += 1
+	if added > 0:
+		notes.append("sorts de nature : %d ajouté(s)" % added)
+	return notes
 
 ## v3 → v4 : le piège de vapeur reste en place quand le jet échoue (il se redéclenche si on repasse dessus) : ses objets deviennent « permanents »
 ## (objets des niveaux et de la bibliothèque). Une seule fois : le choix du créateur reste libre ensuite.

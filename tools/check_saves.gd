@@ -79,6 +79,14 @@ func _ready() -> void:
 	checks["héros qui suivait l'icône de sa classe"] = ci.config.party[0].icon == "@icon:dagger_wavy"
 	checks["héros à icône perso intact"] = ci.config.party[1].icon == "🐱"
 	checks["héros de la sauvegarde"] = ci.save.party[0].icon == "@icon:helm_winged"
+	# école de nature (v8 → v9) : les sorts manquants sont ajoutés une seule fois, un sort déjà présent n'est pas dupliqué
+	var na := {"config": {"spells": [{"id": "spell_nature1", "name": "Mon épine", "style": "nature", "mode": "damage"}]}, "save": {}, "schema": 8, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(na, Data.original_config)
+	var nat_ids := {}
+	for sp in na.config.spells:
+		nat_ids[sp.id] = int(nat_ids.get(sp.id, 0)) + 1
+	checks["sorts de nature ajoutés"] = nat_ids.has("spell_nature2") and nat_ids.has("spell_nature6")
+	checks["sort de nature existant non dupliqué ni écrasé"] = int(nat_ids.get("spell_nature1", 0)) == 1 and na.config.spells[0].name == "Mon épine"
 	# un donjon personnalisé garde sa bibliothèque
 	var cu := {"config": {"itemLibrary": [], "spells": []}, "save": {}, "dungeonOrigin": "custom"}
 	SaveMigrations.migrate(cu, Data.original_config)
