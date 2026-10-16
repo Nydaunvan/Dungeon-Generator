@@ -265,7 +265,14 @@ func request(method: int, path: String, body: Variant = null, auth: bool = false
 		token = await _valid_token()
 		if token == "":
 			return _fail("session_expired", 401)
-	return await _raw(method, path, body, token, extra)
+	var r: Dictionary = await _raw(method, path, body, token, extra)
+	# Jeton refusé par le serveur alors que l'horloge le croyait valide (session de la veille, horloge du PC décalée, jeton révoqué) :
+	# on le renouvelle une fois et on réessaie, au lieu de rester « connecté » sans que rien ne passe.
+	if auth and not r.ok and int(r.status) == 401 and not r.offline and is_signed_in():
+		var rr: Dictionary = await refresh()
+		if rr.ok and is_signed_in():
+			return await _raw(method, path, body, str(session.get("access_token", "")), extra)
+	return r
 
 func _valid_token() -> String:
 	if not is_signed_in():

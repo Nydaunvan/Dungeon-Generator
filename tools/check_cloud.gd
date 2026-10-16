@@ -142,6 +142,20 @@ func _ready() -> void:
 	await Cloud.sign_out()
 	check("déconnexion", not Cloud.is_signed_in() and not FileAccess.file_exists(Cloud.SESSION_PATH))
 
+	# --- jeton refusé par le serveur alors que l'horloge le croyait valide : renouvelé puis requête rejouée
+	reset()
+	queue = [resp(200, session_json("A2", "R2", 3600)), resp(200, [{"pseudo": "Nyra"}])]
+	await Cloud.sign_in("nyra@example.org", "bon")
+	Cloud.session["expires_at"] = Time.get_unix_time_from_system() + 3000.0
+	calls.clear()
+	queue = [resp(401, {"code": "PGRST303", "message": "JWT expired"}), resp(200, session_json("A7", "R7", 3600)), resp(200, [])]
+	r = await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/dungeons", null, true)
+	check("jeton refusé (401) : renouvelé puis requête rejouée", r.ok and calls.size() == 3 and "grant_type=refresh_token" in calls[1].url and header_of(calls[2], "Authorization") == "Bearer A7")
+	calls.clear()
+	queue = [resp(401, {"message": "JWT expired"}), resp(400, {"error_code": "refresh_token_not_found"})]
+	r = await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/dungeons", null, true)
+	check("jeton refusé et renouvellement refusé : session effacée (plus de faux « connecté »)", not r.ok and not Cloud.is_signed_in())
+
 	# --- mot de passe oublié
 	reset()
 	queue = [resp(200, {})]
