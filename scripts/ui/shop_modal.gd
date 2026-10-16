@@ -16,7 +16,8 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 	var m := Modal.open(host, L.t("ui.shop_modal.le_marchand") if village else L.t("ui.shop_modal.le_marchand_itinerant"), 960.0)
 	var body_h := clampf(vp.y * 0.74 - 150.0, 250.0, 560.0)
 	var greet := "ui.shop_modal.salut_village" if village else "ui.shop_modal.salut_%d" % (1 + randi() % 3)
-	var st := {"tab": "buy", "cat": "items", "who": str(gs.active_char_id), "sel": "", "qty": {}, "msg": "", "ok": false, "greet": greet}
+	# multi : mode « sélection multiple » (vente) ; picks : clés de sélection (`_gkey`) des objets cochés, toutes catégories confondues
+	var st := {"tab": "buy", "cat": "items", "who": str(gs.active_char_id), "sel": "", "qty": {}, "msg": "", "ok": false, "greet": greet, "multi": false, "picks": {}}
 	var merchant_icon := "@icon:merchant" if village else "@icon:merchant_dungeon"
 
 	# ---- en-tête : le marchand, sa phrase, l'or et la place restante dans la besace
@@ -51,6 +52,12 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 	var cat_bar := HBoxContainer.new()
 	cat_bar.add_theme_constant_override("separation", 6)
 	bar.add_child(cat_bar)
+	var sp2 := Control.new()
+	sp2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(sp2)
+	var multi_bar := HBoxContainer.new()      # bouton « Sélection multiple » (onglet Vendre seulement), à droite
+	multi_bar.add_theme_constant_override("separation", 6)
+	bar.add_child(multi_bar)
 
 	# ---- corps : étal (grille défilante) + fiche de l'objet
 	var main := HBoxContainer.new()
@@ -103,10 +110,11 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 
 	ctl.fn = func():
 		var buy: bool = st.tab == "buy"
+		var multi_on: bool = (not buy) and bool(st.multi)
 		gold.text = L.fa(L.t("ui.shop_modal.pieces_or"), gs.gold)
 		speech.text = L.t(str(st.greet)) if buy else L.t("ui.shop_modal.salut_vente")
 		bag_info.text = _bag_text(gs)
-		for box in [tab_bar, cat_bar, grid, detail]:
+		for box in [tab_bar, cat_bar, multi_bar, grid, detail]:
 			for ch in box.get_children():
 				box.remove_child(ch)
 				ch.queue_free()
@@ -125,6 +133,8 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 				st.tab = tid
 				st.sel = ""
 				st.msg = ""
+				st.multi = false      # la sélection multiple ne vaut que pour une vente en cours
+				st.picks = {}
 				refresh.call())
 			tab_bar.add_child(b)
 		# catégories avec leur effectif
@@ -147,13 +157,30 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 				st.msg = ""
 				refresh.call())
 			cat_bar.add_child(b)
+		# sélection multiple (vente) : on coche plusieurs objets, puis un seul bouton les vend ; Ctrl/Maj + clic sur un objet y entre aussi
+		if not buy:
+			var mb := Button.new()
+			mb.text = "☑ " + L.t("ui.shop_modal.multi")
+			mb.tooltip_text = L.t("ui.shop_modal.multi_tip")
+			mb.toggle_mode = true
+			mb.button_pressed = multi_on
+			mb.focus_mode = Control.FOCUS_NONE
+			mb.custom_minimum_size = Vector2(0, 34)
+			mb.toggled.connect(func(on: bool):
+				st.multi = on
+				st.msg = ""
+				st.picks = {}
+				if on:
+					_toggle_pick(gs, st, str(st.sel), 1)     # l'objet déjà sélectionné est le premier de la sélection
+				refresh.call())
+			multi_bar.add_child(mb)
 		# étal
 		var groups := _groups(src, str(st.cat))
 		var cur: Dictionary = {}
 		for g in groups:
 			if _gkey(g, buy) == str(st.sel):
 				cur = g
-		if cur.is_empty() and not groups.is_empty():
+		if cur.is_empty() and not groups.is_empty() and not multi_on:
 			cur = groups[0]
 			st.sel = _gkey(cur, buy)
 		grid.columns = clampi(int((shelf.size.x if shelf.size.x > 200 else 560.0) / (CARD_W + 8.0)), 3, 6)
@@ -163,9 +190,23 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 			e.custom_minimum_size = Vector2(220, 0)
 			grid.add_child(e)
 		for g in groups:
-			grid.add_child(_card(g, buy, str(st.sel) == _gkey(g, buy), func():
-				st.sel = _gkey(g, buy)
+			var gk_i := _gkey(g, buy)
+			var is_key_g: bool = (not buy) and str((g.rep as Dictionary).get("type", "")) == "key"
+			var shown_sel: bool = bool(st.picks.has(gk_i)) if multi_on else str(st.sel) == gk_i
+			grid.add_child(_card(g, buy, shown_sel, multi_on, func():
 				st.msg = ""
+				var chord := Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_SHIFT) or Input.is_key_pressed(KEY_META)
+				if not buy and (bool(st.multi) or chord):
+					if not bool(st.multi):
+						st.multi = true
+						st.picks = {}
+						_toggle_pick(gs, st, str(st.sel), 1)
+					if is_key_g:
+						st.msg = L.t("ui.shop_modal.ne_peut_pas_etre_vendue")
+						st.ok = false
+					else:
+						_toggle_pick(gs, st, gk_i)
+				st.sel = gk_i
 				refresh.call()))
 		_fill_detail(detail, gs, offers, st, cur, buy, village, done, refresh)
 		m.call_deferred("_fit")
@@ -184,9 +225,13 @@ static func open(host: Node, gs: GameState, offers: Array, village: bool, on_cha
 			st.qty.erase(st.gk)
 			st.erase("gk")
 		st.sel = ""
+		st.picks = {}      # (les places des objets ont changé : la sélection multiple repart de zéro)
 		var ok_text := ""
 		if int(res.bought) > 0:
-			ok_text = L.fa(L.t("ui.shop_modal.achat_ok") if buy_b else L.t("ui.shop_modal.vente_ok"), [int(res.bought), L.c(str(res.name))])
+			if (res.counts as Dictionary).size() > 1:
+				ok_text = L.fa(L.t("ui.shop_modal.achat_ok_multi") if buy_b else L.t("ui.shop_modal.vente_ok_multi"), _count_list(res.counts))
+			else:
+				ok_text = L.fa(L.t("ui.shop_modal.achat_ok") if buy_b else L.t("ui.shop_modal.vente_ok"), [int(res.bought), L.c(str(res.name))])
 		done.call(str(res.err) if int(res.bought) == 0 else "", ok_text),
 		["close"],
 		func(a: Variant):
@@ -245,12 +290,16 @@ static func _portrait(icon: String, village: bool) -> Control:
 		frame.add_child(t)
 	return frame
 
+## Clé de sélection d'un groupe. Piles : leur clé d'empilement. Autres objets : leur place dans la liste affichée (besace ou étal) —
+## surtout pas leur `id` : plusieurs exemplaires d'une même définition (le même butin lâché deux fois) le partagent, et ils étaient alors
+## sélectionnés ensemble (le détail et la vente portaient sur le dernier). La place est unique et ne change pas tant que la fenêtre
+## n'effectue pas de transaction (la sélection est alors remise à zéro).
 static func _gkey(g: Dictionary, buy: bool) -> String:
-	var rep: Dictionary = g.rep
-	return ("buy:" if buy else "sell:") + str(g.key if g.key != "" else rep.get("id", rep.get("uid", g.idxs[0])))
+	return ("buy:" if buy else "sell:") + (str(g.key) if g.key != "" else "#%d" % int((g.idxs as Array)[0]))
 
-## Vignette d'un objet sur l'étal : icône, nom, prix, pile.
-static func _card(g: Dictionary, buy: bool, selected: bool, on_pick: Callable) -> Button:
+## Vignette d'un objet sur l'étal : icône, nom, prix, pile. `multi_mark` : sélection multiple en cours, la case ☐ / ✓ est affichée
+## (jamais sur une clé : elle ne se vend pas).
+static func _card(g: Dictionary, buy: bool, selected: bool, multi_mark: bool, on_pick: Callable) -> Button:
 	var rep: Dictionary = g.rep
 	var count: int = g.idxs.size()
 	var leg: bool = bool(rep.get("legendary", false))
@@ -289,7 +338,108 @@ static func _card(g: Dictionary, buy: bool, selected: bool, on_pick: Callable) -
 		badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 3)
 		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(badge)
+	if multi_mark and str(rep.get("type", "")) != "key":
+		var ck := AdminUtil.label("✓" if selected else "☐", 14, UiTheme.GOLD if selected else UiTheme.DIM)
+		ck.add_theme_stylebox_override("normal", UiTheme.box(Color("120d09"), UiTheme.GOLD if selected else UiTheme.BRONZE, 1, 8))
+		ck.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_MINSIZE, 3)
+		ck.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(ck)
 	return b
+
+# ------------------------------------------------------------------ sélection multiple (vente)
+
+## Groupe de la besace désigné par une clé de sélection (toutes catégories), ou {}.
+static func _find_group(gs: GameState, gk: String) -> Dictionary:
+	for c in CATS:
+		for g in _groups(gs.inventory, str(c[0])):
+			if _gkey(g, false) == gk:
+				return g
+	return {}
+
+## Un groupe se vend-il ? (jamais une clé)
+static func _sellable(g: Dictionary) -> bool:
+	return not g.is_empty() and str((g.rep as Dictionary).get("type", "")) != "key"
+
+## Coche ou décoche un groupe de la sélection de vente (`on` : 1 coche, 0 décoche, -1 bascule). Une clé ou une clé inconnue est ignorée.
+static func _toggle_pick(gs: GameState, st: Dictionary, gk: String, on: int = -1) -> void:
+	if not _sellable(_find_group(gs, gk)):
+		return
+	var has: bool = st.picks.has(gk)
+	if on == 1 or (on == -1 and not has):
+		st.picks[gk] = true
+	elif has:
+		st.picks.erase(gk)
+
+## « 2× Épée, Bouclier, 3× Potion » : noms (traduits) avec leur nombre, dans l'ordre de `counts` {nom: nombre}.
+static func _count_list(counts: Dictionary) -> String:
+	var parts: Array = []
+	for nm in counts:
+		parts.append(("%d× %s" % [int(counts[nm]), L.c(str(nm))]) if int(counts[nm]) > 1 else L.c(str(nm)))
+	return ", ".join(parts)
+
+## Vente groupée, en haut de la fiche : bouton « Vendre la sélection » (avec le nombre d'objets et le total), liste des objets cochés,
+## « Tout sélectionner » (catégorie affichée) et « Tout désélectionner ».
+static func _multi_summary(box: VBoxContainer, gs: GameState, st: Dictionary, refresh: Callable) -> void:
+	var picked: Array = []     # groupes cochés, dans l'ordre de la besace
+	var take: Array = []       # indices dans la besace
+	var total := 0
+	for c in CATS:
+		for g in _groups(gs.inventory, str(c[0])):
+			if st.picks.has(_gkey(g, false)) and _sellable(g):
+				picked.append(g)
+				take.append_array(g.idxs)
+				total += Shop.sell_price(g.rep) * (g.idxs as Array).size()
+	var title := AdminUtil.label("☑ " + L.t("ui.shop_modal.multi_titre"), 17, UiTheme.GOLD)
+	title.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+	box.add_child(title)
+	var act := Button.new()
+	act.text = L.fa(L.t("ui.shop_modal.multi_vendre"), [take.size(), total])
+	act.focus_mode = Control.FOCUS_NONE
+	act.custom_minimum_size = Vector2(0, 40)
+	act.disabled = take.is_empty()
+	act.pressed.connect(func():
+		Flows.input("shop", ["sell", take.duplicate()]))
+	box.add_child(act)
+	if take.is_empty():
+		var none := AdminUtil.label(L.t("ui.shop_modal.multi_aucun"), 13, UiTheme.DIM)
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(none)
+	for g in picked:
+		var row := HBoxContainer.new()
+		var cnt: int = (g.idxs as Array).size()
+		var nl := AdminUtil.label(("%d× " % cnt if cnt > 1 else "") + L.c(str((g.rep as Dictionary).get("name", "?"))), 13, UiTheme.PARCH)
+		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nl.clip_text = true
+		row.add_child(nl)
+		row.add_child(AdminUtil.label("%d or" % (Shop.sell_price(g.rep) * cnt), 13, UiTheme.GOLD))
+		box.add_child(row)
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 6)
+	var all := Button.new()
+	all.text = L.t("ui.shop_modal.multi_tout")
+	all.focus_mode = Control.FOCUS_NONE
+	all.pressed.connect(func():
+		for g in _groups(gs.inventory, str(st.cat)):
+			if _sellable(g):
+				st.picks[_gkey(g, false)] = true
+		st.msg = ""
+		refresh.call())
+	bar.add_child(all)
+	var none_b := Button.new()
+	none_b.text = L.t("ui.shop_modal.multi_rien")
+	none_b.focus_mode = Control.FOCUS_NONE
+	none_b.disabled = take.is_empty()
+	none_b.pressed.connect(func():
+		st.picks = {}
+		st.msg = ""
+		refresh.call())
+	bar.add_child(none_b)
+	box.add_child(bar)
+	var il := AdminUtil.label(L.t("ui.shop_modal.revente_info"), 12, UiTheme.DIM)
+	il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(il)
+	if str(st.msg) != "":
+		_msg(box, st)
 
 static func _bag_text(gs: GameState) -> String:
 	var parts: Array = []
@@ -492,11 +642,15 @@ static func _scroll_section(box: VBoxContainer, gs: GameState, sp: Dictionary) -
 	_wrap(box, L.fa(L.t("ui.shop_modal.scr_conditions"), int(sp.get("staminaCost", 15))), 11, UiTheme.DIM)
 
 static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: Dictionary, g: Dictionary, buy: bool, village: bool, done: Callable, refresh: Callable) -> void:
+	var multi_on: bool = (not buy) and bool(st.get("multi", false))
+	if multi_on:
+		_multi_summary(box, gs, st, refresh)
+		box.add_child(HSeparator.new())
 	if g.is_empty():
 		var l := AdminUtil.label(L.t("ui.shop_modal.choisir_objet"), 14, UiTheme.DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(l)
-		if str(st.msg) != "":
+		if str(st.msg) != "" and not multi_on:
 			_msg(box, st)
 		return
 	var rep: Dictionary = g.rep
@@ -523,6 +677,79 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	top.add_child(tt)
 	box.add_child(top)
 	box.add_child(HSeparator.new())
+
+	# ---- action : le bouton est tout en haut de la fiche (plus besoin de faire défiler pour l'atteindre) ; en vente groupée, c'est le
+	# bouton du résumé (en haut du panneau) qui vend
+	if not multi_on:
+		var total := unit * qty
+		if is_key:
+			var kk := AdminUtil.label(L.t("ui.shop_modal.ne_peut_pas_etre_vendue"), 14, UiTheme.DIM)
+			kk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(kk)
+		else:
+			# raison d'un achat impossible
+			var reason := ""
+			if buy:
+				if gs.gold < total:
+					reason = L.fa(L.t("ui.shop_modal.manque_or"), total - gs.gold)
+				elif not Inventory.has_space(gs, rep):
+					reason = L.fa(L.t("ui.shop_modal.besace_pleine"), L.t(str(Inventory.TAB_LABELS.get(Inventory.tab_of(rep), ""))))
+			var act := Button.new()
+			act.text = "%s  ·  %d or" % [L.t("ui.shop_modal.acheter") if buy else L.t("ui.shop_modal.vendre"), total]
+			act.focus_mode = Control.FOCUS_NONE
+			act.custom_minimum_size = Vector2(0, 40)
+			act.disabled = reason != ""
+			var take: Array = idxs.slice(0, qty)
+			act.pressed.connect(func():
+				st["gk"] = gk         # (présentation : quantité à remettre à zéro après la transaction)
+				if not Flows.input("shop", ["buy" if buy else "sell", take.duplicate()]):
+					st.erase("gk"))
+			box.add_child(act)
+			if reason != "":
+				var rl := AdminUtil.label(reason, 13, RED)
+				rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				box.add_child(rl)
+			elif not buy:
+				var il := AdminUtil.label(L.t("ui.shop_modal.revente_info"), 12, UiTheme.DIM)
+				il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				box.add_child(il)
+			# quantité (piles)
+			if count > 1:
+				var qh := HBoxContainer.new()
+				qh.add_theme_constant_override("separation", 8)
+				var ql := AdminUtil.label(L.t("ui.shop_modal.quantite"), 14, UiTheme.DIM)
+				ql.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				qh.add_child(ql)
+				for d in [-1, 1]:
+					if d == 1:
+						var q := AdminUtil.label("%d / %d" % [qty, count], 15)
+						q.custom_minimum_size = Vector2(54, 0)
+						q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+						qh.add_child(q)
+					var sb := Button.new()
+					sb.text = "−" if d < 0 else "+"
+					sb.focus_mode = Control.FOCUS_NONE
+					sb.custom_minimum_size = Vector2(34, 30)
+					var dd: int = d
+					sb.pressed.connect(func():
+						st.qty[gk] = clampi(qty + dd, 1, count)
+						refresh.call())
+					qh.add_child(sb)
+				var mx := Button.new()
+				mx.text = "Max"
+				mx.focus_mode = Control.FOCUS_NONE
+				mx.custom_minimum_size = Vector2(44, 30)
+				mx.pressed.connect(func():
+					var cap := count
+					if buy and unit > 0:
+						cap = clampi(gs.gold / unit, 1, count)
+					st.qty[gk] = cap
+					refresh.call())
+				qh.add_child(mx)
+				box.add_child(qh)
+		if str(st.msg) != "":
+			_msg(box, st)
+		box.add_child(HSeparator.new())
 
 	# compare-t-on avec un équipement ?
 	var slot := Inventory.slot_of(rep)
@@ -596,91 +823,6 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	if compare and not who.is_empty():
 		_effect_section(box, gs, who, rep, slot)
 
-	var fill := Control.new()
-	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(fill)
-	box.add_child(HSeparator.new())
-
-	# quantité
-	if count > 1 and not is_key:
-		var qh := HBoxContainer.new()
-		qh.add_theme_constant_override("separation", 8)
-		var ql := AdminUtil.label(L.t("ui.shop_modal.quantite"), 14, UiTheme.DIM)
-		ql.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		qh.add_child(ql)
-		for d in [-1, 1]:
-			if d == 1:
-				var q := AdminUtil.label("%d / %d" % [qty, count], 15)
-				q.custom_minimum_size = Vector2(54, 0)
-				q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				qh.add_child(q)
-			var sb := Button.new()
-			sb.text = "−" if d < 0 else "+"
-			sb.focus_mode = Control.FOCUS_NONE
-			sb.custom_minimum_size = Vector2(34, 30)
-			var dd: int = d
-			sb.pressed.connect(func():
-				st.qty[gk] = clampi(qty + dd, 1, count)
-				refresh.call())
-			qh.add_child(sb)
-		var mx := Button.new()
-		mx.text = "Max"
-		mx.focus_mode = Control.FOCUS_NONE
-		mx.custom_minimum_size = Vector2(44, 30)
-		mx.pressed.connect(func():
-			var cap := count
-			if buy and unit > 0:
-				cap = clampi(gs.gold / unit, 1, count)
-			st.qty[gk] = cap
-			refresh.call())
-		qh.add_child(mx)
-		box.add_child(qh)
-
-	if is_key:
-		var kk := AdminUtil.label(L.t("ui.shop_modal.ne_peut_pas_etre_vendue"), 14, UiTheme.DIM)
-		kk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(kk)
-		if str(st.msg) != "":
-			_msg(box, st)
-		return
-
-	var total := unit * qty
-	var ph := HBoxContainer.new()
-	var pl := AdminUtil.label(L.t("ui.shop_modal.prix") if buy else L.t("ui.shop_modal.revente"), 14, UiTheme.DIM)
-	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ph.add_child(pl)
-	ph.add_child(AdminUtil.label("%d or" % total, 18, UiTheme.GOLD))
-	box.add_child(ph)
-
-	# raison d'un achat impossible
-	var reason := ""
-	if buy:
-		if gs.gold < total:
-			reason = L.fa(L.t("ui.shop_modal.manque_or"), total - gs.gold)
-		elif not Inventory.has_space(gs, rep):
-			reason = L.fa(L.t("ui.shop_modal.besace_pleine"), L.t(str(Inventory.TAB_LABELS.get(Inventory.tab_of(rep), ""))))
-	var act := Button.new()
-	act.text = L.t("ui.shop_modal.acheter") if buy else L.t("ui.shop_modal.vendre")
-	act.focus_mode = Control.FOCUS_NONE
-	act.custom_minimum_size = Vector2(0, 40)
-	act.disabled = reason != ""
-	var take: Array = idxs.slice(0, qty)
-	act.pressed.connect(func():
-		st["gk"] = gk         # (présentation : quantité à remettre à zéro après la transaction)
-		if not Flows.input("shop", ["buy" if buy else "sell", take.duplicate()]):
-			st.erase("gk"))
-	box.add_child(act)
-	if reason != "":
-		var rl := AdminUtil.label(reason, 13, RED)
-		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(rl)
-	elif not buy:
-		var il := AdminUtil.label(L.t("ui.shop_modal.revente_info"), 12, UiTheme.DIM)
-		il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(il)
-	if str(st.msg) != "":
-		_msg(box, st)
-
 ## Transaction de la boutique (achat ou vente d'un lot d'objets) : toute la logique est ici, l'interface ne fait que l'afficher.
 ## Renvoie {err, bought, paid, name}.
 static func transact(gs: GameState, offers: Array, buy: bool, take_in: Array) -> Dictionary:
@@ -691,8 +833,11 @@ static func transact(gs: GameState, offers: Array, buy: bool, take_in: Array) ->
 	var bought := 0
 	var paid := 0
 	var rep_name := str(offers[int(take[0])].get("name", "")) if buy else str(gs.inventory[int(take[0])].get("name", ""))
+	var counts := {}   # nom -> exemplaires traités (dans l'ordre) : une vente groupée mêle des objets différents
 	for ix in take:
-		var unit_p := int(offers[int(ix)].get("price", 0)) if buy else Shop.sell_price(gs.inventory[int(ix)])
+		var src_item: Dictionary = offers[int(ix)] if buy else gs.inventory[int(ix)]
+		var item_name := str(src_item.get("name", ""))
+		var unit_p := int(src_item.get("price", 0)) if buy else Shop.sell_price(src_item)
 		err = Shop.buy(gs, offers, int(ix), true) if buy else Shop.sell(gs, int(ix), true)
 		if err != "":
 			if buy and err.contains("plein"):
@@ -700,10 +845,15 @@ static func transact(gs: GameState, offers: Array, buy: bool, take_in: Array) ->
 			break
 		bought += 1
 		paid += unit_p
+		counts[item_name] = int(counts.get(item_name, 0)) + 1
 	if bought > 0:
-		gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [L.t("ui.shop_modal.le_groupe_achete") if buy else L.t("ui.shop_modal.le_groupe_vend"), "%d× " % bought if bought > 1 else "", rep_name, paid]))
+		var verb := L.t("ui.shop_modal.le_groupe_achete") if buy else L.t("ui.shop_modal.le_groupe_vend")
+		if counts.size() > 1:
+			gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [verb, "", _count_list(counts), paid]))
+		else:
+			gs.add_log(L.fa(L.t("ui.shop_modal.pour_pieces_or"), [verb, "%d× " % bought if bought > 1 else "", rep_name, paid]))
 		Sound.coins()
-	return {"err": err, "bought": bought, "paid": paid, "name": rep_name}
+	return {"err": err, "bought": bought, "paid": paid, "name": rep_name, "counts": counts}
 
 ## Une transaction est-elle bien formée ? (indices entiers, distincts, existants ; jamais une clé à la vente)
 static func valid_take(gs: GameState, offers: Array, buy: bool, take: Variant) -> bool:
