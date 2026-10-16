@@ -369,7 +369,7 @@ static func _level(cfg: Dictionary, id: String) -> Dictionary:
 ## `baseClassOf` : classe de base d'une classe évoluée (par son nom d'« evolvesFrom »).
 static func _base_class(cfg: Dictionary, cls: Dictionary) -> Dictionary:
 	var from := str(cls.get("evolvesFrom", ""))
-	if from == "" or not ["Guerrier", "Archer", "Roublard", "Mage", "Prêtre", "Barde"].has(from):
+	if from == "" or not ["Guerrier", "Archer", "Roublard", "Mage", "Prêtre", "Barde", "Druide"].has(from):
 		return {}
 	for c in cfg.get("classes", []):
 		if str(c.get("name", "")) == from:

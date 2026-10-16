@@ -83,6 +83,13 @@
    "assets/portraits/pretre_3.webp",
    "assets/portraits/pretre_4.webp",
    "assets/portraits/pretre_5.webp"
+  ],
+  "Druide": [
+   "assets/portraits/druide_0.webp",
+   "assets/portraits/druide_1.webp",
+   "assets/portraits/druide_2.webp",
+   "assets/portraits/druide_3.webp",
+   "assets/portraits/druide_4.webp"
   ]
  },
  "sheets": {

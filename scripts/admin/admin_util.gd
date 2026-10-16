@@ -2,7 +2,7 @@ class_name AdminUtil
 extends RefCounted
 ## Aides communes aux onglets d'administration (classes, sorts, objets).
 
-const BASE_ARCHETYPES := ["Guerrier", "Archer", "Roublard", "Mage", "Prêtre", "Barde"]
+const BASE_ARCHETYPES := ["Guerrier", "Archer", "Roublard", "Mage", "Prêtre", "Barde", "Druide"]
 
 static func is_base(cls: Dictionary) -> bool:
 	return BASE_ARCHETYPES.has(str(cls.get("name", "")))

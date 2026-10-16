@@ -2148,6 +2148,62 @@
     [
      "spell_minstrel4",
      "Carillon"
+    ],
+    [
+     "class_druid",
+     "Druide (classe)"
+    ],
+    [
+     "class_warden",
+     "Gardien de la Forêt (classe)"
+    ],
+    [
+     "class_stormcaller",
+     "Druide de la Tempête (classe)"
+    ],
+    [
+     "spell_nature1",
+     "Épine venimeuse"
+    ],
+    [
+     "spell_nature2",
+     "Ronces entravantes"
+    ],
+    [
+     "spell_nature3",
+     "Foudre sauvage"
+    ],
+    [
+     "spell_nature4",
+     "Essaim de guêpes"
+    ],
+    [
+     "spell_nature5",
+     "Bourgeon de vie"
+    ],
+    [
+     "spell_nature6",
+     "Souffle de la forêt"
+    ],
+    [
+     "spell_nature7",
+     "Écorce protectrice"
+    ],
+    [
+     "spell_nature8",
+     "Sève régénérante"
+    ],
+    [
+     "spell_nature9",
+     "Arbre-monde"
+    ],
+    [
+     "spell_nature10",
+     "Ouragan de feuilles"
+    ],
+    [
+     "spell_nature11",
+     "Colère de la nature"
     ]
    ]
   ],

@@ -87,6 +87,30 @@ func _ready() -> void:
 		nat_ids[sp.id] = int(nat_ids.get(sp.id, 0)) + 1
 	checks["sorts de nature ajoutés"] = nat_ids.has("spell_nature2") and nat_ids.has("spell_nature6")
 	checks["sort de nature existant non dupliqué ni écrasé"] = int(nat_ids.get("spell_nature1", 0)) == 1 and na.config.spells[0].name == "Mon épine"
+	# classe Druide (v9 → v10) : classes et sorts ajoutés, icônes des sorts de nature en image, rien d'écrasé ni de doublé
+	var dr := {"config": {"classes": [{"id": "class_priest", "name": "Prêtre"}], "spells": [{"id": "spell_nature1", "name": "Épine Venimeuse", "icon": "🌿", "style": "nature", "mode": "damage"},
+		{"id": "spell_nature2", "name": "Mes ronces", "icon": "🌟", "style": "nature", "mode": "damage"}]}, "save": {}, "schema": 9, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(dr, Data.original_config)
+	var dr_cls := {}
+	for c in dr.config.classes:
+		dr_cls[c.id] = int(dr_cls.get(c.id, 0)) + 1
+	var dr_sp := {}
+	for sp in dr.config.spells:
+		dr_sp[sp.id] = sp
+	checks["druide : 3 classes ajoutées"] = dr_cls.get("class_druid", 0) == 1 and dr_cls.get("class_warden", 0) == 1 and dr_cls.get("class_stormcaller", 0) == 1
+	checks["druide : sorts ajoutés"] = dr_sp.has("spell_nature7") and dr_sp.has("spell_nature11")
+	checks["druide : icône de sort de nature en image"] = dr_sp.spell_nature1.icon == "@icon:spell_nature1"
+	checks["druide : icône choisie par le créateur intacte"] = dr_sp.spell_nature2.icon == "🌟" and dr_sp.spell_nature2.name == "Mes ronces"
+	var dr2 := {"config": {"classes": [{"id": "class_mien", "name": "Druide"}], "spells": []}, "save": {}, "schema": 9, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(dr2, Data.original_config)
+	var mine := 0
+	for c in dr2.config.classes:
+		if c.name == "Druide":
+			mine += 1
+	checks["druide : classe du créateur de même nom non doublée"] = mine == 1 and not (dr2.config.classes as Array).any(func(c): return c.id == "class_druid")
+	var dr3 := {"config": {"classes": [], "spells": []}, "save": {}, "schema": 9, "dungeonOrigin": "custom"}
+	SaveMigrations.migrate(dr3, Data.original_config)
+	checks["druide : donjon custom intact"] = (dr3.config.classes as Array).is_empty()
 	# un donjon personnalisé garde sa bibliothèque
 	var cu := {"config": {"itemLibrary": [], "spells": []}, "save": {}, "dungeonOrigin": "custom"}
 	SaveMigrations.migrate(cu, Data.original_config)

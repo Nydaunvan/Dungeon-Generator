@@ -29,10 +29,12 @@ const LEGENDARY_NAMES := ["Croc du Néant", "Larme d'Aurore", "Rugissement de Fe
 const LEGENDARY_PERKS := ["lifesteal", "crit", "thorns"]
 const HERO_NAMES := ["Aldric", "Brienne", "Cassian", "Dorian", "Elowen", "Fenwick", "Gwyneth", "Hadrian", "Isolde", "Joren", "Kaelen", "Liora", "Magnus", "Nyra", "Osric", "Perenelle", "Quillan", "Rhiannon", "Silas", "Thalia", "Ulric", "Vesna", "Wystan", "Xanthe", "Yorick", "Zephyrine", "Alistair", "Branwen", "Cedric", "Dariel"]
 const ARCHETYPE_STATS := {
-	"Guerrier": [16, 11, 14, 7], "Archer": [10, 17, 11, 8], "Roublard": [11, 16, 10, 9], "Mage": [7, 10, 9, 17], "Prêtre": [9, 9, 13, 14],
+	"Guerrier": [16, 11, 14, 7], "Archer": [10, 17, 11, 8], "Roublard": [11, 16, 10, 9], "Mage": [7, 10, 9, 17], "Prêtre": [9, 9, 13, 14], "Druide": [9, 10, 13, 14],
 }
-const PORTRAIT_COUNTS := {"Guerrier": 7, "Mage": 8, "Roublard": 6, "Archer": 8, "Barde": 4, "Prêtre": 6}
-const PORTRAIT_FILES := {"Guerrier": "guerrier", "Mage": "mage", "Roublard": "roublard", "Archer": "archer", "Barde": "barde", "Prêtre": "pretre"}
+const PORTRAIT_COUNTS := {"Guerrier": 7, "Mage": 8, "Roublard": 6, "Archer": 8, "Barde": 4, "Prêtre": 6, "Druide": 5}
+const PORTRAIT_FILES := {"Guerrier": "guerrier", "Mage": "mage", "Roublard": "roublard", "Archer": "archer", "Barde": "barde", "Prêtre": "pretre", "Druide": "druide"}
+## Portraits du Druide empruntés à d'autres classes (même image) : jamais deux fois dans le même groupe.
+const PORTRAIT_TWINS := {"druide_0": "pretre_4", "druide_1": "archer_0", "druide_2": "archer_1", "druide_3": "pretre_2", "druide_4": "mage_4"}
 const WEAPON_STAT := {"sword": "bonusForce", "axe": "bonusForce", "mace": "bonusForce", "dagger": "bonusDex", "bow": "bonusDex", "staff": "bonusInt"}
 const WEAPON_TYPES := ["sword", "axe", "dagger", "staff", "bow", "mace"]
 const ARMOR_SLOTS := ["head", "body", "hands", "feet"]
@@ -792,6 +794,16 @@ static func _keeps_connected(rows: Array, cell: Vector2i) -> bool:
 
 # ------------------------------------------------------------------ groupe aléatoire
 
+## Portrait qui montre la même image que `path` (dans un sens ou dans l'autre), ou "".
+static func _portrait_twin(path: String) -> String:
+	var stem := path.get_file().get_basename()
+	for k in PORTRAIT_TWINS:
+		if k == stem:
+			return "res://assets/portraits/%s.webp" % str(PORTRAIT_TWINS[k])
+		if str(PORTRAIT_TWINS[k]) == stem:
+			return "res://assets/portraits/%s.webp" % k
+	return ""
+
 static func _is_base(cls: Dictionary) -> bool:
 	return str(cls.get("evolvesFrom", "")) == ""
 
@@ -843,7 +855,7 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 			var free: Array = []
 			for n in int(PORTRAIT_COUNTS[cname]):
 				var p := "res://assets/portraits/%s_%d.webp" % [PORTRAIT_FILES[cname], n]
-				if not used_portraits.has(p):
+				if not used_portraits.has(p) and not used_portraits.has(_portrait_twin(p)):
 					free.append(p)
 			if not free.is_empty():
 				portrait = choice(free)

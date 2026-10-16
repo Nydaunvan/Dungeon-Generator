@@ -2,7 +2,8 @@ extends "res://scripts/dungeon/spell_fx_kit.gd"
 ## Effets de nature (Forward+ / Vulkan) : épine venimeuse (vraie épine qui file, gerbe de pointes et bulles toxiques), ronces entravantes
 ## (lianes épineuses qui jaillissent du sol), foudre sauvage (éclair en zigzag, branches, feuilles arrachées), essaim de guêpes (nuée
 ## qui fond sur chaque cible), bourgeon de vie (fleur qui s'ouvre sur l'allié) et souffle de la forêt (pluie de feuilles et floraisons
-## sur tout le groupe). Vert vif et or de pollen ; feuilles opaques (mélange normal) pour que cela ressemble à du feuillage, pas à de la lumière.
+## sur tout le groupe) ; puis ceux du Gardien de la Forêt (écorce protectrice, sève régénérante, arbre-monde) et du Druide de la Tempête
+## (ouragan de feuilles, colère de la nature). Vert vif et or de pollen ; feuilles opaques (mélange normal) pour que cela ressemble à du feuillage, pas à de la lumière.
 
 static var _nat: Dictionary = {}
 
@@ -15,6 +16,11 @@ func play(_spell_id: String, target: Dictionary, ctx: Dictionary) -> void:
 		"nature_swarm": _swarm(target, ctx)
 		"nature_bloom": _bud(ctx)
 		"nature_grove": _grove(ctx)
+		"nature_bark": _bark(ctx)
+		"nature_sap": _sap(ctx)
+		"nature_worldtree": _worldtree(ctx)
+		"nature_cyclone": _cyclone(target, ctx)
+		"nature_wrath": _wrath(target, ctx)
 		_: _thorn(target)
 
 # ------------------------------------------------------------------------------------------ palette et briques
@@ -402,7 +408,7 @@ func _bud(ctx: Dictionary) -> void:
 
 # ------------------------------------------------------------------------------------------ SOUFFLE DE LA FORÊT
 
-func _grove(_ctx: Dictionary) -> void:
+func _grove(_ctx: Dictionary, rain_for: float = 1.5, rain_free: float = 2.2) -> void:
 	var up := cam.global_transform.basis.y
 	var right := cam.global_transform.basis.x
 	# pluie de feuilles sur toute la largeur de la vue
@@ -417,9 +423,9 @@ func _grove(_ctx: Dictionary) -> void:
 	pm.angular_velocity_max = 160.0
 	var rain := _gpu(70, 2.0, false, _smoke_mesh(Color.WHITE, _leaf_tex()), pm, top)
 	rain.global_transform = Transform3D(cam.global_transform.basis, top)
-	_later(1.5, func():
+	_later(rain_for, func():
 		rain.emitting = false
-		_free_after(rain, 2.2))
+		_free_after(rain, rain_free))
 	for i in 4:
 		var at := _slot_pos(i, 2.0)
 		_flower(at + up * 0.1, 0.8, 0.12 * float(i), 1.3)
@@ -429,3 +435,231 @@ func _grove(_ctx: Dictionary) -> void:
 		_later(0.12 * float(i), func(): _shock(at, _n_mid(), 1.8, 0.6))
 	_fade_lamp(_lamp_node(cam.global_position + _fwd() * 1.2, _n_mid(), 1.6 * _g, 6.0), 1.4)
 	_keep(2.4)
+
+# ------------------------------------------------------------------------------------------ LIANES AUTOUR D'UN POINT
+
+## Couronne de lianes qui jaillissent du sol autour de `base`, restent un instant puis se flétrissent.
+func _vine_ring(base: Vector3, size: float, n: int, hgt: float, life: float, radius: float, delay0: float = 0.0) -> void:
+	for i in n:
+		var ang := float(i) / float(n) * TAU + randf() * 0.4
+		var r := radius * (0.7 + randf() * 0.5) * size
+		var p := base + Vector3(cos(ang) * r, 0.0, sin(ang) * r)
+		var h := hgt * (0.75 + randf() * 0.5) * size
+		_later(delay0 + 0.05 * float(i), func():
+			var vm := _mesh_node(_vine_mesh(1 + i % 4), _vcol_mat(1.1 * _g), p, 1.0)
+			vm.rotation.y = ang
+			var seed_f := randf() * TAU
+			_add({"node": vm}, life, func(u: float):
+				var grow := 1.0 - pow(1.0 - clampf(u / 0.28, 0.0, 1.0), 3.0)
+				var wither := 1.0 - clampf((u - 0.72) / 0.28, 0.0, 1.0)
+				vm.scale = Vector3(size * 1.2 * (0.6 + 0.4 * wither), h * grow * (0.15 + 0.85 * wither), size * 1.2 * (0.6 + 0.4 * wither))
+				vm.rotation.z = sin(u * 7.0 + seed_f) * 0.07 * grow))
+
+# ------------------------------------------------------------------------------------------ ÉCORCE PROTECTRICE
+
+func _bark(ctx: Dictionary) -> void:
+	var at := _ally_at(ctx)
+	var up := cam.global_transform.basis.y
+	var right := cam.global_transform.basis.x
+	var bark := _c(0.78, 0.5, 0.22)
+	var moss := _n_mid()
+	_flash(_w_soft(), _hdr(Color(moss, 0.9), 0.9 * _g), at, 0.5, 2.0, 0.55, true)
+	_dome(at + up * 0.1, 0.8, _c(0.5, 0.78, 0.25), 1.7, 0.6)
+	_vine_ring(at - up * 0.95, 0.55, 6, 1.5, 1.7, 0.45)
+	# plaques d'écorce qui se posent autour du héros
+	for k in 6:
+		var a := float(k) / 6.0 * TAU
+		var p := at + right * cos(a) * 0.6 + up * sin(a) * 0.62
+		_streak(p, a + PI * 0.5, 0.7, bark.lerp(_n_hot(), 0.25), 0.5, 0.07 * float(k), 0.14, 0.3)
+	_helix(at - up * 0.6, [Color(_n_hot(), 0.0), Color(moss, 0.95), Color(_n_deep(), 0.0)], 0.6, 1.0, 1.6, 26, 0.9, _leaf_tex(), [0.07, 0.14])
+	_n_leaves(at, 0.5, 8, [0.8, 1.8], Vector3(0, -1.2, 0), 1.2)
+	_shock(at - up * 0.8, moss, 2.0, 0.6)
+	_halo_ring(at - up * 0.7, bark, 1.8, 0.8, 1.15, 0.05)
+	_fade_lamp(_lamp_node(at + _fwd() * -0.3, moss, 1.4 * _g, 4.0), 0.9)
+	_keep(2.0)
+
+# ------------------------------------------------------------------------------------------ SÈVE RÉGÉNÉRANTE
+
+func _sap(ctx: Dictionary) -> void:
+	var at := _ally_at(ctx)
+	var up := cam.global_transform.basis.y
+	var amber := _c(1.0, 0.78, 0.28)
+	var deep := _c(0.6, 0.32, 0.06)
+	_flash(_w_soft(), _hdr(Color(amber, 0.9), 1.0 * _g), at, 0.5, 2.2, 0.7, true)
+	_pillar(at - up * 1.0, 1.1, 3.2, SH_PILLAR, "pillar", {"col": amber, "core": _n_hot(), "power": 0.45 * _g, "fade": 0.0, "drop": 1.0, "flow": 2.6}, 1.3,
+		func(u: float, mi: MeshInstance3D, m: ShaderMaterial):
+			m.set_shader_parameter("fade", sin(u * PI) * 0.85))
+	# gouttes de sève dorée qui montent en spirale, feuilles qui tournent en sens inverse
+	_helix(at - up * 0.75, [Color(_n_hot(), 0.0), Color(amber, 0.95), Color(deep, 0.0)], 0.5, 1.5, 2.6, 42, 1.0)
+	_helix(at - up * 0.75, [Color(_n_hot(), 0.0), Color(_n_mid(), 0.95), Color(_n_deep(), 0.0)], 0.66, 1.2, -1.9, 18, 0.9, _leaf_tex(), [0.07, 0.14])
+	_halo_ring(at - up * 0.8, amber, 2.0, 0.9, 1.15)
+	_halo_ring(at - up * 0.8, _n_mid(), 1.4, 0.8, 1.15, 0.2)
+	_n_leaves(at - up * 0.6, 0.7, 8, [0.8, 2.0], Vector3(0, 1.0, 0), 1.4)
+	_later(0.35, func(): _flash(_w_spark(), _hdr(_n_gold(), 1.2 * _g), at + up * 0.2, 0.2, 1.0, 0.4))
+	_fade_lamp(_lamp_node(at + _fwd() * -0.3, amber, 1.5 * _g, 4.0), 1.1)
+	_keep(1.9)
+
+# ------------------------------------------------------------------------------------------ ARBRE-MONDE
+
+## Tronc : cône évasé à la base (racines), écorce striée, pousse le long de +Y (hauteur 1, rayon de base 1).
+static func _trunk_mesh() -> ArrayMesh:
+	if _nat.has("trunk"):
+		return _nat["trunk"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var segs := 18
+	var sides := 12
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var light := Vector3(0.5, 0.6, 0.6).normalized()
+	var rings: Array = []
+	for s in segs + 1:
+		var t := float(s) / float(segs)
+		var rad := lerpf(0.2, 0.075, pow(t, 0.7)) + 0.22 * pow(1.0 - t, 6.0)      # évasement des racines
+		var ring: Array = []
+		for k in sides:
+			var ang := TAU * float(k) / float(sides)
+			var n := Vector3(cos(ang), 0.0, sin(ang))
+			var bump := 1.0 + 0.16 * sin(ang * 5.0 + t * 3.0) * (1.0 - t * 0.5)
+			var sh := 0.4 + 0.6 * maxf(0.0, n.dot(light))
+			var stripe := 0.78 + 0.22 * sin(ang * 9.0 + t * 5.0)
+			var col := Color(0.36, 0.22, 0.1).lerp(Color(0.48, 0.34, 0.16), t) * sh * stripe
+			ring.append([Vector3(n.x * rad * bump, t, n.z * rad * bump), Color(col.r, col.g, col.b, 1.0)])
+		rings.append(ring)
+	for s in segs:
+		for k in sides:
+			var a: Array = rings[s][k]
+			var b: Array = rings[s][(k + 1) % sides]
+			var c: Array = rings[s + 1][k]
+			var d: Array = rings[s + 1][(k + 1) % sides]
+			for tri in [[a, c, b], [b, c, d]]:
+				for v in tri:
+					st.set_color(v[1])
+					st.add_vertex(v[0])
+	var m := st.commit()
+	_nat["trunk"] = m
+	return m
+
+func _worldtree(ctx: Dictionary) -> void:
+	var up := cam.global_transform.basis.y
+	var c := (_slot_pos(1, 3.0) + _slot_pos(2, 3.0)) * 0.5
+	var base := c - up * 1.1
+	var height := 3.8
+	var tm := _mesh_node(_trunk_mesh(), _vcol_mat(1.05 * _g), base, 1.0)
+	tm.scale = Vector3(0.01, 0.01, 0.01)
+	_add({"node": tm}, 2.8, func(u: float):
+		var grow := 1.0 - pow(1.0 - clampf(u / 0.3, 0.0, 1.0), 3.0)
+		var fade := 1.0 - clampf((u - 0.8) / 0.2, 0.0, 1.0)
+		tm.scale = Vector3(2.6 * (0.3 + 0.7 * grow) * (0.4 + 0.6 * fade), height * grow * (0.2 + 0.8 * fade), 2.6 * (0.3 + 0.7 * grow) * (0.4 + 0.6 * fade)))
+	_ground_shock(Vector3(base.x, base.y + 0.05, base.z), _n_mid(), 4.2, 0.8)
+	_vine_ring(base, 1.0, 7, 1.0, 2.6, 0.55)
+	# branches : lianes qui s'écartent depuis la cime
+	var top := base + up * height * 0.9
+	for k in 5:
+		var a := lerpf(-1.0, 1.0, float(k) / 4.0)
+		_later(0.35 + 0.06 * float(k), func():
+			var bm := _mesh_node(_vine_mesh(1 + k % 4), _vcol_mat(1.1 * _g), top - up * 0.3, 1.0)
+			bm.rotation.z = -a * 1.1
+			_add({"node": bm}, 2.0, func(u: float):
+				var grow := 1.0 - pow(1.0 - clampf(u / 0.35, 0.0, 1.0), 3.0)
+				var wither := 1.0 - clampf((u - 0.7) / 0.3, 0.0, 1.0)
+				bm.scale = Vector3(2.0 * wither, 2.4 * grow * (0.2 + 0.8 * wither), 2.0 * wither)))
+	# cime : lueur et gerbe de feuilles, puis la pluie de soin du souffle de la forêt
+	_later(0.5, func():
+		_flash(_w_soft(), _hdr(_n_mid(), 1.0 * _g), top, 1.0, 5.0, 1.4, true)
+		_flash(_w_soft(), _hdr(_n_gold(), 0.7 * _g), top, 0.6, 3.0, 1.0, true)
+		_crown(top, 1.7, 2.0)
+		_flare4(top, _n_gold(), 3.0, 0.9, 0.3))
+	_later(0.45, func(): _grove(ctx, 0.9, 1.7))
+	_fade_lamp(_lamp_node(top, _n_mid(), 2.0 * _g, 8.0), 2.4)
+	_keep(3.0)
+
+## Couronne de feuillage : feuilles opaques qui naissent dans une sphère de rayon `radius` autour de `at` et y restent `dur` secondes.
+func _crown(at: Vector3, radius: float, dur: float) -> void:
+	var pm := _pmat(radius, Vector3.UP, 180.0, 0.05, 0.35, Vector3(0, -0.15, 0), 0.34, 0.6,
+		_ramp(Color(0.55, 0.9, 0.3, 0.0), Color(0.3, 0.78, 0.18, 1.0), Color(0.14, 0.45, 0.08, 0.0)), 0.5, 0.3)
+	pm.angle_min = -180.0
+	pm.angle_max = 180.0
+	pm.angular_velocity_min = -40.0
+	pm.angular_velocity_max = 40.0
+	var crown := _gpu(90, 1.8, false, _smoke_mesh(Color.WHITE, _leaf_tex()), pm, at)
+	_later(dur * 0.55, func():
+		crown.emitting = false
+		_free_after(crown, 1.9))
+
+# ------------------------------------------------------------------------------------------ OURAGAN DE FEUILLES
+
+func _cyclone(target: Dictionary, ctx: Dictionary) -> void:
+	var pts: Array = ctx.get("targets", [])
+	if str(ctx.get("mode", "damage")) != "damageGroup" or pts.is_empty():
+		pts = [target] if not target.is_empty() else [{}]
+	var src := _start_point()
+	_flash(_w_soft(), _hdr(Color(_n_mid(), 0.7), 0.8 * _g), src, 0.3, 1.5, 0.4, true)
+	var i := 0
+	for t in pts:
+		var tt: Dictionary = t
+		_later(0.08 + 0.13 * float(i), func(): _cyclone_one(tt))
+		i += 1
+	_keep(2.6)
+
+func _cyclone_one(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var base := Vector3(at.x, 0.05, at.z)
+	var size := _tsize(target) * _s
+	var up := cam.global_transform.basis.y
+	_ground_shock(base, _n_mid(), 3.2 * size, 0.7)
+	# colonne de feuilles et de poussière verte qui tourne et monte
+	for layer in 3:
+		var rad := (0.3 + 0.2 * float(layer)) * size
+		_helix(base, [Color(_n_hot(), 0.0), Color(_n_mid(), 1.0), Color(_n_deep(), 0.0)], rad, (1.6 + 0.5 * float(layer)) * size, (3.4 - 0.8 * float(layer)) * (1.0 if layer % 2 == 0 else -1.0), 34, 0.9, _leaf_tex(), [0.2, 0.36])
+	_helix(base, [Color(1, 1, 0.85, 0.0), Color(0.8, 1.0, 0.6, 0.7), Color(0.3, 0.6, 0.2, 0.0)], 0.5 * size, 1.8 * size, 4.0, 24, 0.9)
+	for k in 4:
+		var a := randf() * TAU
+		_streak(base + up * (0.3 + 0.45 * float(k)) * size, a, 1.6 * size, _n_hot().lerp(_n_mid(), 0.4), 0.55, 0.06 * float(k), 0.1, 0.8)
+	_fade_lamp(_lamp_node(at, _n_mid(), 1.6 * _g, 5.0), 0.9)
+	_later(0.45, func():
+		_n_hit(at, target, 1.15, 0.05, {"shocks": [[_n_mid(), 3.0, 0.45], [_n_hot(), 1.8, 0.3, 0.05]], "lens": [2.8, 0.06]})
+		_n_leaves(at, 1.2 * size, 12, [2.0, 4.5], Vector3(0, -2.0, 0), 1.2))
+
+# ------------------------------------------------------------------------------------------ COLÈRE DE LA NATURE
+
+func _wrath(target: Dictionary, ctx: Dictionary) -> void:
+	var pts: Array = ctx.get("targets", [])
+	if str(ctx.get("mode", "damage")) != "damageGroup" or pts.is_empty():
+		pts = [target] if not target.is_empty() else [{}]
+	var up := cam.global_transform.basis.y
+	var glow := _c(0.7, 1.0, 0.45)
+	# le ciel s'obscurcit puis s'embrase, le sol tremble
+	_flash(_w_soft(), _hdr(Color(glow, 0.5), 1.0 * _g), cam.global_position + _fwd() * 3.2 + up * 2.2, 1.0, 10.0, 0.7, true)
+	_fade_lamp(_lamp_node(cam.global_position + _fwd() * 2.0 + up * 1.5, glow, 2.2 * _g, 9.0), 1.6)
+	var i := 0
+	for t in pts:
+		var tt: Dictionary = t
+		_later(0.3 + 0.16 * float(i), func(): _wrath_one(tt))
+		i += 1
+	_keep(2.8)
+
+func _wrath_one(target: Dictionary) -> void:
+	var at := _end_point(target)
+	var base := Vector3(at.x, 0.04, at.z)
+	var size := _tsize(target) * _s
+	var up := cam.global_transform.basis.y
+	var right := cam.global_transform.basis.x
+	var top := at + up * 4.6 + right * randf_range(-0.6, 0.6)
+	var glow := _c(0.7, 1.0, 0.45)
+	var white := _c(0.95, 1.0, 0.9)
+	var pts := _zigzag(top, at, 10, 0.45)
+	_bolt(pts, glow, 0.75 * size, 0.34)
+	_bolt(pts, white, 0.24 * size, 0.3)
+	for b in 4:
+		var from: Vector3 = pts[2 + b * 2]
+		var to := from + (at - top).normalized() * 1.4 + right * randf_range(-1.5, 1.5) * size + up * randf_range(-0.8, 0.2)
+		_bolt(_zigzag(from, to, 4, 0.22), glow, 0.24 * size, 0.26, 0.05)
+	_flare4(at, white, 4.0 * size, 0.5, 0.2)
+	_flash(_w_soft(), _hdr(white, 1.4 * _g), at, 0.3, 2.4 * size, 0.35)
+	_ground_shock(base, glow, 4.0 * size, 0.6)
+	_vine_ring(base, size, 6, 1.9, 1.4, 0.55, 0.05)
+	_n_hit(at, target, 1.5, 0.08, {"shocks": [[glow, 3.4, 0.5], [white, 2.0, 0.32, 0.05]], "lens": [3.4, 0.09],
+		"shards": {"mesh": _thorn_mesh(), "n": 14, "v": [2.0, 4.0], "sz": [0.18, 0.34], "grav": Vector3(0, -3.0, 0)}})
+	_n_leaves(at, 1.6 * size, 14, [2.0, 5.0], Vector3(0, -3.0, 0), 1.3)
+	_fade_lamp(_lamp_node(at + up * 0.5, glow, 3.4 * _g, 7.0), 0.6)

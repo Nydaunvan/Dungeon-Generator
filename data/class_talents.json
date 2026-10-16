@@ -2667,5 +2667,451 @@
 	}
    ]
   }
+ ],
+ "class_druid": [
+  {
+   "level": 5,
+   "options": [
+	{
+	 "icon": "🌿",
+	 "labelFr": "Sève vive",
+	 "labelEn": "Living Sap",
+	 "descFr": "+1 Intelligence, +1 dégâts/soin de sort",
+	 "descEn": "+1 Intelligence, +1 spell damage/power",
+	 "effects": {
+	  "bonusSpellDmg": 1,
+	  "bonusInt": 1
+	 },
+	 "id": "class_druid_lv5_A"
+	},
+	{
+	 "icon": "🌳",
+	 "labelFr": "Écorce épaisse",
+	 "labelEn": "Thick Bark",
+	 "descFr": "+1 Constitution, +4 PV max",
+	 "descEn": "+1 Constitution, +4 max HP",
+	 "effects": {
+	  "bonusCon": 1,
+	  "bonusHp": 4
+	 },
+	 "id": "class_druid_lv5_B"
+	}
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+	{
+	 "icon": "🍃",
+	 "labelFr": "Sagesse sauvage",
+	 "labelEn": "Wild Wisdom",
+	 "descFr": "+2 Intelligence, +2 résistance magique",
+	 "descEn": "+2 Intelligence, +2 magic resistance",
+	 "effects": {
+	  "bonusInt": 2,
+	  "resistMagic": 2
+	 },
+	 "id": "class_druid_lv10_A"
+	},
+	{
+	 "icon": "🌸",
+	 "labelFr": "Floraison",
+	 "labelEn": "Bloom",
+	 "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+	 "descEn": "+1 spell damage/power, +3 max stamina",
+	 "effects": {
+	  "bonusSpellDmg": 1,
+	  "bonusStamina": 3
+	 },
+	 "id": "class_druid_lv10_B"
+	}
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+	{
+	 "icon": "🌱",
+	 "labelFr": "Racines profondes",
+	 "labelEn": "Deep Roots",
+	 "descFr": "+1 Intelligence, +4 Endurance max",
+	 "descEn": "+1 Intelligence, +4 max stamina",
+	 "effects": {
+	  "bonusInt": 1,
+	  "bonusStamina": 4
+	 },
+	 "id": "class_druid_lv15_A"
+	},
+	{
+	 "icon": "🦋",
+	 "labelFr": "Instinct sauvage",
+	 "labelEn": "Wild Instinct",
+	 "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+	 "descEn": "+4 % critical hit chance, +2 spell damage/power",
+	 "effects": {
+	  "critChance": 4,
+	  "bonusSpellDmg": 2
+	 },
+	 "id": "class_druid_lv15_B"
+	}
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+	{
+	 "icon": "🪵",
+	 "labelFr": "Peau d'écorce",
+	 "labelEn": "Barkskin",
+	 "descFr": "+4 résistance physique, +4 résistance magique, +5 PV max",
+	 "descEn": "+4 physical resistance, +4 magic resistance, +5 max HP",
+	 "effects": {
+	  "resistPhys": 4,
+	  "resistMagic": 4,
+	  "bonusHp": 5
+	 },
+	 "id": "class_druid_lv20_A"
+	},
+	{
+	 "icon": "🌩️",
+	 "labelFr": "Fureur sylvestre",
+	 "labelEn": "Sylvan Fury",
+	 "descFr": "+4 dégâts/soin de sort",
+	 "descEn": "+4 spell damage/power",
+	 "effects": {
+	  "bonusSpellDmg": 4
+	 },
+	 "id": "class_druid_lv20_B"
+	}
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+	{
+	 "icon": "🌲",
+	 "labelFr": "Cœur de la forêt",
+	 "labelEn": "Heart of the Forest",
+	 "descFr": "+4 résistance magique, +6 PV max, +6 Endurance max",
+	 "descEn": "+4 magic resistance, +6 max HP, +6 max stamina",
+	 "effects": {
+	  "resistMagic": 4,
+	  "bonusHp": 6,
+	  "bonusStamina": 6
+	 },
+	 "id": "class_druid_lv25_A"
+	},
+	{
+	 "icon": "🌍",
+	 "labelFr": "Éveil de la nature",
+	 "labelEn": "Nature's Awakening",
+	 "descFr": "+1 Intelligence, +3 dégâts/soin de sort, +4 Endurance max",
+	 "descEn": "+1 Intelligence, +3 spell damage/power, +4 max stamina",
+	 "effects": {
+	  "bonusInt": 1,
+	  "bonusSpellDmg": 3,
+	  "bonusStamina": 4
+	 },
+	 "id": "class_druid_lv25_B"
+	}
+   ]
+  }
+ ],
+ "class_warden": [
+  {
+   "level": 5,
+   "options": [
+	{
+	 "icon": "🌿",
+	 "labelFr": "Gardien attentif",
+	 "labelEn": "Watchful Warden",
+	 "descFr": "+1 Constitution, +1 dégâts/soin de sort",
+	 "descEn": "+1 Constitution, +1 spell damage/power",
+	 "effects": {
+	  "bonusCon": 1,
+	  "bonusSpellDmg": 1
+	 },
+	 "id": "class_warden_lv5_A"
+	},
+	{
+	 "icon": "🛡️",
+	 "labelFr": "Écorce de chêne",
+	 "labelEn": "Oak Bark",
+	 "descFr": "+3 résistance physique, +4 PV max",
+	 "descEn": "+3 physical resistance, +4 max HP",
+	 "effects": {
+	  "resistPhys": 3,
+	  "bonusHp": 4
+	 },
+	 "id": "class_warden_lv5_B"
+	}
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+	{
+	 "icon": "💚",
+	 "labelFr": "Sève nourricière",
+	 "labelEn": "Nourishing Sap",
+	 "descFr": "+2 dégâts/soin de sort, +3 Endurance max",
+	 "descEn": "+2 spell damage/power, +3 max stamina",
+	 "effects": {
+	  "bonusSpellDmg": 2,
+	  "bonusStamina": 3
+	 },
+	 "id": "class_warden_lv10_A"
+	},
+	{
+	 "icon": "🪵",
+	 "labelFr": "Racines protectrices",
+	 "labelEn": "Protective Roots",
+	 "descFr": "+2 Constitution, +6 PV max",
+	 "descEn": "+2 Constitution, +6 max HP",
+	 "effects": {
+	  "bonusCon": 2,
+	  "bonusHp": 6
+	 },
+	 "id": "class_warden_lv10_B"
+	}
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+	{
+	 "icon": "🌳",
+	 "labelFr": "Canopée",
+	 "labelEn": "Canopy",
+	 "descFr": "+1 Intelligence, +3 résistance magique, +4 Endurance max",
+	 "descEn": "+1 Intelligence, +3 magic resistance, +4 max stamina",
+	 "effects": {
+	  "bonusInt": 1,
+	  "resistMagic": 3,
+	  "bonusStamina": 4
+	 },
+	 "id": "class_warden_lv15_A"
+	},
+	{
+	 "icon": "🦌",
+	 "labelFr": "Force du cerf",
+	 "labelEn": "Stag's Strength",
+	 "descFr": "+3 résistance physique, +8 PV max",
+	 "descEn": "+3 physical resistance, +8 max HP",
+	 "effects": {
+	  "resistPhys": 3,
+	  "bonusHp": 8
+	 },
+	 "id": "class_warden_lv15_B"
+	}
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+	{
+	 "icon": "🌸",
+	 "labelFr": "Floraison éternelle",
+	 "labelEn": "Everbloom",
+	 "descFr": "+3 dégâts/soin de sort, +6 Endurance max",
+	 "descEn": "+3 spell damage/power, +6 max stamina",
+	 "effects": {
+	  "bonusSpellDmg": 3,
+	  "bonusStamina": 6
+	 },
+	 "id": "class_warden_lv20_A"
+	},
+	{
+	 "icon": "🏔️",
+	 "labelFr": "Rempart vivant",
+	 "labelEn": "Living Rampart",
+	 "descFr": "+6 résistance physique, +10 PV max",
+	 "descEn": "+6 physical resistance, +10 max HP",
+	 "effects": {
+	  "resistPhys": 6,
+	  "bonusHp": 10
+	 },
+	 "id": "class_warden_lv20_B"
+	}
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+	{
+	 "icon": "🌲",
+	 "labelFr": "Arbre ancestral",
+	 "labelEn": "Ancient Tree",
+	 "descFr": "+4 Constitution, +4 résistance magique, +12 PV max",
+	 "descEn": "+4 Constitution, +4 magic resistance, +12 max HP",
+	 "effects": {
+	  "bonusCon": 4,
+	  "resistMagic": 4,
+	  "bonusHp": 12
+	 },
+	 "id": "class_warden_lv25_A"
+	},
+	{
+	 "icon": "💫",
+	 "labelFr": "Souffle de vie",
+	 "labelEn": "Breath of Life",
+	 "descFr": "+1 Intelligence, +4 dégâts/soin de sort, +6 Endurance max",
+	 "descEn": "+1 Intelligence, +4 spell damage/power, +6 max stamina",
+	 "effects": {
+	  "bonusInt": 1,
+	  "bonusSpellDmg": 4,
+	  "bonusStamina": 6
+	 },
+	 "id": "class_warden_lv25_B"
+	}
+   ]
+  }
+ ],
+ "class_stormcaller": [
+  {
+   "level": 5,
+   "options": [
+	{
+	 "icon": "⚡",
+	 "labelFr": "Étincelle sauvage",
+	 "labelEn": "Wild Spark",
+	 "descFr": "+1 dégâts/soin de sort",
+	 "descEn": "+1 spell damage/power",
+	 "effects": {
+	  "bonusSpellDmg": 1
+	 },
+	 "id": "class_stormcaller_lv5_A"
+	},
+	{
+	 "icon": "👁️",
+	 "labelFr": "Œil de la tempête",
+	 "labelEn": "Eye of the Storm",
+	 "descFr": "+1 Intelligence, +3 % chances de coup critique",
+	 "descEn": "+1 Intelligence, +3 % critical hit chance",
+	 "effects": {
+	  "bonusInt": 1,
+	  "critChance": 3
+	 },
+	 "id": "class_stormcaller_lv5_B"
+	}
+   ]
+  },
+  {
+   "level": 10,
+   "options": [
+	{
+	 "icon": "🌩️",
+	 "labelFr": "Orage grondant",
+	 "labelEn": "Rumbling Storm",
+	 "descFr": "+1 dégâts/soin de sort, +3 Endurance max",
+	 "descEn": "+1 spell damage/power, +3 max stamina",
+	 "effects": {
+	  "bonusSpellDmg": 1,
+	  "bonusStamina": 3
+	 },
+	 "id": "class_stormcaller_lv10_A"
+	},
+	{
+	 "icon": "🍂",
+	 "labelFr": "Vent mordant",
+	 "labelEn": "Biting Wind",
+	 "descFr": "+2 Intelligence, +2 résistance magique",
+	 "descEn": "+2 Intelligence, +2 magic resistance",
+	 "effects": {
+	  "bonusInt": 2,
+	  "resistMagic": 2
+	 },
+	 "id": "class_stormcaller_lv10_B"
+	}
+   ]
+  },
+  {
+   "level": 15,
+   "options": [
+	{
+	 "icon": "🌪️",
+	 "labelFr": "Tourbillon",
+	 "labelEn": "Whirlwind",
+	 "descFr": "+4 % chances de coup critique, +2 dégâts/soin de sort",
+	 "descEn": "+4 % critical hit chance, +2 spell damage/power",
+	 "effects": {
+	  "critChance": 4,
+	  "bonusSpellDmg": 2
+	 },
+	 "id": "class_stormcaller_lv15_A"
+	},
+	{
+	 "icon": "💨",
+	 "labelFr": "Souffle ample",
+	 "labelEn": "Deep Breath",
+	 "descFr": "+1 Intelligence, +4 Endurance max",
+	 "descEn": "+1 Intelligence, +4 max stamina",
+	 "effects": {
+	  "bonusInt": 1,
+	  "bonusStamina": 4
+	 },
+	 "id": "class_stormcaller_lv15_B"
+	}
+   ]
+  },
+  {
+   "level": 20,
+   "options": [
+	{
+	 "icon": "🌠",
+	 "labelFr": "Foudre guidée",
+	 "labelEn": "Guided Lightning",
+	 "descFr": "+5 % chances de coup critique, +2 dégâts/soin de sort",
+	 "descEn": "+5 % critical hit chance, +2 spell damage/power",
+	 "effects": {
+	  "critChance": 5,
+	  "bonusSpellDmg": 2
+	 },
+	 "id": "class_stormcaller_lv20_A"
+	},
+	{
+	 "icon": "🌿",
+	 "labelFr": "Sève volatile",
+	 "labelEn": "Volatile Sap",
+	 "descFr": "+4 dégâts/soin de sort",
+	 "descEn": "+4 spell damage/power",
+	 "effects": {
+	  "bonusSpellDmg": 4
+	 },
+	 "id": "class_stormcaller_lv20_B"
+	}
+   ]
+  },
+  {
+   "level": 25,
+   "options": [
+	{
+	 "icon": "⛈️",
+	 "labelFr": "Colère déchaînée",
+	 "labelEn": "Unleashed Wrath",
+	 "descFr": "+5 % chances de coup critique, +4 dégâts/soin de sort",
+	 "descEn": "+5 % critical hit chance, +4 spell damage/power",
+	 "effects": {
+	  "critChance": 5,
+	  "bonusSpellDmg": 4
+	 },
+	 "id": "class_stormcaller_lv25_A"
+	},
+	{
+	 "icon": "🌀",
+	 "labelFr": "Œil du cyclone",
+	 "labelEn": "Eye of the Cyclone",
+	 "descFr": "+1 Intelligence, +4 % des dégâts infligés restaurés en PV, +3 dégâts/soin de sort, +4 Endurance max",
+	 "descEn": "+1 Intelligence, +4 % of damage dealt restored as HP, +3 spell damage/power, +4 max stamina",
+	 "effects": {
+	  "bonusInt": 1,
+	  "lifestealPct": 4,
+	  "bonusSpellDmg": 3,
+	  "bonusStamina": 4
+	 },
+	 "id": "class_stormcaller_lv25_B"
+	}
+   ]
+  }
  ]
 }

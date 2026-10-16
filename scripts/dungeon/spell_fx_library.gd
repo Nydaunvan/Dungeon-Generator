@@ -85,6 +85,11 @@ const CATALOG := {
 	"nature_swarm": {"label": "admin.spells.fx_nature_swarm", "styles": ["nature"], "modes": ["damage", "damageGroup"], "script": NATURE_SCRIPT},
 	"nature_bloom": {"label": "admin.spells.fx_nature_bloom", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["healSingle"], "script": NATURE_SCRIPT},
 	"nature_grove": {"label": "admin.spells.fx_nature_grove", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["healParty"], "script": NATURE_SCRIPT},
+	"nature_bark": {"label": "admin.spells.fx_nature_bark", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["shieldSingle"], "script": NATURE_SCRIPT},
+	"nature_sap": {"label": "admin.spells.fx_nature_sap", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["healSingle"], "script": NATURE_SCRIPT},
+	"nature_worldtree": {"label": "admin.spells.fx_nature_worldtree", "styles": ["nature", "holy", "bard", "arcane"], "modes": ["healParty"], "script": NATURE_SCRIPT},
+	"nature_cyclone": {"label": "admin.spells.fx_nature_cyclone", "styles": ["nature"], "modes": ["damageGroup"], "script": NATURE_SCRIPT},
+	"nature_wrath": {"label": "admin.spells.fx_nature_wrath", "styles": ["nature"], "modes": ["damageGroup"], "script": NATURE_SCRIPT},
 }
 
 ## Effet par défaut de chaque sort d'origine (quand le sort n'en a pas choisi un) ; sinon l'effet par défaut du style.
@@ -149,6 +154,11 @@ const SPELL_DEFAULT := {
 	"spell_nature4": "nature_swarm",
 	"spell_nature5": "nature_bloom",
 	"spell_nature6": "nature_grove",
+	"spell_nature7": "nature_bark",
+	"spell_nature8": "nature_sap",
+	"spell_nature9": "nature_worldtree",
+	"spell_nature10": "nature_cyclone",
+	"spell_nature11": "nature_wrath",
 }
 
 ## Teintes proposées dans l'éditeur : [couleur, clé de langue]. La teinte tourne les couleurs de l'effet en gardant ses nuances.

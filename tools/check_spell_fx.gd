@@ -44,6 +44,16 @@ func _init() -> void:
 		bad += 1
 		print("ÉCHEC : effet par défaut de nature (soin de groupe) : ", lib.default_for("nature", "healParty"))
 
+	# chaque effet du catalogue est bien aiguillé par son script (sinon c'est l'effet par défaut du script qui jouerait)
+	var src_cache := {}
+	for id in lib.CATALOG:
+		var path: String = str(lib.CATALOG[id].script)
+		if not src_cache.has(path):
+			src_cache[path] = FileAccess.get_file_as_string(path)
+		if not (src_cache[path] as String).contains("\"%s\"" % id):
+			bad += 1
+			print("ÉCHEC : l'effet ", id, " n'est pas aiguillé dans ", path)
+
 	# 2. anciens sorts et sauvegardes : les champs sont ajoutés, rien d'autre ne change
 	var cfg: Dictionary = data.original_config.duplicate(true)
 	for s in cfg.spells:

@@ -704,7 +704,7 @@
   {
    "id": "spell_nature1",
    "name": "Épine Venimeuse",
-   "icon": "🌿",
+   "icon": "@icon:spell_nature1",
    "style": "nature",
    "mode": "damage",
    "dmgMin": 8,
@@ -719,7 +719,7 @@
   {
    "id": "spell_nature2",
    "name": "Ronces Entravantes",
-   "icon": "🌱",
+   "icon": "@icon:spell_nature2",
    "style": "nature",
    "mode": "damage",
    "dmgMin": 10,
@@ -733,7 +733,7 @@
   {
    "id": "spell_nature3",
    "name": "Foudre Sauvage",
-   "icon": "⚡",
+   "icon": "@icon:spell_nature3",
    "style": "nature",
    "mode": "damage",
    "dmgMin": 16,
@@ -747,7 +747,7 @@
   {
    "id": "spell_nature4",
    "name": "Essaim de Guêpes",
-   "icon": "🐝",
+   "icon": "@icon:spell_nature4",
    "style": "nature",
    "mode": "damageGroup",
    "dmgMin": 9,
@@ -762,7 +762,7 @@
   {
    "id": "spell_nature5",
    "name": "Bourgeon de Vie",
-   "icon": "🌸",
+   "icon": "@icon:spell_nature5",
    "style": "nature",
    "mode": "healSingle",
    "healMin": 8,
@@ -773,13 +773,74 @@
   {
    "id": "spell_nature6",
    "name": "Souffle de la Forêt",
-   "icon": "🍃",
+   "icon": "@icon:spell_nature6",
    "style": "nature",
    "mode": "healParty",
    "healMin": 9,
    "healMax": 15,
    "staminaCost": 28,
    "cooldownSec": 12
+  },
+  {
+   "id": "spell_nature7",
+   "name": "Écorce Protectrice",
+   "icon": "@icon:spell_nature7",
+   "style": "nature",
+   "mode": "shieldSingle",
+   "shieldMin": 22,
+   "shieldMax": 34,
+   "staminaCost": 22,
+   "cooldownSec": 12
+  },
+  {
+   "id": "spell_nature8",
+   "name": "Sève Régénérante",
+   "icon": "@icon:spell_nature8",
+   "style": "nature",
+   "mode": "healSingle",
+   "healMin": 22,
+   "healMax": 34,
+   "staminaCost": 24,
+   "cooldownSec": 9
+  },
+  {
+   "id": "spell_nature9",
+   "name": "Arbre-Monde",
+   "icon": "@icon:spell_nature9",
+   "style": "nature",
+   "mode": "healParty",
+   "healMin": 17,
+   "healMax": 27,
+   "staminaCost": 36,
+   "cooldownSec": 15
+  },
+  {
+   "id": "spell_nature10",
+   "name": "Ouragan de Feuilles",
+   "icon": "@icon:spell_nature10",
+   "style": "nature",
+   "mode": "damageGroup",
+   "dmgMin": 16,
+   "dmgMax": 26,
+   "staminaCost": 30,
+   "statusEffect": "slow",
+   "statusChance": 50,
+   "statusDuration": 3,
+   "cooldownSec": 10
+  },
+  {
+   "id": "spell_nature11",
+   "name": "Colère de la Nature",
+   "icon": "@icon:spell_nature11",
+   "style": "nature",
+   "mode": "damageGroup",
+   "dmgMin": 28,
+   "dmgMax": 42,
+   "staminaCost": 38,
+   "statusEffect": "stun",
+   "statusChance": 25,
+   "statusDuration": 1,
+   "cooldownSec": 13
   }
  ],
  "itemLibrary": [
@@ -1108,6 +1169,40 @@
    "evolvesTo": [
     "class_skald",
     "class_minstrel"
+   ],
+   "evolveLevel": 5
+  },
+  {
+   "id": "class_druid",
+   "name": "Druide",
+   "icon": "@icon:class_druid",
+   "baseSpeed": 8,
+   "allowedWeaponTypes": [
+    "mace",
+    "staff"
+   ],
+   "allowedSpellIds": [
+    "spell_nature1",
+    "spell_nature5",
+    "spell_nature2"
+   ],
+   "spellProgression": [
+    {
+     "level": 1,
+     "spellId": "spell_nature1"
+    },
+    {
+     "level": 3,
+     "spellId": "spell_nature5"
+    },
+    {
+     "level": 6,
+     "spellId": "spell_nature2"
+    }
+   ],
+   "evolvesTo": [
+    "class_warden",
+    "class_stormcaller"
    ],
    "evolveLevel": 5
   },
@@ -1547,6 +1642,79 @@
     {
      "level": 27,
      "spellId": "spell_crusader3"
+    }
+   ]
+  },
+  {
+   "id": "class_warden",
+   "name": "Gardien de la Forêt",
+   "icon": "@icon:class_warden",
+   "baseSpeed": 8,
+   "evolvesFrom": "Druide",
+   "descFr": "Protecteur de la nature : soins sylvestres, écorce protectrice et régénération de tout le groupe.",
+   "descEn": "Nature's protector: sylvan healing, protective bark and regeneration for the whole party.",
+   "allowedWeaponTypes": [
+    "mace",
+    "staff"
+   ],
+   "allowedSpellIds": [
+    "spell_nature6",
+    "spell_nature7",
+    "spell_nature8",
+    "spell_nature9"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_nature6"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_nature7"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_nature8"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_nature9"
+    }
+   ]
+  },
+  {
+   "id": "class_stormcaller",
+   "name": "Druide de la Tempête",
+   "icon": "@icon:class_stormcaller",
+   "baseSpeed": 9,
+   "evolvesFrom": "Druide",
+   "descFr": "Maître des forces sauvages : foudre, essaims et ouragans qui frappent tout un groupe d'ennemis.",
+   "descEn": "Master of the wild forces: lightning, swarms and hurricanes that strike a whole group of enemies.",
+   "allowedWeaponTypes": [
+    "staff"
+   ],
+   "allowedSpellIds": [
+    "spell_nature3",
+    "spell_nature4",
+    "spell_nature10",
+    "spell_nature11"
+   ],
+   "spellProgression": [
+    {
+     "level": 7,
+     "spellId": "spell_nature3"
+    },
+    {
+     "level": 13,
+     "spellId": "spell_nature4"
+    },
+    {
+     "level": 20,
+     "spellId": "spell_nature10"
+    },
+    {
+     "level": 27,
+     "spellId": "spell_nature11"
     }
    ]
   }

@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 9
+const SCHEMA := 10
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -54,6 +54,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v7_to_v8(d))
 			8:
 				notes.append_array(_v8_to_v9(d, defaults))
+			9:
+				notes.append_array(_v9_to_v10(d, defaults))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -187,6 +189,54 @@ static func _v8_to_v9(d: Dictionary, defaults: Dictionary) -> Array[String]:
 			added += 1
 	if added > 0:
 		notes.append("sorts de nature : %d ajouté(s)" % added)
+	return notes
+
+## Anciennes icônes (emoji) des sorts de nature, remplacées par des images : {id de sort : emoji d'origine}.
+const NATURE_ICON_OLD := {
+	"spell_nature1": "🌿", "spell_nature2": "🌱", "spell_nature3": "⚡", "spell_nature4": "🐝", "spell_nature5": "🌸", "spell_nature6": "🍃",
+}
+
+## Classes ajoutées par le jeu en v10 (le Druide et ses deux évolutions).
+const DRUID_CLASS_IDS := ["class_druid", "class_warden", "class_stormcaller"]
+
+## v9 → v10 : la classe Druide et ses évolutions (Gardien de la Forêt, Druide de la Tempête), les 5 sorts de nature qui complètent leur
+## progression, et les icônes en image des sorts de nature. Un donjon « custom » garde ses classes et ses sorts tels quels ; une classe
+## du créateur qui porte déjà le même identifiant ou le même nom n'est jamais remplacée ni doublonnée.
+static func _v9_to_v10(d: Dictionary, defaults: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary) or str(d.get("dungeonOrigin", "random")) == "custom":
+		return notes
+	# sorts manquants (les 5 nouveaux ; tout sort du jeu absent de la configuration)
+	var n_sp := _v8_to_v9(d, defaults)
+	var spells = (cfg as Dictionary).get("spells")
+	var n_icons := 0
+	if spells is Array:
+		for e in spells:
+			if e is Dictionary and NATURE_ICON_OLD.has(str(e.get("id", ""))) and str(e.get("icon", "")) == str(NATURE_ICON_OLD[str(e.id)]):
+				e["icon"] = "@icon:%s" % str(e.id)
+				n_icons += 1
+	# classes manquantes
+	var classes = (cfg as Dictionary).get("classes")
+	var theirs = defaults.get("classes")
+	var added := 0
+	if classes is Array and theirs is Array:
+		var ids := {}
+		var names := {}
+		for c in classes:
+			if c is Dictionary:
+				ids[str(c.get("id", ""))] = true
+				names[str(c.get("name", ""))] = true
+		for c in theirs:
+			if c is Dictionary and DRUID_CLASS_IDS.has(str(c.get("id", ""))) and not ids.has(str(c.id)) and not names.has(str(c.get("name", ""))):
+				(classes as Array).append((c as Dictionary).duplicate(true))
+				added += 1
+	if added > 0:
+		notes.append("classe Druide et évolutions : %d classe(s) ajoutée(s)" % added)
+	for n in n_sp:
+		notes.append(n)
+	if n_icons > 0:
+		notes.append("icônes des sorts de nature : %d mise(s) à jour" % n_icons)
 	return notes
 
 ## v3 → v4 : le piège de vapeur reste en place quand le jet échoue (il se redéclenche si on repasse dessus) : ses objets deviennent « permanents »

@@ -4,7 +4,7 @@ extends RefCounted
 ## `renderIconPickerGrid` et `openPortraitPicker` de l'original. Le catalogue illustré vient de `ICON_CATALOG`
 ## (data/game_constants.json), dans l'ordre de l'original, jamais d'un parcours de dossier.
 
-const PORTRAIT_CLASSES := [["Guerrier", "guerrier"], ["Mage", "mage"], ["Roublard", "roublard"], ["Archer", "archer"], ["Barde", "barde"], ["Prêtre", "pretre"]]
+const PORTRAIT_CLASSES := [["Guerrier", "guerrier"], ["Mage", "mage"], ["Roublard", "roublard"], ["Archer", "archer"], ["Barde", "barde"], ["Prêtre", "pretre"], ["Druide", "druide"]]
 
 const SWATCH_BG := Color("1c1610")
 const BORDER := Color("5a4526")

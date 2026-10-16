@@ -352,7 +352,8 @@ func decode_code(code: String) -> Dictionary:
 # ------------------------------------------------------------------ complétion d'une configuration (loadConfig)
 
 const BASE_EVOLUTIONS := {"Guerrier": ["Berserker", "Paladin"], "Archer": ["Mage-Archer", "Danselame"], "Roublard": ["Voleur", "Assassin"],
-	"Mage": ["Élémentaliste", "Sorcier"], "Prêtre": ["Clerc", "Croisé"]}
+	"Mage": ["Élémentaliste", "Sorcier"], "Prêtre": ["Clerc", "Croisé"],
+	"Druide": ["Gardien de la Forêt", "Druide de la Tempête"]}
 
 ## Complète les champs absents d'une configuration (anciennes sauvegardes, fichiers incomplets) : comme `loadConfig`,
 ## `ensureGrowthDefaults` et `repairEvolvedClasses`. Ne purge rien ; les migrations `_contentVersion` n'ont pas été portées
