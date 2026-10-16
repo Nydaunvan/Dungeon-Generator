@@ -1162,7 +1162,7 @@ func _fill_candidates() -> void:
 
 const LOG_ACTIONS := ["chat_mute", "chat_unmute", "chat_delete", "chat_word_add", "chat_word_remove", "gallery_ban", "gallery_unban",
 	"gallery_unpublish", "gallery_delete", "role_set", "role_remove", "account_ban", "account_unban", "announce", "announce_clear",
-	"maintenance", "board_reset", "run_cancel", "run_view", "note_add", "note_delete", "report_handle", "flag_set"]
+	"maintenance", "board_reset", "run_cancel", "run_view", "note_add", "note_delete", "report_handle", "flag_set", "suspect_seen", "suspect_clear", "suspect_restore"]
 const LOG_PERIODS := [1, 7, 30, 0]
 
 static func _action_name(a: String) -> String:
@@ -1695,6 +1695,22 @@ func _build_suspects() -> void:
 	if not r.ok or not (r.data is Array):
 		_error(_body, r)
 		return
+	var reload := func():
+		await SuperAdmin.refresh_pending(true)
+		if _alive():
+			_show(_tab)
+	var seen_n := 0
+	var sc: Dictionary = await SuperAdmin.suspect_seen_count()
+	if mine != _gen or not _alive():
+		return
+	if sc.ok and sc.data != null:
+		seen_n = int(sc.data)
+	var top := _flow(_body)
+	if not (r.data as Array).is_empty():
+		_btn(top, L.fa(L.t("ui.sadmin.sus_clear"), [(r.data as Array).size()]), func():
+			_ask(L.t("ui.sadmin.sus_clear_title"), L.fa(L.t("ui.sadmin.sus_clear_confirm"), [(r.data as Array).size()]), func(): _run(func(): return await SuperAdmin.suspect_clear(14), reload)))
+	if seen_n > 0:
+		_btn(top, L.fa(L.t("ui.sadmin.sus_restore"), [seen_n]), func(): _run(func(): return await SuperAdmin.suspect_restore(), reload))
 	if (r.data as Array).is_empty():
 		_note(_body, L.t("ui.sadmin.sus_none"), GOOD)
 		return
@@ -1717,6 +1733,7 @@ func _build_suspects() -> void:
 		card.add_child(_label(info, UiTheme.PARCH, 12))
 		var act := _flow(card)
 		_btn(act, L.t("ui.sadmin.card_btn"), func(): _open_card(pid))
+		_btn(act, L.t("ui.sadmin.sus_seen"), func(): _run(func(): return await SuperAdmin.suspect_seen(id), reload))
 		if SuperAdmin.is_dev() and bool(x.get("has_log", false)):
 			_btn(act, L.t("ui.sadmin.run_watch"), func(): _watch(id))
 			_btn(act, L.t("ui.sadmin.run_csv"), func(): _export_csv(id))

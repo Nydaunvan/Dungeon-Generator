@@ -287,6 +287,21 @@ static func history(player_id: String) -> Dictionary:
 static func suspect_runs(days: int = 14) -> Dictionary:
 	return await _rpc("admin_suspect_runs", {"p_days": days, "p_limit": 60})
 
+## Marque une partie suspecte comme vue : elle quitte la liste et le rappel d'ouverture (la partie n'est pas supprimée).
+static func suspect_seen(run_id: String) -> Dictionary:
+	return await _rpc("admin_suspect_seen", {"p_run": run_id})
+
+## Marque comme vues toutes les parties listées ; renvoie leur nombre.
+static func suspect_clear(days: int = 14) -> Dictionary:
+	return await _rpc("admin_suspect_clear", {"p_days": days})
+
+## Réaffiche toutes les parties marquées comme vues ; renvoie leur nombre.
+static func suspect_restore() -> Dictionary:
+	return await _rpc("admin_suspect_restore")
+
+static func suspect_seen_count() -> Dictionary:
+	return await _rpc("admin_suspect_seen_count")
+
 static func stats(days: int = 14) -> Dictionary:
 	return await _rpc("admin_stats", {"p_days": days})
 
