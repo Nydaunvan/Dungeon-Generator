@@ -157,7 +157,7 @@ func _load_friend_badge() -> void:
 	if not _signed():
 		return
 	var r: Dictionary = await Friends.pending_count()
-	if _alive() and r.ok and r.data != null:
+	if _alive() and r.ok and (r.data is int or r.data is float):
 		_set_friend_badge(int(r.data))
 
 func _wait(parent: Control) -> Label:
