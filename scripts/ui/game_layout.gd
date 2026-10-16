@@ -49,8 +49,10 @@ var log_panel: LogPanel
 var panel_map: OrnatePanel
 var panel_bag: OrnatePanel
 var panel_log: OrnatePanel
-var panel_menu: OrnatePanel
-var save_menu: SaveMenu
+var save_menu: SaveMenu      # « 💾 Sauvegarde ▾ » : hébergé par le menu du haut (`header`)
+var _map_inset: Control
+var _map_fold: Button
+static var map_folded := false   # carte repliée (état de la session : ne fait partie ni des sauvegardes ni des configurations)
 
 var _root: Control
 var footer: Label
@@ -570,6 +572,15 @@ func _build_parts() -> void:
 	panel_map = OrnatePanel.new(L.t("common.carte"))
 	panel_map.name = "Carte"
 	if panel_map.header_row != null:
+		# bouton de repli à gauche, bouton « plein écran » à droite : le titre reste centré
+		_map_fold = Button.new()
+		_small_iron(_map_fold)
+		_map_fold.focus_mode = Control.FOCUS_NONE
+		_map_fold.pressed.connect(func():
+			map_folded = not map_folded
+			_apply_map_fold())
+		panel_map.header_row.add_child(_map_fold)
+		panel_map.header_row.move_child(_map_fold, 0)
 		var fb := Button.new()
 		fb.text = "🗺️"
 		_small_iron(fb)
@@ -578,6 +589,7 @@ func _build_parts() -> void:
 		fb.pressed.connect(func(): menu_pressed.emit("Carte"))
 		panel_map.header_row.add_child(fb)
 	var map_inset := MinimapWrap.new()
+	_map_inset = map_inset
 	minimap = Minimap.new()
 	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	minimap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -585,6 +597,7 @@ func _build_parts() -> void:
 	map_inset.add_child(minimap)
 	panel_map.body.add_child(map_inset)
 	map_inset.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_apply_map_fold()
 	panel_bag = OrnatePanel.new(L.t("ui.game_layout.besace_commune_du_groupe"))
 	panel_bag.name = "Besace"
 	bag = BagPanel.new()
@@ -605,14 +618,21 @@ func _build_parts() -> void:
 	log_panel = LogPanel.new()
 	log_panel.setup(gs)
 	panel_log.body.add_child(log_panel)
-	panel_menu = OrnatePanel.new("")
-	panel_menu.name = "Menu"
+	# « 💾 Sauvegarde ▾ » : dans le menu du haut (plus de panneau dédié, la place va au grimoire)
 	save_menu = SaveMenu.new()
 	save_menu.slots_pressed.connect(func(): menu_pressed.emit("Slots"))
 	save_menu.new_pressed.connect(func(): menu_pressed.emit("Nouveau"))
 	save_menu.export_pressed.connect(func(): menu_pressed.emit("Exporter"))
 	save_menu.import_pressed.connect(func(): menu_pressed.emit("Importer"))
-	panel_menu.body.add_child(save_menu)
+	header.add_save_menu(save_menu)
+
+## Carte repliée : il ne reste que son titre, le grimoire occupe la place libérée.
+func _apply_map_fold() -> void:
+	if _map_inset != null:
+		_map_inset.visible = not map_folded
+	if _map_fold != null:
+		_map_fold.text = "▸" if map_folded else "▾"
+		_map_fold.tooltip_text = L.t("ui.game_layout.deplier_la_carte") if map_folded else L.t("ui.game_layout.replier_la_carte")
 
 # ------------------------------------------------------------------ dispositions
 
@@ -638,7 +658,7 @@ func _detach(n: Node) -> void:
 		n.get_parent().remove_child(n)
 
 func _rebuild() -> void:
-	for n in [header, frame, queue, strip, hud, footer, panel_map, panel_bag, panel_log, panel_menu]:
+	for n in [header, frame, queue, strip, hud, footer, panel_map, panel_bag, panel_log]:
 		_detach(n)
 	if _root != null:
 		_root.queue_free()
@@ -687,7 +707,7 @@ func _rebuild() -> void:
 		# la carte quitte l'écran mobile (la vue 3D gagne la place) : le bouton 🗺 de la vue l'ouvre en plein écran
 		panel_map.visible = false
 		v.add_child(panel_map)
-		for p in [panel_bag, panel_log, panel_menu]:
+		for p in [panel_bag, panel_log]:
 			# chaque onglet défile s'il manque de place : la vue 3D garde le plus de hauteur possible
 			var sc := ScrollContainer.new()
 			sc.name = p.name
@@ -725,19 +745,18 @@ func _rebuild() -> void:
 			pm.medal = true
 		panel_log.hooks = true
 		panel_bag.hooks = true
-		panel_menu.hooks = true
 		h.add_child(right)
-		for p in [panel_map, panel_bag, panel_log, panel_menu]:
+		for p in [panel_map, panel_bag, panel_log]:
 			right.add_child(p)
 		await _yield()
 		panel_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		for p in [panel_map, panel_bag, panel_log]:
 			p.custom_minimum_size = Vector2(0, 0)
-		panel_bag.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		panel_bag.size_flags_stretch_ratio = 1.5
+		# la besace garde la taille de son contenu ; le grimoire prend tout le reste de la colonne (carte repliée : encore plus)
+		panel_bag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		panel_bag.size_flags_stretch_ratio = 1.0
 		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		panel_log.size_flags_stretch_ratio = 1.0
-		panel_menu.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	v.add_child(footer)
 	footer.visible = not _portrait
 	call_deferred("_size_widgets")
@@ -900,7 +919,7 @@ func _process(_d: float) -> void:
 	if save_menu != null:
 		# `#viewPlay.in-combat .save-menu-panel{opacity:.4;pointer-events:none;filter:grayscale(1)}` : sauvegarde indisponible en combat
 		save_menu.locked = on
-		panel_menu.modulate = Color(0.62, 0.62, 0.62, 0.4) if on else Color.WHITE
+		save_menu.modulate = Color(0.62, 0.62, 0.62, 0.4) if on else Color.WHITE
 	pad.visible = not on
 	map_btn.visible = _compact and not on
 	_comp.visible = not on

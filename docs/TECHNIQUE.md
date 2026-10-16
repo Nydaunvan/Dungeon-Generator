@@ -74,6 +74,12 @@ Cloner le dépôt, ouvrir `project.godot` dans Godot 4.7, lancer le projet (F5).
 - Éditeur : colonne « Style (animation) » de l'onglet Sorts (`admin_spells.gd`) avec effet, teinte, intensité et bouton « Aperçu » (`scripts/ui/spell_fx_preview.gd` : petite scène 3D à trois mannequins, avec repères des quatre places du groupe ; le contexte transmis contient les trois cibles, l'allié (place 2) et le lanceur (place 3), si bien que les effets de groupe et de soin sont montrés comme en combat ; effet joué en boucle avec les réglages graphiques actuels).
 - Les capacités spéciales des monstres (sorts de dégâts tirés au hasard) ne jouent pas d'effet de sort, seulement l'animation du coup reçu.
 
+## Interface de jeu (colonne de droite et menu du haut)
+Écart voulu avec la page d'origine, où le menu « 💾 Sauvegarde » était un panneau en bas de la colonne de droite et le grimoire un petit panneau (2 lignes visibles à 1920×1080).
+- Menu du haut : `SaveMenu` (`save_menu.gd`) est hébergé par `AppHeader.add_save_menu` (`app_header.gd`), entre « Paramètres » et « Compte ». Il n'existe qu'en jeu (l'accueil n'en a pas). La liste s'ouvre sous le bouton, large d'au moins 300 px de conception et recadrée dans l'écran ; le groupe de boutons du haut reste déployé tant qu'elle est ouverte (`SaveMenu.is_open`). En combat le bouton est inerte et grisé (`locked`, `GameLayout._process`). Les refus des parties classées (pas de sauvegarde, d'export ni d'import) restent dans `main.gd` (`_on_menu`). Sur mobile (portrait) le bouton n'affiche que l'icône 💾.
+- Colonne de droite (`GameLayout._rebuild`, paysage) : Carte, Besace, Grimoire. Le panneau « Menu » n'existe plus (ni son onglet en portrait, qui garde Besace et Journal). La besace garde la taille de son contenu (`SIZE_SHRINK_BEGIN`) et le grimoire prend tout le reste de la colonne (`SIZE_EXPAND_FILL`). La police du journal (`LogPanel`) passe de 14 px à 0,9 rem (≈ 16 px ; 0,8 rem en portrait).
+- Carte repliable : bouton ▾/▸ à gauche du titre du panneau (le bouton 🗺️ « plein écran » reste à droite) ; replié, il ne reste que le titre et le grimoire occupe la place libérée. L'état est `GameLayout.map_folded` (variable statique) : il vaut pour la session et ne fait partie ni des sauvegardes ni des configurations, donc aucune migration (le schéma reste 10). Textes : `ui.game_layout.replier_la_carte` et `ui.game_layout.deplier_la_carte`.
+
 ## Commandes (couloir 3D)
 Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner (libellés AZERTY).
 

@@ -23,6 +23,7 @@ Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héro
 - **Combat au tour par tour** avec jauges d'initiative, sorts et effets visuels en 3D, statuts, monstres de groupe et boss.
 - **Donjons aléatoires** réglables (difficulté, taille, nombre de niveaux) et **éditeur de niveaux** intégré ; les donjons se partagent par code.
 - **Village** : forge, Maître des Talents, marchands itinérants et boutique.
+- **Interface de jeu** : la sauvegarde (emplacements, nouvelle partie, export, import) se trouve dans le menu du haut ; la colonne de droite montre la carte (que l'on peut replier), la besace commune du groupe et un grand grimoire des événements, plus lisible, qui occupe toute la place restante.
 - **Sept thèmes** de décor (matériaux, éclairage et ambiance propres à chacun), avec parfois du brouillard.
 - **Français et anglais**, guide du jeu et tutoriel intégrés, touches réassignables.
 

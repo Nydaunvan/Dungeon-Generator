@@ -10,6 +10,7 @@ var nav_row: HBoxContainer
 var btn_admin: Button
 var btn_account: Button
 var btn_home: Button
+var save_menu: SaveMenu    # « 💾 Sauvegarde ▾ » (seulement en jeu : ajouté par GameLayout)
 var hang: HangChain
 var _lang: MenuButton
 var _home_mode: bool = false
@@ -111,6 +112,13 @@ func _refresh_account() -> void:
 func _lang_text() -> String:
 	return "%s ▾" % ("🇬🇧 EN" if Data.lang == "en" else "🇫🇷 FR")
 
+## Menu « 💾 Sauvegarde ▾ » de la partie en cours, entre « Paramètres » et « Compte » (l'accueil n'en a pas : pas de partie à sauvegarder).
+func add_save_menu(m: SaveMenu) -> void:
+	save_menu = m
+	nav_row.add_child(m)
+	nav_row.move_child(m, btn_account.get_index())
+	rescale()
+
 ## Sur l'accueil, « Accueil » est la page courante (inactif).
 func set_home_mode(on: bool) -> void:
 	_home_mode = on
@@ -153,7 +161,7 @@ func _animate_menu(d: float) -> void:
 	if _holder == null or _box == null:
 		return
 	var over := _box.get_global_rect().has_point(get_global_mouse_position()) and get_viewport().get_visible_rect().has_point(get_viewport().get_mouse_position())
-	if over or _pinned or (_lang != null and _lang.get_popup().visible):
+	if over or _pinned or (_lang != null and _lang.get_popup().visible) or (save_menu != null and save_menu.is_open()):
 		_idle = 0.0
 	else:
 		_idle += d

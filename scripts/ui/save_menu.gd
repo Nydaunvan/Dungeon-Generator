@@ -1,8 +1,9 @@
 class_name SaveMenu
 extends Button
-## Menu « 💾 Sauvegarde ▾ » de la colonne de droite (`.save-menu-trigger` + `#saveMenuDropdown` de l'original) : la liste déroulante
-## s'ouvre au-dessus du bouton avec « Emplacements de sauvegarde », « Nouveau », « Exporter », « Importer », l'état
-## « Sauvegardé à HH:MM:SS » et le texte d'aide. Inaccessible en combat (`locked`) : le panneau est grisé et inerte.
+## Menu « 💾 Sauvegarde ▾ » du menu du haut (hébergé par `AppHeader.add_save_menu`, entre « Paramètres » et « Compte » ; dans l'original
+## `.save-menu-trigger` + `#saveMenuDropdown` se trouvaient dans la colonne de droite) : la liste déroulante s'ouvre sous le bouton avec
+## « Emplacements de sauvegarde », « Nouveau », « Exporter », « Importer », l'état « Sauvegardé à HH:MM:SS » et le texte d'aide.
+## Inaccessible en combat (`locked`) : le bouton est grisé et inerte. Le style du bouton est celui des boutons du menu du haut (`AppHeader`).
 
 signal slots_pressed
 signal new_pressed
@@ -22,29 +23,9 @@ var locked: bool = false:
 			_close()
 
 func _init() -> void:
-	text = L.t("ui.save_menu.sauvegarde")
+	text = L.t("ui.save_menu.sauvegarde") + " ▾"
+	tooltip_text = L.t("ui.save_menu.sauvegarde")
 	focus_mode = Control.FOCUS_NONE
-	alignment = HORIZONTAL_ALIGNMENT_LEFT
-	custom_minimum_size = Vector2(0, UiMetrics.css(44.0))
-	add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
-	add_theme_color_override("font_color", Color("e2d2b0"))
-	add_theme_color_override("font_hover_color", Color("ffd88a"))
-	var sst := IronBox.button_styles()
-	for k in sst:
-		var ib: IronBox = sst[k]
-		ib.rivets = false
-		ib.radius_css = 3.0
-		add_theme_stylebox_override(k, ib)
-	var arrow := Label.new()
-	arrow.text = "▼"
-	arrow.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
-	arrow.add_theme_color_override("font_color", Color("b9a880"))
-	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	arrow.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-	arrow.offset_right = -UiMetrics.css(14.0)
-	arrow.offset_left = -UiMetrics.css(30.0)
-	add_child(arrow)
 	pressed.connect(_toggle)
 	_build()
 
@@ -128,15 +109,23 @@ func _toggle() -> void:
 	else:
 		_open()
 
+## Vrai tant que la liste est ouverte (le menu du haut reste alors déployé).
+func is_open() -> bool:
+	return _layer != null and _layer.visible
+
+## La liste s'ouvre sous le bouton, assez large pour le texte d'aide, sans déborder de l'écran.
 func _open() -> void:
 	_layer.visible = true
 	_dd.modulate.a = 0.0
 	var r := get_global_rect()
-	_dd.custom_minimum_size = Vector2(r.size.x, 0)
-	_dd.size = Vector2(r.size.x, 0)
+	var w := maxf(r.size.x, UiMetrics.css(300.0))
+	_dd.custom_minimum_size = Vector2(w, 0)
+	_dd.size = Vector2(w, 0)
 	await get_tree().process_frame
-	_dd.size = Vector2(r.size.x, _dd.get_combined_minimum_size().y)
-	_dd.position = Vector2(r.position.x, r.position.y - _dd.size.y - UiMetrics.css(6.0))
+	_dd.size = Vector2(w, _dd.get_combined_minimum_size().y)
+	var edge := UiMetrics.css(8.0)
+	var vp := get_viewport().get_visible_rect().size
+	_dd.position = Vector2(clampf(r.position.x, edge, maxf(edge, vp.x - w - edge)), r.end.y + UiMetrics.css(6.0))
 	_dd.modulate.a = 1.0
 
 func _close() -> void:
