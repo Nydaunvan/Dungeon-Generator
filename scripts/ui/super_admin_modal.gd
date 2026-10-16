@@ -404,15 +404,17 @@ func _fill_players() -> void:
 	if rows.is_empty():
 		_note(box, L.t("ui.sadmin.none"))
 		return
-	var w := [0, 40, 60, 62, 52, 92]
-	var head := _cells(box, [L.t("ui.sadmin.col_player"), L.t("ui.sadmin.col_level"), L.t("ui.sadmin.col_xp"), L.t("ui.sadmin.col_runs_ok"), L.t("ui.sadmin.col_best"), L.t("ui.sadmin.col_last")], w, UiTheme.DIM)
+	var w := [0, 84, 96, 40, 60, 62, 52, 92]
+	var head := _cells(box, [L.t("ui.sadmin.col_player"), L.t("ui.sadmin.col_state"), L.t("ui.sadmin.col_login"), L.t("ui.sadmin.col_level"), L.t("ui.sadmin.col_xp"), L.t("ui.sadmin.col_runs_ok"), L.t("ui.sadmin.col_best"), L.t("ui.sadmin.col_last")], w, UiTheme.DIM)
 	var pad := Control.new()
 	pad.custom_minimum_size = Vector2(70, 0)
 	head.add_child(pad)
 	for p in rows:
 		var pid := str(p.get("id", ""))
 		var name := _mark(str(p.get("role", ""))) + str(p.get("pseudo", "?")) + (" 🔇" if bool(p.get("muted", false)) else "") + (" 🚫" if bool(p.get("banned", false)) else "")
-		var row := _cells(box, [name, num(p.get("level")), num(p.get("xp")), "%s/%s" % [num(p.get("verified")), num(p.get("runs"))], num(p.get("best_score")), date(p.get("last_run_at"))], w)
+		var online := bool(p.get("online", false))
+		var row := _cells(box, [name, L.t("ui.sadmin.online") if online else L.t("ui.sadmin.offline"), date(p.get("last_login")), num(p.get("level")), num(p.get("xp")), "%s/%s" % [num(p.get("verified")), num(p.get("runs"))], num(p.get("best_score")), date(p.get("last_run_at"))], w)
+		(row.get_child(1) as Label).add_theme_color_override("font_color", GOOD if online else UiTheme.DIM)
 		var cb := Button.new()
 		cb.text = L.t("ui.sadmin.card_btn")
 		cb.focus_mode = Control.FOCUS_NONE
@@ -932,6 +934,11 @@ func _open_card(pid: String) -> void:
 	_title(_body, "%s%s" % [_mark(role), str(d.get("pseudo", "?"))])
 	_kv(_body, L.t("ui.sadmin.card_role"), StaffBadges.role_name(role) if role != "" else L.t("ui.sadmin.role_player"), GOLD if role != "" else UiTheme.PARCH)
 	_kv(_body, L.t("ui.sadmin.card_since"), date(d.get("created_at")))
+	var online := bool(d.get("online", false))
+	_kv(_body, L.t("ui.sadmin.card_state"), L.t("ui.sadmin.online") if online else L.t("ui.sadmin.offline"), GOOD if online else UiTheme.DIM)
+	_kv(_body, L.t("ui.sadmin.card_last_login"), date(d.get("last_login")) if d.get("last_login") != null else L.t("ui.sadmin.never"))
+	if not online and d.get("last_seen") != null:
+		_kv(_body, L.t("ui.sadmin.card_last_seen"), date(d.get("last_seen")))
 	_status = Form.status_label(_body)
 	# sanctions en cours
 	_title(_body, L.t("ui.sadmin.card_sanctions"))

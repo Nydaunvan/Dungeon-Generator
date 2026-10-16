@@ -90,10 +90,51 @@ var _transport: Callable = Callable()
 var _refreshing := false
 signal _refresh_finished
 
+## Présence (visible dans l'administration) : « login » au premier signal de cette exécution, « ping » ensuite, « logout » à la
+## déconnexion ou à la fermeture du jeu. Aucun effet hors ligne : un échec est ignoré et le signal suivant rattrape.
+const PRESENCE_EVERY := 60.0
+var _presence_timer: Timer
+var _presence_logged := false
+
 func _ready() -> void:
 	_load_config()
 	_load_session()
 	RankedRun.flush_pending.call_deferred()      # journal d'une partie classée restée en attente (plantage, hors ligne)
+	_presence_timer = Timer.new()
+	_presence_timer.wait_time = PRESENCE_EVERY
+	_presence_timer.timeout.connect(presence_ping)
+	add_child(_presence_timer)
+	_presence_start.call_deferred()
+
+# ------------------------------------------------------------------ présence
+
+func _presence_start() -> void:
+	if is_configured() and is_signed_in():
+		_presence_timer.start()
+		presence_ping()
+
+## Envoie le signal de présence ; le premier de l'exécution est une « connexion », les suivants des « pings ».
+func presence_ping() -> void:
+	if not is_configured() or not is_signed_in() or _transport.is_valid():
+		return
+	var event := "ping" if _presence_logged else "login"
+	var r: Dictionary = await request(HTTPClient.METHOD_POST, "/rest/v1/rpc/presence_ping", {"p_event": event}, true)
+	if r.ok:
+		_presence_logged = true
+
+## Dit au serveur que le joueur quitte (déconnexion ou fermeture du jeu).
+func presence_logout() -> void:
+	if not _presence_logged or not is_signed_in():
+		return
+	_presence_timer.stop()
+	_presence_logged = false
+	await request(HTTPClient.METHOD_POST, "/rest/v1/rpc/presence_ping", {"p_event": "logout"}, true)
+
+## Fermeture de la fenêtre : on prévient le serveur au mieux (le jeu se ferme sans attendre) ; sinon le joueur repasse hors ligne
+## de lui-même au bout de 150 s.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		presence_logout()
 
 # ------------------------------------------------------------------ état
 
@@ -270,6 +311,9 @@ func sign_in(mail: String, password: String) -> Dictionary:
 		_store_session(r.data)
 		await load_profile()
 		RankedRun.flush_pending.call_deferred()
+		_presence_logged = false
+		_presence_timer.start()
+		presence_ping()
 	return r
 
 ## Relit le pseudo du profil (il peut avoir été changé depuis l'inscription).
@@ -308,6 +352,7 @@ func restore_session() -> Dictionary:
 	return await refresh()
 
 func sign_out() -> void:
+	await presence_logout()
 	if is_signed_in():
 		await _raw(HTTPClient.METHOD_POST, "/auth/v1/logout", null, str(session.get("access_token", "")))
 	_clear_session()

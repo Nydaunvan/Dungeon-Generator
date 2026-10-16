@@ -52,8 +52,8 @@ func fake(_method: int, full_url: String, _headers: PackedStringArray, body: Str
 		if full_url.ends_with("/rpc/admin_players"):
 			var q: String = str(JSON.parse_string(body).get("p_search", ""))
 			var all := [
-				{"id": "u-1", "pseudo": "Nyra", "created_at": "2026-10-09T17:00:00+00:00", "xp": 450, "level": 3, "runs": 5, "verified": 4, "best_score": 3, "last_run_at": "2026-10-10T15:00:00+00:00", "badges": 2, "admin": true},
-				{"id": "u-2", "pseudo": "Bob", "created_at": "2026-10-10T10:00:00+00:00", "xp": 0, "level": 1, "runs": 0, "verified": 0, "best_score": null, "last_run_at": null, "badges": 0, "admin": false}]
+				{"id": "u-1", "pseudo": "Nyra", "created_at": "2026-10-09T17:00:00+00:00", "xp": 450, "level": 3, "runs": 5, "verified": 4, "best_score": 3, "last_run_at": "2026-10-10T15:00:00+00:00", "badges": 2, "admin": true, "online": true, "last_login": "2026-10-16T19:00:00+00:00", "last_seen": "2026-10-16T19:30:00+00:00"},
+				{"id": "u-2", "pseudo": "Bob", "created_at": "2026-10-10T10:00:00+00:00", "xp": 0, "level": 1, "runs": 0, "verified": 0, "best_score": null, "last_run_at": null, "badges": 0, "admin": false, "online": false, "last_login": null, "last_seen": null}]
 			return resp(200, all.filter(func(p): return q == "" or str(p.pseudo).to_lower().contains(q.to_lower())))
 		if full_url.ends_with("/rpc/admin_runs"):
 			return resp(200, [
@@ -154,6 +154,9 @@ func _init() -> void:
 	await settle()
 	var p: Array = labels(sm._modal)
 	check("joueurs : liste", p.any(func(x): return str(x).begins_with("Nyra")) and p.has("Bob"))
+	check("joueurs : Nyra en ligne, Bob hors ligne", p.has("🟢 En ligne") and p.has("⚫ Hors ligne"))
+	check("joueurs : date de dernière connexion affichée", p.any(func(x): return str(x).begins_with("16/10 ")))
+	check("joueurs : jamais connecté = tiret", p.has("—"))
 	check("joueurs : super admin marqué", p.any(func(x): return str(x).contains("Nyra 🛡️")))
 	check("joueurs : vérifiées/total", p.has("4/5") and p.has("0/0"))
 	sm._search.text = "bo"

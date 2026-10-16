@@ -28,7 +28,7 @@ Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héro
 - **Français et anglais**, guide du jeu et tutoriel intégrés, touches réassignables.
 
 ## En ligne (facultatif)
-Le jeu reste entièrement jouable hors ligne. Avec un compte, on peut partager ses donjons, relever les défis, jouer des parties classées vérifiées (chaque partie est rejouée côté serveur), tenter le Hardcore du mois, gagner des badges, titres et cadres cosmétiques, et discuter avec les autres joueurs.
+Le jeu reste entièrement jouable hors ligne. Avec un compte, on peut partager ses donjons, relever les défis, jouer des parties classées vérifiées (chaque partie est rejouée côté serveur), tenter le Hardcore du mois, gagner des badges, titres et cadres cosmétiques, et discuter avec les autres joueurs. L'équipe d'administration voit qui est en ligne et la date de dernière connexion de chaque joueur.
 
 ## Graphismes
 Rendu Forward+ (Vulkan) avec repli automatique sur OpenGL. Quatre niveaux de qualité (Faible, Moyen, Élevé, Ultra) et un réglage Auto qui s'adapte à la machine. Les effets (occlusion ambiante, reflets, relief, brouillard volumétrique, étalonnage des couleurs) se règlent un par un dans **⚙ Paramètres › Graphismes**. F3 affiche, sur une seule ligne tout en haut à gauche (sans cadre), les images par seconde, la mémoire et le nombre d'appels de dessin.
