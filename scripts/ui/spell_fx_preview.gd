@@ -13,18 +13,25 @@ static func open(host: Node, spell: Dictionary) -> void:
 		m.add_text(L.t("admin.spells.apercu_indispo"), UiTheme.PARCH, 15)
 		m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 		return
-	m.add_text("%s %s" % [str(spell.get("icon", "")), L.c(str(spell.get("name", "")))], UiTheme.PARCH, 18)
+	var ico := str(spell.get("icon", ""))
+	m.add_text(L.c(str(spell.get("name", ""))) if ico.begins_with("@icon:") else "%s %s" % [ico, L.c(str(spell.get("name", "")))], UiTheme.PARCH, 18)
 	var svc := SubViewportContainer.new()
 	svc.stretch = true
 	svc.custom_minimum_size = VIEW
 	svc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var stage := Control.new()            # cadre : vue 3D + repères des quatre places du groupe (cibles des soins et des sorts d'allié)
+	stage.custom_minimum_size = VIEW
+	stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var vp := SubViewport.new()
 	vp.size = Vector2i(VIEW)
 	vp.own_world_3d = true
 	vp.msaa_3d = Settings.msaa_mode()
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	svc.add_child(vp)
-	m.content.add_child(svc)
+	svc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	stage.add_child(svc)
+	_add_party_marks(stage)
+	m.content.add_child(stage)
 
 	var root := Node3D.new()
 	vp.add_child(root)
@@ -42,12 +49,17 @@ static func open(host: Node, spell: Dictionary) -> void:
 	cam.current = true
 	_build_set(root)
 
-	# cible : mannequin sombre à 4 m, de 1,7 m de haut (même dictionnaire que celui d'un monstre en combat)
+	# cibles : trois mannequins sombres de 1,7 m (même dictionnaires qu'un monstre en combat) : les effets de groupe les touchent tous
 	var target := {"pos": Vector3(0, 0.95, -4.0), "h": 1.7, "w": 1.0}
+	var points: Array = [{"pos": Vector3(-1.7, 0.95, -4.3), "h": 1.7, "w": 1.0}, target, {"pos": Vector3(1.7, 0.95, -4.3), "h": 1.7, "w": 1.0}]
 	var play := func():
 		if not is_instance_valid(root):
 			return
-		SpellFxLibrary.cast(root, cam, str(spell.get("id", "preview")), target, SpellFxLibrary.ctx_for(spell))
+		var ctx := SpellFxLibrary.ctx_for(spell)
+		ctx["targets"] = points
+		ctx["ally"] = 1       # allié visé : deuxième place du groupe ; lanceur : troisième
+		ctx["caster"] = 2
+		SpellFxLibrary.cast(root, cam, str(spell.get("id", "preview")), target, ctx)
 	var timer := Timer.new()
 	timer.wait_time = LOOP_SECONDS
 	timer.autostart = true
@@ -83,6 +95,38 @@ static func _build_set(root: Node3D) -> void:
 	dummy.material_override = _stone(Color(0.32, 0.28, 0.25))
 	dummy.position = Vector3(0, 0.85, -4.0)
 	root.add_child(dummy)
+	for sx in [-1.7, 1.7]:
+		var d2 := MeshInstance3D.new()
+		d2.mesh = cap
+		d2.material_override = dummy.material_override
+		d2.position = Vector3(sx, 0.85, -4.3)
+		root.add_child(d2)
+
+## Repères des quatre places du groupe, en bas de la vue (là où les soins et les sorts d'allié se posent).
+static func _add_party_marks(stage: Control) -> void:
+	var row := HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 0)
+	stage.add_child(row)
+	for i in 4:
+		var cell := Control.new()
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(cell)
+		var lab := Label.new()
+		lab.text = L.t("admin.spells.apercu_place") % (i + 1)
+		lab.add_theme_font_size_override("font_size", 12)
+		lab.modulate = Color(1, 1, 1, 0.55 if i == 1 else 0.3)
+		lab.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		lab.anchor_top = 0.93
+		lab.anchor_bottom = 1.0
+		lab.anchor_left = 0.0
+		lab.anchor_right = 1.0
+		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(lab)
 
 static func _stone(col: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()

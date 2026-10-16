@@ -506,6 +506,7 @@
   "admin.spells.apercu": "▶ Aperçu",
   "admin.spells.apercu_titre": "Aperçu de l'effet",
   "admin.spells.apercu_rejouer": "Rejouer",
+  "admin.spells.apercu_place": "Place %d du groupe",
   "admin.spells.apercu_indispo": "L'aperçu demande le rendu Forward+ (Vulkan).",
   "admin.spells.effets_hint": "Style : école du sort (elle décide aussi de la logique de combat). Effet, teinte et intensité : aspect visuel seulement. Certains styles proposent plusieurs effets, d'autres en recevront bientôt ; les effets avancés demandent le niveau graphique Moyen ou plus.",
   "admin.spells.supprimer_le_sort_capacite": "Supprimer le sort/capacité %s ?",
