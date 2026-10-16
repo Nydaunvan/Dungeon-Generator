@@ -78,6 +78,14 @@ const ERR_KEYS := {
 	"tchat_ferme": "ui.cloud.err.tchat_ferme",
 	"confirmation_requise": "ui.cloud.err.confirmation_requise",
 	"message_invalide": "ui.cloud.err.message_invalide",
+	"pas_soi_meme": "ui.cloud.err.pas_soi_meme",
+	"ami_impossible": "ui.cloud.err.ami_impossible",
+	"deja_ami": "ui.cloud.err.deja_ami",
+	"demande_deja_envoyee": "ui.cloud.err.demande_deja_envoyee",
+	"demande_introuvable": "ui.cloud.err.demande_introuvable",
+	"demandes_fermees": "ui.cloud.err.demandes_fermees",
+	"trop_d_amis": "ui.cloud.err.trop_d_amis",
+	"trop_de_demandes": "ui.cloud.err.trop_de_demandes",
 	"generic": "ui.cloud.err.generic",
 }
 

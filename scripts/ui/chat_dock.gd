@@ -406,6 +406,11 @@ func _close_channel(room: String) -> void:
 	ChatAlerts.changed.emit()
 	_show_channel(ChatPrefs.active()[0])
 
+## Ouvre le panneau directement sur la conversation privée avec ce joueur (depuis la liste d'amis).
+func open_private(player_id: String, pseudo: String) -> void:
+	open_panel()
+	_open_dm(player_id, pseudo)
+
 func _open_dm(player_id: String, pseudo: String) -> void:
 	var room := Chat.dm_room(player_id)
 	if not ChatPrefs.add(room, pseudo):

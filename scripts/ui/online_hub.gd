@@ -1,11 +1,11 @@
 class_name OnlineHub
 extends RefCounted
-## Fenêtre unique du mode en ligne, dans le cadre habituel : un bandeau « mon compte » toujours visible, quatre onglets
+## Fenêtre unique du mode en ligne, dans le cadre habituel : un bandeau « mon compte » toujours visible, cinq onglets
 ##  🎮 Jouer (choix du mode : partie libre, partie classée, Hardcore du mois — avec ce que chacun implique),
-##  🏆 Classements, 🏅 Récompenses, 📜 Mes parties.
+##  🏆 Classements, 🏅 Récompenses, 📜 Mes parties, 👥 Amis.
 ## Rien ne défile en usage normal : chaque onglet tient dans la fenêtre (les lignes des classements s'adaptent à la hauteur disponible).
 
-const TABS := [["play", "ui.hub.tab_play", "🎮"], ["boards", "ui.hub.tab_boards", "🏆"], ["rewards", "ui.hub.tab_rewards", "🏅"], ["runs", "ui.hub.tab_runs", "📜"]]
+const TABS := [["play", "ui.hub.tab_play", "🎮"], ["boards", "ui.hub.tab_boards", "🏆"], ["rewards", "ui.hub.tab_rewards", "🏅"], ["runs", "ui.hub.tab_runs", "📜"], ["friends", "ui.hub.tab_friends", "👥"]]
 const MODES := ["free", "ranked", "weekly", "hardcore"]
 ## Ce que mesure le classement de certaines règles du Défi de la semaine (les autres comptent des niveaux).
 const RULE_METRIC := {"richest": "gold", "bossrush": "bosses"}
@@ -57,6 +57,7 @@ static func open(host: Node, on_launch: Callable = Callable(), tab: String = "pl
 	Cloud.session_changed.connect(h._on_session)
 	h._build()
 	h._refresh_notice.call_deferred()
+	h._load_friend_badge.call_deferred()
 	return h
 
 func _alive() -> bool:
@@ -119,6 +120,7 @@ func _show(tab: String) -> void:
 		"boards": _show_boards()
 		"rewards": _show_rewards()
 		"runs": _show_runs()
+		"friends": _show_friends()
 	_stabilize_height()
 	_modal.call_deferred("_fit")
 
@@ -129,6 +131,34 @@ func _stabilize_height() -> void:
 	var vp_h := _host.get_viewport().get_visible_rect().size.y if _host.is_inside_tree() else 720.0
 	var other := _modal.content.get_combined_minimum_size().y - _body.get_combined_minimum_size().y
 	_body.custom_minimum_size.y = maxf(0.0, vp_h * _modal.fit_ratio - other)
+
+## Onglet « Amis » : tout est dans HubFriends. La pastille (demandes reçues) du bouton de l'onglet suit la liste.
+var _friends: HubFriends
+
+func _show_friends() -> void:
+	if not _signed():
+		_body.add_child(HubKit.label(L.t("ui.hub.friends_sign_in"), UiTheme.DIM, 14, false, true, HORIZONTAL_ALIGNMENT_CENTER))
+		return
+	var mine := _gen
+	_friends = HubFriends.build(_body, _host, func(): return mine != _gen or not _alive(), func(): _modal.call_deferred("_fit"),
+		func(): _modal.close(), _set_friend_badge)
+
+## Texte du bouton de l'onglet Amis : « 👥 Amis (2) » quand des demandes attendent.
+func _set_friend_badge(n: int) -> void:
+	_friend_requests = n
+	if _tab_buttons.has("friends"):
+		var b: Button = _tab_buttons["friends"]
+		var base := L.t("ui.hub.tab_friends")
+		b.text = ("👥 %s" % base if not _narrow() else "👥") + (" (%d)" % n if n > 0 else "")
+
+var _friend_requests := 0
+
+func _load_friend_badge() -> void:
+	if not _signed():
+		return
+	var r: Dictionary = await Friends.pending_count()
+	if _alive() and r.ok and r.data != null:
+		_set_friend_badge(int(r.data))
 
 func _wait(parent: Control) -> Label:
 	var l := HubKit.label(L.t("ui.hub.loading"), UiTheme.DIM, 13, false, true, HORIZONTAL_ALIGNMENT_CENTER)

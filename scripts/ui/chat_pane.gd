@@ -224,6 +224,7 @@ func _menu(m: Dictionary) -> MenuButton:
 	pm.add_item(L.t("ui.chat.report"), 0)
 	pm.add_item(L.t("ui.chat.block"), 1)
 	pm.add_item(L.t("ui.chat.report_player"), 3)
+	pm.add_item("👥 " + L.t("ui.friends.menu_add"), 4)
 	if not Chat.is_dm(room):
 		pm.add_item("✉ " + L.t("ui.chat.write_private"), 2)
 	var mid := int(m.get("id", 0))
@@ -236,6 +237,8 @@ func _menu(m: Dictionary) -> MenuButton:
 			_ask_block(pid, pseudo)
 		elif i == 3:
 			_report_player_dialog(pid, pseudo)
+		elif i == 4:
+			_friend_request(pid, pseudo)
 		else:
 			dm_requested.emit(pid, pseudo))
 	return mb
@@ -279,6 +282,16 @@ func _mark_read() -> void:
 	var r: Dictionary = await Chat.mark_read(room, _last_id)
 	if r.ok:
 		ChatAlerts.refresh()
+
+## Demande d'ami depuis le menu d'un message ; le serveur répond « envoyée » ou « vous êtes amis » (demande croisée).
+func _friend_request(player_id: String, pseudo: String) -> void:
+	var r: Dictionary = await Friends.request(player_id)
+	if not is_inside_tree():
+		return
+	if r.ok:
+		_say(L.fa(L.t("ui.friends.now_friends") if str(r.data) == "accepted" else L.t("ui.friends.sent"), [pseudo]), GOOD)
+	else:
+		_say(str(r.message), BAD)
 
 func _report(message_id: int) -> void:
 	var r: Dictionary = await Chat.report(message_id)
