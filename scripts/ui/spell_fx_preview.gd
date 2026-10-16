@@ -37,6 +37,10 @@ static func open(host: Node, spell: Dictionary) -> void:
 	vp.add_child(root)
 	var env := WarmUp.make_environment()
 	VisualFx.apply_environment(env, "stone", false)
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR      # lumière d'ambiance : les mannequins restent lisibles sans écraser les effets
+	env.ambient_light_color = Color(0.62, 0.58, 0.54)
+	env.ambient_light_energy = 1.6
+	env.fog_enabled = false
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
@@ -48,6 +52,13 @@ static func open(host: Node, spell: Dictionary) -> void:
 	root.add_child(cam)
 	cam.current = true
 	_build_set(root)
+	var fill := OmniLight3D.new()                                     # lampe douce au-dessus du groupe de mannequins
+	fill.position = Vector3(0, 2.6, -2.6)
+	fill.light_color = Color(1.0, 0.92, 0.8)
+	fill.light_energy = 1.4
+	fill.omni_range = 9.0
+	fill.shadow_enabled = false
+	root.add_child(fill)
 
 	# cibles : trois mannequins sombres de 1,7 m (même dictionnaires qu'un monstre en combat) : les effets de groupe les touchent tous
 	var target := {"pos": Vector3(0, 0.95, -4.0), "h": 1.7, "w": 1.0}
@@ -75,14 +86,14 @@ static func open(host: Node, spell: Dictionary) -> void:
 static func _build_set(root: Node3D) -> void:
 	var floor_mesh := MeshInstance3D.new()
 	var pl := PlaneMesh.new()
-	pl.size = Vector2(14, 14)
+	pl.size = Vector2(40, 14)
 	floor_mesh.mesh = pl
 	floor_mesh.material_override = _stone(Color(0.16, 0.13, 0.11))
 	floor_mesh.position = Vector3(0, 0, -5)
 	root.add_child(floor_mesh)
 	var wall := MeshInstance3D.new()
 	var wq := QuadMesh.new()
-	wq.size = Vector2(14, 6)
+	wq.size = Vector2(40, 8)
 	wall.mesh = wq
 	wall.material_override = _stone(Color(0.20, 0.17, 0.14))
 	wall.position = Vector3(0, 3, -8)
