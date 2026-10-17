@@ -145,7 +145,7 @@ func bump_village(x: int, y: int) -> bool:
 			mm["discovered"] = true
 			_log(L.t("game.interactions.le_marchand_vous_accueille_et"))
 			if mm.get("offers") == null:
-				mm["offers"] = Shop.village_offers(gs.cfg, gs.run_number)
+				mm["offers"] = Shop.village_offers(gs.cfg, gs.run_number, gs.party)
 			_open_shop(mm.offers, true, on_change)
 			return true
 		"blacksmith":
@@ -252,7 +252,7 @@ var _frozen := false
 
 func open_merchant(mm: Dictionary) -> void:
 	if mm.get("offers") == null:
-		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), maxi(1, gs.run_number))
+		mm["offers"] = Shop.merchant_offers(gs.cfg, level.get("travelingMerchant", {}), maxi(1, gs.run_number), gs.party)
 	var on_change := func():
 		bag_changed.emit()
 		ctrl.changed.emit()

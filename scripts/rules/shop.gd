@@ -80,6 +80,63 @@ static func _gear_offer(run: int) -> Dictionary:
 	it.merge(_armor_stats(run), true)
 	return it
 
+# ------------------------------------------------------------------ qualité des offres (relative au stuff du groupe)
+
+## Emplacement d'équipement occupé par une offre (« weapon », « head »… ; « accessory » pour un bijou).
+static func _slot_of(it: Dictionary) -> String:
+	match str(it.get("type", "")):
+		"weapon": return "weapon"
+		"jewelry": return "accessory"
+	return str(it.get("slot", "body"))
+
+## Puissance de référence d'un emplacement : le meilleur objet porté à cet emplacement par un héros du groupe (0 si rien).
+static func reference_power(party: Array, slot: String) -> float:
+	var best := 0.0
+	for c in party:
+		best = maxf(best, Inventory.power((c as Dictionary).get("equipment", {}).get(slot)))
+	return best
+
+const _SCALED := ["bonusAtkMin", "bonusAtkMax", "bonusHp", "bonusSpellDmg", "bonusForce", "bonusDex", "bonusCon", "bonusInt"]
+
+## Multiplie les bonus d'un objet (au moins +1 sur chaque bonus présent) pour atteindre ~`factor` fois sa puissance.
+static func _scale(it: Dictionary, factor: float) -> void:
+	for k in _SCALED:
+		var v := int(it.get(k, 0))
+		if v > 0:
+			it[k] = maxi(v + 1, int(round(v * factor))) if factor > 1.0 else maxi(1, int(round(v * factor)))
+	if str(it.get("type", "")) == "weapon" and int(it.get("bonusAtkMax", 0)) <= int(it.get("bonusAtkMin", 0)):
+		it["bonusAtkMax"] = int(it.get("bonusAtkMin", 0)) + 1
+
+## Fait varier la valeur d'une offre. `upgrade` : l'offre doit dépasser nettement ce que porte déjà le groupe (de 25 % à 70 % de plus,
+## au moins +2 de puissance) ; sinon sa valeur varie autour de la normale (de -25 % à +10 %), parfois sous le stuff actuel.
+static func _vary(it: Dictionary, party: Array, upgrade: bool) -> void:
+	var ref := reference_power(party, _slot_of(it))
+	var p := Inventory.power(it)
+	if upgrade:
+		var target := maxf(ref * lerpf(1.25, 1.7, GameRng.f("loot")), ref + 2.0)
+		if p < target and p > 0.0:
+			_scale(it, minf(12.0, target / p))
+		if Inventory.power(it) > ref:
+			it["upgradeOffer"] = true
+	else:
+		_scale(it, lerpf(0.75, 1.1, GameRng.f("loot")))
+
+## Passe sur les offres d'équipement : chacune a ~35 % de chances d'être une « belle affaire » ; au moins une l'est toujours
+## quand le groupe porte déjà de l'équipement (sans quoi, à haut niveau, plus rien ne vaudrait l'achat).
+static func _rank_offers(offers: Array, party: Array) -> void:
+	if party.is_empty():
+		return
+	var gear: Array = offers.filter(func(o): return ["weapon", "armor", "jewelry"].has(str(o.type)))
+	if gear.is_empty():
+		return
+	var flags: Array = []
+	for o in gear:
+		flags.append(GameRng.f("loot") < 0.35)
+	if not flags.has(true):
+		flags[GameRng.i("loot") % flags.size()] = true
+	for k in gear.size():
+		_vary(gear[k], party, flags[k])
+
 static func _finish(offers: Array, prefix: String, village: bool) -> Array:
 	for i in offers.size():
 		var o: Dictionary = offers[i]
@@ -98,7 +155,7 @@ static func potion_lots(heal: int, sta: int) -> Array:
 	return out
 
 ## Offres aléatoires du marchand ambulant (generateShopOffers).
-static func random_offers(cfg: Dictionary, run: int) -> Array:
+static func random_offers(cfg: Dictionary, run: int, party: Array = []) -> Array:
 	var offers: Array = []
 	for k in 2:
 		offers.append(_weapon_offer(run, 2 + int(floor(run / 2.0)), [1, 3]))
@@ -106,6 +163,7 @@ static func random_offers(cfg: Dictionary, run: int) -> Array:
 		offers.append(_gear_offer(run))
 	for k in 2:
 		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 16 + run * 4})
+	_rank_offers(offers, party)
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
 	GameRng.shuffle("loot", spells)
 	for i in mini(GameRng.range_i("loot", 2, 3), spells.size()):
@@ -113,7 +171,7 @@ static func random_offers(cfg: Dictionary, run: int) -> Array:
 	return _finish(offers, "shop_offer", false)
 
 ## Offres du marchand ambulant d'un niveau : objets choisis dans l'admin d'abord, puis complétés au hasard.
-static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
+static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int, party: Array = []) -> Array:
 	var slot_count := 8 if int(tm.get("lootSlotCount", 6)) == 8 else 6
 	var offers: Array = []
 	var ids: Array = []
@@ -128,7 +186,7 @@ static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
 				inst["price"] = price(inst)
 				offers.append(inst)
 	# Le complément aléatoire garantit quelques parchemins : on réserve leurs places avant d'achever avec le reste.
-	var rnd := random_offers(cfg, run)
+	var rnd := random_offers(cfg, run, party)
 	var scrolls: Array = rnd.filter(func(o): return str(o.type) == "scroll")
 	var others: Array = rnd.filter(func(o): return str(o.type) != "scroll" and str(o.type) != "potion")
 	var free := slot_count - offers.size()
@@ -149,13 +207,14 @@ static func merchant_offers(cfg: Dictionary, tm: Dictionary, run: int) -> Array:
 	return offers
 
 ## Offres du marchand du village (plus riches : run + 2, quantités de potions, plusieurs parchemins).
-static func village_offers(cfg: Dictionary, run: int) -> Array:
+static func village_offers(cfg: Dictionary, run: int, party: Array = []) -> Array:
 	var boosted := run + 2
 	var offers: Array = []
 	for k in 2:
 		offers.append(_weapon_offer(boosted, 3 + int(floor(boosted / 2.0)), [2, 4]))
 	for k in 2:
 		offers.append(_gear_offer(boosted))
+	_rank_offers(offers, party)
 	var heal := GameRng.range_i("loot", 8, 15)
 	var sta := GameRng.range_i("loot", 8, 15)
 	offers.append_array(potion_lots(heal, sta))
