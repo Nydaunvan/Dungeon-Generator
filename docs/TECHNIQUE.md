@@ -292,4 +292,5 @@ Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les mo
 - `assets/sheets/items_sheet.webp` : les cases 155 (torque d'or) et 156 (couronne) étaient mal découpées dans la planche (la couronne décalée à droite, avec un morceau du torque dans sa case). La couronne est recentrée et le morceau parasite retiré (planche réenregistrée sans perte). Le torque, dont l'arc droit était déjà coupé dans la source, reste tel quel.
 - `DungeonGenerator.EQUIP_ICONS` : le sprite 156 passe de `jewelry` à `head`, la couronne est donc une armure de tête.
 - Migration 17 → 18 (`SaveMigrations._v17_to_v18`) : les couronnes déjà générées (niveaux, bibliothèque d'objets, sac) deviennent des casques ; une couronne portée en accessoire retourne dans le sac du groupe. Contrôle : `tools/check_saves.tscn`.
+- Torque d'or (case 155) reconstitué en entier : la source ne contenait que sa moitié gauche et un bord droit détaché ; la moitié gauche est reflétée autour du centre (déduit des deux bords) puis le tout est réduit pour tenir dans la case (réduction fine, sans perte de netteté visible).
 
