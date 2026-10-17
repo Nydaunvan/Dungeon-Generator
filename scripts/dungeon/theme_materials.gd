@@ -12,6 +12,10 @@ const STONE_LITE := "res://assets/themes/stone_lite/"
 const STONE_WALL_REPEAT := 2.0    # répétitions de la texture par pan de mur (entier : les pans voisins se raccordent)
 const STONE_FLOOR_REPEAT := 1.0   # idem pour une case de sol
 ## Mur du Cachot humide : briques brun-vert en matériau 3D, mêmes deux jeux de résolution (damp_hd / damp_lite).
+## Thème Lave : mur et plafond en lave (couleur, normales, rugosité, émission des fissures incandescentes), sol en roche.
+const LAVA_WALL_REPEAT := 1.0
+const LAVA_FLOOR_REPEAT := 1.0
+const LAVA_EMISSION := 0.75
 const DAMP_FLOOR_REPEAT := 1.0    # terre rocailleuse du sol : une répétition par case
 const DAMP_WALL_REPEAT := 0.5     # la texture 2048 couvre deux pans : briques de taille raisonnable (un pan en montre le quart)
 static var _cache: Dictionary = {}
@@ -38,6 +42,14 @@ static func for_theme(theme: String) -> Dictionary:
 		var dfloor := _stone_pbr("floor", DAMP_FLOOR_REPEAT, "damp")
 		if dfloor != null:
 			mats["floor"] = dfloor
+	if theme == "lava":
+		var lwall := _stone_pbr("wall", LAVA_WALL_REPEAT, "lava")
+		if lwall != null:
+			mats["wall"] = lwall
+			mats["ceil"] = lwall
+		var lfloor := _stone_pbr("floor", LAVA_FLOOR_REPEAT, "lava")
+		if lfloor != null:
+			mats["floor"] = lfloor
 	if theme == "stone":
 		var wall := _stone_pbr("wall", STONE_WALL_REPEAT)
 		if wall != null:
@@ -132,6 +144,10 @@ static func _stone_pbr(part: String, repeat: float, prefix: String = "stone") ->
 	m.texture_repeat = true
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	m.uv1_scale = Vector3(repeat, repeat, 1)
+	if ResourceLoader.exists(d + part + "_emission.jpg"):       # fissures incandescentes (lave)
+		m.emission_enabled = true
+		m.emission_texture = load(d + part + "_emission.jpg")
+		m.emission_energy_multiplier = LAVA_EMISSION
 	return m
 
 static func placeholder(color: Color) -> StandardMaterial3D:

@@ -294,3 +294,6 @@ Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les mo
 - Migration 17 → 18 (`SaveMigrations._v17_to_v18`) : les couronnes déjà générées (niveaux, bibliothèque d'objets, sac) deviennent des casques ; une couronne portée en accessoire retourne dans le sac du groupe. Contrôle : `tools/check_saves.tscn`.
 - Torque d'or (case 155) reconstitué en entier : la source ne contenait que sa moitié gauche et un bord droit détaché ; la moitié gauche est reflétée autour du centre (déduit des deux bords) puis le tout est réduit pour tenir dans la case (réduction fine, sans perte de netteté visible).
 
+### Thème Lave en matériau 3D
+Mur et plafond du thème `lava` : pack « Lava003 » (couleur, normales OpenGL, rugosité, émission des fissures incandescentes) ; sol : pack « Rock062 » (couleur légèrement réchauffée, normales, occlusion, rugosité). Jeux `assets/themes/lava_hd/` (2048 px) et `lava_lite/` (1024 px, exclu des exports PC), construits comme la pierre (`ThemeMaterials._stone_pbr(part, repeat, "lava")`) ; `_stone_pbr` active l'émission quand `<part>_emission.jpg` existe (`LAVA_EMISSION` = 0,75). Répétitions `LAVA_WALL_REPEAT` / `LAVA_FLOOR_REPEAT` = 1. Capture : `THEME=lava` avec `tools/shot_theme.tscn`.
+
