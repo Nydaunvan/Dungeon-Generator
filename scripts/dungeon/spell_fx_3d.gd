@@ -12,6 +12,8 @@ var cam: Camera3D
 var solo_party: bool = false
 ## Centres des cartes du groupe en pixels de la fenêtre (couche d'effets au-dessus de l'interface, CardFxOverlay) ; vide : places sous la vue 3D.
 var slot_px: Array = []
+## Point de départ des effets sur chaque carte (milieu du bord bas de la carte), mêmes pixels et même ordre que `slot_px`.
+var slot_start_px: Array = []
 var caster_idx: int = -1       ## place du héros qui lance le sort (ses effets partent de sa carte quand `slot_px` est connu)
 var victim_idx: int = 0        ## place du héros touché (coup de monstre)
 
@@ -19,6 +21,7 @@ var victim_idx: int = 0        ## place du héros touché (coup de monstre)
 func apply_party_ctx(ctx: Dictionary) -> void:
 	solo_party = bool(ctx.get("solo", false))
 	slot_px = ctx.get("slotPx", [])
+	slot_start_px = ctx.get("slotStartPx", slot_px)
 	caster_idx = int(ctx.get("caster", -1))
 	victim_idx = int(ctx.get("victim", 0))
 
@@ -26,12 +29,16 @@ func apply_party_ctx(ctx: Dictionary) -> void:
 func _side(k: float) -> Vector3:
 	return Vector3.ZERO if not slot_px.is_empty() else cam.global_transform.basis.x * k
 
-## Point de départ des effets des héros : sa carte quand l'effet joue au-dessus de l'interface, sinon le bas de la vue.
+## Point de départ des effets des héros : milieu du bord bas de sa carte quand l'effet joue au-dessus de l'interface, sinon le bas de la vue.
 func _start_point() -> Vector3:
-	if not slot_px.is_empty() and caster_idx >= 0:
-		var k := 0 if solo_party else mini(caster_idx, slot_px.size() - 1)
-		return cam.project_position(slot_px[k], 0.6)
-	return cam.global_position + _fwd() * 0.6 - cam.global_transform.basis.y * 0.42
+	return _caster_anchor(0.6, 0.42)
+
+## Ancre d'un effet lancé par le héros, à `depth` devant la caméra : le milieu du bord bas de sa carte ; sans carte, `drop` sous l'axe de la vue.
+func _caster_anchor(depth: float, drop: float) -> Vector3:
+	if not slot_start_px.is_empty() and caster_idx >= 0:
+		var k := 0 if solo_party else mini(caster_idx, slot_start_px.size() - 1)
+		return cam.project_position(slot_start_px[k], depth)
+	return cam.global_position + _fwd() * depth - cam.global_transform.basis.y * drop
 var _parts: Array = []     # {node, mat, t0, dur, fn}
 var _t: float = 0.0
 

@@ -110,7 +110,7 @@ func _fatal(target: Dictionary) -> void:
 func _drain(target: Dictionary, ctx: Dictionary) -> void:
 	_base_hue = 0.98
 	var at := _end_point(target)
-	var src := _slot_pos(int(ctx.get("caster", 1)), 2.0)
+	var src := _caster_anchor(2.0, 0.7)
 	var size := _tsize(target) * _s
 	var red := _c(1.0, 0.18, 0.25)
 	var hot := _c(1.0, 0.8, 0.8)

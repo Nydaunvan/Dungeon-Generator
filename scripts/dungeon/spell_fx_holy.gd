@@ -133,7 +133,7 @@ func _aura(target: Dictionary, ctx: Dictionary) -> void:
 	var at := _end_point(target)
 	var size := _tsize(target) * _s
 	var up := cam.global_transform.basis.y
-	var src := _slot_pos(int(ctx.get("caster", 1)), 2.0)
+	var src := _caster_anchor(2.0, 0.7)
 	_flash(_w_soft(), _hdr(Color(_mid(), 0.8), 1.0 * _g), src, 0.4, 1.5, 0.5, true)
 	for i in 3:
 		_later(0.12 * float(i), func(): _shock(src, _mid().lerp(_hot(), 0.3 * float(i)), 2.2 + 1.0 * float(i), 0.7))

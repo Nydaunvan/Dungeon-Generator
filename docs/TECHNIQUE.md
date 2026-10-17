@@ -189,3 +189,5 @@ Onglet **Tests** de l'administration : un sélecteur liste les 12 règles (`admi
 ## Qualité en toutes lettres
 
 Toute description d'arme, d'armure ou de bijou indique sa qualité par un mot (« Commun », « Rare »…), pas seulement par la couleur : ligne de type des infobulles (`EquipDock.type_label`), fiche du marchand (`ShopModal`) et liste d'équipement de la fiche de survol d'un héros (`PartyTip`).
+
+Départ des effets : le point de départ d'un sort de héros est le milieu du bord bas de sa carte (`PartyHud.card_bottoms()`, contexte `slotStartPx`, `SpellFx3D._caster_anchor`) ; les arrivées (cible, soin) visent le centre de la carte (`card_centers()`, `slotPx`). Les ancres « bas de l'écran » des sorts de zone, de sommeil, du cri de guerre et des sorts sacrés ou d'ombre passent aussi par `_caster_anchor`.

@@ -35,7 +35,8 @@ func _ready() -> void:
 	var fov_ok := absf(ov._cam.fov - rad_to_deg(2.0 * atan(tan(deg_to_rad(35.0)) * ov.size.y / 500.0))) < 0.01
 	# sort d'un héros (carte 1) : l'effet part de sa carte ; coup de monstre sur la carte 3
 	var ctx2 := {"style": "arcane", "mode": "damage", "fx": "", "caster": 1, "ally": 1, "solo": false}
-	var ok2 := ov.play("y", tgt, ctx2, cam, view, vp, centers)
+	var bottoms := [Vector2(300, 780), Vector2(500, 780), Vector2(700, 780), Vector2(900, 780)]
+	var ok2 := ov.play("y", tgt, ctx2, cam, view, vp, centers, bottoms)
 	var ok3 := ov.play_action("hit", {"victim": 3, "solo": false}, cam, view, centers)
 	await get_tree().process_frame
 	var n_fx := 0
@@ -46,7 +47,7 @@ func _ready() -> void:
 			var f := ch as SpellFx3D
 			if f.caster_idx == 1 and f.slot_px.size() == 4:
 				var st: Vector3 = f._start_point()
-				start_ok = ov._cam.unproject_position(st).distance_to(centers[1]) < 1.5
+				start_ok = ov._cam.unproject_position(st).distance_to(bottoms[1]) < 1.5
 	# fontaine avec 3 héros : un soin par carte (3 places), pas de doublon sur la dernière
 	var slots3 := ov._world.get_child_count()
 	var probe := SpellFxStyles.new()

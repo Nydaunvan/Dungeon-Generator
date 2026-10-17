@@ -170,7 +170,7 @@ func _armor(ctx: Dictionary) -> void:
 
 func _warcry(target: Dictionary, ctx: Dictionary) -> void:
 	_base_hue = 0.03
-	var src := _slot_pos(int(ctx.get("caster", 1)), 2.2)
+	var src := _caster_anchor(2.2, 0.7)
 	var red := _c(1.0, 0.35, 0.15)
 	var hot := _c(1.0, 0.85, 0.6)
 	var deep := _c(0.7, 0.1, 0.05)
@@ -240,7 +240,7 @@ func _lullaby(target: Dictionary, ctx: Dictionary) -> void:
 	var hot := _c(0.85, 0.88, 1.0)
 	var mid := _c(0.4, 0.45, 1.0)
 	var deep := _c(0.15, 0.12, 0.6)
-	var base := cam.global_position + _fwd() * 2.4 - up * 0.7
+	var base := _caster_anchor(2.4, 0.7)
 	for i in 3:
 		_later(0.18 * float(i), func(): _shock(base, mid.lerp(hot, 0.2 * float(i)), 2.6 + 1.0 * float(i), 1.0))
 	_flash(_w_soft(), _hdr(Color(mid, 0.7), 0.2 * _g), base, 0.8, 2.6, 0.7, true)

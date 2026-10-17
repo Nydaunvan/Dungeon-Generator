@@ -375,7 +375,7 @@ func _group(style: String, spell_id: String, target: Dictionary, ctx: Dictionary
 		_offense(style, spell_id, target, ctx)
 		return
 	var col := _style_tint(style)
-	var base := cam.global_position + _fwd() * 2.4 - cam.global_transform.basis.y * 0.7
+	var base := _caster_anchor(2.4, 0.7)
 	_ring("ring_grp_" + style, col, base, 0.6, 7.0, 0.55)
 	_flash(_arcane_tex(), Color(col, 0.7), base, 1.0, 5.0, 0.4, true)
 	var i := 0
@@ -764,7 +764,7 @@ func _sleep(target: Dictionary, ctx: Dictionary) -> void:
 	var pts: Array = ctx.get("targets", [])
 	if pts.is_empty() and not target.is_empty():
 		pts = [target]
-	var base := cam.global_position + _fwd() * 2.4 - cam.global_transform.basis.y * 0.7
+	var base := _caster_anchor(2.4, 0.7)
 	var col := Color(0.6, 0.6, 1.0)
 	_ring("ring_sleep", col, base, 0.6, 6.0, 0.6)
 	var up := cam.global_transform.basis.y

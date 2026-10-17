@@ -57,12 +57,13 @@ static func usable() -> bool:
 
 ## Joue l'effet dans la couche. `main_cam` / `view` / `view_vp` : caméra, zone et rendu de la vue du jeu ; `centers` : centre de chaque carte du groupe
 ## (pixels de la fenêtre, dans l'ordre du groupe). Renvoie faux si l'effet n'a pas pu être placé (l'appelant le joue alors dans la vue).
-func play(spell_id: String, target: Dictionary, ctx: Dictionary, main_cam: Camera3D, view: Control, view_vp: SubViewport, centers: Array) -> bool:
+func play(spell_id: String, target: Dictionary, ctx: Dictionary, main_cam: Camera3D, view: Control, view_vp: SubViewport, centers: Array, bottoms: Array = []) -> bool:
 	if main_cam == null or view == null or view_vp == null or centers.is_empty() or size.y < 50.0 or view.size.y < 50.0:
 		return false
 	_frame(main_cam, view)
 	var c := ctx.duplicate()
 	c["slotPx"] = centers.map(func(p): return (p as Vector2) - global_position)
+	c["slotStartPx"] = (bottoms if not bottoms.is_empty() else centers).map(func(p): return (p as Vector2) - global_position)
 	var tgt := _remap(target, main_cam, view, view_vp)
 	if tgt.is_empty() and not target.is_empty():
 		return false
@@ -85,12 +86,13 @@ func _frame(main_cam: Camera3D, view: Control) -> void:
 
 ## Effet d'action (coup de monstre sur un héros) : `ctx.victim` = place du héros touché.
 ## `target` / `view_vp` : monstre visé dans la vue du jeu (flèche de l'archer, qui part de la carte de l'archer).
-func play_action(kind: String, ctx: Dictionary, main_cam: Camera3D, view: Control, centers: Array, target: Dictionary = {}, view_vp: SubViewport = null) -> bool:
+func play_action(kind: String, ctx: Dictionary, main_cam: Camera3D, view: Control, centers: Array, target: Dictionary = {}, view_vp: SubViewport = null, bottoms: Array = []) -> bool:
 	if main_cam == null or view == null or centers.is_empty() or size.y < 50.0 or view.size.y < 50.0:
 		return false
 	_frame(main_cam, view)
 	var c := ctx.duplicate()
 	c["slotPx"] = centers.map(func(p): return (p as Vector2) - global_position)
+	c["slotStartPx"] = (bottoms if not bottoms.is_empty() else centers).map(func(p): return (p as Vector2) - global_position)
 	var tgt := {}
 	if not target.is_empty() and view_vp != null:
 		tgt = _remap(target, main_cam, view, view_vp)

@@ -164,6 +164,14 @@ func card_centers() -> Array:
 		out.append(card.get_global_rect().get_center())
 	return out
 
+## Milieu du bord bas de chaque carte (pixels de la fenêtre) : point de départ des effets lancés par un héros.
+func card_bottoms() -> Array:
+	var out: Array = []
+	for c in gs.party:
+		var r: Rect2 = (_cards[str(c.id)].card as Control).get_global_rect()
+		out.append(Vector2(r.get_center().x, r.end.y))
+	return out
+
 func refresh() -> void:
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]

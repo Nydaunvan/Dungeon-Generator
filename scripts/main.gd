@@ -1036,7 +1036,7 @@ func _on_fx_attack(kind: String, char_id: String) -> void:
 	if kind == "bow" and card_fx != null and idx >= 0 and CardFxOverlay.usable():
 		var st: CombatStage = level_node.stage if level_node != null else null
 		var tgt: Dictionary = st.target_point() if st != null and st.active else {}
-		if card_fx.play_action("bow", {"caster": idx, "solo": gs.party.size() == 1}, rig.camera, layout.sub_container, layout.hud.card_centers(), tgt, layout.sub_viewport):
+		if card_fx.play_action("bow", {"caster": idx, "solo": gs.party.size() == 1}, rig.camera, layout.sub_container, layout.hud.card_centers(), tgt, layout.sub_viewport, layout.hud.card_bottoms()):
 			return
 	_on_fx(kind)
 
@@ -1069,7 +1069,7 @@ func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
 	c["solo"] = gs.party.size() == 1
 	# tous les sorts et capacités : joués au-dessus de l'interface, depuis la carte du lanceur / jusqu'à la carte visée (option « Effets sur les cartes »)
 	if card_fx != null:
-		if CardFxOverlay.usable() and card_fx.play(spell_id, tgt, c, rig.camera, layout.sub_container, layout.sub_viewport, layout.hud.card_centers()):
+		if CardFxOverlay.usable() and card_fx.play(spell_id, tgt, c, rig.camera, layout.sub_container, layout.sub_viewport, layout.hud.card_centers(), layout.hud.card_bottoms()):
 			return
 	SpellFxLibrary.cast(layout.world, rig.camera, spell_id, tgt, c)
 
