@@ -864,6 +864,15 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 		gs.bump(victim.id, "knockdowns")
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
+	# vol de vie de la capacité (sort de drain) : le monstre récupère une part des dégâts infligés
+	var steal := int(spell.get("spellLifestealPct", 0))
+	if steal > 0 and dmg > 0 and not st.has("members"):
+		var heal := maxi(1, int(round(dmg * steal / 100.0)))
+		var before := float(st.hp)
+		st["hp"] = minf(float(st.get("maxHp", st.hp)), before + heal)
+		if float(st.hp) > before:
+			gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [_mname(def), int(float(st.hp) - before)]), true)
+			events.append({"type": "popup", "text": "+%d" % int(float(st.hp) - before), "color": Color("7ddc7d")})
 	if int(victim.hp) > 0:
 		if not Statuses.apply_from_spell(gs, spell, victim, str(victim.name), "", true):
 			_monster_inflict(def, victim)

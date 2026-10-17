@@ -259,3 +259,7 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 
 ### Halo de sélection
 `CombatStage._halo_texture` : le halo qui désigne le membre ciblé d'un groupe est désormais bleu-cyan clair et discret (alpha 0,38 au centre), au lieu du rouge, pour ne plus être confondu avec l'aura de rage.
+
+### Vol de vie des capacités de monstre
+`Combat._monster_use_ability` lit désormais `spellLifestealPct` du sort de la capacité : le monstre (hors groupe) récupère ce pourcentage des dégâts infligés (au moins 1 PV, plafonné à ses PV max), avec ligne de journal « draine » et popup vert. Auparavant le pourcentage s'affichait sur le sort mais n'avait aucun effet côté monstre.
+
