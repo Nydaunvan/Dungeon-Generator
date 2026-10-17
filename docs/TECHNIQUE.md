@@ -253,3 +253,7 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 
 ### Guide et tutoriel
 À chaque nouveauté, mettre à jour les sujets de `data/lang/help.fr.json` / `help.en.json` (guide de l'aventurier) et de `tutorial.fr.json` / `tutorial.en.json` (tutoriel de création), en plus du README et de ce document. Ces fichiers sont des listes `{id, label, text}` (BBCode) ; les relire avec `json.dumps(..., ensure_ascii=False, indent=1)` conserve leur mise en forme.
+
+### Préchauffage de la rage et des statuts
+`WarmUp.run` joue aussi, hors écran, l'aura et l'entrée en rage (`CombatStage._make_rage_aura`, `_size_rage`, `_rage_burst(aura, true)`, désormais statiques) et tous les effets de `StatusAura` (en mélange additif et normal) : shaders compilés avant le premier combat. L'aura de rage s'applique à tout monstre enragé, boss ou non (vérifié sur un groupe de rats : `RAGE_NONBOSS=1` avec `tools/shot_rage.tscn`). Le grognement de rage est réglé à -7 dB dans `SFX_GAIN_DB` (plus fort que le niveau commun, à la demande). Vérification : `tools/check_warm_up.tscn`.
+

@@ -11,7 +11,7 @@ func _ready() -> void:
 	var found := false
 	for m in main.level.monsters:
 		var stt: Dictionary = lst.get(str(m.id), {})
-		if stt.is_empty() or not stt.alive:
+		if stt.is_empty() or not stt.alive or (OS.get_environment("RAGE_NONBOSS") != "" and bool(m.get("isBoss", false))):
 			continue
 		for d in 4:
 			var v: Vector2i = DungeonGrid.DIRS[d]

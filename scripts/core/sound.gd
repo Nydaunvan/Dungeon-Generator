@@ -151,7 +151,7 @@ const SFX_GAIN_DB := {
 	"stairs|true": 1.0, "stairs|false": 1.0,
 	"swing|axe": 12.0, "swing|bow": 10.5, "swing|dagger": 11.5, "swing|mace": 12.0,
 	"swing|staff": 12.0, "swing|sword": 11.5, "swing|unarmed": 12.0,
-	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5, "wood_thud": -13.5, "rune_seal": -13.0, "rage": -15.0,
+	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5, "wood_thud": -13.5, "rune_seal": -13.0, "rage": -7.0,
 }
 
 ## Bruit de dés qui roulent (fichier OGG, chargé une fois).

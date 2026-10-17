@@ -225,6 +225,26 @@ static func run(host: Node, progress: Callable) -> void:
 	for kind in SpellFxStyles.ACTIONS:
 		steps.append(func():
 			SpellFxStyles.cast_action(root, rig.camera, kind, {}))
+	# aura et entrée en rage des monstres (shader de flammes, braises, onde de choc) : compilées avant le premier combat
+	steps.append(func():
+		rig.place(grid, 3, 3, 0)
+		var aura := CombatStage._make_rage_aura()
+		root.add_child(aura)
+		aura.position = rig.position + Vector3(0, 0.9, -3.0)
+		CombatStage._size_rage(aura, 1.6)
+		CombatStage._rage_burst(aura, true)
+		tree.create_timer(2.5).timeout.connect(func(): if is_instance_valid(aura): aura.queue_free()))
+	# effets persistants des statuts (monstres : mélange additif ; cartes des héros : mélange normal)
+	for mix in [false, true]:
+		steps.append(func():
+			rig.place(grid, 3, 3, 0)
+			var sa := StatusAura.new()
+			sa.mix_mode = mix
+			root.add_child(sa)
+			sa.position = rig.position + Vector3(0, 0.9, -3.0)
+			sa.ext = Vector2(1.2, 1.8)
+			sa.set_looks(StatusAura.LOOKS.duplicate())
+			tree.create_timer(2.0).timeout.connect(func(): if is_instance_valid(sa): sa.queue_free()))
 
 	await tree.process_frame
 	var n := maxi(steps.size(), 1)

@@ -297,7 +297,7 @@ void fragment(){
 
 ## Aura de rage façon « ki » : flammes rouges qui montent le long du monstre (shader), braises, halo sombre au fond.
 ## Se compose de : halo de braise (mesh `halo`), flammes (mesh `flames`, shader), braises (CPUParticles3D `embers`) ; réglages dans `_size_rage`.
-func _make_rage_aura() -> Node3D:
+static func _make_rage_aura() -> Node3D:
 	var root := Node3D.new()
 	root.set_meta("halo", _make_rage_halo())
 	root.add_child(root.get_meta("halo"))
@@ -361,7 +361,7 @@ static func _rage_dot() -> Texture2D:
 		_dot_tex = t
 	return _dot_tex
 
-func _size_rage(root: Node3D, h: float) -> void:
+static func _size_rage(root: Node3D, h: float) -> void:
 	((root.get_meta("halo") as MeshInstance3D).mesh as QuadMesh).size = Vector2(h * 1.7, h * 1.5)
 	var fl: MeshInstance3D = root.get_meta("flames")
 	(fl.mesh as QuadMesh).size = Vector2(h * 1.5, h * 1.9)
@@ -371,11 +371,12 @@ func _size_rage(root: Node3D, h: float) -> void:
 	em.position = Vector3(0, -h * 0.4, 0)
 
 ## Entrée en rage : grognement, éclat, onde de choc rouge, l'aura enfle (1,1 s) puis se stabilise.
-func _rage_burst(root: Node3D) -> void:
-	Sound.rage()
+static func _rage_burst(root: Node3D, silent: bool = false) -> void:
+	if not silent:
+		Sound.rage()
 	var sm: ShaderMaterial = root.get_meta("mat")
 	sm.set_shader_parameter("grow", 0.0)
-	var tw := create_tween().set_parallel(true)
+	var tw := root.create_tween().set_parallel(true)
 	tw.tween_method(func(v: float): sm.set_shader_parameter("grow", v), 0.0, 1.0, 1.1).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.tween_method(func(v: float): sm.set_shader_parameter("flash", v), 1.0, 0.0, 0.9).set_trans(Tween.TRANS_SINE)
 	var ring := MeshInstance3D.new()
@@ -396,13 +397,13 @@ func _rage_burst(root: Node3D) -> void:
 	var h := ((root.get_meta("halo") as MeshInstance3D).mesh as QuadMesh).size.x / 1.7
 	ring.scale = Vector3(h * 0.6, h * 0.6, 1.0)
 	root.add_child(ring)
-	var t2 := create_tween().set_parallel(true)
+	var t2 := root.create_tween().set_parallel(true)
 	t2.tween_property(ring, "scale", Vector3(h * 3.6, h * 3.6, 1.0), 0.8).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	t2.tween_property(m, "albedo_color:a", 0.0, 0.8)
 	t2.chain().tween_callback(ring.queue_free)
 	var em: CPUParticles3D = root.get_meta("embers")
 	em.amount = 70
-	var t3 := create_tween()
+	var t3 := root.create_tween()
 	t3.tween_interval(1.0)
 	t3.tween_callback(func(): if is_instance_valid(em): em.amount = 22)
 
@@ -424,7 +425,7 @@ static func _ring_texture() -> Texture2D:
 	return _ring_tex
 
 ## Halo de rage : braise rouge sombre à cœur transparent (le monstre reste lisible), liseré orangé, qui pulse sans fin.
-func _make_rage_halo() -> MeshInstance3D:
+static func _make_rage_halo() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = QuadMesh.new()
 	var m := StandardMaterial3D.new()
