@@ -1575,6 +1575,7 @@
   "ui.cloud.err.trop_de_parties_en_attente": "Trop de parties en attente de vérification : patientez avant d'en envoyer d'autres.",
   "ui.cloud.err.trop_de_soumissions": "Limite atteinte : trop de parties envoyées aujourd'hui.",
   "ui.cloud.err.generic": "Une erreur est survenue avec le service en ligne. Réessayez plus tard.",
+  "ui.cloud.err.function_missing": "Cette fonction n'est pas encore installée sur le serveur (mise à jour de la base de données en attente).",
   "ui.cloud.title": "Compte en ligne",
   "ui.cloud.intro_login": "Connectez-vous pour partager vos donjons et participer aux défis. Le compte est facultatif : le jeu reste entièrement jouable hors ligne.",
   "ui.cloud.intro_signup": "Créez un compte gratuit avec votre email. Votre email n'est jamais affiché ; seul votre pseudo est visible des autres joueurs.",

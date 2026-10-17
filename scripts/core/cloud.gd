@@ -87,6 +87,7 @@ const ERR_KEYS := {
 	"trop_d_amis": "ui.cloud.err.trop_d_amis",
 	"trop_de_demandes": "ui.cloud.err.trop_de_demandes",
 	"generic": "ui.cloud.err.generic",
+	"function_missing": "ui.cloud.err.function_missing",
 }
 
 var url := ""
@@ -221,6 +222,8 @@ func _error_code(status: int, d: Variant) -> String:
 			var v := str(d.get(k, ""))
 			if ERR_KEYS.has(v):
 				return v
+	if d is Dictionary and (str(d.get("code", "")) == "PGRST202" or str(d.get("code", "")) == "42883"):
+		return "function_missing"     # fonction SQL absente : migration pas encore appliquée
 	if status == 429:
 		return "over_request_rate_limit"
 	if status == 401:

@@ -1575,6 +1575,7 @@
   "ui.cloud.err.trop_de_parties_en_attente": "Too many runs awaiting verification: wait before sending more.",
   "ui.cloud.err.trop_de_soumissions": "Limit reached: too many runs sent today.",
   "ui.cloud.err.generic": "Something went wrong with the online service. Try again later.",
+  "ui.cloud.err.function_missing": "This feature is not installed on the server yet (database update pending).",
   "ui.cloud.title": "Online account",
   "ui.cloud.intro_login": "Sign in to share your dungeons and join challenges. The account is optional: the game stays fully playable offline.",
   "ui.cloud.intro_signup": "Create a free account with your email. Your email is never shown; only your nickname is visible to other players.",
