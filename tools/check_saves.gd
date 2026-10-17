@@ -45,7 +45,7 @@ func _ready() -> void:
 	SaveMigrations.migrate(oldc, Data.original_config)
 	checks["icône de classe skalde"] = oldc.config.classes[0].icon == "@icon:class_skald"
 	checks["berserker : emoji → image du jeu (v5)"] = oldc.config.classes[1].icon == "@icon:axe_double"
-	checks["icône de classe barde (équipe)"] = oldc.config.party[0].icon == "@icon:class_bard"
+	checks["icône de classe barde (équipe) : luth → cor (v16)"] = oldc.config.party[0].icon == "@icon:spr_103"
 	checks["icône de classe ménestrel (sauvegarde)"] = oldc.save.party[0].icon == "@icon:class_minstrel"
 	# piège de vapeur permanent (v3 → v4) : niveaux et bibliothèque ; les autres pièges ne changent pas
 	var gas := {"config": {"levels": [{"items": [{"id": "g", "type": "trap", "trapKind": "gas", "permanent": false}, {"id": "d", "type": "trap", "trapKind": "dart", "permanent": false}]}],

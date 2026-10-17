@@ -265,3 +265,6 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 
 Correctif : l'effet de statut `lifedrain` (« Vol de vie », dégâts par tour avec `heals`) infligé par un monstre soignait personne ; `Combat.tick_char` soigne maintenant le monstre émetteur (`casterId`, hors groupe) du montant drainé à chaque tour.
 
+### Icône du Barde (schéma 16)
+La classe Barde utilise le cor de la planche d'objets (`@icon:spr_103`) à la place de `class_bard.png` (conservé dans assets). Migration 15 → 16 (`SaveMigrations._v15_to_v16`) : classe, groupe de la configuration et héros de la partie, seulement si l'icône était encore l'ancienne.
+

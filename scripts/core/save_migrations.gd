@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 15
+const SCHEMA := 16
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -66,6 +66,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v13_to_v14(d))
 			14:
 				notes.append_array(_v14_to_v15(d))
+			15:
+				notes.append_array(_v15_to_v16(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -435,3 +437,25 @@ static func _v14_to_v15(d: Dictionary) -> Array[String]:
 		if not (cfg as Dictionary).has("bossResist"):
 			cfg["bossResist"] = true
 	return []
+
+## v15 → v16 : le Barde prend l'icône du cor (planche d'objets, spr_103) à la place de l'ancien luth, sur la classe et sur ses héros
+## (seulement si le joueur n'avait pas choisi une autre icône).
+static func _v15_to_v16(d: Dictionary) -> Array[String]:
+	var n := 0
+	var cfg = d.get("config")
+	if cfg is Dictionary:
+		n += _bard_icon(cfg.get("classes", []), "id")
+		n += _bard_icon(cfg.get("party", []), "classId")
+	var sv = d.get("save")
+	if sv is Dictionary:
+		n += _bard_icon(sv.get("party", []), "classId")
+	return ["icône du barde (cor) : %d mise(s) à jour" % n] if n > 0 else []
+
+static func _bard_icon(list: Variant, key: String) -> int:
+	var n := 0
+	if list is Array:
+		for e in list:
+			if e is Dictionary and str(e.get(key, "")) == "class_bard" and str(e.get("icon", "")) == "@icon:class_bard":
+				e["icon"] = "@icon:spr_103"
+				n += 1
+	return n
