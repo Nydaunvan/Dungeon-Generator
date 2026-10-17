@@ -1344,7 +1344,7 @@
   "ui.trap_kind.pit_txt": "Le sol sonne creux sous vos pas.",
   "ui.trap_modal.passer_penalite": "🚶 Passer · dégâts ×%s",
   "ui.trap_modal.passer_tip": "Passer en force : le piège se déclenche aussitôt et frappe un personnage au hasard, avec des dégâts ×%s.",
-  "ui.trap_modal.sacrifice_aucun": "Aucune potion ni aucun parchemin à sacrifier.",
+  "ui.trap_modal.sacrifice_aucun": "Aucun objet à sacrifier (les clés ne peuvent pas l'être).",
   "game.interactions.piege_passe_en_force": "⚠️ Le groupe force le passage : le piège frappe de plein fouet !",
   "ui.trap_puzzle.enigme_n": "📜 Énigme %d/%d",
   "ui.trap_puzzle.enigme_suivante": "✨ Bonne réponse… une autre inscription apparaît",

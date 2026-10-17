@@ -505,7 +505,13 @@ func _stage_sacrifice() -> void:
 	_foot_show(false, true, false)
 
 func _item_icon(it: Dictionary) -> String:
-	return "🧪" if str(it.get("type", "")) == "potion" else "📜"
+	match str(it.get("type", "")):
+		"potion": return "🧪"
+		"scroll": return "📜"
+		"weapon": return "⚔️"
+		"armor": return "🛡️"
+		"jewelry": return "💍"
+	return "🎒"
 
 func _do_sacrifice(idx: int, it: Dictionary) -> void:
 	_stage = "roll"

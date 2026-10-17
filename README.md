@@ -66,3 +66,4 @@ Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQU
 - Tous les effets de sorts partent des cartes du groupe ou y arrivent, par-dessus l'interface ; le coup d'un monstre frappe la carte du héros touché ; l'attaque normale reste sur le monstre (option « Effets sur les cartes », essai).
 - Les statuts durent visuellement autant que leur effet : tant qu'un monstre est endormi (berceuse du ménestrel), empoisonné, brûlé, gelé, étourdi, ralenti ou affaibli, ses « Z », bulles, flammes, givre ou étoiles restent sur lui ; sur les héros, l'effet reste sur leur carte. Un boss a toujours une capacité spéciale.
 - Sorts de dégâts du Druide rééquilibrés : moins de dégâts, recharge plus longue et statuts moins fréquents (les sorts modifiés par le créateur ne sont pas touchés).
+- Piège « sacrifier un objet » : on peut jeter dans le mécanisme n'importe quel objet du sac (potion, parchemin, arme, armure, bijou…), sauf les clés.

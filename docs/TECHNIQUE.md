@@ -229,3 +229,6 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 
 ### Équilibrage du Druide (schéma 12)
 `_v11_to_v12` (SaveMigrations) applique les nouvelles valeurs des 6 sorts de dégâts de nature (`DRUID_OLD` → `DRUID_NEW`) aux configurations enregistrées, seulement si les dégâts min/max sont encore ceux d'origine.
+
+### Sacrifice aux pièges
+`TrapRules.sacrifice_candidates` renvoie les indices de tout objet de la besace sauf les types de `SACRIFICE_EXCLUDED` (`key`). Aucune migration : l'entrée rejouée reste l'indice dans la besace (`["sac", idx]`).

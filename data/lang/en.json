@@ -1344,7 +1344,7 @@
   "ui.trap_kind.pit_txt": "The floor sounds hollow underfoot.",
   "ui.trap_modal.passer_penalite": "🚶 Walk on · damage ×%s",
   "ui.trap_modal.passer_tip": "Forcing your way through: the trap goes off at once and hits a random hero for ×%s damage.",
-  "ui.trap_modal.sacrifice_aucun": "No potion or scroll to sacrifice.",
+  "ui.trap_modal.sacrifice_aucun": "No item to sacrifice (keys cannot be sacrificed).",
   "game.interactions.piege_passe_en_force": "⚠️ The party forces its way through: the trap hits head-on!",
   "ui.trap_puzzle.enigme_n": "📜 Riddle %d/%d",
   "ui.trap_puzzle.enigme_suivante": "✨ Correct… another inscription appears",

@@ -42,7 +42,7 @@ const TYPES := [
 ]
 const PUZZLES := ["rune", "wires", "riddle", "tiles"]
 const PUZZLE_ICONS := {"rune": "ᚱ", "wires": "🧵", "riddle": "📜", "tiles": "▦"}
-const SACRIFICE_TYPES := ["potion", "scroll"]
+const SACRIFICE_EXCLUDED := ["key"]      # tout objet du sac peut être sacrifié, sauf les clés
 
 ## Forçage pour les captures / tests : {"kind": id, "methods": [ids], "puzzle": id}.
 static var debug_offer: Dictionary = {}
@@ -80,7 +80,7 @@ static func kind_by_id(id: String) -> Dictionary:
 static func sacrifice_candidates(gs: GameState) -> Array:
 	var out: Array = []
 	for i in gs.inventory.size():
-		if SACRIFICE_TYPES.has(str(gs.inventory[i].get("type", ""))):
+		if not SACRIFICE_EXCLUDED.has(str(gs.inventory[i].get("type", ""))):
 			out.append(i)
 	return out
 
