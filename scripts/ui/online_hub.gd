@@ -10,7 +10,7 @@ const MODES := ["free", "ranked", "weekly", "hardcore"]
 ## Ce que mesure le classement de certaines règles du Défi de la semaine (les autres comptent des niveaux).
 const RULE_METRIC := {"richest": "gold", "bossrush": "bosses"}
 ## Modes de l'onglet « Jouer » : les classements (MODES) n'incluent pas le Défi du jour, qui n'a pas de classement.
-const PLAY_MODES := ["free", "ranked", "weekly", "daily", "hardcore"]
+const PLAY_MODES := ["free", "ranked", "daily", "weekly", "hardcore"]
 const MODE_ICON := {"free": "🎲", "ranked": "🏆", "weekly": "📅", "daily": "🌅", "hardcore": "🔥"}
 const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "weekly": "ui.hub.mode_weekly", "daily": "ui.hub.mode_daily", "hardcore": "ui.hub.mode_hardcore"}
 const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "weekly": "ui.hub.tag_weekly", "daily": "ui.hub.tag_daily", "hardcore": "ui.hub.tag_hardcore"}
@@ -266,40 +266,53 @@ func _load_xp() -> void:
 # ------------------------------------------------------------------ onglet Jouer
 
 func _show_play() -> void:
-	var tiles := GridContainer.new()
-	tiles.columns = 5 if _width >= 1000.0 else (3 if not _narrow() else 1)
-	tiles.add_theme_constant_override("h_separation", 8)
-	tiles.add_theme_constant_override("v_separation", 8)
-	tiles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_child(tiles)
+	# Disposition : liste des modes à gauche (icône, nom, accroche, chevron), fiche du mode choisi à droite. Écran étroit : liste puis fiche.
+	var side_by_side := not _narrow() and _width >= 820.0
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 6)
 	for m in PLAY_MODES:
-		tiles.add_child(_tile(m))
-	var detail := HubKit.card(UiTheme.BRONZE_DARK, HubKit.CARD_BG, 14)
-	_body.add_child(detail)
-	var box := HubKit.vbox(8)
+		list.add_child(_tile(m))
+	var detail := HubKit.card(UiTheme.BRONZE_DARK, HubKit.CARD_BG, 16)
+	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var box := HubKit.vbox(10)
 	detail.add_child(box)
+	if side_by_side:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_body.add_child(row)
+		list.custom_minimum_size.x = clampf(_width * 0.4, 300.0, 460.0)
+		list.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		row.add_child(list)
+		row.add_child(detail)
+	else:
+		_body.add_child(list)
+		_body.add_child(detail)
 	_fill_mode(box)
 	if (_mode == "hardcore" or _mode == "ranked" or _mode == "weekly" or _mode == "daily") and _signed() and not _runs_ok:
 		_load_runs_for_play()
 
+## Ligne de la liste des modes : icône, nom, accroche et chevron ; le mode choisi est en or.
 func _tile(m: String) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_pressed = m == _mode
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 58 if _narrow() else 74)
+	b.custom_minimum_size = Vector2(0, 62 if _narrow() else 78)
 	HubKit.style_toggle(b, 10, 6)
 	b.pressed.connect(func():
 		_mode = m
 		_show("play"))
 	var h := HBoxContainer.new()
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	h.offset_left = 10
-	h.offset_right = -10
-	h.add_theme_constant_override("separation", 10)
+	h.offset_left = 12
+	h.offset_right = -12
+	h.add_theme_constant_override("separation", 12)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ic := HubKit.label(str(MODE_ICON[m]), UiTheme.PARCH, 28, false, false, HORIZONTAL_ALIGNMENT_CENTER)
+	var ic := HubKit.label(str(MODE_ICON[m]), UiTheme.PARCH, 34, false, false, HORIZONTAL_ALIGNMENT_CENTER)
+	ic.custom_minimum_size = Vector2(44, 0)
 	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(ic)
 	var v := VBoxContainer.new()
@@ -307,26 +320,59 @@ func _tile(m: String) -> Button:
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var t1 := HubKit.label(L.t(MODE_NAME[m]), GOLD if m == _mode else UiTheme.PARCH, 16, true)
+	var t1 := HubKit.label(L.t(MODE_NAME[m]), GOLD if m == _mode else UiTheme.PARCH, 18, true)
 	t1.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(t1)
 	var t2 := HubKit.label(L.t(MODE_TAG[m]), UiTheme.DIM, 12)
 	t2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(t2)
 	h.add_child(v)
+	var chev := HubKit.label("›", GOLD if m == _mode else UiTheme.DIM, 30, false, false, HORIZONTAL_ALIGNMENT_CENTER)
+	chev.custom_minimum_size = Vector2(18, 0)
+	chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(chev)
 	b.add_child(h)
 	return b
 
+## Titre de la fiche : grande icône, nom du mode et filet doré dessous.
+func _mode_head(box: VBoxContainer, icon: String, text: String, color: Color) -> void:
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 14)
+	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(head)
+	head.add_child(HubKit.label(icon, UiTheme.PARCH, 44, false, false, HORIZONTAL_ALIGNMENT_CENTER))
+	var t := HubKit.vbox(2)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_child(t)
+	t.add_child(HubKit.label(text, color, 30, true, false))
+	var line := ColorRect.new()
+	line.color = Color(0.72, 0.55, 0.25, 0.65)
+	line.custom_minimum_size = Vector2(0, 2)
+	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.add_child(line)
+
+## Bouton de lancement : centré, large, avec les épées croisées.
+func _play_button(text: String, cb: Callable) -> Control:
+	var wrap := CenterContainer.new()
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var b := HubKit.button("⚔  " + text, cb, true, 54)
+	b.custom_minimum_size.x = 380.0
+	b.add_theme_font_size_override("font_size", 17)
+	wrap.add_child(b)
+	wrap.set_meta("button", b)
+	return wrap
+
 func _fill_mode(box: VBoxContainer) -> void:
-	var cols := 1 if _narrow() else 2
+	var cols := 1 if (_narrow() or _width < 1100.0) else 2   # la fiche est à droite de la liste : une colonne si la place manque
 	match _mode:
 		"free":
-			box.add_child(HubKit.label("🎲  " + L.t("ui.hub.mode_free"), GOLD, 20, true, false))
+			_mode_head(box, "🎲", L.t("ui.hub.mode_free"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.free_desc"), UiTheme.PARCH, 14))
 			if _on_launch.is_valid():
-				box.add_child(HubKit.button(L.t("ui.hub.free_play"), func():
+				box.add_child(_play_button(L.t("ui.hub.free_play"), func():
 					_modal.close()
-					_on_launch.call(), true, 46))
+					_on_launch.call()))
 			else:
 				box.add_child(HubKit.label(L.t("ui.hub.free_home"), UiTheme.DIM, 13, false, true, HORIZONTAL_ALIGNMENT_CENTER))
 			HubKit.facts(box, [
@@ -337,7 +383,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["🔓", L.t("ui.hub.f_unlock"), L.t("ui.hub.free_unlock")],
 			], cols)
 		"ranked":
-			box.add_child(HubKit.label("🏆  " + L.t("ui.hub.mode_ranked"), GOLD, 20, true, false))
+			_mode_head(box, "🏆", L.t("ui.hub.mode_ranked"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.ranked_desc"), UiTheme.PARCH, 14))
 			var chips := HFlowContainer.new()
 			chips.add_theme_constant_override("h_separation", 6)
@@ -359,7 +405,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.ranked_tries")],
 			], cols)
 		"weekly":
-			box.add_child(HubKit.label("📅  " + L.t("ui.hub.mode_weekly"), GOLD, 20, true, false))
+			_mode_head(box, "📅", L.t("ui.hub.mode_weekly"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.weekly_desc"), UiTheme.PARCH, 14))
 			var rule_box := HubKit.card(Color("7a5a2c"), Color(0.2, 0.14, 0.05, 0.45), 12)
 			rule_box.name = "RuleCard"
@@ -376,7 +422,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 			], cols)
 			_load_weekly(rule_box, _gen)
 		"daily":
-			box.add_child(HubKit.label("🌅  " + L.t("ui.hub.mode_daily"), GOLD, 20, true, false))
+			_mode_head(box, "🌅", L.t("ui.hub.mode_daily"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.daily_desc"), UiTheme.PARCH, 14))
 			var day_box := HubKit.card(Color("7a5a2c"), Color(0.2, 0.14, 0.05, 0.45), 12)
 			day_box.name = "DailyCard"
@@ -392,7 +438,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 			_load_daily(day_box, _gen)
 		"hardcore":
 			var key := _month_key()
-			box.add_child(HubKit.label("🔥  " + L.fa(L.t("ui.hub.hc_title"), key.substr(5) + "/" + key.substr(0, 4)), HubKit.FIRE, 20, true, false))
+			_mode_head(box, "🔥", L.fa(L.t("ui.hub.hc_title"), key.substr(5) + "/" + key.substr(0, 4)), HubKit.FIRE)
 			box.add_child(HubKit.label(L.t("ui.hub.hc_desc"), UiTheme.PARCH, 14))
 			_cta(box, "hardcore")
 			HubKit.facts(box, [
@@ -586,9 +632,9 @@ func _cta(box: VBoxContainer, mode: String) -> void:
 		status.add_theme_color_override("font_color", HubKit.WARN)
 		box.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 46))
 		return
-	var b := HubKit.button(L.t("ui.hub.ranked_play") if mode == "ranked" else (L.t("ui.hub.weekly_play") if mode == "weekly" else (L.t("ui.hub.daily_play") if mode == "daily" else L.t("ui.hub.hc_play"))), func(): _ask(mode), true, 46)
-	b.name = "CtaButton"
-	box.add_child(b)
+	var wrap := _play_button(L.t("ui.hub.ranked_play") if mode == "ranked" else (L.t("ui.hub.weekly_play") if mode == "weekly" else (L.t("ui.hub.daily_play") if mode == "daily" else L.t("ui.hub.hc_play"))), func(): _ask(mode))
+	(wrap.get_meta("button") as Button).name = "CtaButton"
+	box.add_child(wrap)
 	_update_cta()
 
 func _used_today() -> bool:
