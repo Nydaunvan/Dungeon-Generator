@@ -53,7 +53,8 @@ const BOSS := {
 static func style_key(style: String) -> String:
 	return str(STYLE_KEY.get(style, ""))
 
-## Résistances tirées pour un monstre : {"resists": {...}} (vide si la famille n'en a pas ou si le tirage est négatif).
+## Résistances tirées pour un monstre : {"resists": {...}} (vide si la famille n'en a pas). Toutes les écoles de la famille sont présentes, avec
+## une valeur au hasard dans sa fourchette, jamais zéro. `always` à faux : tirage de chance (`chance_pct`), non utilisé par le générateur.
 static func roll(icon_id: String, is_boss: bool, chance_pct: float, always: bool) -> Dictionary:
 	var row: Dictionary = (BOSS if is_boss else FAMILY).get(icon_id, {})
 	if row.is_empty() or (not always and randf() * 100.0 >= chance_pct):

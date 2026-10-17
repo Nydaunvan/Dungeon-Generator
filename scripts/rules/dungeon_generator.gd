@@ -447,7 +447,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			"goldReward": maxi(1, int(round((4 + i * 3) * diff_mult * power * float(mod.goldMult)))),
 			"opensDoorId": "", "isGroup": is_group, "groupSize": group_size}
 		m.merge(_resist(), true)
-		m.merge(Resist.roll(str(fl[1]), false, float(cfg.get("monsterResistChancePct", 70)), false), true)        # résistances de famille (au hasard)
+		m.merge(Resist.roll(str(fl[1]), false, 100.0, true), true)        # résistances de famille : toujours présentes, valeurs au hasard (jamais zéro)
 		m.merge(MonsterEffects.roll(str(fl[1]), false, float(cfg.get("monsterStatusChancePct", 60)), false, i), true)       # effet de famille (au hasard)
 		# rage : tous les monstres peuvent en avoir une, au hasard (chance réglée dans l'admin) ; elle se déclenche sous un seuil de PV
 		var rage_on := randf() * 100.0 < float(cfg.get("monsterRageChancePct", 25))

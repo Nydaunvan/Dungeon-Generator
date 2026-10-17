@@ -279,3 +279,6 @@ Suite : le plafond du thème `damp` reprend les briques du mur (même matériau)
 ### Clé de la porte verrouillée : jamais sur un escalier
 Correctif du générateur (`DungeonGenerator._one_level`) : les cases candidates pour la clé excluent désormais toute case déjà prise (`used` : départ, escalier de sortie), au lieu du seul départ ; elles restent limitées aux salles atteignables sans passer la porte à ouvrir. Contrôle : `tools/check_key_placement.tscn` (150 donjons, une clé jamais sur un escalier ni sur le départ, toujours atteignable porte fermée ; l'ancien code échouait sur 4 clés sur 292). Les niveaux déjà générés dans une partie ne sont pas modifiés.
 
+### Résistances de famille : toujours présentes
+Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les monstres : toute famille de la table `FAMILY` reçoit toutes ses écoles, chacune avec une valeur tirée dans sa fourchette, jamais zéro. Le réglage `monsterResistChancePct` n'est plus utilisé (champ retiré de l'Admin ; la clé reste dans les configurations existantes sans effet). Les monstres déjà générés dans une partie gardent leurs tirages. Contrôle : `tools/check_resist_family.tscn` (5123 monstres, 33 familles).
+
