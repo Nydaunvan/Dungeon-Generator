@@ -201,5 +201,6 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 - `Loader._slice` et `Sound` rendent la main toutes les ~5 ms (au lieu de 7-8) ; `Loader._wait_full` laisse la barre finir de se remplir avant de lever le rideau.
 - Aucun gros bloc sur le fil principal (l'animation interne de l'épée tourne sur ce fil) : images et scripts sont chargés par `ResourceLoader.load_threaded_request` (`Loader._load_threaded`, fenêtre de 4 à 6 requêtes, sondage à chaque image) ; les sons sont synthétisés dans une seule tâche `WorkerThreadPool` (`Sound.preload_all`, progression pondérée) ; les textures procédurales d'effets sont fabriquées d'avance, une par image (`WarmUp.pregen_effect_resources`), sauf la grande texture de runes (512², calcul pur) qui part sur un fil de travail. Les autres fabriques ne doivent PAS passer sur un fil (erreurs de texte, plantage).
 - Mesure : images les plus longues ≤ 20 ms en chargement ; restent le décor (1 image ~130 ms) et la compilation des shaders par le GPU pendant la préparation des effets.
+- Shader de l'épée : le bruit est calculé en pixels d'écran (cellules carrées, interpolation quintique, hachage sans motif) pour supprimer les bandes verticales dans l'aura et sur la lame.
 - Contrôle : `tools/check_loading_bar.tscn`.
 

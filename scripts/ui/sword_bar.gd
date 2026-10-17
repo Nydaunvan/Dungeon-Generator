@@ -22,9 +22,9 @@ uniform sampler2D mask : filter_linear_mipmap;      // la lame seule (sans garde
 uniform vec2 rect_px = vec2(900.0, 330.0);   // taille du rectangle en pixels d'écran
 uniform vec2 pad_map = vec2(0.0, 1.0);    // x = marge (fraction de la largeur), y = largeur de l'épée (fraction de la largeur du rectangle)
 
-float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float hash(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p){
-	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
@@ -33,7 +33,8 @@ void fragment(){
 	float xs = (UV.x - pad_map.x) / pad_map.y;                         // 0..1 le long de l'épée
 	float g5 = textureLod(mask, UV, 6.4).a;
 	if (tex.a < 0.004 && g5 < 0.004) { discard; }     // loin de l'épée : rien à calculer (économie de GPU)
-	float n = vnoise(vec2(xs * 22.0 - time_s * 0.8, UV.y * 9.0)) * 0.65 + vnoise(vec2(xs * 50.0 - time_s * 1.7, UV.y * 17.0)) * 0.35;
+	vec2 px = vec2(xs * pad_map.y * rect_px.x, UV.y * rect_px.y);        // position en pixels d'écran : le bruit a des cellules carrées, donc pas de rayures verticales
+	float n = vnoise(px / 46.0 - vec2(time_s * 0.8, 0.0)) * 0.6 + vnoise(px / 21.0 - vec2(time_s * 1.7, 0.0) + 7.3) * 0.4;
 	float f = x0 + progress * (1.0 - x0) + (n - 0.5) * 0.02;
 	float bm = texture(mask, UV).a;                                    // 1 sur la lame, 0 partout ailleurs
 	float inblade = bm;
@@ -53,7 +54,7 @@ void fragment(){
 	float g2 = textureLod(mask, UV, 3.0).a;
 	float g3 = textureLod(mask, UV, 4.6).a;
 	float g4 = textureLod(mask, UV, 5.6).a;                              // halo plus large, toujours calqué sur la forme de la lame
-	float stream = 0.75 + 0.5 * vnoise(vec2(xs * 34.0 - time_s * 3.2, UV.y * 7.0));
+	float stream = 0.86 + 0.28 * (vnoise(px / 38.0 - vec2(time_s * 3.2, 0.0) + 3.1) * 0.6 + vnoise(px / 17.0 - vec2(time_s * 4.4, time_s * 0.5)) * 0.4);
 	float pulse = 0.92 + 0.08 * sin(time_s * 9.0) * sin(time_s * 2.3 + 1.0);
 	float aura = (g1 * 1.3 + g2 * 1.1 * stream + g3 * 1.0 + g4 * 0.95 * stream + g5 * 0.8) * (1.0 + flash * 0.9);
 	aura *= mix(1.0, 0.16, tex.a);                                      // sur le métal l'aura reste discrète
@@ -64,7 +65,7 @@ void fragment(){
 	vec3 glow = a_col * clamp(aura, 0.0, 1.8) * 0.9;
 
 	// filets d'énergie sur le métal
-	float vein = smoothstep(0.62, 0.95, vnoise(vec2(xs * 40.0 - time_s * 2.6, UV.y * 30.0))) * lit * tex.a;
+	float vein = smoothstep(0.62, 0.95, vnoise(px / 14.0 - vec2(time_s * 2.6, 0.0))) * lit * tex.a;
 	col += vec3(0.5, 0.82, 1.0) * vein * 0.28;
 	col += vec3(0.55, 0.8, 1.0) * edge * tex.a * 0.9;
 
