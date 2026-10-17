@@ -674,7 +674,7 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 	tt.add_child(nm)
-	tt.add_child(AdminUtil.label((Rarity.label(rep) + " · " if leg else "") + _type_line(rep), 13, UiTheme.DIM))
+	tt.add_child(AdminUtil.label((Rarity.label(rep) + " · " if ["weapon", "armor", "jewelry"].has(str(rep.get("type", ""))) else "") + _type_line(rep), 13, UiTheme.DIM))
 	for pline in Rarity.lines(rep):
 		var pl := AdminUtil.label(str(pline), 13, Rarity.color(rep))
 		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

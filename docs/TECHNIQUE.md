@@ -186,3 +186,6 @@ Onglet **Tests** de l'administration : un sélecteur liste les 12 règles (`admi
 - Option `card_fx` (Options > jeu, défaut activée, `user://settings.cfg` section `game`, clé absente = activée : aucune migration). Rendu avancé (Forward+) uniquement ; sinon, ou si le placement échoue, l'effet joue dans la vue comme avant.
 - Contrôle : `tools/check_card_fx.tscn`.
 
+## Qualité en toutes lettres
+
+Toute description d'arme, d'armure ou de bijou indique sa qualité par un mot (« Commun », « Rare »…), pas seulement par la couleur : ligne de type des infobulles (`EquipDock.type_label`), fiche du marchand (`ShopModal`) et liste d'équipement de la fiche de survol d'un héros (`PartyTip`).

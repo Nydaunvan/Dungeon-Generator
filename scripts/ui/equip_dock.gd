@@ -236,10 +236,10 @@ static func stat_rows(it: Dictionary, force_atk: bool) -> Array:
 			rows.append({"key": pair[1], "label": pair[2], "value": int(it[pair[0]])})
 	return rows
 
-## Type de l'objet, précédé de sa rareté s'il n'est pas commun (« Rare · Torse »).
+## Type de l'objet, précédé de sa qualité en toutes lettres, y compris « Commun » (« Rare · Torse ») : la couleur ne suffit pas à la deviner.
 static func type_label(it: Dictionary) -> String:
 	var base := _base_type_label(it)
-	if Rarity.is_special(it) and ["weapon", "armor", "jewelry"].has(str(it.get("type", ""))):
+	if ["weapon", "armor", "jewelry"].has(str(it.get("type", ""))):
 		return Rarity.label(it) + " · " + base
 	return base
 
