@@ -46,6 +46,15 @@ func _ready() -> void:
 	checks["icône de classe skalde"] = oldc.config.classes[0].icon == "@icon:class_skald"
 	checks["berserker : emoji → image du jeu (v5)"] = oldc.config.classes[1].icon == "@icon:axe_double"
 	checks["icône de classe barde (équipe) : luth → cor (v16)"] = oldc.config.party[0].icon == "@icon:spr_103"
+	# couronne d'or sertie : bijou → casque (v18), y compris portée
+	var crown := {"id": "c1", "name": "Couronne", "icon": "@icon:spr_156", "type": "jewelry"}
+	var worn := {"id": "c2", "name": "Couronne", "icon": "@icon:spr_156", "type": "jewelry"}
+	var oldk := {"config": {"levels": [{"items": [crown]}], "party": []}, "save": {"inventory": [], "party": [{"equipment": {"accessory": worn}}]},
+		"schema": 17, "dungeonOrigin": "random"}
+	SaveMigrations.migrate(oldk, Data.original_config)
+	checks["couronne au sol : casque"] = str(crown.type) == "armor" and str(crown.slot) == "head"
+	checks["couronne portée : retour au sac en casque"] = oldk.save.party[0].equipment.accessory == null and (oldk.save.inventory as Array).size() == 1 \
+			and str(oldk.save.inventory[0].slot) == "head"
 	checks["icône de classe ménestrel (sauvegarde)"] = oldc.save.party[0].icon == "@icon:class_minstrel"
 	# piège de vapeur permanent (v3 → v4) : niveaux et bibliothèque ; les autres pièges ne changent pas
 	var gas := {"config": {"levels": [{"items": [{"id": "g", "type": "trap", "trapKind": "gas", "permanent": false}, {"id": "d", "type": "trap", "trapKind": "dart", "permanent": false}]}],

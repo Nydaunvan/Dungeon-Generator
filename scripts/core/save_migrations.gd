@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 17
+const SCHEMA := 18
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -70,6 +70,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v15_to_v16(d))
 			16:
 				notes.append_array(_v16_to_v17(d))
+			17:
+				notes.append_array(_v17_to_v18(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -470,3 +472,52 @@ static func _v16_to_v17(d: Dictionary) -> Array[String]:
 			if not (cfg as Dictionary).has(k):
 				cfg[k] = {"bossHpMult": 1.8, "bossFinalHpMult": 2.2, "bossDmgPct": 10, "bossRewardPct": 25}[k]
 	return []
+
+## v17 → v18 : la « Couronne d'or sertie » (sprite 156) est un casque, plus un bijou. Les couronnes déjà générées (niveaux, bibliothèque d'objets,
+## sac du groupe) passent en armure de tête ; celles qui sont portées en accessoire retournent dans le sac.
+static func _v17_to_v18(d: Dictionary) -> Array[String]:
+	var n := 0
+	var cfg = d.get("config")
+	if cfg is Dictionary:
+		for lv in (cfg as Dictionary).get("levels", []):
+			if lv is Dictionary:
+				n += _crown_fix((lv as Dictionary).get("items", []))
+		n += _crown_fix((cfg as Dictionary).get("itemLibrary", []))
+		n += _crown_worn((cfg as Dictionary).get("party", []), null)
+	var sv = d.get("save")
+	if sv is Dictionary:
+		var inv = (sv as Dictionary).get("inventory")
+		n += _crown_fix(inv)
+		n += _crown_worn((sv as Dictionary).get("party", []), inv)
+	return ["couronne d'or sertie : %d objet(s) passé(s) en casque" % n] if n > 0 else []
+
+static func _is_crown(it: Variant) -> bool:
+	return it is Dictionary and str((it as Dictionary).get("icon", "")) == "@icon:spr_156" and str((it as Dictionary).get("type", "")) == "jewelry"
+
+static func _crown_fix(list: Variant) -> int:
+	var n := 0
+	if list is Array:
+		for it in list:
+			if _is_crown(it):
+				it["type"] = "armor"
+				it["slot"] = "head"
+				n += 1
+	return n
+
+## Couronne portée en accessoire dans une partie : elle devient un casque et retourne dans le sac du groupe (`inv`).
+static func _crown_worn(party: Variant, inv: Variant) -> int:
+	var n := 0
+	if not (party is Array):
+		return 0
+	for c in party:
+		if not (c is Dictionary):
+			continue
+		var eq = (c as Dictionary).get("equipment")
+		if inv is Array and eq is Dictionary and _is_crown((eq as Dictionary).get("accessory")):
+			var it: Dictionary = eq["accessory"]
+			it["type"] = "armor"
+			it["slot"] = "head"
+			(inv as Array).append(it)
+			eq["accessory"] = null
+			n += 1
+	return n

@@ -288,3 +288,8 @@ Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les mo
 ### Sceau de l'accueil connecté
 `HomeScreen._refresh_seal_texts` : hors ligne le sceau affiche « Donjon aléatoire / jamais deux fois pareil » ; connecté (`Cloud.is_signed_in()`), « Expédition / classée ou libre » (clés `ui.home_screen.expedition_en_ligne`, `classee_ou_libre`). Le texte suit `Cloud.session_changed` (connexion, déconnexion, restauration de session). Le comportement du bouton ne change pas (fenêtre Défis puis réglages). Capture : `tools/shot_home_online.tscn`.
 
+### Couronne d'or sertie : casque, et sprite recoupé (schéma 18)
+- `assets/sheets/items_sheet.webp` : les cases 155 (torque d'or) et 156 (couronne) étaient mal découpées dans la planche (la couronne décalée à droite, avec un morceau du torque dans sa case). La couronne est recentrée et le morceau parasite retiré (planche réenregistrée sans perte). Le torque, dont l'arc droit était déjà coupé dans la source, reste tel quel.
+- `DungeonGenerator.EQUIP_ICONS` : le sprite 156 passe de `jewelry` à `head`, la couronne est donc une armure de tête.
+- Migration 17 → 18 (`SaveMigrations._v17_to_v18`) : les couronnes déjà générées (niveaux, bibliothèque d'objets, sac) deviennent des casques ; une couronne portée en accessoire retourne dans le sac du groupe. Contrôle : `tools/check_saves.tscn`.
+
