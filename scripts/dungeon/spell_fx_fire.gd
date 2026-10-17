@@ -66,7 +66,7 @@ func _fire_hit(at: Vector3, target: Dictionary, big: float = 1.0, debris: bool =
 # ------------------------------------------------------------------------------------------ BOULE DE FEU
 
 func _ball(target: Dictionary) -> void:
-	var start := _start_point() + cam.global_transform.basis.x * 0.15
+	var start := _start_point() + _side(0.15)
 	var end := _end_point(target)
 	var dur := clampf(0.38 + start.distance_to(end) * 0.035, 0.42, 0.6)
 	_fly(start, end, dur, {

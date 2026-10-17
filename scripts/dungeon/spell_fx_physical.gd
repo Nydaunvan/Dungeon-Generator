@@ -122,7 +122,7 @@ func _ph_power(target: Dictionary) -> void:
 
 func _ph_archer(target: Dictionary) -> void:
 	_base_hue = 0.12
-	var start := _start_point() + cam.global_transform.basis.x * 0.4
+	var start := _start_point() + _side(0.4)
 	var end := _end_point(target)
 	var dur := clampf(0.22 + start.distance_to(end) * 0.022, 0.26, 0.38)
 	var size := _tsize(target) * _s
@@ -514,7 +514,7 @@ func _ph_slow(target: Dictionary) -> void:
 
 func _ph_arcane_arrow(target: Dictionary) -> void:
 	_base_hue = 0.74
-	var start := _start_point() + cam.global_transform.basis.x * 0.4
+	var start := _start_point() + _side(0.4)
 	var end := _end_point(target)
 	var dur := clampf(0.28 + start.distance_to(end) * 0.024, 0.3, 0.42)
 	var vi := _c(0.65, 0.4, 1.0)

@@ -206,7 +206,7 @@ func _n_hit(at: Vector3, target: Dictionary, big: float = 1.0, shake: float = 0.
 # ------------------------------------------------------------------------------------------ ÉPINE VENIMEUSE
 
 func _thorn(target: Dictionary) -> void:
-	var start := _start_point() + cam.global_transform.basis.x * 0.3
+	var start := _start_point() + _side(0.3)
 	var end := _end_point(target)
 	var dur := clampf(0.3 + start.distance_to(end) * 0.028, 0.34, 0.48)
 	var size := _tsize(target) * _s
@@ -331,7 +331,7 @@ func _swarm(target: Dictionary, ctx: Dictionary) -> void:
 	_keep(2.4)
 
 func _swarm_one(target: Dictionary) -> void:
-	var start := _start_point() + cam.global_transform.basis.x * randf_range(-0.4, 0.4)
+	var start := _start_point() + _side(randf_range(-0.4, 0.4))
 	var end := _end_point(target)
 	var dur := clampf(0.5 + start.distance_to(end) * 0.04, 0.55, 0.8)
 	var size := _tsize(target) * _s

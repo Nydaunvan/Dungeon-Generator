@@ -53,6 +53,12 @@ func _ready() -> void:
 	probe.cam = ov._cam
 	probe.apply_party_ctx({"slotPx": [Vector2(300, 700), Vector2(500, 700), Vector2(700, 700)]})
 	var slots_ok: bool = probe._party_slots() == [0, 1, 2] and probe._party_ends(2.2)[0].distance_to(probe._party_ends(2.2)[1]) > 1.0
-	var good: bool = slots_ok and ok2 and ok3 and n_fx >= 3 and start_ok and ok and fx_nodes >= 1 and back.distance_to(centers[2]) < 1.5 and fov_ok and ov.visible
-	print("CARDFX places=", slots_ok, " ok=", ok, " sort=", ok2, " coup=", ok3, " depart_carte=", start_ok, " n=", n_fx, " effets=", fx_nodes, " ecart=", back.distance_to(centers[2]), " fov=", ov._cam.fov, " -> ", "OK" if good else "ECHEC")
+	# flèche de l'archer (carte 2) : part du centre de sa carte, sans décalage latéral
+	var okb := ov.play_action("bow", {"caster": 2, "solo": false}, cam, view, centers, tgt, vp)
+	var bow_ok := false
+	for ch in ov._world.get_children():
+		if ch is SpellFx3D and (ch as SpellFx3D).caster_idx == 2 and (ch as SpellFx3D).slot_px.size() == 4:
+			bow_ok = ov._cam.unproject_position((ch as SpellFx3D)._start_point() + (ch as SpellFx3D)._side(1.1)).distance_to(centers[2]) < 1.5
+	var good: bool = okb and bow_ok and slots_ok and ok2 and ok3 and n_fx >= 3 and start_ok and ok and fx_nodes >= 1 and back.distance_to(centers[2]) < 1.5 and fov_ok and ov.visible
+	print("CARDFX fleche=", okb, bow_ok, " places=", slots_ok, " ok=", ok, " sort=", ok2, " coup=", ok3, " depart_carte=", start_ok, " n=", n_fx, " effets=", fx_nodes, " ecart=", back.distance_to(centers[2]), " fov=", ov._cam.fov, " -> ", "OK" if good else "ECHEC")
 	get_tree().quit(0 if good else 1)

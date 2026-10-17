@@ -84,16 +84,22 @@ func _frame(main_cam: Camera3D, view: Control) -> void:
 	_cam.global_transform = Transform3D.IDENTITY
 
 ## Effet d'action (coup de monstre sur un héros) : `ctx.victim` = place du héros touché.
-func play_action(kind: String, ctx: Dictionary, main_cam: Camera3D, view: Control, centers: Array) -> bool:
+## `target` / `view_vp` : monstre visé dans la vue du jeu (flèche de l'archer, qui part de la carte de l'archer).
+func play_action(kind: String, ctx: Dictionary, main_cam: Camera3D, view: Control, centers: Array, target: Dictionary = {}, view_vp: SubViewport = null) -> bool:
 	if main_cam == null or view == null or centers.is_empty() or size.y < 50.0 or view.size.y < 50.0:
 		return false
 	_frame(main_cam, view)
 	var c := ctx.duplicate()
 	c["slotPx"] = centers.map(func(p): return (p as Vector2) - global_position)
+	var tgt := {}
+	if not target.is_empty() and view_vp != null:
+		tgt = _remap(target, main_cam, view, view_vp)
+		if tgt.is_empty():
+			return false
 	visible = true
 	_idle = 0.0
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	SpellFxStyles.cast_action(_world, _cam, kind, {}, c)
+	SpellFxStyles.cast_action(_world, _cam, kind, tgt, c)
 	return true
 
 ## Point du monde de la vue → point de la couche à l'écran identique (même profondeur).

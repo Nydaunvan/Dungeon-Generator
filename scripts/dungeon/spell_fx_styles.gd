@@ -570,7 +570,7 @@ func _hit_sparks(at: Vector3, target: Dictionary) -> void:
 
 ## Flèche : un trait lumineux rapide, sans cloche.
 func _arrow(target: Dictionary) -> void:
-	var start := _start_point() + cam.global_transform.basis.x * 1.1     # part du côté : le trait se lit en diagonale
+	var start := _start_point() + _side(1.1)     # part du côté : le trait se lit en diagonale
 	var end := _end_point(target)
 	var up := cam.global_transform.basis.y
 	var dur := clampf(0.2 + start.distance_to(end) * 0.025, 0.24, 0.36)

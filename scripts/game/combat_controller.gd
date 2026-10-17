@@ -11,6 +11,8 @@ signal fx(type: String)
 signal fx3d(spell_id: String, ctx: Dictionary)
 ## Coup de monstre sur un héros précis : l'effet se joue sur sa carte.
 signal fx_hit(char_id: String)
+## Attaque normale d'un héros précis (flèche de l'archer : part de sa carte).
+signal fx_attack(kind: String, char_id: String)
 
 const MONSTER_DELAY := 0.85
 
@@ -319,6 +321,8 @@ func _drain() -> void:
 				Crumbs.mark("effet %s" % str(e.fx))
 				if str(e.fx) == "hit" and e.has("char"):
 					fx_hit.emit(str(e.char))
+				elif e.has("char"):
+					fx_attack.emit(str(e.fx), str(e.char))
 				else:
 					fx.emit(str(e.fx))
 			"fx3d":

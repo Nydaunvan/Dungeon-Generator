@@ -163,6 +163,7 @@ func _ready() -> void:
 	ctrl.fx.connect(_on_fx)
 	ctrl.fx3d.connect(_on_fx3d)
 	ctrl.fx_hit.connect(_on_fx_hit)
+	ctrl.fx_attack.connect(_on_fx_attack)
 
 	await Loader.step(0.32, L.t("loading.etape_interface"))
 	var ui := CanvasLayer.new()
@@ -1025,6 +1026,19 @@ func _on_fx(type: String) -> void:
 		_shake()
 
 var card_fx: CardFxOverlay
+
+## Attaque normale d'un héros : seule la flèche de l'archer part de sa carte vers le monstre ; les coups de corps à corps restent sur le monstre.
+func _on_fx_attack(kind: String, char_id: String) -> void:
+	var idx := -1
+	for i in gs.party.size():
+		if str(gs.party[i].id) == char_id:
+			idx = i
+	if kind == "bow" and card_fx != null and idx >= 0 and CardFxOverlay.usable():
+		var st: CombatStage = level_node.stage if level_node != null else null
+		var tgt: Dictionary = st.target_point() if st != null and st.active else {}
+		if card_fx.play_action("bow", {"caster": idx, "solo": gs.party.size() == 1}, rig.camera, layout.sub_container, layout.hud.card_centers(), tgt, layout.sub_viewport):
+			return
+	_on_fx(kind)
 
 ## Coup de monstre sur un héros : l'effet frappe sa carte (au-dessus de l'interface) ; sinon l'effet d'origine.
 func _on_fx_hit(char_id: String) -> void:

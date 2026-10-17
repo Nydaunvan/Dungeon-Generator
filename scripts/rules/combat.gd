@@ -384,7 +384,7 @@ func player_attack(attacker: Dictionary) -> bool:
 	var wpn_v = (attacker.get("equipment", {}) as Dictionary).get("weapon")
 	var wtype := str(wpn_v.get("weaponType", "sword")) if wpn_v is Dictionary else "fist"
 	gs.bump(attacker.id, "actions")
-	events.append({"type": "fx", "fx": "unarmed" if wtype == "fist" else wtype})
+	events.append({"type": "fx", "fx": "unarmed" if wtype == "fist" else wtype, "char": str(attacker.id)})
 	Sound.sfx("swing", wtype)
 	Sound.sfx_later(0.09, "hit")
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)

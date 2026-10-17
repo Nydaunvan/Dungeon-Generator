@@ -185,7 +185,7 @@ func _execute(target: Dictionary) -> void:
 # ------------------------------------------------------------------------------------------ LAME SILENCIEUSE
 
 func _blade(target: Dictionary) -> void:
-	var start := _start_point() + cam.global_transform.basis.x * 0.5
+	var start := _start_point() + _side(0.5)
 	var end := _end_point(target)
 	var dur := clampf(0.28 + start.distance_to(end) * 0.025, 0.3, 0.42)
 	var mesh := _shard_pal("fxs_blade_" + (str(int(_tint_h * 100.0)) if _tinted else "d"), _c(0.85, 0.7, 1.0), _c(0.38, 0.18, 0.65), _c(0.06, 0.02, 0.14))

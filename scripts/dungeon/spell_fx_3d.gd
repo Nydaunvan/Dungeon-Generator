@@ -22,6 +22,10 @@ func apply_party_ctx(ctx: Dictionary) -> void:
 	caster_idx = int(ctx.get("caster", -1))
 	victim_idx = int(ctx.get("victim", 0))
 
+## Décalage latéral du départ (varie les trajectoires) ; nul quand l'effet part du centre d'une carte.
+func _side(k: float) -> Vector3:
+	return Vector3.ZERO if not slot_px.is_empty() else cam.global_transform.basis.x * k
+
 ## Point de départ des effets des héros : sa carte quand l'effet joue au-dessus de l'interface, sinon le bas de la vue.
 func _start_point() -> Vector3:
 	if not slot_px.is_empty() and caster_idx >= 0:
@@ -446,7 +450,7 @@ func _fire(target: Dictionary) -> void:
 	var fwd := _fwd()
 	var right := cam.global_transform.basis.x
 	var up := cam.global_transform.basis.y
-	var start := _start_point() + right * 0.15
+	var start := _start_point() + _side(0.15)
 	var end: Vector3 = start + fwd * 4.0
 	if not target.is_empty():
 		end = _toward_cam(target.pos)
