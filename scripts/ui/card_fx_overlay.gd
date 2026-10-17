@@ -51,10 +51,10 @@ func _init() -> void:
 	_world.add_child(_cam)
 	_cam.current = true
 
-## Vrai si les effets peuvent jouer ici (rendu avancé, option activée). Indépendant du palier d'effets : sans halo (palier 0), les sorts des héros
-## et les coups reçus partent / arrivent quand même sur les cartes (seuls les effets de monstres avancés demandent un palier ≥ 1, voir SpellFxLibrary.cast).
+## Vrai si les effets peuvent jouer ici (option activée). Indépendant du rendu et du palier d'effets : même en compatibilité ou sans halo (palier 0),
+## les sorts des héros et les coups reçus partent / arrivent sur les cartes (les effets avancés de monstres demandent Forward+ et un palier ≥ 1, voir SpellFxLibrary.cast).
 static func usable() -> bool:
-	return Settings.card_fx and VisualFx.is_forward()
+	return Settings.card_fx
 
 ## Joue l'effet dans la couche. `main_cam` / `view` / `view_vp` : caméra, zone et rendu de la vue du jeu ; `centers` : centre de chaque carte du groupe
 ## (pixels de la fenêtre, dans l'ordre du groupe). Renvoie faux si l'effet n'a pas pu être placé (l'appelant le joue alors dans la vue).

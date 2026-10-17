@@ -194,7 +194,7 @@ Départ des effets : le point de départ d'un sort de héros est le milieu du bo
 
 Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucune ligne de type d'objet (emplacements, types, raretés, deux langues) ne montre une clé de langue brute. Cause du bug « ui.equip_dock.bottes » : `EquipDock._base_type_label` renvoyait le libellé de `SLOT_DEFS` sans le traduire.
 
-- Correctif : `CardFxOverlay.usable()` ne dépend plus du palier d'effets (halo désactivé = palier 0) : sans cela, tous les sorts (archer, druide…) partaient du bas de l'écran. Contrôle : `tools/check_start_all.tscn` (palier 0 forcé ; départ au bord bas de la carte).
+- Correctif : `CardFxOverlay.usable()` ne dépend plus ni du rendu (Forward+ / compatibilité) ni du palier d'effets (halo désactivé = palier 0) : sans cela, tous les sorts (archer, druide…) partaient du bas de l'écran. Contrôle : `tools/check_start_all.tscn` (rendu de compatibilité et palier 0 simulés ; départ au bord bas de la carte).
 
 ## Écran de chargement fluide
 
