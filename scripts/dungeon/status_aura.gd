@@ -122,18 +122,94 @@ func _build_poison(fx: Dictionary) -> void:
 			var s := _g() * (0.3 + 0.3 * _h(i + 9))
 			_put(b, Vector2(x, lerpf(-ext.y * 0.45, ext.y * 0.5, k)), Vector2(s, s), sin(k * PI) * 0.9))
 
+## Vraies flammes : trois nappes de feu en shader (bruit qui monte, cœur jaune-blanc, bords orange puis rouges, pointes qui se dissipent),
+## une lueur chaude et des braises qui s'envolent. Le mélange est additif sur un monstre, normal (alpha) dans la couche transparente des cartes.
+const FIRE_SHADER := """
+shader_type spatial;
+render_mode unshaded, BLEND, cull_disabled, depth_draw_never, depth_test_disabled;
+uniform float seed = 0.0;
+uniform float speed = 1.0;
+uniform float gain = 1.0;
+uniform float aspect = 1.0;       // largeur / hauteur de la nappe : les langues gardent leur finesse sur une carte large
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p){
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float fbm(vec2 p){ return vnoise(p) * 0.5 + vnoise(p * 2.03 + 5.1) * 0.3 + vnoise(p * 4.1 + 1.7) * 0.2; }
+void vertex(){
+	float sx = length(MODEL_MATRIX[0].xyz);
+	float sy = length(MODEL_MATRIX[1].xyz);
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * sx, INV_VIEW_MATRIX[1] * sy, INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+void fragment(){
+	float x = (UV.x - 0.5) * 2.0;
+	float y = 1.0 - UV.y;                                   // 0 en bas, 1 en haut
+	float t = TIME * speed;
+	vec2 q = vec2(x * 2.4 * aspect + seed, y * 2.1 - t * 1.7);
+	q.x += (vnoise(vec2(y * 3.0 - t * 0.8, seed)) - 0.5) * 0.9 * y;       // les langues ondulent en montant
+	float n = fbm(q);
+	float n2 = fbm(vec2(x * 5.2 * aspect - seed * 1.3, y * 3.7 - t * 3.1));
+	float flick = n * 0.75 + n2 * 0.55;
+	float dens = (0.95 - y * 1.25) + (flick - 0.5) * 1.25 - pow(abs(x), 2.0) * 0.95;
+	float a = smoothstep(0.1, 0.62, dens) * 0.85;
+	float heat = clamp(dens * 1.05 + n2 * 0.15, 0.0, 1.0);
+	vec3 col = mix(vec3(0.75, 0.05, 0.0), vec3(1.0, 0.42, 0.04), smoothstep(0.08, 0.45, heat));
+	col = mix(col, vec3(1.0, 0.82, 0.25), smoothstep(0.45, 0.72, heat));
+	col = mix(col, vec3(1.0, 0.95, 0.6), smoothstep(0.88, 1.0, heat) * 0.6);
+	float bottom = smoothstep(0.0, 0.16, y);
+	float pulse = 0.9 + 0.1 * sin(TIME * 11.0 + seed * 3.0);
+	ALBEDO = col;
+	ALPHA = clamp(a * bottom * pulse * gain, 0.0, 1.0);
+}
+"""
+static var _fire_shaders: Dictionary = {}
+
+static func _fire_shader(mix_blend: bool) -> Shader:
+	if not _fire_shaders.has(mix_blend):
+		var sh := Shader.new()
+		sh.code = FIRE_SHADER.replace("BLEND", "blend_mix" if mix_blend else "blend_add")
+		_fire_shaders[mix_blend] = sh
+	return _fire_shaders[mix_blend]
+
+func _fire_quad(fx: Dictionary, seed_v: float, speed: float, gain: float) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2.ONE
+	mi.mesh = q
+	var m := ShaderMaterial.new()
+	m.shader = _fire_shader(mix_mode)
+	m.set_shader_parameter("seed", seed_v)
+	m.set_shader_parameter("speed", speed)
+	m.set_shader_parameter("gain", gain * (0.6 if mix_mode else 0.75))
+	m.render_priority = 5
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+	fx.nodes.append(mi)
+	return mi
+
 func _build_burn(fx: Dictionary) -> void:
 	var glow := _spr(fx, "glow", Color(1.0, 0.38, 0.08))
 	fx.fns.append(func(t: float):
-		_put(glow, Vector2(0, -ext.y * 0.1), ext * 1.1, 0.2 + 0.07 * sin(t * 9.0)))
-	for i in 6:
-		var f := _spr(fx, "flame", Color(1.0, 0.55, 0.12))
+		_put(glow, Vector2(0, -ext.y * 0.05), ext * 1.25, 0.22 + 0.08 * sin(t * 9.0)))
+	# nappes de feu : une grande derrière, deux plus petites sur les côtés, avec des rythmes différents
+	var layout := [[0.0, 0.0, 1.30, 1.35, 1.0, 1.0, 1.0], [-0.27, -0.04, 0.75, 0.95, 4.3, 1.3, 0.9], [0.27, -0.04, 0.75, 0.95, 8.1, 1.15, 0.9]]
+	for l in layout:
+		var f := _fire_quad(fx, float(l[4]), float(l[5]), float(l[6]))
 		fx.fns.append(func(t: float):
-			var k := fposmod(t * 0.9 + float(i) * 0.17, 1.0)
-			var x := ext.x * (-0.36 + 0.72 * fposmod(float(i) * 0.618, 1.0)) + sin(t * 7.0 + float(i)) * ext.x * 0.02
-			var s := _g() * (1.1 - 0.5 * k)
-			(f.material_override as StandardMaterial3D).albedo_color = Color(1.0, lerpf(0.85, 0.25, k), lerpf(0.3, 0.05, k), 0.0)
-			_put(f, Vector2(x, lerpf(-ext.y * 0.45, ext.y * 0.4, k)), Vector2(s * 0.75, s), pow(1.0 - k, 0.6) * minf(k * 8.0, 1.0)))
+			if is_instance_valid(f):
+				f.position = Vector3(ext.x * float(l[0]), ext.y * (0.16 + float(l[1])), 0.01)
+				f.scale = Vector3(ext.x * float(l[2]), ext.y * float(l[3]), 1.0)
+				(f.material_override as ShaderMaterial).set_shader_parameter("aspect", maxf(1.0, f.scale.x / maxf(f.scale.y, 0.001))))
+	# braises : petits points chauds qui montent et s'éteignent
+	for i in 9:
+		var e := _spr(fx, "glow", Color(1.0, 0.7, 0.2))
+		fx.fns.append(func(t: float):
+			var k := fposmod(t * (0.5 + 0.25 * _h(i + 3)) + _h(i) , 1.0)
+			var x := ext.x * (-0.4 + 0.8 * _h(i + 5)) + sin(t * 3.0 + float(i)) * ext.x * 0.04
+			var s := _g() * (0.16 + 0.12 * _h(i + 11)) * (1.0 - 0.5 * k)
+			_put(e, Vector2(x, lerpf(-ext.y * 0.1, ext.y * 0.75, k)), Vector2(s, s), pow(1.0 - k, 0.8) * 0.95))
 
 func _build_freeze(fx: Dictionary) -> void:
 	var glow := _spr(fx, "glow", Color(0.45, 0.8, 1.0))

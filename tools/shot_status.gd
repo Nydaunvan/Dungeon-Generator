@@ -28,6 +28,7 @@ func _ready() -> void:
 	print("ENGAGED ", not eng.is_empty())
 	var st: Dictionary = main.ctrl.combat.lstate().monsters[str(eng.monster.id)]
 	var sets := [
+		[["burn", ""], ["burn"]],
 		[["stun", "sleep"], ["poison"]],
 		[["burn", ""], ["freeze"]],
 		[["poison", ""], ["weaken", ""]],

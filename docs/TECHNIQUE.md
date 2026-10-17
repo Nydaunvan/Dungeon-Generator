@@ -282,3 +282,6 @@ Correctif du générateur (`DungeonGenerator._one_level`) : les cases candidates
 ### Résistances de famille : toujours présentes
 Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les monstres : toute famille de la table `FAMILY` reçoit toutes ses écoles, chacune avec une valeur tirée dans sa fourchette, jamais zéro. Le réglage `monsterResistChancePct` n'est plus utilisé (champ retiré de l'Admin ; la clé reste dans les configurations existantes sans effet). Les monstres déjà générés dans une partie gardent leurs tirages. Contrôle : `tools/check_resist_family.tscn` (5123 monstres, 33 familles).
 
+### Brûlure : vraies flammes
+`StatusAura._build_burn` : trois nappes de feu en shader (`FIRE_SHADER` : bruit qui monte et ondule, cœur jaune, bords orange puis rouges, pointes qui se dissipent, uniforme `aspect` pour garder des langues fines sur les cartes larges), une lueur chaude et neuf braises qui s'envolent. Mélange additif sur un monstre, normal (alpha) dans la couche transparente des cartes (`mix_mode`). Même effet pour monstres, boss et héros ; préchauffé par `WarmUp` avec les autres aspects. Capture : `tools/shot_status.tscn` (status_0.png : brûlure sur le monstre et les cartes).
+
