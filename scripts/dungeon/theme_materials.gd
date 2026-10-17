@@ -13,6 +13,9 @@ const STONE_WALL_REPEAT := 2.0    # répétitions de la texture par pan de mur (
 const STONE_FLOOR_REPEAT := 1.0   # idem pour une case de sol
 ## Mur du Cachot humide : briques brun-vert en matériau 3D, mêmes deux jeux de résolution (damp_hd / damp_lite).
 ## Thème Lave : mur et plafond en lave (couleur, normales, rugosité, émission des fissures incandescentes), sol en roche.
+## Temple ancien : mur et plafond en pierres plates (Bricks075A), sol de mousse et de feuilles mortes (Ground068).
+const TEMPLE_WALL_REPEAT := 1.0
+const TEMPLE_FLOOR_REPEAT := 1.0
 const LAVA_WALL_REPEAT := 1.0
 const LAVA_FLOOR_REPEAT := 1.0
 const LAVA_EMISSION := 0.75
@@ -42,6 +45,14 @@ static func for_theme(theme: String) -> Dictionary:
 		var dfloor := _stone_pbr("floor", DAMP_FLOOR_REPEAT, "damp")
 		if dfloor != null:
 			mats["floor"] = dfloor
+	if theme == "temple":
+		var twall := _stone_pbr("wall", TEMPLE_WALL_REPEAT, "temple")
+		if twall != null:
+			mats["wall"] = twall
+			mats["ceil"] = twall
+		var tfloor := _stone_pbr("floor", TEMPLE_FLOOR_REPEAT, "temple")
+		if tfloor != null:
+			mats["floor"] = tfloor
 	if theme == "lava":
 		var lwall := _stone_pbr("wall", LAVA_WALL_REPEAT, "lava")
 		if lwall != null:

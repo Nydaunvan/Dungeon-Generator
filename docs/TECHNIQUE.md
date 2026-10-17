@@ -297,3 +297,6 @@ Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les mo
 ### Thème Lave en matériau 3D
 Mur et plafond du thème `lava` : pack « Lava003 » (couleur, normales OpenGL, rugosité, émission des fissures incandescentes) ; sol : pack « Rock062 » (couleur légèrement réchauffée, normales, occlusion, rugosité). Jeux `assets/themes/lava_hd/` (2048 px) et `lava_lite/` (1024 px, exclu des exports PC), construits comme la pierre (`ThemeMaterials._stone_pbr(part, repeat, "lava")`) ; `_stone_pbr` active l'émission quand `<part>_emission.jpg` existe (`LAVA_EMISSION` = 0,75). Répétitions `LAVA_WALL_REPEAT` / `LAVA_FLOOR_REPEAT` = 1. Capture : `THEME=lava` avec `tools/shot_theme.tscn`.
 
+### Thème Temple ancien en matériau 3D
+Mur et plafond du thème `temple` : pack « Bricks075A » (pierres plates ; le plafond reprend le mur) ; sol : pack « Ground068 » (mousse et feuilles mortes). Jeux `assets/themes/temple_hd/` (2048 px) et `temple_lite/` (1024 px, exclu des exports PC), construits par `ThemeMaterials._stone_pbr(part, repeat, "temple")` ; répétitions `TEMPLE_WALL_REPEAT` / `TEMPLE_FLOOR_REPEAT` = 1. Capture : `THEME=temple` avec `tools/shot_theme.tscn`.
+
