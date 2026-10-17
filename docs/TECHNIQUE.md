@@ -194,6 +194,8 @@ Départ des effets : le point de départ d'un sort de héros est le milieu du bo
 
 Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucune ligne de type d'objet (emplacements, types, raretés, deux langues) ne montre une clé de langue brute. Cause du bug « ui.equip_dock.bottes » : `EquipDock._base_type_label` renvoyait le libellé de `SLOT_DEFS` sans le traduire.
 
+- Correctif : `CardFxOverlay.usable()` ne dépend plus du palier d'effets (halo désactivé = palier 0) : sans cela, tous les sorts (archer, druide…) partaient du bas de l'écran. Contrôle : `tools/check_start_all.tscn` (palier 0 forcé ; départ au bord bas de la carte).
+
 ## Écran de chargement fluide
 
 - `LoadingScreen._advance` : la barre (donc l'épée) avance à vitesse progressive (accélération limitée, `ACCEL`), rattrape l'avancement réel sans à-coup, et continue de ramper (`CREEP`) jusqu'à `LEAD` devant lui pendant une longue étape, sans jamais reculer ni dépasser 98,5 % avant la fin réelle.
