@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 14
+const SCHEMA := 15
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -64,6 +64,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v12_to_v13(d))
 			13:
 				notes.append_array(_v13_to_v14(d))
+			14:
+				notes.append_array(_v14_to_v15(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -421,3 +423,15 @@ static func _v13_to_v14(d: Dictionary) -> Array[String]:
 	if n > 0:
 		notes.append("sorts de base du Barde et du Druide rééquilibrés : %d" % n)
 	return notes
+
+
+## v14 → v15 : résistances par école (feu, glace, nature, sacré, ombre, physique). Réglages de génération ajoutés à la configuration ; les niveaux existants
+## ne changent pas (leurs monstres n'ont aucune résistance d'école tant que le créateur n'en saisit pas), et celles des héros sont calculées (classe + objets).
+static func _v14_to_v15(d: Dictionary) -> Array[String]:
+	var cfg = d.get("config")
+	if cfg is Dictionary:
+		if not (cfg as Dictionary).has("monsterResistChancePct"):
+			cfg["monsterResistChancePct"] = 70
+		if not (cfg as Dictionary).has("bossResist"):
+			cfg["bossResist"] = true
+	return []

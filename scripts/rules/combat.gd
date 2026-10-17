@@ -608,6 +608,10 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	var st: Dictionary = lstate().monsters[str(target.id)]
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
 	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st)))
+	# résistance de l'école du coup (feu, glace, sacré…) : s'ajoute ; négative = faiblesse (dégâts accrus)
+	var rkey := Resist.style_key(str(spell.get("style", ""))) if not spell.is_empty() else "phys"
+	var elem := 0 if ignore_resist else Resist.of_monster(target, rkey)
+	resist = clampi(resist + elem, Resist.MIN_PCT, 100)
 	var dmg := raw_dmg
 	var weak := Statuses.damage_reduction_pct(attacker)      # héros affaibli / vulnérable : dégâts réduits
 	if weak > 0:
@@ -621,6 +625,8 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 			dmg = int(round(dmg * (1.0 + spell_pct / 100.0)))
 	if resist > 0:
 		dmg = 0 if resist >= 100 else maxi(1, int(round(dmg * (1.0 - resist / 100.0))))
+	elif resist < 0:
+		dmg = int(round(dmg * (1.0 - resist / 100.0)))
 	var exec_pct := _perk_value(attacker, "execute")
 	if exec_pct > 0 and not aoe and not bool(target.get("isGroup", false)) and float(st.hp) <= float(st.maxHp) * 0.25:
 		dmg = int(round(dmg * (1.0 + exec_pct / 100.0)))
@@ -662,6 +668,10 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	else:
 		gs.add_log(L.fa(L.t("rules.combat.pour_degats"), [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""]), true)
 	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
+	if elem >= 25:
+		events.append({"type": "popup", "text": L.t("rules.combat.popup_resiste"), "color": Color("8fc8e8")})
+	elif elem <= -25:
+		events.append({"type": "popup", "text": L.t("rules.combat.popup_faiblesse"), "color": Color("ffb347")})
 	events.append({"type": "mon_hit", "id": str(target.id), "crit": crit})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
@@ -745,9 +755,10 @@ func monster_act(key: String) -> void:
 	ensure_gauges()
 
 ## Dégâts après la réduction du héros (résistance des talents + garde de Constitution, plafonnée) ; un coup qui touche inflige toujours 1 au moins.
-func _hero_reduction(victim: Dictionary, dmg: int, magic: bool) -> int:
+func _hero_reduction(victim: Dictionary, dmg: int, magic: bool, key: String = "") -> int:
 	var red := maxi(0, Stats.reduction(victim, magic) - Statuses.resist_reduction_pct(victim))      # « Vulnérable » : protection réduite
-	if red <= 0 or dmg <= 0:
+	red = clampi(red + Resist.of_hero(victim, key), Resist.MIN_PCT, Stats.CAP_REDUCTION)           # école du coup : résistance de classe / d'objet, ou faiblesse
+	if red == 0 or dmg <= 0:
 		return dmg
 	return maxi(1, int(round(dmg * (1.0 - red / 100.0))))
 
@@ -776,7 +787,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	var reduction := Statuses.damage_reduction_pct(st)
 	if reduction > 0:
 		dmg = maxi(0, int(round(dmg * (1.0 - reduction / 100.0))))
-	dmg = _hero_reduction(victim, dmg, false)
+	dmg = _hero_reduction(victim, dmg, false, "phys")
 	if int(victim.get("shieldAmount", 0)) > 0 and dmg > 0:
 		var absorbed := mini(int(victim.shieldAmount), dmg)
 		victim["shieldAmount"] = int(victim.shieldAmount) - absorbed
@@ -831,7 +842,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 3)), int(spell.get("dmgMax", 6)))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
-	dmg = _hero_reduction(victim, dmg, str(spell.get("style", "")) != "physical")
+	dmg = _hero_reduction(victim, dmg, str(spell.get("style", "")) != "physical", Resist.style_key(str(spell.get("style", ""))))
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))

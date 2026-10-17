@@ -39,6 +39,8 @@
  "monsterRageChancePct": 25,
  "monsterStatusChancePct": 60,
  "bossStatus": true,
+ "monsterResistChancePct": 70,
+ "bossResist": true,
  "bossRage": true,
  "xpSettings": {
   "healRatio": 0.8

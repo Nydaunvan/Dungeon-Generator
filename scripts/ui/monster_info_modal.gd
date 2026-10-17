@@ -73,6 +73,8 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		if st.get("enraged", false):
 			t += L.fa(L.t("ui.monster_info_modal.actuellement_enrage"), bonus)
 		m.add_text(t, Color("ff7a6a") if st.get("enraged", false) else UiTheme.DIM, 13)
+	if def.get("resists") is Dictionary and not (def.resists as Dictionary).is_empty():
+		m.add_text(L.fa(L.t("ui.monster_info_modal.resistances"), Resist.summary(def.resists)), Color("a9c8e8"), 13)
 	var inflicts := MonsterEffects.describe(def)
 	if inflicts != "":
 		m.add_text(inflicts, Color("e8b86a"), 13)

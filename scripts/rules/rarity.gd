@@ -90,6 +90,11 @@ static func lines(it) -> Array:
 	var out: Array = []
 	for p in perks_of(it):
 		out.append(perk_line(p))
+	if it is Dictionary and it.get("resists") is Dictionary:
+		for k in Resist.KEYS:
+			var v := int((it.resists as Dictionary).get(k, 0))
+			if v != 0:
+				out.append(L.fa(L.t(str(Resist.ITEM_KEYS[k])), v))
 	return out
 
 ## Capacités actives d'un personnage : [{perk, value, item}] sur tout son équipement, plus l'effet d'ensemble mythique (2 pièces ou plus : +10 % critique).
@@ -179,6 +184,7 @@ static func apply(item: Dictionary, tier: String, f: Callable) -> Dictionary:
 		return item
 	_scale(item, float(DEF[tier].mult))
 	_set_perks(item, tier, f)
+	Resist.roll_item(item, tier, f)
 	return item
 
 ## Remonte un objet déjà tiré à un palier supérieur (bonus multipliés de l'écart, capacités du nouveau palier).
@@ -188,6 +194,7 @@ static func upgrade_to(item: Dictionary, tier: String, f: Callable) -> Dictionar
 		return item
 	_scale(item, float(DEF[tier].mult) / float(DEF[cur].mult))
 	_set_perks(item, tier, f)
+	Resist.roll_item(item, tier, f)
 	return item
 
 static func _scale(item: Dictionary, ratio: float) -> void:

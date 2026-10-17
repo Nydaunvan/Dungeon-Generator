@@ -954,8 +954,8 @@ static func _loot_button(lvl: Dictionary, m: Dictionary, key: String, tip: Strin
 	return b
 
 static func _monsters_sub(host: VBoxContainer, lvl: Dictionary) -> void:
-	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.rage"), L.t("admin.levels.effet"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
-	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 190, 42, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
+	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.rage"), L.t("admin.levels.effet"), L.t("admin.levels.resists"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
+	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 190, 230, 42, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
 	var g := AdminTable.create(host, headers, widths)
 	var spells: Array = [["", L.t("admin.levels.attaque_simple")]]
 	for s in _cfg().get("spells", []):
@@ -1049,6 +1049,26 @@ static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spell
 		ef.add_child(_num(_or(m.get("hitStatusChance"), 30.0), 36, _set_clamped(m, "hitStatusChance", 0, 100), L.t("admin.levels.effet_chance")))
 		ef.add_child(_num(_or(m.get("hitStatusDuration"), 2.0), 30, _set_clamped(m, "hitStatusDuration", 1, 20), L.t("admin.levels.effet_duree")))
 	AdminTable.cell(g, ef)
+	# résistances par école (négatif = faiblesse) : une case par école, 0 = aucune
+	var rz := HBoxContainer.new()
+	rz.add_theme_constant_override("separation", 2)
+	for rk in Resist.KEYS:
+		var key: String = rk
+		var cell := func(v: float, _f: bool):
+			var cur: Dictionary = m.get("resists", {}) if m.get("resists") is Dictionary else {}
+			var iv := clampi(int(v), -100, 100)
+			if iv == 0:
+				cur.erase(key)
+			else:
+				cur[key] = iv
+			if cur.is_empty():
+				m.erase("resists")
+			else:
+				m["resists"] = cur
+			return float(iv)
+		var cur0 := float(Resist.of_monster(m, key))
+		rz.add_child(_num(cur0, 34, cell, "%s %s (%%, négatif = faiblesse)" % [Resist.ICONS[key], L.t(str(Resist.NAME_KEYS[key]))]))
+	AdminTable.cell(g, rz)
 	var set_zone := func(v: float, _f: bool):
 		m["patrolRadius"] = _store(maxf(0.0, v))
 		return m["patrolRadius"]
