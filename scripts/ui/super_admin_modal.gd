@@ -247,6 +247,7 @@ func _build_tests() -> void:
 	wk.tooltip_text = L.t("ui.sadmin.test_weekly_hint")
 	_status = Form.status_label(_body)
 	_note(_body, L.t("ui.sadmin.test_month_hint"))
+	_build_rule_picker()
 	var purge := Button.new()
 	purge.text = L.t("ui.sadmin.purge")
 	purge.focus_mode = Control.FOCUS_NONE
@@ -254,6 +255,66 @@ func _build_tests() -> void:
 		Dialogs.confirm(_host, L.t("ui.sadmin.purge"), L.t("ui.sadmin.purge_confirm"), _purge, L.t("common.confirmer"), L.t("common.annuler")))
 	_body.add_child(purge)
 	_fit()
+
+## Sélecteur « n'importe quelle règle » : règle + format (semaine ou jour), partie de test sans classement ni essai consommé.
+func _build_rule_picker() -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	_body.add_child(box)
+	_note(box, L.t("ui.sadmin.rule_title"))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	box.add_child(row)
+	var pick := OptionButton.new()
+	pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pick.focus_mode = Control.FOCUS_NONE
+	row.add_child(pick)
+	var fmt := OptionButton.new()
+	fmt.focus_mode = Control.FOCUS_NONE
+	fmt.add_item(L.t("ui.sadmin.rule_fmt_weekly"))
+	fmt.add_item(L.t("ui.sadmin.rule_fmt_daily"))
+	row.add_child(fmt)
+	var go := Button.new()
+	go.text = L.t("ui.sadmin.rule_go")
+	go.focus_mode = Control.FOCUS_NONE
+	go.disabled = true
+	row.add_child(go)
+	var info := Label.new()
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_theme_font_size_override("font_size", 13)
+	box.add_child(info)
+	var rules: Array = []
+	var refresh := func(_i = 0):
+		if rules.is_empty() or pick.selected < 0:
+			return
+		var ru: Dictionary = rules[pick.selected]
+		if fmt.selected == 1:
+			info.text = L.fa(L.t("ui.sadmin.rule_info"), [2, 13, 11, L.t(ChallengesModal.DIFF_KEYS["normal"])])
+		else:
+			info.text = L.fa(L.t("ui.sadmin.rule_info"), [int(ru.levels), int(ru.width), int(ru.height), L.t(ChallengesModal.DIFF_KEYS.get(str(ru.difficulty), "ui.challenges.diff_normal"))])
+	pick.item_selected.connect(refresh)
+	fmt.item_selected.connect(refresh)
+	go.pressed.connect(func():
+		if rules.is_empty():
+			return
+		_say(L.t("ui.sadmin.launching"))
+		var r: Dictionary = await SuperAdmin.launch_rule(str(rules[pick.selected].rule_id), "daily" if fmt.selected == 1 else "weekly")
+		if not r.ok and _alive():
+			_say(str(r.get("message", "")), true))
+	var res: Dictionary = await SuperAdmin.test_rules()
+	if not _alive() or not is_instance_valid(pick):
+		return
+	if not res.ok:
+		_say(str(res.get("message", "")), true)
+		return
+	rules = res.data if res.data is Array else []
+	var en := TranslationServer.get_locale().begins_with("en")
+	for ru in rules:
+		pick.add_item("%s %s%s" % [ru.icon, ru.label_en if en else ru.label_fr, "" if bool(ru.daily) else " *"])
+	go.disabled = rules.is_empty()
+	if not rules.is_empty():
+		pick.select(0)
+		refresh.call()
 
 func _test_button(parent: Control, text: String, difficulty: String, kind: String) -> Button:
 	var b := Button.new()

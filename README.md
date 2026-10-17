@@ -61,3 +61,4 @@ Structure du code, vérifications automatiques, publication des versions, partie
 | `docs/` | La documentation technique et les images du README. |
 
 Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQUE.md#sous-dossiers). La branche `migration/donnees` est la branche de développement : les versions sont publiées depuis elle.
+- Administration : onglet Tests, lancer une partie de test de n'importe quelle règle de défi, au format semaine ou jour (hors classement).

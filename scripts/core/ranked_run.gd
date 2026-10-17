@@ -130,6 +130,24 @@ static func launch(difficulty: String, kind: String = "difficulty", test: bool =
 	Data.launch(cfg, "random")
 	return r
 
+## Partie de TEST d'une règle précise (super admins) : `format` "weekly" (réglages de la règle) ou "daily" (2 niveaux 13×11). Hors classements, sans essai consommé.
+static func launch_rule(rule_id: String, format: String) -> Dictionary:
+	if not Cloud.is_signed_in():
+		return Cloud._fail("session_expired", 401)
+	var r: Dictionary = await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/admin_start_rule_run",
+		{"p_rule": rule_id, "p_format": format, "p_game_version": AppVersion.number()}, true)
+	if not r.ok:
+		return r
+	var d: Dictionary = r.data if r.data is Dictionary else {}
+	var cfg := config_for(Data.original_config, str(d.get("seed", "")), d.get("params", {}))
+	if cfg.is_empty():
+		return Cloud._fail("generic")
+	cfg["runId"] = str(d.get("run_id", ""))
+	cfg["rankedKind"] = format
+	cfg["rankedTest"] = true
+	Data.launch(cfg, "random")
+	return {"ok": true}
+
 ## Envoie le journal de la partie classée en cours (une seule fois par partie). Sans compte ou partie souillée : ne fait rien.
 ## Hors ligne : le journal est gardé dans user://ranked_pending.json et renvoyé à la prochaine occasion (`flush_pending`).
 static func submit(gs: GameState) -> Dictionary:

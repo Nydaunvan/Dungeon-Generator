@@ -135,6 +135,14 @@ static func alert_popup(host: Node) -> void:
 static func launch_test(difficulty: String, kind: String = "difficulty") -> Dictionary:
 	return await RankedRun.launch(difficulty, kind, true)
 
+## Règles de défi pour le sélecteur de test : [{rule_id, icon, label_fr/en, metric, daily, levels, width, height, difficulty}].
+static func test_rules() -> Dictionary:
+	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/admin_test_rules", {}, true)
+
+## Partie de test d'une règle précise, au format « weekly » ou « daily ».
+static func launch_rule(rule_id: String, format: String) -> Dictionary:
+	return await RankedRun.launch_rule(rule_id, format)
+
 static func overview() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_POST, "/rest/v1/rpc/admin_overview", {}, true)
 
