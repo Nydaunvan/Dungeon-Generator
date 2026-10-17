@@ -2343,6 +2343,8 @@
   "ui.shop_modal.scr_base": "Spell base: %d – %d, plus the caster's power (Intelligence ÷ 3 − 1, gear, level). Result depending on who reads it:",
   "ui.settings.monster_anim": "Monster animations",
   "ui.settings.monster_anim_hint": "Monsters breathe while idle and react in combat (hit, attack, stun, death). « Reduced motion » turns the breathing off.",
+  "ui.settings.card_fx": "Effects on party cards (trial)",
+  "ui.settings.card_fx_hint": "Monster effects and heals reach the party cards, drawn over the interface. Off: they stay inside the game view. Advanced rendering (Vulkan) only.",
   "ui.hub.expire_warn": "⚠ A ranked run is already in progress (started %s). Starting a new one abandons it: it will expire and will not count for the rankings. To keep it, cancel, go back to your game and finish it (or « Finish here »).",
   "ui.rewards.browse_hint": "Browse rewards by type to see what to earn or farm:",
   "ui.rewards.k_all": "All",

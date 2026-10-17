@@ -243,6 +243,8 @@ func _graphics() -> void:
 	_section(L.t("ui.settings.anim_title"))
 	_check(L.t("ui.settings.monster_anim"), Settings.monster_anim, func(v: bool): Settings.set_monster_anim(v))
 	_hint(L.t("ui.settings.monster_anim_hint"))
+	_check(L.t("ui.settings.card_fx"), Settings.card_fx, func(v: bool): Settings.set_card_fx(v))
+	_hint(L.t("ui.settings.card_fx_hint"))
 
 func _opt(key: String, options: Array) -> OptionButton:
 	return _drop(options, Settings.opt(key), func(v):

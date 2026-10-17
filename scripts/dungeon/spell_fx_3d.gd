@@ -9,7 +9,14 @@ static var _tex: Dictionary = {}
 
 var cam: Camera3D
 ## Vrai quand le groupe n'a qu'un héros (règle « Héros solitaire ») : il occupe l'emplacement central du bandeau, les effets le visent là.
-static var solo_party: bool = false
+var solo_party: bool = false
+## Centres des cartes du groupe en pixels de la fenêtre (couche d'effets au-dessus de l'interface, CardFxOverlay) ; vide : places sous la vue 3D.
+var slot_px: Array = []
+
+## Lit dans le contexte de l'effet où se trouvent les héros (héros seul, cartes réelles).
+func apply_party_ctx(ctx: Dictionary) -> void:
+	solo_party = bool(ctx.get("solo", false))
+	slot_px = ctx.get("slotPx", [])
 var _parts: Array = []     # {node, mat, t0, dur, fn}
 var _t: float = 0.0
 

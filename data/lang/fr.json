@@ -2343,6 +2343,8 @@
   "ui.shop_modal.scr_base": "Base du sort : %d – %d, plus la puissance du lanceur (Intelligence ÷ 3 − 1, équipement, niveau). Résultat selon le héros qui lit :",
   "ui.settings.monster_anim": "Animations des monstres",
   "ui.settings.monster_anim_hint": "Les monstres respirent au repos et réagissent en combat (touché, attaque, étourdissement, mort). L'option « Mouvements réduits » coupe la respiration.",
+  "ui.settings.card_fx": "Effets sur les cartes (essai)",
+  "ui.settings.card_fx_hint": "Les effets des monstres et des soins vont jusqu'aux cartes du groupe, par-dessus l'interface. Désactivé : ils restent dans la vue du jeu. Rendu avancé (Vulkan) uniquement.",
   "ui.hub.expire_warn": "⚠ Une partie classée est déjà en cours (commencée le %s). Si tu en lances une nouvelle, l'ancienne sera abandonnée : elle expirera et ne comptera pas au classement. Pour la garder, annule, retourne dans ta partie et termine-la (ou « Terminer ici »).",
   "ui.rewards.browse_hint": "Parcours les récompenses par type pour savoir quoi obtenir ou farmer :",
   "ui.rewards.k_all": "Tout",

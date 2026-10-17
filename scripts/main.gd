@@ -174,6 +174,8 @@ func _ready() -> void:
 	ui.add_child(bg)
 	layout = GameLayout.new()
 	ui.add_child(layout)
+	card_fx = CardFxOverlay.new()
+	ui.add_child(card_fx)
 	await layout.setup(gs, ctrl, rig)
 	# la vue 3D ne dessine rien tant que le chargement n'est pas fini : tout le temps d'image va à l'écran de chargement (épée fluide)
 	layout.sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -1017,6 +1019,10 @@ func _on_fx(type: String) -> void:
 	if type == "hit" or type == "trap":
 		_shake()
 
+## Modes de sort dont l'effet vise un héros : joués sur sa carte plutôt que dans la vue.
+const CARD_FX_MODES := ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"]
+var card_fx: CardFxOverlay
+
 func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
 	var st: CombatStage = level_node.stage if level_node != null else null
 	var active: bool = st != null and st.active
@@ -1031,6 +1037,11 @@ func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
 				c.merge(SpellFxLibrary.fx_keys(sp))
 				break
 	c["targets"] = st.target_points() if active else []
+	c["solo"] = gs.party.size() == 1
+	# effets de monstres, soins et protections : joués au-dessus de l'interface pour atteindre les cartes du groupe (option « Effets sur les cartes »)
+	if card_fx != null and (CARD_FX_MODES.has(str(c.get("mode", "damage"))) or bool(c.get("fromMonster", false))):
+		if CardFxOverlay.usable() and card_fx.play(spell_id, tgt, c, rig.camera, layout.sub_container, layout.sub_viewport, layout.hud.card_centers()):
+			return
 	SpellFxLibrary.cast(layout.world, rig.camera, spell_id, tgt, c)
 
 func layout_stage_target() -> Dictionary:

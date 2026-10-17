@@ -23,6 +23,7 @@ static func cast_spell(host: Node, camera: Camera3D, spell_id: String, target: D
 	var fx := SpellFxStyles.new()
 	fx.name = "SpellFx"
 	fx.cam = camera
+	fx.apply_party_ctx(ctx)
 	host.add_child(fx)
 	fx._run(spell_id, target, ctx)
 	fx._started = true
@@ -62,9 +63,12 @@ func _viewport_size() -> Vector2:
 
 ## Position monde « sous la caméra » du héros d'index i (les cartes du groupe sont en bas de l'écran, 4 colonnes).
 func _slot_pos(i: int, depth: float = 2.2) -> Vector3:
+	if not slot_px.is_empty():      # couche au-dessus de l'interface : on vise la vraie carte du héros
+		var k := 0 if solo_party else clampi(i, 0, slot_px.size() - 1)
+		return cam.project_position(slot_px[k], depth)
 	var vs := _viewport_size()
 	var n := 4.0
-	var col := 2.0 if SpellFx3D.solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : entre les fentes 2 et 3 (centre du bandeau)
+	var col := 2.0 if solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : entre les fentes 2 et 3 (centre du bandeau)
 	return cam.project_position(Vector2(vs.x * col / n, vs.y * 0.8), depth)
 
 func _start_point() -> Vector3:

@@ -54,6 +54,7 @@ var vsync := true
 var refresh_override := 0.0      # tests : fréquence d'écran simulée
 var _peak_fps := 0.0             # meilleure moyenne mesurée en jeu (cible plafonnée tant que l'écran est inconnu)
 var reduced_motion := false
+var card_fx := true              ## effets des monstres et des soins affichés sur les cartes du groupe (couche au-dessus de l'interface)
 var monster_anim := true         ## animations des monstres (respiration au repos, réactions en combat)
 var perf_overlay := false
 var ceiling := ""                # niveau maximal tenu lors des essais (mode Auto, mémorisé)
@@ -214,6 +215,10 @@ func set_reduced_motion(v: bool) -> void:
 	reduced_motion = v
 	_commit()
 
+func set_card_fx(v: bool) -> void:
+	card_fx = v
+	_commit()
+
 func set_monster_anim(v: bool) -> void:
 	monster_anim = v
 	_commit()
@@ -254,6 +259,7 @@ func reset_graphics() -> void:
 	custom = preset_values("high")
 	reduced_motion = false
 	monster_anim = true
+	card_fx = true
 	redetect()
 
 ## Laisse l'adaptation attendre `sec` secondes (chargement, changement de niveau…).
@@ -322,6 +328,7 @@ func _load() -> void:
 		_fullscreen_pref = int(cf.get_value("display", "fullscreen", -1))
 		reduced_motion = bool(cf.get_value("access", "reduced_motion", false))
 		monster_anim = bool(cf.get_value("game", "monster_anim", true))
+		card_fx = bool(cf.get_value("game", "card_fx", true))
 		if cf.has_section_key("diag", "perf_overlay"):
 			perf_overlay = bool(cf.get_value("diag", "perf_overlay", false))
 		else:   # ancien fichier du compteur de performances
@@ -358,6 +365,7 @@ func _save() -> void:
 	cf.set_value("display", "fullscreen", _fullscreen_pref)
 	cf.set_value("access", "reduced_motion", reduced_motion)
 	cf.set_value("game", "monster_anim", monster_anim)
+	cf.set_value("game", "card_fx", card_fx)
 	cf.set_value("diag", "perf_overlay", perf_overlay)
 	cf.save(CFG)
 

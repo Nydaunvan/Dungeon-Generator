@@ -178,3 +178,11 @@ Onglet **Tests** de l'administration : un sélecteur liste les 12 règles (`admi
 - Effets visuels : `Combat` ajoute `solo: true` au contexte des effets 3D quand le groupe n'a qu'un héros ; `SpellFxLibrary.cast` le copie dans `SpellFx3D.solo_party`, et `SpellFxStyles._slot_pos` vise alors le centre du bandeau (coups et capacités de monstres, sorts de soin ou de soutien).
 - Migration `20261017000400_heros_solitaire_degats.sql` : texte de la règle côté serveur. Contrôle : `tools/check_solo.tscn`.
 
+## Effets de sorts sur les cartes du groupe (essai)
+
+- `CardFxOverlay` (scripts/ui/card_fx_overlay.gd) : couche plein écran au-dessus de l'interface (SubViewport transparent, monde 3D et caméra propres, mise à jour coupée quand aucun effet ne joue). Ajoutée par `Main` juste après la mise en page.
+- Sont joués dans la couche : les capacités de monstres (`fromMonster`) et les modes `healSingle`, `healParty`, `staminaRestoreSingle`, `shieldSingle`, `dispelSingle`, `selfBuff`, `partyUtility` (`Main.CARD_FX_MODES`). Les attaques et sorts offensifs des héros restent dans la vue 3D.
+- Placement : la caméra de la couche a le même nombre de pixels par unité de monde que celle de la vue (`tan(fov_couche/2) = tan(fov_vue/2) × hauteur couche / hauteur vue`) ; le point de départ d'un monstre est reprojeté (`_remap`) à l'écran et à la même profondeur. Les places des héros viennent de `PartyHud.card_centers()` et du contexte `slotPx` ; `SpellFx3D.apply_party_ctx` les range dans l'instance de l'effet, `_slot_pos` les utilise.
+- Option `card_fx` (Options > jeu, défaut activée, `user://settings.cfg` section `game`, clé absente = activée : aucune migration). Rendu avancé (Forward+) uniquement ; sinon, ou si le placement échoue, l'effet joue dans la vue comme avant.
+- Contrôle : `tools/check_card_fx.tscn`.
+

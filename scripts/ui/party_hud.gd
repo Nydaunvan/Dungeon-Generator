@@ -156,6 +156,14 @@ func _draw() -> void:
 	var real_w := maxi(64, roundi(size.x * UiMetrics.s))
 	draw_texture_rect(_bar_texture(real_w), Rect2(Vector2.ZERO, Vector2(size.x, size.x * BAR_H / BAR_W)), false)
 
+## Centre de chaque carte du groupe (pixels de la fenêtre), dans l'ordre du groupe : cibles des effets de la couche CardFxOverlay.
+func card_centers() -> Array:
+	var out: Array = []
+	for c in gs.party:
+		var card: Control = _cards[str(c.id)].card
+		out.append(card.get_global_rect().get_center())
+	return out
+
 func refresh() -> void:
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
