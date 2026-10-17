@@ -97,7 +97,7 @@ begin
   if not public.is_super_admin() then
     raise exception 'acces_refuse';
   end if;
-  with del as (delete from public.suspect_seen returning 1)
+  with del as (delete from public.suspect_seen where true returning 1)   -- "where true" : pg_safeupdate refuse un DELETE sans WHERE
   select count(*) into n from del;
   perform public._staff_log_add('suspect_restore', null, jsonb_build_object('count', n));
   return n;
