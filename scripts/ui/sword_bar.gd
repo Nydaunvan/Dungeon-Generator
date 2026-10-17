@@ -22,6 +22,9 @@ uniform sampler2D mask : filter_linear_mipmap;      // la lame seule (sans garde
 uniform vec2 rect_px = vec2(900.0, 330.0);   // taille du rectangle en pixels d'écran
 uniform vec2 pad_map = vec2(0.0, 1.0);    // x = marge (fraction de la largeur), y = largeur de l'épée (fraction de la largeur du rectangle)
 
+float sym(sampler2D t, vec2 uv, float l){      // flou de la forme, moyenné avec son reflet haut/bas : la lumière est identique des deux côtés de la lame
+	return 0.5 * (textureLod(t, uv, l).a + textureLod(t, vec2(uv.x, 1.0 - uv.y), l).a);
+}
 float hash(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p){
 	vec2 i = floor(p); vec2 f = fract(p); f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
@@ -31,7 +34,7 @@ float vnoise(vec2 p){
 void fragment(){
 	vec4 tex = texture(TEXTURE, UV);
 	float xs = (UV.x - pad_map.x) / pad_map.y;                         // 0..1 le long de l'épée
-	float g5 = textureLod(mask, UV, 6.4).a;
+	float g5 = sym(mask, UV, 6.4);
 	if (tex.a < 0.004 && g5 < 0.004) { discard; }     // loin de l'épée : rien à calculer (économie de GPU)
 	vec2 px = vec2(xs * pad_map.y * rect_px.x, UV.y * rect_px.y);        // position en pixels d'écran : le bruit a des cellules carrées, donc pas de rayures verticales
 	float n = vnoise(px / 46.0 - vec2(time_s * 0.8, 0.0)) * 0.6 + vnoise(px / 21.0 - vec2(time_s * 1.7, 0.0) + 7.3) * 0.4;
@@ -50,10 +53,10 @@ void fragment(){
 	col = mix(col, col * energy * 1.3 + energy * 0.14, hot);
 
 	// aura : l'alpha de l'épée, flouté à plusieurs échelles (mipmaps), épouse la lame
-	float g1 = textureLod(mask, UV, 1.6).a;
-	float g2 = textureLod(mask, UV, 3.0).a;
-	float g3 = textureLod(mask, UV, 4.6).a;
-	float g4 = textureLod(mask, UV, 5.6).a;                              // halo plus large, toujours calqué sur la forme de la lame
+	float g1 = sym(mask, UV, 1.6);
+	float g2 = sym(mask, UV, 3.0);
+	float g3 = sym(mask, UV, 4.6);
+	float g4 = sym(mask, UV, 5.6);                              // halo plus large, toujours calqué sur la forme de la lame
 	float stream = 0.86 + 0.28 * (vnoise(px / 38.0 - vec2(time_s * 3.2, 0.0) + 3.1) * 0.6 + vnoise(px / 17.0 - vec2(time_s * 4.4, time_s * 0.5)) * 0.4);
 	float pulse = 0.92 + 0.08 * sin(time_s * 9.0) * sin(time_s * 2.3 + 1.0);
 	float aura = (g1 * 1.3 + g2 * 1.1 * stream + g3 * 1.0 + g4 * 0.95 * stream + g5 * 0.8) * (1.0 + flash * 0.9);
