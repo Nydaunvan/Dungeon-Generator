@@ -12,6 +12,7 @@ const STONE_LITE := "res://assets/themes/stone_lite/"
 const STONE_WALL_REPEAT := 2.0    # répétitions de la texture par pan de mur (entier : les pans voisins se raccordent)
 const STONE_FLOOR_REPEAT := 1.0   # idem pour une case de sol
 ## Mur du Cachot humide : briques brun-vert en matériau 3D, mêmes deux jeux de résolution (damp_hd / damp_lite).
+const DAMP_FLOOR_REPEAT := 1.0    # terre rocailleuse du sol : une répétition par case
 const DAMP_WALL_REPEAT := 0.5     # la texture 2048 couvre deux pans : briques de taille raisonnable (un pan en montre le quart)
 static var _cache: Dictionary = {}
 
@@ -33,6 +34,10 @@ static func for_theme(theme: String) -> Dictionary:
 		var dwall := _stone_pbr("wall", DAMP_WALL_REPEAT, "damp")
 		if dwall != null:
 			mats["wall"] = dwall
+			mats["ceil"] = dwall   # plafond : mêmes briques que les murs
+		var dfloor := _stone_pbr("floor", DAMP_FLOOR_REPEAT, "damp")
+		if dfloor != null:
+			mats["floor"] = dfloor
 	if theme == "stone":
 		var wall := _stone_pbr("wall", STONE_WALL_REPEAT)
 		if wall != null:
