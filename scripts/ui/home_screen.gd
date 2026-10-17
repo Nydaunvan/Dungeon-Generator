@@ -24,6 +24,8 @@ var _embers: Embers
 var _title_box: Control
 var _tagline: Label
 var _seal: Control
+var _seal_title: Label       # titre du sceau : « Donjon aléatoire » hors ligne, « Expédition » une fois connecté
+var _seal_sub: Label
 var _banners: Array = []      # {root, height}
 var _tuto: Button
 var _links: VBoxContainer
@@ -143,6 +145,9 @@ func _build() -> void:
 	_tagline = _label(L.t("ui.home_screen.creez_explorez_survivez"), 17, Color("cbb083"), UiTheme.F_BODY_ITALIC)
 
 	_seal = _make_seal()
+	_refresh_seal_texts()
+	if not Cloud.session_changed.is_connected(_refresh_seal_texts):
+		Cloud.session_changed.connect(_refresh_seal_texts)       # connexion / déconnexion / restauration de session : le texte suit
 	_banners = [
 		_make_banner("banner_create.png", L.t("ui.home_screen.creer_votre_propre_donjon"), L.t("ui.home_screen.concevoir_votre_expedition_de"), "create", 89.0),
 		_make_banner("banner_origin.png", L.t("common.le_donjon_origine"), L.t("ui.home_screen.la_demonstration_officielle"), "origin", 67.0),
@@ -206,7 +211,8 @@ func _make_seal() -> Control:
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(pic)
-	var t := _label(L.t("ui.home_screen.donjon_aleatoire"), 24, Color("f2ddc4"), UiTheme.F_DISPLAY_BOLD)
+	var t := _label("", 24, Color("f2ddc4"), UiTheme.F_DISPLAY_BOLD)
+	_seal_title = t
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	t.anchor_left = 0.08
@@ -214,7 +220,8 @@ func _make_seal() -> Control:
 	t.anchor_top = 127.0 / 280.0
 	t.anchor_bottom = 187.0 / 280.0
 	root.add_child(t)
-	var s := _label(L.t("ui.home_screen.jamais_deux_fois_pareil"), 13, Color("e6d6b2"), UiTheme.F_DISPLAY)
+	var s := _label("", 13, Color("e6d6b2"), UiTheme.F_DISPLAY)
+	_seal_sub = s
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	s.anchor_left = 0.08
 	s.anchor_right = 0.92
@@ -256,6 +263,14 @@ func _make_seal() -> Control:
 	return root
 
 ## Petit « lancer » du sceau au clic (les dés du HTML roulent au survol).
+## Texte du sceau : « Donjon aléatoire / jamais deux fois pareil » hors ligne, « Expédition / classée ou libre » une fois connecté.
+func _refresh_seal_texts() -> void:
+	if _seal_title == null:
+		return
+	var online := Cloud.is_signed_in()
+	_seal_title.text = L.t("ui.home_screen.expedition_en_ligne") if online else L.t("ui.home_screen.donjon_aleatoire")
+	_seal_sub.text = L.t("ui.home_screen.classee_ou_libre") if online else L.t("ui.home_screen.jamais_deux_fois_pareil")
+
 func _seal_roll(root: Control) -> void:
 	var tw := create_tween()
 	tw.tween_property(root, "rotation", deg_to_rad(4.0), 0.07)

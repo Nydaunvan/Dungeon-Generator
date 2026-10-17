@@ -285,3 +285,6 @@ Le générateur appelle `Resist.roll(icône, false, 100, true)` pour tous les mo
 ### Brûlure : vraies flammes
 `StatusAura._build_burn` : trois nappes de feu en shader (`FIRE_SHADER` : bruit qui monte et ondule, cœur jaune, bords orange puis rouges, pointes qui se dissipent, uniforme `aspect` pour garder des langues fines sur les cartes larges), une lueur chaude et neuf braises qui s'envolent. Mélange additif sur un monstre, normal (alpha) dans la couche transparente des cartes (`mix_mode`). Même effet pour monstres, boss et héros ; préchauffé par `WarmUp` avec les autres aspects. Capture : `tools/shot_status.tscn` (status_0.png : brûlure sur le monstre et les cartes).
 
+### Sceau de l'accueil connecté
+`HomeScreen._refresh_seal_texts` : hors ligne le sceau affiche « Donjon aléatoire / jamais deux fois pareil » ; connecté (`Cloud.is_signed_in()`), « Expédition / classée ou libre » (clés `ui.home_screen.expedition_en_ligne`, `classee_ou_libre`). Le texte suit `Cloud.session_changed` (connexion, déconnexion, restauration de session). Le comportement du bouton ne change pas (fenêtre Défis puis réglages). Capture : `tools/shot_home_online.tscn`.
+
