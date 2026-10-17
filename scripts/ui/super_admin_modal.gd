@@ -1721,7 +1721,10 @@ func _build_suspects() -> void:
 		var card := VBoxContainer.new()
 		card.add_theme_constant_override("separation", 2)
 		var tags := " · ".join(flags.map(func(f): return L.t("ui.sadmin.sus_flag_" + str(f))))
-		card.add_child(_label("%s · %s · %s" % [str(x.get("pseudo", "?")), mode_name(str(x.get("difficulty", "")), ""), tags], GOLD, 13))
+		var level := str(x.get("level", "watch"))
+		var level_col: Color = BAD if level == "probable" else (GOLD if level == "watch" else UiTheme.DIM)
+		card.add_child(_label("%s · %s · %s" % [str(x.get("pseudo", "?")), mode_name(str(x.get("difficulty", "")), ""), tags], level_col, 13))
+		card.add_child(_label(L.t("ui.sadmin.sus_level_" + level), level_col, 12))
 		var info := "%s · %s · %s" % [date(x.get("at")), status_name(str(x.get("status", ""))),
 			("%s pts" % num(x.get("score"))) if x.get("score") != null else "—"]
 		if x.get("seconds") != null:
