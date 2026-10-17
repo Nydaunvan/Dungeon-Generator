@@ -263,3 +263,5 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 ### Vol de vie des capacités de monstre
 `Combat._monster_use_ability` lit désormais `spellLifestealPct` du sort de la capacité : le monstre (hors groupe) récupère ce pourcentage des dégâts infligés (au moins 1 PV, plafonné à ses PV max), avec ligne de journal « draine » et popup vert. Auparavant le pourcentage s'affichait sur le sort mais n'avait aucun effet côté monstre.
 
+Correctif : l'effet de statut `lifedrain` (« Vol de vie », dégâts par tour avec `heals`) infligé par un monstre soignait personne ; `Combat.tick_char` soigne maintenant le monstre émetteur (`casterId`, hors groupe) du montant drainé à chaque tour.
+

@@ -910,6 +910,16 @@ func tick_char(c: Dictionary) -> void:
 			gs.add_log(L.fa(L.t("rules.combat.subit_degats_de"), [sdef.icon, c.name, dmg, sdef.label]), true)
 			events.append({"type": "popup", "text": "%s -%d" % [c.name, dmg], "color": Color("c98bff")})
 			events.append({"type": "hit", "char": c.id})
+			# « Vol de vie » infligé par un monstre : le monstre se soigne du montant drainé
+			if bool(sdef.get("heals", false)) and str(eff.get("casterId", "")) != "":
+				var mst: Dictionary = lstate().monsters.get(str(eff.casterId), {})
+				if not mst.is_empty() and bool(mst.get("alive", false)) and not mst.has("members"):
+					var mb := float(mst.hp)
+					mst["hp"] = minf(float(mst.get("maxHp", mst.hp)), mb + dmg)
+					if float(mst.hp) > mb:
+						var mdef := monster_def(str(eff.casterId))
+						gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [_mname(mdef), int(float(mst.hp) - mb)]), true)
+						events.append({"type": "popup", "text": "+%d" % int(float(mst.hp) - mb), "color": Color("7ddc7d")})
 			if int(c.hp) <= 0:
 				gs.bump(c.id, "knockdowns")
 				gs.add_log(L.fa(L.t("common.effondre_a_terre"), c.name))
