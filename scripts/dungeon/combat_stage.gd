@@ -465,8 +465,9 @@ static func _halo_texture() -> Texture2D:
 	if _halo_tex == null:
 		var g := Gradient.new()
 		g.offsets = PackedFloat32Array([0.0, 0.125, 0.5625, 1.0])
-		g.colors = PackedColorArray([Color(1.0, 0.275, 0.196, 0.95), Color(1.0, 0.275, 0.196, 0.95),
-				Color(1.0, 0.157, 0.078, 0.5), Color(1.0, 0.118, 0.04, 0.0)])
+		# sélection : halo léger bleu-cyan (le rouge est réservé à la rage)
+		g.colors = PackedColorArray([Color(0.45, 0.85, 1.0, 0.38), Color(0.45, 0.85, 1.0, 0.38),
+				Color(0.3, 0.7, 1.0, 0.2), Color(0.25, 0.65, 1.0, 0.0)])
 		var t := GradientTexture2D.new()
 		t.gradient = g
 		t.fill = GradientTexture2D.FILL_RADIAL

@@ -257,3 +257,5 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 ### Préchauffage de la rage et des statuts
 `WarmUp.run` joue aussi, hors écran, l'aura et l'entrée en rage (`CombatStage._make_rage_aura`, `_size_rage`, `_rage_burst(aura, true)`, désormais statiques) et tous les effets de `StatusAura` (en mélange additif et normal) : shaders compilés avant le premier combat. L'aura de rage s'applique à tout monstre enragé, boss ou non (vérifié sur un groupe de rats : `RAGE_NONBOSS=1` avec `tools/shot_rage.tscn`). Le grognement de rage est réglé à -7 dB dans `SFX_GAIN_DB` (plus fort que le niveau commun, à la demande). Vérification : `tools/check_warm_up.tscn`.
 
+### Halo de sélection
+`CombatStage._halo_texture` : le halo qui désigne le membre ciblé d'un groupe est désormais bleu-cyan clair et discret (alpha 0,38 au centre), au lieu du rouge, pour ne plus être confondu avec l'aura de rage.
