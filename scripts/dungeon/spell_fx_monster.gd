@@ -153,8 +153,10 @@ func _m_bolt(src: Vector3, dst: Vector3, pal: Dictionary, school: String, k: flo
 func _rain(src: Vector3, dst: Vector3, pal: Dictionary, school: String, victim: int) -> void:
 	var up := cam.global_transform.basis.y
 	var slots: Array = [victim, clampi(victim - 1, 0, 3), clampi(victim + 1, 0, 3), victim, clampi(victim + 1, 0, 3)]
+	if not slot_px.is_empty():          # sur les cartes : seule la carte de la victime est touchée
+		slots = [victim, victim, victim, victim, victim]
 	for i in slots.size():
-		var to := _slot_pos(int(slots[i]), 1.5) + cam.global_transform.basis.x * randf_range(-0.25, 0.25)
+		var to := _slot_pos(int(slots[i]), 1.5) + cam.global_transform.basis.x * randf_range(-0.25, 0.25) * (0.4 if not slot_px.is_empty() else 1.0)
 		var from := to + up * randf_range(2.6, 3.4) + cam.global_transform.basis.x * randf_range(-0.6, 0.6)
 		_m_bolt(from, to, pal, school, 0.65, 0.1 + 0.09 * float(i))
 

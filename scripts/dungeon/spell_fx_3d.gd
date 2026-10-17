@@ -446,7 +446,7 @@ func _fire(target: Dictionary) -> void:
 	var fwd := _fwd()
 	var right := cam.global_transform.basis.x
 	var up := cam.global_transform.basis.y
-	var start := cam.global_position + fwd * 0.6 - up * 0.4 + right * 0.15
+	var start := _start_point() + right * 0.15
 	var end: Vector3 = start + fwd * 4.0
 	if not target.is_empty():
 		end = _toward_cam(target.pos)
