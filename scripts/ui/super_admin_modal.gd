@@ -307,7 +307,7 @@ func _build_rule_picker() -> void:
 	if not res.ok:
 		_say(str(res.get("message", "")), true)
 		return
-	rules = res.data if res.data is Array else []
+	rules.assign(res.data if res.data is Array else [])    # même tableau : les lambdas capturent la variable par valeur
 	var en := TranslationServer.get_locale().begins_with("en")
 	for ru in rules:
 		pick.add_item("%s %s%s" % [ru.icon, ru.label_en if en else ru.label_fr, "" if bool(ru.daily) else " *"])
