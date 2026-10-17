@@ -250,7 +250,7 @@ static func _base_type_label(it: Dictionary) -> String:
 		"armor":
 			for s in SLOT_DEFS:
 				if s.id == it.get("slot"):
-					return str(s.label)
+					return L.t(str(s.label))
 			return L.t("common.armure")
 		"potion": return L.t("common.potion")
 		"key": return L.t("common.cle")
