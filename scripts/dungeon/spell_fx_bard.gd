@@ -329,9 +329,10 @@ func _ballad(ctx: Dictionary) -> void:
 func _requiem(_ctx: Dictionary) -> void:
 	_base_hue = 0.14
 	var up := cam.global_transform.basis.y
-	var a := _slot_pos(0, 2.2)
-	var b := _slot_pos(3, 2.2)
-	var mid := _slot_pos(1, 2.2).lerp(_slot_pos(2, 2.2), 0.5)
+	var ends := _party_ends(2.2)
+	var a: Vector3 = ends[0]
+	var b: Vector3 = ends[1]
+	var mid: Vector3 = ends[2]
 	var width := a.distance_to(b) * 1.25
 	var gold := _c(1.0, 0.82, 0.35)
 	var hot := _c(1.0, 0.97, 0.8)
@@ -351,8 +352,8 @@ func _requiem(_ctx: Dictionary) -> void:
 			var w := clampf((u * (1.3 + dl) - dl) / 1.3, 0.0, 1.0)
 			(s.node as Node3D).position = p0 + up * (w * w * 1.4)
 			(s.mat as StandardMaterial3D).albedo_color.a = minf(w * 6.0, 1.0) * (1.0 - clampf((w - 0.6) / 0.4, 0.0, 1.0)))
-	for i in 4:
-		var si := i
+	for i in _party_slots():
+		var si: int = i
 		var p := _slot_pos(si, 2.2)
 		_later(0.2 + 0.08 * float(i), func():
 			_shock(p, green, 1.7, 0.55)

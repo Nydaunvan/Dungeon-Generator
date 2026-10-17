@@ -47,6 +47,12 @@ func _ready() -> void:
 			if f.caster_idx == 1 and f.slot_px.size() == 4:
 				var st: Vector3 = f._start_point()
 				start_ok = ov._cam.unproject_position(st).distance_to(centers[1]) < 1.5
-	var good: bool = ok2 and ok3 and n_fx >= 3 and start_ok and ok and fx_nodes >= 1 and back.distance_to(centers[2]) < 1.5 and fov_ok and ov.visible
-	print("CARDFX ok=", ok, " sort=", ok2, " coup=", ok3, " depart_carte=", start_ok, " n=", n_fx, " effets=", fx_nodes, " ecart=", back.distance_to(centers[2]), " fov=", ov._cam.fov, " -> ", "OK" if good else "ECHEC")
+	# fontaine avec 3 héros : un soin par carte (3 places), pas de doublon sur la dernière
+	var slots3 := ov._world.get_child_count()
+	var probe := SpellFxStyles.new()
+	probe.cam = ov._cam
+	probe.apply_party_ctx({"slotPx": [Vector2(300, 700), Vector2(500, 700), Vector2(700, 700)]})
+	var slots_ok: bool = probe._party_slots() == [0, 1, 2] and probe._party_ends(2.2)[0].distance_to(probe._party_ends(2.2)[1]) > 1.0
+	var good: bool = slots_ok and ok2 and ok3 and n_fx >= 3 and start_ok and ok and fx_nodes >= 1 and back.distance_to(centers[2]) < 1.5 and fov_ok and ov.visible
+	print("CARDFX places=", slots_ok, " ok=", ok, " sort=", ok2, " coup=", ok3, " depart_carte=", start_ok, " n=", n_fx, " effets=", fx_nodes, " ecart=", back.distance_to(centers[2]), " fov=", ov._cam.fov, " -> ", "OK" if good else "ECHEC")
 	get_tree().quit(0 if good else 1)

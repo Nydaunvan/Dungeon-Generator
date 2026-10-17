@@ -1012,6 +1012,10 @@ static func _strip_tags(s: String) -> String:
 	return re.sub(s, "", true)
 
 func _on_fx(type: String) -> void:
+	# fontaine : le soin se pose sur la carte de chaque héros (au-dessus de l'interface)
+	if type == "fountain" and card_fx != null and CardFxOverlay.usable() \
+			and card_fx.play_action("fountain", {"solo": gs.party.size() == 1}, rig.camera, layout.sub_container, layout.hud.card_centers()):
+		return
 	if SpellFxStyles.has_action(type):       # coups, piège, interrupteur, fontaine : effets 3D
 		var st: CombatStage = level_node.stage if level_node != null else null
 		SpellFxStyles.cast_action(layout.world, rig.camera, type, st.target_point() if st != null and st.active else {})

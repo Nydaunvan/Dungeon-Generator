@@ -261,9 +261,10 @@ func _heal_soft(ctx: Dictionary) -> void:
 func _heal_group(ctx: Dictionary) -> void:
 	var pal := _heal_pal()
 	var up := cam.global_transform.basis.y
-	var a := _slot_pos(0, 2.2)
-	var b := _slot_pos(3, 2.2)
-	var mid := _slot_pos(1, 2.2).lerp(_slot_pos(2, 2.2), 0.5)
+	var ends := _party_ends(2.2)
+	var a: Vector3 = ends[0]
+	var b: Vector3 = ends[1]
+	var mid: Vector3 = ends[2]
 	_flash(_w_soft(), _hdr(Color(pal[1], 0.5), 0.8 * _g), mid, 1.2, 5.0, 0.7, true)
 	_shock(mid, pal[1], 6.5, 0.8)
 	var rain := _pmat(0.1, Vector3.DOWN, 6.0, 0.8, 1.6, Vector3(0, -0.4, 0), 0.05, 0.11, _ramp(Color(pal[0], 0.0), Color(pal[1], 0.95), Color(pal[2], 0.0)), 0.2, 0.4)
@@ -273,8 +274,8 @@ func _heal_group(ctx: Dictionary) -> void:
 	_later(0.9, func():
 		rp.emitting = false
 		_free_after(rp, 1.3))
-	for i in 4:
-		var si := i
+	for i in _party_slots():
+		var si: int = i
 		_later(0.07 * float(i), func(): _heal_one(_slot_pos(si, 2.2), pal, 0.85))
 
 # ------------------------------------------------------------------------------------------ CÉLÉRITÉ
@@ -354,9 +355,10 @@ func _blessing(ctx: Dictionary) -> void:
 
 func _sanctuary(_ctx: Dictionary) -> void:
 	var up := cam.global_transform.basis.y
-	var a := _slot_pos(0, 3.2)
-	var b := _slot_pos(3, 3.2)
-	var mid := _slot_pos(1, 3.2).lerp(_slot_pos(2, 3.2), 0.5)
+	var ends := _party_ends(3.2)
+	var a: Vector3 = ends[0]
+	var b: Vector3 = ends[1]
+	var mid: Vector3 = ends[2]
 	var radius := a.distance_to(b) * 0.48
 	_flash(_w_soft(), _hdr(Color(_mid(), 0.7), 0.8 * _g), mid, 1.2, 6.0, 1.0, true)
 	var star := _sprite(_rays_tex(), _hdr(_mid(), 0.7 * _g), 1.0, mid - _fwd() * 0.2)
@@ -367,8 +369,8 @@ func _sanctuary(_ctx: Dictionary) -> void:
 		(star.mat as StandardMaterial3D).albedo_color.a = sin(u * PI) * 0.7)
 	_dome(mid + up * 0.3, radius, _mid(), 1.7, 0.26)
 	_shock(mid, _mid(), radius * 3.4, 0.9)
-	for i in 4:
-		var si := i
+	for i in _party_slots():
+		var si: int = i
 		var p := _slot_pos(si, 2.2)
 		_later(0.12 * float(i), func():
 			_pillar(p - up * 1.0, 0.9, 3.4, SH_PILLAR, "pillar", {"col": _mid(), "core": _hot(), "power": 0.8 * _g, "fade": 0.0, "drop": 1.0, "flow": 2.0}, 1.2,

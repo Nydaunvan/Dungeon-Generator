@@ -426,8 +426,8 @@ func _grove(_ctx: Dictionary, rain_for: float = 1.5, rain_free: float = 2.2) -> 
 	_later(rain_for, func():
 		rain.emitting = false
 		_free_after(rain, rain_free))
-	for i in 4:
-		var at := _slot_pos(i, 2.0)
+	for i in _party_slots():
+		var at := _slot_pos(int(i), 2.0)
 		_flower(at + up * 0.1, 0.8, 0.12 * float(i), 1.3)
 		_pillar(at - up * 1.0, 1.2, 2.6, SH_PILLAR, "pillar", {"col": _n_mid(), "core": _n_hot(), "power": 0.3 * _g, "fade": 0.0, "drop": 1.0, "flow": 2.0}, 1.2,
 			func(u: float, mi: MeshInstance3D, m: ShaderMaterial):
@@ -542,7 +542,7 @@ static func _trunk_mesh() -> ArrayMesh:
 
 func _worldtree(ctx: Dictionary) -> void:
 	var up := cam.global_transform.basis.y
-	var c := (_slot_pos(1, 3.0) + _slot_pos(2, 3.0)) * 0.5
+	var c: Vector3 = _party_ends(3.0)[2]
 	var base := c - up * 1.1
 	var height := 3.8
 	var tm := _mesh_node(_trunk_mesh(), _vcol_mat(1.05 * _g), base, 1.0)

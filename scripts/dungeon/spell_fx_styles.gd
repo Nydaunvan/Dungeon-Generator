@@ -71,6 +71,24 @@ func _slot_pos(i: int, depth: float = 2.2) -> Vector3:
 	var col := 2.0 if solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : entre les fentes 2 et 3 (centre du bandeau)
 	return cam.project_position(Vector2(vs.x * col / n, vs.y * 0.8), depth)
 
+## Places des héros qui reçoivent un effet de groupe : celles des cartes réelles (au-dessus de l'interface), sinon les quatre du bandeau.
+func _party_slots() -> Array:
+	if not slot_px.is_empty():
+		return range(slot_px.size())
+	return [0, 1, 2, 3]
+
+## Extrémités et milieu du groupe : [première place, dernière place, milieu]. Un héros seul reçoit tout de même une largeur minimale.
+func _party_ends(depth: float = 2.2) -> Array:
+	var sl := _party_slots()
+	var a := _slot_pos(int(sl[0]), depth)
+	var b := _slot_pos(int(sl[sl.size() - 1]), depth)
+	var mid := a.lerp(b, 0.5)
+	if a.distance_to(b) < 1.2:
+		var r := cam.global_transform.basis.x * 0.6
+		a = mid - r
+		b = mid + r
+	return [a, b, mid]
+
 func _end_point(target: Dictionary) -> Vector3:
 	if target.is_empty():
 		return _start_point() + _fwd() * 4.0
@@ -652,7 +670,7 @@ func _tint_for(kind: String) -> Color:
 
 ## Gerbe de lumière qui monte sur le(s) héros ciblé(s) : croix de soin, particules, anneau au sol de la vue.
 func _heal(ctx: Dictionary, party: bool, kind: String) -> void:
-	var slots: Array = [0, 1, 2, 3] if party else [int(ctx.get("ally", ctx.get("caster", 1)))]
+	var slots: Array = _party_slots() if party else [int(ctx.get("ally", ctx.get("caster", 1)))]
 	var col := _tint_for(kind)
 	var i := 0
 	for s in slots:
@@ -660,7 +678,7 @@ func _heal(ctx: Dictionary, party: bool, kind: String) -> void:
 		_later(0.06 * i, func(): _heal_at(_slot_pos(si), col, kind))
 		i += 1
 	if party:
-		var base := _slot_pos(1, 2.2).lerp(_slot_pos(2, 2.2), 0.5)
+		var base: Vector3 = _party_ends(2.2)[2]
 		_flash(_arcane_tex(), Color(col, 0.55), base, 1.5, 8.0, 0.6, true)
 
 func _heal_at(at: Vector3, col: Color, kind: String) -> void:
