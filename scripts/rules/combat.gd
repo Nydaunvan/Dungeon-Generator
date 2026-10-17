@@ -492,7 +492,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		if not ally.is_empty() and str(gs.party[pi].id) == str(ally.id):
 			ally_idx = pi
 	var fx_ctx := {"style": str(spell.get("style", "arcane")), "mode": mode,
-		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", ""))}
+		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", "")), "solo": gs.party.size() == 1}
 	fx_ctx.merge(SpellFxLibrary.fx_keys(spell))      # effet visuel choisi dans l'éditeur (fx, teinte, intensité)
 	events.append({"type": "fx3d", "spell": spell_id, "ctx": fx_ctx})
 	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
@@ -608,6 +608,9 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
 	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st)))
 	var dmg := raw_dmg
+	var dmg_mult := float(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).dmgMult)      # « Héros solitaire » : ×2 (attaques et sorts)
+	if dmg_mult != 1.0:
+		dmg = int(round(dmg * dmg_mult))
 	if magic and not aoe:
 		var spell_pct := _perk_value(attacker, "spell")
 		if spell_pct > 0:
@@ -827,7 +830,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 		if str(gs.party[pi].id) == str(victim.id):
 			victim_idx = pi
 	var mfx := {"style": str(spell.get("style", "arcane")), "mode": "damage", "fromMonster": true, "victim": victim_idx,
-		"status": str(spell.get("statusEffect", "")), "ally": victim_idx, "caster": 0}
+		"status": str(spell.get("statusEffect", "")), "ally": victim_idx, "caster": 0, "solo": gs.party.size() == 1}
 	mfx.merge(SpellFxLibrary.fx_keys(spell))
 	events.append({"type": "fx3d", "spell": str(spell.get("id", "")), "ctx": mfx})
 	events.append({"type": "fx", "fx": "hit"})

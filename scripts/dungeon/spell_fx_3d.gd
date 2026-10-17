@@ -8,6 +8,8 @@ const TABLE := {"spell_arc1": "arcane", "spell_holy1": "holy", "spell_fire1": "f
 static var _tex: Dictionary = {}
 
 var cam: Camera3D
+## Vrai quand le groupe n'a qu'un héros (règle « Héros solitaire ») : il occupe l'emplacement central du bandeau, les effets le visent là.
+static var solo_party: bool = false
 var _parts: Array = []     # {node, mat, t0, dur, fn}
 var _t: float = 0.0
 

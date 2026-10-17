@@ -246,6 +246,7 @@ static func tier() -> int:
 static func cast(host: Node, camera: Camera3D, spell_id: String, target: Dictionary, ctx: Dictionary) -> void:
 	if camera == null:
 		return
+	SpellFx3D.solo_party = bool(ctx.get("solo", false))     # héros seul : toutes les places visées sont l'emplacement central
 	if bool(ctx.get("fromMonster", false)):
 		# capacité d'un monstre : `target` est le monstre, `ctx.victim` la place du héros visé. Pas d'effet d'origine pour ce sens de tir
 		# (celui des héros va vers les monstres) : sans rendu avancé, seule l'animation du coup reçu joue.

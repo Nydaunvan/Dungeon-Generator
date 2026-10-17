@@ -67,6 +67,8 @@ const BAR_H := 340.0
 ## Fentes du bandeau (px de l'image d'origine) : x début, x fin ; y 125 → 258 (hauteur 133).
 const SLOTS := [[99.0, 471.0], [560.0, 935.0], [1022.0, 1391.0], [1479.0, 1851.0]]
 const SLOT_Y := [125.0, 258.0]
+## Héros seul (« Héros solitaire ») : il occupe une fente centrée sur le bandeau (milieu de l'image = 978 px), les autres fentes restent vides.
+const SOLO_SLOT := [792.0, 1164.0]
 var _bar_cache: Dictionary = {}
 var _flames: Array = []
 const TORCH_BASE := [[47.0, 108.0], [1909.0, 108.0]]    # centre des vasques (px de l'image d'origine)
@@ -89,7 +91,7 @@ func _layout() -> void:
 	var n := _cards.size()
 	if n == 0:
 		return
-	var framed := not UiMetrics.portrait and n == SLOTS.size() and ResourceLoader.exists(BAR_SRC)
+	var framed := not UiMetrics.portrait and (n == SLOTS.size() or n == 1) and ResourceLoader.exists(BAR_SRC)
 	if framed:
 		var sc := size.x / BAR_W
 		var want := BAR_H * sc
@@ -99,7 +101,7 @@ func _layout() -> void:
 		for c in gs.party:
 			var card: PartyCard = _cards[str(c.id)].card
 			card.framed = true
-			var sl: Array = SLOTS[mini(i, SLOTS.size() - 1)]
+			var sl: Array = SOLO_SLOT if n == 1 else SLOTS[mini(i, SLOTS.size() - 1)]
 			var inset := 3.0 * sc
 			card.position = Vector2(sl[0] * sc + inset, SLOT_Y[0] * sc + inset)
 			card.size = Vector2((sl[1] - sl[0]) * sc - inset * 2.0, (SLOT_Y[1] - SLOT_Y[0]) * sc - inset * 2.0)
@@ -149,7 +151,7 @@ func _bar_texture(real_w: int) -> Texture2D:
 	return _bar_cache[real_w]
 
 func _draw() -> void:
-	if UiMetrics.portrait or _cards.size() != SLOTS.size() or not ResourceLoader.exists(BAR_SRC) or size.x < 50.0:
+	if UiMetrics.portrait or (_cards.size() != SLOTS.size() and _cards.size() != 1) or not ResourceLoader.exists(BAR_SRC) or size.x < 50.0:
 		return
 	var real_w := maxi(64, roundi(size.x * UiMetrics.s))
 	draw_texture_rect(_bar_texture(real_w), Rect2(Vector2.ZERO, Vector2(size.x, size.x * BAR_H / BAR_W)), false)

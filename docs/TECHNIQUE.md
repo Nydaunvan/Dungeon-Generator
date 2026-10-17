@@ -170,3 +170,11 @@ Icônes de classes : chaque classe fournie par le jeu doit avoir une icône en i
 ## Test d'une règle de défi précise (super admin)
 
 Onglet **Tests** de l'administration : un sélecteur liste les 12 règles (`admin_test_rules`) et un format, **semaine** (réglages propres à la règle : niveaux, taille, difficulté) ou **jour** (2 niveaux 13×11 normal). Le bouton appelle `admin_start_rule_run(règle, format, version)` (super admin uniquement), qui crée une partie `test` à graine aléatoire : hors classements, sans essai consommé, sans XP ni badge. Côté jeu : `RankedRun.launch_rule`. Migration : `20261017000300_test_regle_defi.sql`. Les règles marquées `*` n'existent qu'au format semaine (métrique ou réglages spéciaux).
+
+## Héros solitaire : dégâts ×2 et héros centré
+
+- Le modificateur `mod_solo` (data/game_constants.json) porte `soloParty`, `hpMult` 2 et `dmgMult` 2. `dmgMult` est combiné par `DungeonGenerator.combine_mods` et appliqué au début de `Combat._hit_monster` (attaques et sorts de zone ou ciblés, avant résistances et critiques).
+- Bandeau d'équipe : avec un seul héros, `PartyHud` garde le cadre orné et place la carte dans la fente `SOLO_SLOT`, centrée sur l'image (milieu = 978 px).
+- Effets visuels : `Combat` ajoute `solo: true` au contexte des effets 3D quand le groupe n'a qu'un héros ; `SpellFxLibrary.cast` le copie dans `SpellFx3D.solo_party`, et `SpellFxStyles._slot_pos` vise alors le centre du bandeau (coups et capacités de monstres, sorts de soin ou de soutien).
+- Migration `20261017000400_heros_solitaire_degats.sql` : texte de la règle côté serveur. Contrôle : `tools/check_solo.tscn`.
+

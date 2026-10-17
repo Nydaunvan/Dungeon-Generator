@@ -251,10 +251,11 @@
    "icon": "🧍",
    "labelFr": "Héros solitaire",
    "labelEn": "Lone Hero",
-   "descFr": "Un seul héros part à l'aventure, avec deux fois plus de PV.",
-   "descEn": "A single hero ventures forth, with twice the HP.",
+   "descFr": "Un seul héros part à l'aventure, avec deux fois plus de PV et deux fois plus de dégâts (attaques et sorts).",
+   "descEn": "A single hero ventures forth, with twice the HP and twice the damage (attacks and spells).",
    "soloParty": true,
    "hpMult": 2.0,
+   "dmgMult": 2.0,
    "weeklyOnly": true,
    "unlockBadge": "wk_r_solo"
   },

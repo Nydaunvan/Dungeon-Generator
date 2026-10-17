@@ -64,7 +64,8 @@ func _viewport_size() -> Vector2:
 func _slot_pos(i: int, depth: float = 2.2) -> Vector3:
 	var vs := _viewport_size()
 	var n := 4.0
-	return cam.project_position(Vector2(vs.x * (clampf(float(i), 0.0, 3.0) + 0.5) / n, vs.y * 0.8), depth)
+	var col := 2.0 if SpellFx3D.solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : entre les fentes 2 et 3 (centre du bandeau)
+	return cam.project_position(Vector2(vs.x * col / n, vs.y * 0.8), depth)
 
 func _start_point() -> Vector3:
 	return cam.global_position + _fwd() * 0.6 - cam.global_transform.basis.y * 0.42
