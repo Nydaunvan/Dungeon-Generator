@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 11
+const SCHEMA := 12
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -58,6 +58,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v9_to_v10(d, defaults))
 			10:
 				notes.append_array(_v10_to_v11(d))
+			11:
+				notes.append_array(_v11_to_v12(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -336,3 +338,34 @@ static func repair_class_icons(cfg: Dictionary, defaults: Dictionary) -> Diction
 			out[str(c.id)] = [cur, str(ref[str(c.id)])]
 			c["icon"] = str(ref[str(c.id)])
 	return out
+
+
+## Sorts de dégâts du Druide rééquilibrés (v1.36) : {id : [dégâts min, max, recharge, chance de statut]} avant puis après.
+## Un sort modifié par le créateur (valeurs différentes des anciennes) n'est pas touché.
+const DRUID_OLD := {"spell_nature1": [8, 14, 6, 40], "spell_nature2": [10, 18, 8, 60], "spell_nature3": [16, 26, 9, 20],
+	"spell_nature4": [9, 15, 11, 30], "spell_nature10": [16, 26, 10, 50], "spell_nature11": [28, 42, 13, 25]}
+const DRUID_NEW := {"spell_nature1": [6, 11, 7, 30], "spell_nature2": [8, 14, 9, 45], "spell_nature3": [12, 20, 10, 15],
+	"spell_nature4": [6, 11, 13, 25], "spell_nature10": [11, 18, 12, 40], "spell_nature11": [20, 30, 15, 20]}
+
+static func _v11_to_v12(d: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary):
+		return notes
+	var n := 0
+	for sp in (cfg as Dictionary).get("spells", []):
+		if not (sp is Dictionary) or not DRUID_OLD.has(str(sp.get("id", ""))):
+			continue
+		var o: Array = DRUID_OLD[str(sp.id)]
+		if int(sp.get("dmgMin", -1)) != o[0] or int(sp.get("dmgMax", -1)) != o[1]:
+			continue
+		var nw: Array = DRUID_NEW[str(sp.id)]
+		sp["dmgMin"] = nw[0]
+		sp["dmgMax"] = nw[1]
+		sp["cooldownSec"] = nw[2]
+		if sp.has("statusChance"):
+			sp["statusChance"] = nw[3]
+		n += 1
+	if n > 0:
+		notes.append("sorts de dégâts du Druide rééquilibrés : %d" % n)
+	return notes

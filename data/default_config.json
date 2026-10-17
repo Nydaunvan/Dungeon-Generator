@@ -709,14 +709,14 @@
    "icon": "@icon:spell_nature1",
    "style": "nature",
    "mode": "damage",
-   "dmgMin": 8,
-   "dmgMax": 14,
+   "dmgMin": 6,
+   "dmgMax": 11,
    "staminaCost": 16,
    "statusEffect": "poison",
-   "statusChance": 40,
+   "statusChance": 30,
    "statusDuration": 3,
    "statusPower": 2,
-   "cooldownSec": 6
+   "cooldownSec": 7
   },
   {
    "id": "spell_nature2",
@@ -724,13 +724,13 @@
    "icon": "@icon:spell_nature2",
    "style": "nature",
    "mode": "damage",
-   "dmgMin": 10,
-   "dmgMax": 18,
+   "dmgMin": 8,
+   "dmgMax": 14,
    "staminaCost": 20,
    "statusEffect": "slow",
-   "statusChance": 60,
+   "statusChance": 45,
    "statusDuration": 3,
-   "cooldownSec": 8
+   "cooldownSec": 9
   },
   {
    "id": "spell_nature3",
@@ -738,13 +738,13 @@
    "icon": "@icon:spell_nature3",
    "style": "nature",
    "mode": "damage",
-   "dmgMin": 16,
-   "dmgMax": 26,
+   "dmgMin": 12,
+   "dmgMax": 20,
    "staminaCost": 26,
    "statusEffect": "stun",
-   "statusChance": 20,
+   "statusChance": 15,
    "statusDuration": 1,
-   "cooldownSec": 9
+   "cooldownSec": 10
   },
   {
    "id": "spell_nature4",
@@ -752,14 +752,14 @@
    "icon": "@icon:spell_nature4",
    "style": "nature",
    "mode": "damageGroup",
-   "dmgMin": 9,
-   "dmgMax": 15,
+   "dmgMin": 6,
+   "dmgMax": 11,
    "staminaCost": 28,
    "statusEffect": "poison",
-   "statusChance": 30,
+   "statusChance": 25,
    "statusDuration": 3,
    "statusPower": 2,
-   "cooldownSec": 11
+   "cooldownSec": 13
   },
   {
    "id": "spell_nature5",
@@ -822,13 +822,13 @@
    "icon": "@icon:spell_nature10",
    "style": "nature",
    "mode": "damageGroup",
-   "dmgMin": 16,
-   "dmgMax": 26,
+   "dmgMin": 11,
+   "dmgMax": 18,
    "staminaCost": 30,
    "statusEffect": "slow",
-   "statusChance": 50,
+   "statusChance": 40,
    "statusDuration": 3,
-   "cooldownSec": 10
+   "cooldownSec": 12
   },
   {
    "id": "spell_nature11",
@@ -836,13 +836,13 @@
    "icon": "@icon:spell_nature11",
    "style": "nature",
    "mode": "damageGroup",
-   "dmgMin": 28,
-   "dmgMax": 42,
+   "dmgMin": 20,
+   "dmgMax": 30,
    "staminaCost": 38,
    "statusEffect": "stun",
-   "statusChance": 25,
+   "statusChance": 20,
    "statusDuration": 1,
-   "cooldownSec": 13
+   "cooldownSec": 15
   }
  ],
  "itemLibrary": [
