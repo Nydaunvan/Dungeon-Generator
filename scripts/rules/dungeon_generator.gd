@@ -495,7 +495,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var b_con := int(round(bbc * diff_mult * party_pow)) + randi_range(-3, 3)
 	var boss_power := (b_force + b_dex + b_con) / ((bbf + bbd + bbc) * diff_mult)
 	var b_ability := ""
-	if not damage_spells.is_empty() and randf() < 0.6:
+	if not damage_spells.is_empty():      # un boss a toujours une capacité spéciale
 		b_ability = str(choice(damage_spells).id)
 	var boss := {"id": "boss_gen_%d" % i, "name": "👑 " + str(bf[0]), "icon": "@icon:" + str(bf[1]), "x": boss_cell.x, "y": boss_cell.y, "isBoss": true,
 		"force": b_force, "dex": b_dex, "con": b_con, "speed": randi_range(8, 12),

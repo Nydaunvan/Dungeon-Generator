@@ -15,7 +15,9 @@ var _sig: String = ""
 var mon_id: String = ""          # monstre affiché (réactions visuelles)
 var _atk_turn := 0
 var _hidden: Array = []
-var _nodes: Dictionary = {}   # clé -> {node, halo, idx, h}
+var _nodes: Dictionary = {}   # clé -> {node, halo, rage, aura, idx, h}
+var _cur_st: Dictionary = {}   # état (vivant) du monstre affiché : sert à tenir les effets de statut à jour
+var _aura_clock := 0.0
 
 static var _halo_tex: Texture2D
 
@@ -51,6 +53,10 @@ func exit() -> void:
 func _process(delta: float) -> void:
 	if not active or view == null or view.entities == null:
 		return
+	_aura_clock += delta
+	if _aura_clock > 0.3:
+		_aura_clock = 0.0
+		_sync_auras()
 	var nodes: Array = []
 	for k in _nodes.keys():
 		nodes.append(_nodes[k].node)
@@ -91,7 +97,7 @@ func _free_entry(k, dying: bool = false) -> void:
 		e.halo.queue_free()
 	if e.get("rage") != null:
 		e.rage.queue_free()
-	_nodes.erase(k)
+	_nodes.erase(k)       # l'effet de statut est enfant du sprite : il disparaît avec lui
 
 func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
 	if _arena != null:
@@ -164,7 +170,7 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 				continue
 			node.name = "Combatant_%d" % idx
 			add_child(node)
-			e = {"node": node, "halo": null, "rage": null, "idx": idx, "h": float(node.get_meta("h"))}
+			e = {"node": node, "halo": null, "rage": null, "aura": null, "idx": idx, "h": float(node.get_meta("h"))}
 			_nodes[key] = e
 			_sprite_mass(node)      # précalcule le centre visible (visée des sorts)
 			node.set_meta("ph", randf() * TAU)      # animations (voir EntityLayer.animate_stage)
@@ -204,6 +210,26 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 	for k in _nodes.keys():
 		if not wanted.has(k):
 			_free_entry(k)
+	_cur_st = st
+	_sync_auras()
+
+## Effets de statut persistants sur chaque combattant affiché : ils restent tant que le statut dure (sommeil, poison, brûlure, gel…).
+func _sync_auras() -> void:
+	var looks: Array = StatusAura.looks_for(_cur_st) if not _cur_st.is_empty() and bool(_cur_st.get("alive", true)) else []
+	for k in _nodes:
+		var e: Dictionary = _nodes[k]
+		if e.get("aura") == null:
+			if looks.is_empty():
+				continue
+			e["aura"] = StatusAura.new()
+			(e.node as Node3D).add_child(e.aura)
+		var a: StatusAura = e.aura
+		var info := _sprite_mass(e.node)
+		var h: float = e.h
+		var sz: Vector2 = info.size
+		a.ext = Vector2(maxf(h * sz.x, h * 0.3), maxf(h * sz.y, h * 0.3))
+		a.position = Vector3((info.center.x - 0.5) * h, (0.5 - info.center.y) * h, 0.04)
+		a.set_looks(looks)
 
 func _make_halo() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()

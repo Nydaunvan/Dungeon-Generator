@@ -10,6 +10,12 @@ var _vp: SubViewport
 var _world: Node3D
 var _cam: Camera3D
 var _idle := 0.0
+var status_source: Callable = Callable()     ## () -> Array de {key, rect (pixels de la fenêtre), looks} : héros portant un statut
+var ref_cam: Camera3D                         ## caméra et zone de la vue du jeu : cadrage de la couche pour les effets persistants
+var ref_view: Control
+var _status_root: Node3D
+var _auras: Dictionary = {}
+var _status_clock := 0.0
 
 func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -50,6 +56,8 @@ func _init() -> void:
 	_cam.far = 100.0
 	_world.add_child(_cam)
 	_cam.current = true
+	_status_root = Node3D.new()
+	_vp.add_child(_status_root)          # hors de _world : les effets persistants ne comptent pas parmi les effets « en cours »
 
 ## Vrai si les effets peuvent jouer ici (option activée). Indépendant du rendu et du palier d'effets : même en compatibilité ou sans halo (palier 0),
 ## les sorts des héros et les coups reçus partent / arrivent sur les cartes (les effets avancés de monstres demandent Forward+ et un palier ≥ 1, voir SpellFxLibrary.cast).
@@ -128,6 +136,13 @@ func _remap(t: Dictionary, main_cam: Camera3D, view: Control, view_vp: SubViewpo
 	return out
 
 func _process(delta: float) -> void:
+	_status_clock += delta
+	if _status_clock > 0.25:
+		_status_clock = 0.0
+		_sync_status()
+	if not _auras.is_empty():
+		_idle = 0.0
+		return        # un statut est affiché sur une carte : la couche reste active
 	if not visible:
 		return
 	if _world.get_child_count() > 2:       # environnement + caméra + effets en cours
@@ -137,3 +152,39 @@ func _process(delta: float) -> void:
 	if _idle > 0.4:
 		visible = false
 		_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+## Effets de statut persistants sur les cartes des héros : un effet par héros, tant que ses statuts durent.
+func _sync_status() -> void:
+	if not status_source.is_valid() or size.y < 50.0 or ref_cam == null or ref_view == null or ref_view.size.y < 50.0:
+		return
+	_frame(ref_cam, ref_view)
+	var entries: Array = status_source.call() if Settings.card_fx else []
+	var seen := {}
+	for e in entries:
+		var looks: Array = e.looks
+		if looks.is_empty():
+			continue
+		var key: String = str(e.key)
+		seen[key] = true
+		var a: StatusAura = _auras.get(key)
+		if a == null:
+			a = StatusAura.new()
+			a.mix_mode = true
+			_status_root.add_child(a)
+			_auras[key] = a
+			if not visible:
+				visible = true
+				_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		var rect: Rect2 = e.rect
+		var depth := 4.0
+		var px := rect.get_center() - global_position
+		a.position = _cam.project_position(px, depth)
+		var per_px := 2.0 * tan(deg_to_rad(_cam.fov * 0.5)) * depth / maxf(size.y, 1.0)
+		a.ext = Vector2(rect.size.x, rect.size.y) * per_px
+		a.set_looks(looks)
+	for key in _auras.keys():
+		if not seen.has(key):
+			_auras[key].queue_free()
+			_auras.erase(key)
+	if _auras.is_empty() and _world.get_child_count() <= 2:
+		_idle = 0.0

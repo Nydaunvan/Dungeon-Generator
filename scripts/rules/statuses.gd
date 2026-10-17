@@ -20,6 +20,17 @@ static func active(holder: Dictionary) -> Array:
 	out.sort_custom(func(a, b): return PRIORITY.find(str(a.type)) < PRIORITY.find(str(b.type)))
 	return out
 
+## Libellé et icône d'un statut tel que le joueur le voit : le sommeil (étourdissement « endormi » de la berceuse) a les siens.
+static func label_of(e: Dictionary) -> String:
+	if str(e.get("look", "")) == "sleep":
+		return L.t("ui.status.sommeil")
+	return str(def(str(e.get("type", ""))).get("label", e.get("type", "")))
+
+static func icon_of(e: Dictionary) -> String:
+	if str(e.get("look", "")) == "sleep":
+		return "💤"
+	return str(def(str(e.get("type", ""))).get("icon", "✨"))
+
 static func has(holder: Dictionary, type: String) -> bool:
 	for e in active(holder):
 		if str(e.type) == type:
@@ -84,17 +95,20 @@ static func apply_from_spell(gs: GameState, spell: Dictionary, holder: Dictionar
 		if cut > 0:
 			duration = maxi(1, int(round(duration * (1.0 - cut / 100.0))))
 	var list: Array = holder.get("statusEffects", [])
+	var look := str(spell.get("statusLook", ""))
 	var found := false
 	for e in list:
 		if str(e.type) == type:
 			e["remaining"] = duration
 			e["power"] = power
 			e["casterId"] = caster_id
+			e["look"] = look
 			found = true
 	if not found:
-		list.append({"type": type, "remaining": duration, "power": power, "casterId": caster_id})
+		list.append({"type": type, "remaining": duration, "power": power, "casterId": caster_id, "look": look})
 	holder["statusEffects"] = list
-	gs.add_log(L.fa(L.t("rules.statuses.est_affecte_par"), [sdef.icon, display_name, sdef.label]), is_party)
+	var shown := {"look": look, "type": type}
+	gs.add_log(L.fa(L.t("rules.statuses.est_affecte_par"), [icon_of(shown), display_name, label_of(shown)]), is_party)
 	if is_party:
 		Characters.recompute(holder, gs.cfg)
 	return true

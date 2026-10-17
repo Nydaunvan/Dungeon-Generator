@@ -938,6 +938,7 @@
   "ui.monster_info_modal.resist_magique": "✨ Résist. magique",
   "ui.monster_info_modal.pv": "%d / %d PV",
   "ui.monster_info_modal.vaincu": "Vaincu",
+  "ui.status.sommeil": "Sommeil",
   "ui.monster_info_modal.entre_en_rage_sous_pv": "Entre en rage sous %d%% PV : +%d%% de dégâts",
   "ui.monster_info_modal.actuellement_enrage": " — 😡 actuellement enragé : +%d%% de dégâts !",
   "ui.party_card.inventaire_de_ce_heros": "Inventaire de ce héros",

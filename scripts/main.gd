@@ -178,7 +178,10 @@ func _ready() -> void:
 	ui.add_child(layout)
 	card_fx = CardFxOverlay.new()
 	ui.add_child(card_fx)
+	card_fx.status_source = _hero_status_entries
 	await layout.setup(gs, ctrl, rig)
+	card_fx.ref_cam = rig.camera
+	card_fx.ref_view = layout.sub_container
 	# la vue 3D ne dessine rien tant que le chargement n'est pas fini : tout le temps d'image va à l'écran de chargement (épée fluide)
 	layout.sub_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	await Loader.slice()
@@ -1026,6 +1029,21 @@ func _on_fx(type: String) -> void:
 		_shake()
 
 var card_fx: CardFxOverlay
+
+## Héros portant un statut (pour les effets persistants sur leurs cartes, voir CardFxOverlay) : une entrée par héros vivant.
+func _hero_status_entries() -> Array:
+	var out: Array = []
+	if layout == null or layout.hud == null or gs == null:
+		return out
+	var rects: Array = layout.hud.card_rects()
+	for i in mini(gs.party.size(), rects.size()):
+		var c: Dictionary = gs.party[i]
+		if int(c.get("hp", 1)) <= 0:
+			continue
+		var looks := StatusAura.looks_for(c)
+		if not looks.is_empty():
+			out.append({"key": str(c.id), "rect": rects[i], "looks": looks})
+	return out
 
 ## Attaque normale d'un héros : seule la flèche de l'archer part de sa carte vers le monstre ; les coups de corps à corps restent sur le monstre.
 func _on_fx_attack(kind: String, char_id: String) -> void:

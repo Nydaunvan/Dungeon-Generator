@@ -64,3 +64,4 @@ Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQU
 - Administration : onglet Tests, lancer une partie de test de n'importe quelle règle de défi, au format semaine ou jour (hors classement).
 - Héros solitaire : dégâts ×2 (attaques et sorts) en plus des PV ×2, héros affiché au centre du bandeau d'équipe.
 - Tous les effets de sorts partent des cartes du groupe ou y arrivent, par-dessus l'interface ; le coup d'un monstre frappe la carte du héros touché ; l'attaque normale reste sur le monstre (option « Effets sur les cartes », essai).
+- Les statuts durent visuellement autant que leur effet : tant qu'un monstre est endormi (berceuse du ménestrel), empoisonné, brûlé, gelé, étourdi, ralenti ou affaibli, ses « Z », bulles, flammes, givre ou étoiles restent sur lui ; sur les héros, l'effet reste sur leur carte. Un boss a toujours une capacité spéciale.

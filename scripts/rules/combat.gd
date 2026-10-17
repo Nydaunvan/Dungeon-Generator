@@ -561,6 +561,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var boss := bool(target.get("isBoss", false))
 			var eff_spell: Dictionary = spell.duplicate()
 			eff_spell["statusEffect"] = "slow" if boss else "stun"
+			eff_spell["statusLook"] = "" if boss else "sleep"      # l'étourdissement de la berceuse se voit comme un sommeil (Z) pendant toute sa durée
 			eff_spell["statusDuration"] = int(spell.get("statusDuration", 3)) if boss else maxi(1, int(round(int(spell.get("statusDuration", 3)) / 2.0)))
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_3"), [caster.name, spell.get("icon", ""), spell.name, _mname(target)]), true)
 			if not Statuses.apply_from_spell(gs, eff_spell, tst, _mname(target), str(caster.id), false):

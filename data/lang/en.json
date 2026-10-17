@@ -938,6 +938,7 @@
   "ui.monster_info_modal.resist_magique": "✨ Magic resist.",
   "ui.monster_info_modal.pv": "%d / %d HP",
   "ui.monster_info_modal.vaincu": "Defeated",
+  "ui.status.sommeil": "Sleep",
   "ui.monster_info_modal.entre_en_rage_sous_pv": "Enrages below %d%% HP: +%d%% damage",
   "ui.monster_info_modal.actuellement_enrage": " — 😡 currently enraged: +%d%% damage!",
   "ui.party_card.inventaire_de_ce_heros": "This hero's inventory",

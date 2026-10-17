@@ -75,8 +75,7 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		m.add_text(t, Color("ff7a6a") if st.get("enraged", false) else UiTheme.DIM, 13)
 	var badges: Array = []
 	for e in Statuses.active(st):
-		var sd := Statuses.def(str(e.type))
-		badges.append("%s %s (%d)" % [sd.get("icon", "✨"), sd.get("label", e.type), int(e.remaining)])
+		badges.append("%s %s (%d)" % [Statuses.icon_of(e), Statuses.label_of(e), int(e.remaining)])
 	if not badges.is_empty():
 		m.add_text("  ".join(badges), Color("ffd88a"), 14)
 	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])

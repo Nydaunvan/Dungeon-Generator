@@ -164,6 +164,13 @@ func card_centers() -> Array:
 		out.append(card.get_global_rect().get_center())
 	return out
 
+## Rectangle de chaque carte du groupe (pixels de la fenêtre) : emplacement des effets de statut persistants.
+func card_rects() -> Array:
+	var out: Array = []
+	for c in gs.party:
+		out.append((_cards[str(c.id)].card as Control).get_global_rect())
+	return out
+
 ## Milieu du bord bas de chaque carte (pixels de la fenêtre) : point de départ des effets lancés par un héros.
 func card_bottoms() -> Array:
 	var out: Array = []
