@@ -276,3 +276,6 @@ Le mur du thème `damp` n'est plus la petite image en pixels : c'est un jeu de b
 
 Suite : le plafond du thème `damp` reprend les briques du mur (même matériau). Le sol utilise la terre rocailleuse « GroundDirtRocky020 » (la même image que le sol de pierre `stone_hd/floor_albedo.jpg`, déjà dans le jeu), recolorée plus sombre avec des plaques vert mousse pour se distinguer du sol de pierre ; normales et rugosité du pack fourni (`damp_hd` / `damp_lite`, `floor_*`), répétition `DAMP_FLOOR_REPEAT` = 1 par case.
 
+### Clé de la porte verrouillée : jamais sur un escalier
+Correctif du générateur (`DungeonGenerator._one_level`) : les cases candidates pour la clé excluent désormais toute case déjà prise (`used` : départ, escalier de sortie), au lieu du seul départ ; elles restent limitées aux salles atteignables sans passer la porte à ouvrir. Contrôle : `tools/check_key_placement.tscn` (150 donjons, une clé jamais sur un escalier ni sur le départ, toujours atteignable porte fermée ; l'ancien code échouait sur 4 clés sur 292). Les niveaux déjà générés dans une partie ne sont pas modifiés.
+

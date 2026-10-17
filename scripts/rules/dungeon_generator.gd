@@ -356,10 +356,11 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		var placement := _try_locking_door(grid, dist, rooms, candidates, far, sx, sy, 2)
 		if placement.is_empty():
 			placement = _try_locking_door(grid, dist, rooms, candidates, far, sx, sy, 1)
-		# la clé ne se pose jamais sur la première dalle du niveau (case de départ) : sans autre case possible, pas de porte verrouillée
+		# la clé ne se pose jamais sur le départ ni sur un escalier : sans autre case possible, pas de porte verrouillée
 		var key_cands: Array = []
 		if not placement.is_empty():
-			key_cands = rooms.filter(func(r): return placement.dist[r.y][r.x] != -1 and not (r.x == sx and r.y == sy))
+			# jamais sur un escalier (la sortie ou le retour) ni sur une case déjà prise, et toujours du côté accessible sans la porte
+			key_cands = rooms.filter(func(r): return placement.dist[r.y][r.x] != -1 and not used.has(_key(int(r.x), int(r.y))))
 		if not placement.is_empty() and not key_cands.is_empty():
 			var np: Vector2i = placement.cell
 			grid[np.y][np.x] = "D"
