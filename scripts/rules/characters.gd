@@ -127,6 +127,8 @@ static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	c["resistMagic"] = int(tal.resistMagic)
 	c["critDexPct"] = Stats.crit_from_dex(d)
 	c["dodgePct"] = Stats.dodge_from_dex(d) + Rarity.perk_sum(c, "dodge")
+	c["perkCrit"] = Rarity.perk_sum(c, "crit")             # capacités des objets (raretés), pour l'affichage des valeurs dérivées
+	c["perkLifesteal"] = Rarity.perk_sum(c, "lifesteal")
 	c["guardPct"] = Stats.guard_from_con(co)
 	c["spellPower"] = Stats.spell_power(i)
 	if int(c.get("hp", 0)) > c["maxHp"]:

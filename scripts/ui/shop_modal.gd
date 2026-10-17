@@ -489,7 +489,7 @@ static func _effect_rows() -> Array:
 		["con", L.t("common.constitution"), func(c): return [int(c.get("effCon", 10))]],
 		["int", L.t("common.intelligence"), func(c): return [int(c.get("effInt", 10))]],
 		["speed", L.t("common.vitesse"), func(c): return [int(c.get("effSpeed", 10))]],
-		["crit", L.t("ui.party_modal.critique"), func(c): return [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0))]],
+		["crit", L.t("ui.party_modal.critique"), func(c): return [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + int(c.get("perkCrit", 0))]],
 		["dodge", L.t("ui.party_modal.esquive"), func(c): return [int(c.get("dodgePct", 0))]],
 		["guard", L.t("ui.party_modal.garde"), func(c): return [int(c.get("guardPct", 0))]],
 		["reduc_phys", L.t("ui.party_modal.reduc_phys"), func(c): return [Stats.reduction(c, false)]],
@@ -625,7 +625,7 @@ static func _scroll_section(box: VBoxContainer, gs: GameState, sp: Dictionary) -
 			_row(box, str(c.name), L.fa(L.t(unit), [lo, hi]), 0.0, false)
 			var calc := L.fa(L.t("ui.shop_modal.scr_calcul"), [int(sb.total), int(sb.power), int(sb.gear), int(sb.level)])
 			if mode == "damage" or mode == "damageGroup":
-				var cc := clampi(int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + run_crit, 0, 100)
+				var cc := clampi(int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + int(c.get("perkCrit", 0)) + run_crit, 0, 100)
 				if cc > 0:
 					calc += " · " + L.fa(L.t("ui.shop_modal.scr_crit"), [cc, hi * 2])
 			_wrap(box, calc, 11, UiTheme.DIM)

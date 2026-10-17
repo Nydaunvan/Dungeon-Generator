@@ -2125,6 +2125,7 @@
   "ui.monster_info_modal.tip_speed_rule": "It fills the initiative gauge: the higher it is, the earlier the monster acts in the round.",
   "ui.stat_explain.r_base": "Base",
   "ui.stat_explain.r_equip": "Gear",
+  "ui.stat_explain.r_rarity": "Equipment rarity",
   "ui.stat_explain.r_talents": "Talents",
   "ui.stat_explain.r_status": "Statuses",
   "ui.stat_explain.r_total": "Total",

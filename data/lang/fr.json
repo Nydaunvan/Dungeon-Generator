@@ -2125,6 +2125,7 @@
   "ui.monster_info_modal.tip_speed_rule": "Elle remplit la jauge d'initiative : plus elle est haute, plus le monstre joue tôt dans la manche.",
   "ui.stat_explain.r_base": "Base",
   "ui.stat_explain.r_equip": "Équipement",
+  "ui.stat_explain.r_rarity": "Raretés de l'équipement",
   "ui.stat_explain.r_talents": "Talents",
   "ui.stat_explain.r_status": "Statuts",
   "ui.stat_explain.r_total": "Total",

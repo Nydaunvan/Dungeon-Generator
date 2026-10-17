@@ -557,7 +557,7 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 		[L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)], ["atk"]],
 		[L.t("ui.equip_dock.for_dex_con_int"), "%d / %d / %d / %d" % [int(c.get("effForce", 0)), int(c.get("effDex", 0)), int(c.get("effCon", 0)), int(c.get("effInt", 0))], ["force", "dex", "con", "int"]],
 		[L.t("common.vitesse"), str(int(c.get("effSpeed", 10))), ["speed"]],
-		[L.t("ui.equip_dock.crit_esq_garde"), "%d %% / %d %% / %d %%" % [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0))], ["crit", "dodge", "guard"]],
+		[L.t("ui.equip_dock.crit_esq_garde"), "%d %% / %d %% / %d %%" % [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + int(c.get("perkCrit", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0))], ["crit", "dodge", "guard"]],
 		[L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))), ["spell_power"]],
 	]
 	for r in rows:

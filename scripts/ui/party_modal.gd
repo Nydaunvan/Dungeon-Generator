@@ -434,7 +434,7 @@ func _attr_table(p: Control, c: Dictionary) -> void:
 
 ## Valeurs dérivées, chacune avec une infobulle qui donne le détail du calcul.
 func _combat_grid(p: Control, c: Dictionary) -> void:
-	var crit_tot := int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0))
+	var crit_tot := int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + int(c.get("perkCrit", 0))
 	var g := _grid(p)
 	var cells := [
 		["⚔️", L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)], "atk"],
@@ -444,9 +444,14 @@ func _combat_grid(p: Control, c: Dictionary) -> void:
 		["⚔️", L.t("ui.party_modal.reduc_phys"), "%d %%" % Stats.reduction(c, false), "reduc_phys"],
 		["🔮", L.t("ui.party_modal.reduc_mag"), "%d %%" % Stats.reduction(c, true), "reduc_mag"],
 		["✨", L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))), "spell_power"],
-		["🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % int(c.get("talentLifestealPct", 0)), "lifesteal"]]
+		["🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % (int(c.get("talentLifestealPct", 0)) + int(c.get("perkLifesteal", 0))), "lifesteal"]]
+	for pk in ["spell", "execute", "bleed", "critdmg", "thorns", "gold", "last_stand"]:      # capacités des objets rares : sinon invisibles sur la fiche
+		var pv := Rarity.perk_sum(c, pk)
+		if pv > 0:
+			cells.append(["✦", L.t(str(Rarity.PERK_NAMES[pk])), "×1" if pk == "last_stand" else "+%d %%" % pv, ""])
 	for cl in cells:
 		var cell := _stat_cell(cl[0], cl[1], cl[2])
 		var ckey: String = cl[3]
-		StatTip.attach(cell, func(): return StatExplain.many_data(c, gs.cfg, [ckey]))
+		if ckey != "":
+			StatTip.attach(cell, func(): return StatExplain.many_data(c, gs.cfg, [ckey]))
 		g.add_child(cell)

@@ -130,14 +130,18 @@ static func data(c: Dictionary, cfg: Dictionary, key: String) -> Dictionary:
 		"crit":
 			var dx := int(c.get("effDex", 10))
 			var tc := int(c.get("talentCritChance", 0))
-			return _sec(key, "💥", L.t("ui.party_modal.critique"), "%d %%" % (Stats.crit_from_dex(dx) + tc), L.t("ui.stat_explain.rule_crit"),
+			var rc := int(c.get("perkCrit", 0))
+			return _sec(key, "💥", L.t("ui.party_modal.critique"), "%d %%" % (Stats.crit_from_dex(dx) + tc + rc), L.t("ui.stat_explain.rule_crit"),
 				[_row(L.fa(L.t("ui.stat_explain.r_dex_crit"), dx), _pct(Stats.crit_from_dex(dx))), _row(L.t("ui.stat_explain.r_talents"), _pct(tc), _tone(tc)),
-				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (Stats.crit_from_dex(dx) + tc), "total")], [], _sources(c, cfg, [], ["critChance"], " %"),
+				_row(L.t("ui.stat_explain.r_rarity"), _pct(rc), _tone(rc)),
+				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (Stats.crit_from_dex(dx) + tc + rc), "total")], [], _sources(c, cfg, [], ["critChance"], " %"),
 				L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_CRIT) + " (" + L.t("common.dexterite") + ")")
 		"dodge":
 			var dd := int(c.get("effDex", 10))
-			return _sec(key, "💨", L.t("ui.party_modal.esquive"), "%d %%" % Stats.dodge_from_dex(dd), L.t("ui.party_modal.tip_esquive"),
-				[_row(L.fa(L.t("ui.stat_explain.r_dex_dodge"), dd), _pct(Stats.dodge_from_dex(dd))), _row(L.t("ui.stat_explain.r_total"), "%d %%" % Stats.dodge_from_dex(dd), "total")],
+			var rd := Rarity.perk_sum(c, "dodge")
+			return _sec(key, "💨", L.t("ui.party_modal.esquive"), "%d %%" % (Stats.dodge_from_dex(dd) + rd), L.t("ui.party_modal.tip_esquive"),
+				[_row(L.fa(L.t("ui.stat_explain.r_dex_dodge"), dd), _pct(Stats.dodge_from_dex(dd))), _row(L.t("ui.stat_explain.r_rarity"), _pct(rd), _tone(rd)),
+				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (Stats.dodge_from_dex(dd) + rd), "total")],
 				[], _sources(c, cfg, ["bonusDex"], ["bonusDex"]), L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_DODGE))
 		"guard":
 			var cn := int(c.get("effCon", 10))
@@ -165,8 +169,10 @@ static func data(c: Dictionary, cfg: Dictionary, key: String) -> Dictionary:
 				[], _sources(c, cfg, ["bonusSpellDmg"], ["bonusSpellDmg"]), L.fa(L.t("ui.stat_explain.n_pw"), pw))
 		"lifesteal":
 			var ls := int(c.get("talentLifestealPct", 0))
-			return _sec(key, "🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % ls, L.t("ui.party_modal.tip_vol_vie"),
-				[_row(L.t("ui.stat_explain.r_life"), _pct(ls), _tone(ls)), _row(L.t("ui.stat_explain.r_total"), "%d %%" % ls, "total")], [], _sources(c, cfg, [], ["lifestealPct"], " %"))
+			var rl := int(c.get("perkLifesteal", 0))
+			return _sec(key, "🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % (ls + rl), L.t("ui.party_modal.tip_vol_vie"),
+				[_row(L.t("ui.stat_explain.r_life"), _pct(ls), _tone(ls)), _row(L.t("ui.stat_explain.r_rarity"), _pct(rl), _tone(rl)),
+				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (ls + rl), "total")], [], _sources(c, cfg, [], ["lifestealPct"], " %"))
 		"hp":
 			var k2 := int(c.get("effCon", 10))
 			var base_hp := 10 + 3 * k2 + 4 * (lvl - 1)

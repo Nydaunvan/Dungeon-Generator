@@ -232,3 +232,6 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 
 ### Sacrifice aux pièges
 `TrapRules.sacrifice_candidates` renvoie les indices de tout objet de la besace sauf les types de `SACRIFICE_EXCLUDED` (`key`). Aucune migration : l'entrée rejouée reste l'indice dans la besace (`["sac", idx]`).
+
+### Raretés sur la fiche
+Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche ne montrait que talents et caractéristiques. `Characters.recompute` stocke `perkCrit` et `perkLifesteal` (valeurs dérivées, recalculées) ; `party_modal`, `party_tip`, `equip_dock`, `shop_modal` et `StatExplain` les ajoutent, et la fiche liste les autres capacités (`spell`, `execute`, `bleed`, `critdmg`, `thorns`, `gold`, `last_stand`) quand elles sont présentes. Aucune migration.
