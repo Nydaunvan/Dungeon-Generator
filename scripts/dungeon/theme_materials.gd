@@ -11,6 +11,8 @@ const STONE_HD := "res://assets/themes/stone_hd/"
 const STONE_LITE := "res://assets/themes/stone_lite/"
 const STONE_WALL_REPEAT := 2.0    # répétitions de la texture par pan de mur (entier : les pans voisins se raccordent)
 const STONE_FLOOR_REPEAT := 1.0   # idem pour une case de sol
+## Mur du Cachot humide : briques brun-vert en matériau 3D, mêmes deux jeux de résolution (damp_hd / damp_lite).
+const DAMP_WALL_REPEAT := 0.5     # la texture 2048 couvre deux pans : briques de taille raisonnable (un pan en montre le quart)
 static var _cache: Dictionary = {}
 
 static func for_theme(theme: String) -> Dictionary:
@@ -28,6 +30,9 @@ static func for_theme(theme: String) -> Dictionary:
 		mats[part] = _make(theme, part, pixel)
 	if theme == "damp":
 		mats["wall"].uv1_scale = Vector3(2, 2, 1)
+		var dwall := _stone_pbr("wall", DAMP_WALL_REPEAT, "damp")
+		if dwall != null:
+			mats["wall"] = dwall
 	if theme == "stone":
 		var wall := _stone_pbr("wall", STONE_WALL_REPEAT)
 		if wall != null:
@@ -91,17 +96,19 @@ static func _make(theme: String, part: String, pixel: bool) -> StandardMaterial3
 
 ## Dossier du jeu de textures de pierre à utiliser ("" si aucun) : 1024 ou 2048 selon le réglage « Textures » du niveau graphique
 ## (Web et mobile n'embarquent que le jeu 1024 : le repli est automatique).
-static func _stone_dir() -> String:
+static func _stone_dir(prefix: String = "stone") -> String:
 	var small := not Settings.texture_hd()
-	var order := [STONE_LITE, STONE_HD] if small else [STONE_HD, STONE_LITE]
+	var hd := "res://assets/themes/%s_hd/" % prefix
+	var lite := "res://assets/themes/%s_lite/" % prefix
+	var order := [lite, hd] if small else [hd, lite]
 	for d in order:
 		if ResourceLoader.exists(d + "wall_albedo.jpg"):
 			return d
 	return ""
 
 ## part : "wall" ou "floor" (fichiers <part>_albedo.jpg, <part>_normal.png, <part>_orm.jpg).
-static func _stone_pbr(part: String, repeat: float) -> StandardMaterial3D:
-	var d := _stone_dir()
+static func _stone_pbr(part: String, repeat: float, prefix: String = "stone") -> StandardMaterial3D:
+	var d := _stone_dir(prefix)
 	if d == "" or not ResourceLoader.exists(d + part + "_albedo.jpg"):
 		return null
 	var m := StandardMaterial3D.new()

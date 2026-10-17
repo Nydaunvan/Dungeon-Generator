@@ -25,7 +25,7 @@ Un jeu de donjon en vue subjective et en 3D : on mène un groupe de quatre héro
 - **Raretés** : les objets d'équipement sont communs, inhabituels, rares, épiques, légendaires ou mythiques (couleur du nom et du cadre) ; chaque palier ajoute des capacités (critique, esquive, vol de vie, exécution, dernier souffle…). Les gardiens laissent au moins du rare, et un légendaire finit toujours par tomber.
 - **Village** : forge, Maître des Talents, marchands itinérants et boutique. Chez le marchand, le bouton d'achat ou de vente est en haut de la fiche de l'objet, et la **sélection multiple** permet de vendre plusieurs objets d'un coup. Les armes et équipements proposés varient en puissance, avec toujours au moins une **belle affaire** nettement meilleure que ce que porte déjà le groupe : acheter reste intéressant à haut niveau.
 - **Interface de jeu** : la sauvegarde (emplacements, nouvelle partie, export, import) se trouve dans le menu du haut ; la colonne de droite montre la carte (que l'on peut replier), la besace commune du groupe et un grand grimoire des événements, plus lisible, qui occupe toute la place restante.
-- **Sept thèmes** de décor (matériaux, éclairage et ambiance propres à chacun), avec parfois du brouillard.
+- **Sept thèmes** de décor (matériaux, éclairage et ambiance propres à chacun), avec parfois du brouillard. Le Cachot humide a des murs de briques brun-vert en relief (matériau 3D).
 - **Français et anglais**, guide du jeu et tutoriel intégrés, touches réassignables.
 
 ## En ligne (facultatif)
