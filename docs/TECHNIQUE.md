@@ -196,6 +196,8 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 
 - Correctif : `CardFxOverlay.usable()` ne dépend plus ni du rendu (Forward+ / compatibilité) ni du palier d'effets (halo désactivé = palier 0) : sans cela, tous les sorts (archer, druide…) partaient du bas de l'écran. Contrôle : `tools/check_start_all.tscn` (rendu de compatibilité et palier 0 simulés ; départ au bord bas de la carte).
 
+- Profondeur de départ : un effet qui part d'une carte naît à la profondeur du monstre visé (`startDepth`, `SpellFx3D._start_point`), pas à 0,6 devant la caméra : à cette distance, une flèche ou un éclat allongé traversait le plan de la caméra et se dessinait comme un faisceau géant venu du coin de l'écran. Les flèches sont en plus raccourcies (`_tail_k`) dans ce mode. Contrôle visuel : `tools/shot_card_fx.tscn` (rendu réel sous xvfb).
+
 ## Écran de chargement fluide
 
 - `LoadingScreen._advance` : la barre (donc l'épée) avance à vitesse progressive (accélération limitée, `ACCEL`), rattrape l'avancement réel sans à-coup, et continue de ramper (`CREEP`) jusqu'à `LEAD` devant lui pendant une longue étape, sans jamais reculer ni dépasser 98,5 % avant la fin réelle.

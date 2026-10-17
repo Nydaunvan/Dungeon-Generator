@@ -74,7 +74,7 @@ func _ph_blade_node(hot: Color, mid: Color, tail: Color, key: String, scl: Vecto
 
 ## Flèche en volume : fût fin, pointe brillante.
 func _ph_arrow_node(hot: Color, mid: Color, tail: Color, key: String) -> Node3D:
-	return _ph_blade_node(hot, mid, tail, key, Vector3(0.17, 0.28, 3.8), 1.5)
+	return _ph_blade_node(hot, mid, tail, key, Vector3(0.17, 0.28, 3.8 * _tail_k()), 1.5)
 
 ## Étoiles d'étourdissement qui tournent au-dessus du monstre.
 func _ph_stun(at: Vector3, col: Color, size: float, dur: float = 1.0, delay: float = 0.0) -> void:

@@ -68,6 +68,7 @@ func play(spell_id: String, target: Dictionary, ctx: Dictionary, main_cam: Camer
 	var tgt := _remap(target, main_cam, view, view_vp)
 	if tgt.is_empty() and not target.is_empty():
 		return false
+	c["startDepth"] = _start_depth(tgt)
 	var pts: Array = []
 	for t in ctx.get("targets", []):
 		var m := _remap(t, main_cam, view, view_vp)
@@ -79,6 +80,12 @@ func play(spell_id: String, target: Dictionary, ctx: Dictionary, main_cam: Camer
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	SpellFxLibrary.cast(_world, _cam, spell_id, tgt, c)
 	return true
+
+## Profondeur de départ des effets des héros : celle du monstre visé (la caméra de la couche regarde vers -Z), bornée.
+func _start_depth(tgt: Dictionary) -> float:
+	if tgt.is_empty() or not tgt.has("pos"):
+		return 4.0
+	return clampf(-(tgt.pos as Vector3).z, 2.5, 8.0)
 
 ## Caméra de la couche : même nombre de pixels par unité de monde qu'à l'écran de jeu, tan(fov_couche / 2) = tan(fov_vue / 2) × (hauteur couche / hauteur vue).
 func _frame(main_cam: Camera3D, view: Control) -> void:
@@ -99,6 +106,7 @@ func play_action(kind: String, ctx: Dictionary, main_cam: Camera3D, view: Contro
 		tgt = _remap(target, main_cam, view, view_vp)
 		if tgt.is_empty():
 			return false
+		c["startDepth"] = _start_depth(tgt)
 	visible = true
 	_idle = 0.0
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS

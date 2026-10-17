@@ -575,7 +575,7 @@ func _arrow(target: Dictionary) -> void:
 	var up := cam.global_transform.basis.y
 	var dur := clampf(0.2 + start.distance_to(end) * 0.025, 0.24, 0.36)
 	var mesh := _shard_pal("arrow", Color(1, 1, 0.95), Color(0.95, 0.88, 0.62), Color(0.7, 0.55, 0.3))
-	var body := _mesh_sprite(mesh, start, Vector3(1.0, 1.0, 3.4))
+	var body := _mesh_sprite(mesh, start, Vector3(1.0, 1.0, 3.4 * _tail_k()))
 	var trail := _particles(36, 0.28, false, _quad(_spark_tex()), _ramp(Color(1, 0.95, 0.7, 0), Color(1, 0.88, 0.5, 0.85), Color(1, 0.7, 0.3, 0)))
 	trail.spread = 20.0
 	trail.initial_velocity_min = 0.0

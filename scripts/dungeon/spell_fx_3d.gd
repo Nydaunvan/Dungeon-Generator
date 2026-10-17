@@ -14,6 +14,7 @@ var solo_party: bool = false
 var slot_px: Array = []
 ## Point de départ des effets sur chaque carte (milieu du bord bas de la carte), mêmes pixels et même ordre que `slot_px`.
 var slot_start_px: Array = []
+var start_depth := 4.0          ## profondeur du départ quand l'effet part d'une carte : celle du monstre visé, pour que le projectile voyage dans un plan (pas de déformation de perspective)
 var caster_idx: int = -1       ## place du héros qui lance le sort (ses effets partent de sa carte quand `slot_px` est connu)
 var victim_idx: int = 0        ## place du héros touché (coup de monstre)
 
@@ -22,6 +23,7 @@ func apply_party_ctx(ctx: Dictionary) -> void:
 	solo_party = bool(ctx.get("solo", false))
 	slot_px = ctx.get("slotPx", [])
 	slot_start_px = ctx.get("slotStartPx", slot_px)
+	start_depth = float(ctx.get("startDepth", 4.0))
 	caster_idx = int(ctx.get("caster", -1))
 	victim_idx = int(ctx.get("victim", 0))
 
@@ -31,13 +33,19 @@ func _side(k: float) -> Vector3:
 
 ## Point de départ des effets des héros : milieu du bord bas de sa carte quand l'effet joue au-dessus de l'interface, sinon le bas de la vue.
 func _start_point() -> Vector3:
-	return _caster_anchor(0.6, 0.42)
+	return _caster_anchor(0.6, 0.42, start_depth)
+
+## Longueur des projectiles allongés (flèches) : raccourcis quand ils partent d'une carte (proche de la caméra), pour que leur queue ne balaie pas le bas de l'écran.
+func _tail_k() -> float:
+	return 0.4 if not slot_start_px.is_empty() and caster_idx >= 0 else 1.0
 
 ## Ancre d'un effet lancé par le héros, à `depth` devant la caméra : le milieu du bord bas de sa carte ; sans carte, `drop` sous l'axe de la vue.
-func _caster_anchor(depth: float, drop: float) -> Vector3:
+## `card_depth` : profondeur utilisée quand l'effet part d'une carte. Plus loin de la caméra que le départ « sous la vue » : un projectile long (flèche) ne
+## traverse plus le plan de la caméra, il apparaît à sa vraie taille au niveau de la carte au lieu d'un faisceau géant venu du coin de l'écran.
+func _caster_anchor(depth: float, drop: float, card_depth: float = -1.0) -> Vector3:
 	if not slot_start_px.is_empty() and caster_idx >= 0:
 		var k := 0 if solo_party else mini(caster_idx, slot_start_px.size() - 1)
-		return cam.project_position(slot_start_px[k], depth)
+		return cam.project_position(slot_start_px[k], card_depth if card_depth > 0.0 else depth)
 	return cam.global_position + _fwd() * depth - cam.global_transform.basis.y * drop
 var _parts: Array = []     # {node, mat, t0, dur, fn}
 var _t: float = 0.0
