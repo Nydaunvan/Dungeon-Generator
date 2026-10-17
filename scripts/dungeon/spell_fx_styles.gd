@@ -71,9 +71,6 @@ func _slot_pos(i: int, depth: float = 2.2) -> Vector3:
 	var col := 2.0 if solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : entre les fentes 2 et 3 (centre du bandeau)
 	return cam.project_position(Vector2(vs.x * col / n, vs.y * 0.8), depth)
 
-func _start_point() -> Vector3:
-	return cam.global_position + _fwd() * 0.6 - cam.global_transform.basis.y * 0.42
-
 func _end_point(target: Dictionary) -> Vector3:
 	if target.is_empty():
 		return _start_point() + _fwd() * 4.0
@@ -792,12 +789,13 @@ const ACTIONS := ["sword", "dagger", "axe", "mace", "staff", "bow", "unarmed", "
 static func has_action(kind: String) -> bool:
 	return ACTIONS.has(kind)
 
-static func cast_action(host: Node, camera: Camera3D, kind: String, target: Dictionary) -> void:
+static func cast_action(host: Node, camera: Camera3D, kind: String, target: Dictionary, ctx: Dictionary = {}) -> void:
 	if camera == null or not ACTIONS.has(kind):
 		return
 	var fx := SpellFxStyles.new()
 	fx.name = "ActionFx"
 	fx.cam = camera
+	fx.apply_party_ctx(ctx)
 	host.add_child(fx)
 	fx._action(kind, target)
 	fx._started = true
@@ -901,8 +899,15 @@ func _wp_punch(target: Dictionary) -> void:
 func _party_hit() -> void:
 	var right := cam.global_transform.basis.x
 	var up := cam.global_transform.basis.y
+	var on_card := not slot_px.is_empty()       # au-dessus de l'interface : le coup frappe la carte du héros touché
 	var base := cam.global_position + _fwd() * 1.6 - up * 0.15
-	var veil := _sprite(_arcane_tex(), Color(1.0, 0.1, 0.05, 0.0), 6.0, cam.global_position + _fwd() * 1.2)
+	var veil_at := cam.global_position + _fwd() * 1.2
+	var veil_size := 6.0
+	if on_card:
+		base = _slot_pos(victim_idx, 1.6)
+		veil_at = base
+		veil_size = 2.2
+	var veil := _sprite(_arcane_tex(), Color(1.0, 0.1, 0.05, 0.0), veil_size, veil_at)
 	(veil.mat as StandardMaterial3D).no_depth_test = true
 	_add(veil, 0.4, func(u: float):
 		(veil.mat as StandardMaterial3D).albedo_color.a = 0.45 * (1.0 - u) * minf(1.0, u * 12.0))

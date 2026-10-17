@@ -162,6 +162,7 @@ func _ready() -> void:
 	ctrl.combat_won.connect(_show_combat_summary)
 	ctrl.fx.connect(_on_fx)
 	ctrl.fx3d.connect(_on_fx3d)
+	ctrl.fx_hit.connect(_on_fx_hit)
 
 	await Loader.step(0.32, L.t("loading.etape_interface"))
 	var ui := CanvasLayer.new()
@@ -1019,9 +1020,19 @@ func _on_fx(type: String) -> void:
 	if type == "hit" or type == "trap":
 		_shake()
 
-## Modes de sort dont l'effet vise un héros : joués sur sa carte plutôt que dans la vue.
-const CARD_FX_MODES := ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"]
 var card_fx: CardFxOverlay
+
+## Coup de monstre sur un héros : l'effet frappe sa carte (au-dessus de l'interface) ; sinon l'effet d'origine.
+func _on_fx_hit(char_id: String) -> void:
+	var idx := -1
+	for i in gs.party.size():
+		if str(gs.party[i].id) == char_id:
+			idx = i
+	if card_fx != null and idx >= 0 and CardFxOverlay.usable() \
+			and card_fx.play_action("hit", {"victim": idx, "solo": gs.party.size() == 1}, rig.camera, layout.sub_container, layout.hud.card_centers()):
+		_shake()
+		return
+	_on_fx("hit")
 
 func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
 	var st: CombatStage = level_node.stage if level_node != null else null
@@ -1038,8 +1049,8 @@ func _on_fx3d(spell_id: String, ctx: Dictionary = {}) -> void:
 				break
 	c["targets"] = st.target_points() if active else []
 	c["solo"] = gs.party.size() == 1
-	# effets de monstres, soins et protections : joués au-dessus de l'interface pour atteindre les cartes du groupe (option « Effets sur les cartes »)
-	if card_fx != null and (CARD_FX_MODES.has(str(c.get("mode", "damage"))) or bool(c.get("fromMonster", false))):
+	# tous les sorts et capacités : joués au-dessus de l'interface, depuis la carte du lanceur / jusqu'à la carte visée (option « Effets sur les cartes »)
+	if card_fx != null:
 		if CardFxOverlay.usable() and card_fx.play(spell_id, tgt, c, rig.camera, layout.sub_container, layout.sub_viewport, layout.hud.card_centers()):
 			return
 	SpellFxLibrary.cast(layout.world, rig.camera, spell_id, tgt, c)

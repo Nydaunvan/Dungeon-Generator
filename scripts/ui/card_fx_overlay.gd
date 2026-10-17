@@ -60,9 +60,7 @@ static func usable() -> bool:
 func play(spell_id: String, target: Dictionary, ctx: Dictionary, main_cam: Camera3D, view: Control, view_vp: SubViewport, centers: Array) -> bool:
 	if main_cam == null or view == null or view_vp == null or centers.is_empty() or size.y < 50.0 or view.size.y < 50.0:
 		return false
-	# même nombre de pixels par unité de monde qu'à l'écran de jeu : tan(fov_couche / 2) = tan(fov_vue / 2) × (hauteur couche / hauteur vue)
-	_cam.fov = rad_to_deg(2.0 * atan(tan(deg_to_rad(main_cam.fov * 0.5)) * size.y / view.size.y))
-	_cam.global_transform = Transform3D.IDENTITY
+	_frame(main_cam, view)
 	var c := ctx.duplicate()
 	c["slotPx"] = centers.map(func(p): return (p as Vector2) - global_position)
 	var tgt := _remap(target, main_cam, view, view_vp)
@@ -78,6 +76,24 @@ func play(spell_id: String, target: Dictionary, ctx: Dictionary, main_cam: Camer
 	_idle = 0.0
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	SpellFxLibrary.cast(_world, _cam, spell_id, tgt, c)
+	return true
+
+## Caméra de la couche : même nombre de pixels par unité de monde qu'à l'écran de jeu, tan(fov_couche / 2) = tan(fov_vue / 2) × (hauteur couche / hauteur vue).
+func _frame(main_cam: Camera3D, view: Control) -> void:
+	_cam.fov = rad_to_deg(2.0 * atan(tan(deg_to_rad(main_cam.fov * 0.5)) * size.y / view.size.y))
+	_cam.global_transform = Transform3D.IDENTITY
+
+## Effet d'action (coup de monstre sur un héros) : `ctx.victim` = place du héros touché.
+func play_action(kind: String, ctx: Dictionary, main_cam: Camera3D, view: Control, centers: Array) -> bool:
+	if main_cam == null or view == null or centers.is_empty() or size.y < 50.0 or view.size.y < 50.0:
+		return false
+	_frame(main_cam, view)
+	var c := ctx.duplicate()
+	c["slotPx"] = centers.map(func(p): return (p as Vector2) - global_position)
+	visible = true
+	_idle = 0.0
+	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	SpellFxStyles.cast_action(_world, _cam, kind, {}, c)
 	return true
 
 ## Point du monde de la vue → point de la couche à l'écran identique (même profondeur).

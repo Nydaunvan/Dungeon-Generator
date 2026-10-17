@@ -63,4 +63,4 @@ Structure du code, vérifications automatiques, publication des versions, partie
 Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQUE.md#sous-dossiers). La branche `migration/donnees` est la branche de développement : les versions sont publiées depuis elle.
 - Administration : onglet Tests, lancer une partie de test de n'importe quelle règle de défi, au format semaine ou jour (hors classement).
 - Héros solitaire : dégâts ×2 (attaques et sorts) en plus des PV ×2, héros affiché au centre du bandeau d'équipe.
-- Effets des monstres et des soins affichés jusque sur les cartes du groupe (option « Effets sur les cartes », essai).
+- Tous les effets de sorts partent des cartes du groupe ou y arrivent, par-dessus l'interface ; le coup d'un monstre frappe la carte du héros touché ; l'attaque normale reste sur le monstre (option « Effets sur les cartes », essai).

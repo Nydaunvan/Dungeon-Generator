@@ -9,6 +9,8 @@ signal game_over
 signal combat_won(summary: Dictionary)
 signal fx(type: String)
 signal fx3d(spell_id: String, ctx: Dictionary)
+## Coup de monstre sur un héros précis : l'effet se joue sur sa carte.
+signal fx_hit(char_id: String)
 
 const MONSTER_DELAY := 0.85
 
@@ -315,7 +317,10 @@ func _drain() -> void:
 		match str(e.type):
 			"fx":
 				Crumbs.mark("effet %s" % str(e.fx))
-				fx.emit(str(e.fx))
+				if str(e.fx) == "hit" and e.has("char"):
+					fx_hit.emit(str(e.char))
+				else:
+					fx.emit(str(e.fx))
 			"fx3d":
 				Crumbs.mark("effet3d %s" % str(e.spell))
 				fx3d.emit(str(e.spell), e.get("ctx", {}))

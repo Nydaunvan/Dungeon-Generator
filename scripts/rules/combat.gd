@@ -795,7 +795,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.add_log(L.fa(L.t("rules.combat.attaque_et_blesse_degats"), [_mname(def), victim.name, dmg, " 😡" if st.enraged else ""]), true)
 	Sound.sfx("monster_attack")
-	events.append({"type": "fx", "fx": "hit"})
+	events.append({"type": "fx", "fx": "hit", "char": str(victim.id)})
 	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
@@ -833,7 +833,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 		"status": str(spell.get("statusEffect", "")), "ally": victim_idx, "caster": 0, "solo": gs.party.size() == 1}
 	mfx.merge(SpellFxLibrary.fx_keys(spell))
 	events.append({"type": "fx3d", "spell": str(spell.get("id", "")), "ctx": mfx})
-	events.append({"type": "fx", "fx": "hit"})
+	events.append({"type": "fx", "fx": "hit", "char": str(victim.id)})
 	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:

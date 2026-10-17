@@ -33,6 +33,20 @@ func _ready() -> void:
 	# position d'une place : doit se reprojeter sur le centre de la carte 2 (700, 700)
 	var back := ov._cam.unproject_position(ov._cam.project_position(centers[2] - ov.global_position, 1.5))
 	var fov_ok := absf(ov._cam.fov - rad_to_deg(2.0 * atan(tan(deg_to_rad(35.0)) * ov.size.y / 500.0))) < 0.01
-	var good: bool = ok and fx_nodes >= 1 and back.distance_to(centers[2]) < 1.5 and fov_ok and ov.visible
-	print("CARDFX ok=", ok, " effets=", fx_nodes, " ecart=", back.distance_to(centers[2]), " fov=", ov._cam.fov, " -> ", "OK" if good else "ECHEC")
+	# sort d'un héros (carte 1) : l'effet part de sa carte ; coup de monstre sur la carte 3
+	var ctx2 := {"style": "arcane", "mode": "damage", "fx": "", "caster": 1, "ally": 1, "solo": false}
+	var ok2 := ov.play("y", tgt, ctx2, cam, view, vp, centers)
+	var ok3 := ov.play_action("hit", {"victim": 3, "solo": false}, cam, view, centers)
+	await get_tree().process_frame
+	var n_fx := 0
+	var start_ok := false
+	for ch in ov._world.get_children():
+		if ch is SpellFx3D:
+			n_fx += 1
+			var f := ch as SpellFx3D
+			if f.caster_idx == 1 and f.slot_px.size() == 4:
+				var st: Vector3 = f._start_point()
+				start_ok = ov._cam.unproject_position(st).distance_to(centers[1]) < 1.5
+	var good: bool = ok2 and ok3 and n_fx >= 3 and start_ok and ok and fx_nodes >= 1 and back.distance_to(centers[2]) < 1.5 and fov_ok and ov.visible
+	print("CARDFX ok=", ok, " sort=", ok2, " coup=", ok3, " depart_carte=", start_ok, " n=", n_fx, " effets=", fx_nodes, " ecart=", back.distance_to(centers[2]), " fov=", ov._cam.fov, " -> ", "OK" if good else "ECHEC")
 	get_tree().quit(0 if good else 1)

@@ -12,11 +12,22 @@ var cam: Camera3D
 var solo_party: bool = false
 ## Centres des cartes du groupe en pixels de la fenêtre (couche d'effets au-dessus de l'interface, CardFxOverlay) ; vide : places sous la vue 3D.
 var slot_px: Array = []
+var caster_idx: int = -1       ## place du héros qui lance le sort (ses effets partent de sa carte quand `slot_px` est connu)
+var victim_idx: int = 0        ## place du héros touché (coup de monstre)
 
 ## Lit dans le contexte de l'effet où se trouvent les héros (héros seul, cartes réelles).
 func apply_party_ctx(ctx: Dictionary) -> void:
 	solo_party = bool(ctx.get("solo", false))
 	slot_px = ctx.get("slotPx", [])
+	caster_idx = int(ctx.get("caster", -1))
+	victim_idx = int(ctx.get("victim", 0))
+
+## Point de départ des effets des héros : sa carte quand l'effet joue au-dessus de l'interface, sinon le bas de la vue.
+func _start_point() -> Vector3:
+	if not slot_px.is_empty() and caster_idx >= 0:
+		var k := 0 if solo_party else mini(caster_idx, slot_px.size() - 1)
+		return cam.project_position(slot_px[k], 0.6)
+	return cam.global_position + _fwd() * 0.6 - cam.global_transform.basis.y * 0.42
 var _parts: Array = []     # {node, mat, t0, dur, fn}
 var _t: float = 0.0
 
@@ -269,7 +280,7 @@ func _arcane(target: Dictionary) -> void:
 	var fwd := _fwd()
 	var right := cam.global_transform.basis.x
 	var up := cam.global_transform.basis.y
-	var start := cam.global_position + fwd * 0.6 - up * 0.42
+	var start := _start_point()
 	var end: Vector3 = start + fwd * 4.0
 	if not target.is_empty():
 		end = _toward_cam(target.pos)
