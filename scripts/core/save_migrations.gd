@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 16
+const SCHEMA := 17
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -68,6 +68,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v14_to_v15(d))
 			15:
 				notes.append_array(_v15_to_v16(d))
+			16:
+				notes.append_array(_v16_to_v17(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -459,3 +461,12 @@ static func _bard_icon(list: Variant, key: String) -> int:
 				e["icon"] = "@icon:spr_103"
 				n += 1
 	return n
+
+## v16 → v17 : boss plus costauds (PV, dégâts, récompenses) : réglages ajoutés à la configuration. Les boss déjà générés ne changent pas.
+static func _v16_to_v17(d: Dictionary) -> Array[String]:
+	var cfg = d.get("config")
+	if cfg is Dictionary:
+		for k in {"bossHpMult": 1.8, "bossFinalHpMult": 2.2, "bossDmgPct": 10, "bossRewardPct": 25}:
+			if not (cfg as Dictionary).has(k):
+				cfg[k] = {"bossHpMult": 1.8, "bossFinalHpMult": 2.2, "bossDmgPct": 10, "bossRewardPct": 25}[k]
+	return []

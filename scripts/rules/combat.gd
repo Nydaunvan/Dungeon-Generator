@@ -840,6 +840,7 @@ func _monster_inflict(def: Dictionary, victim: Dictionary) -> void:
 func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, pool: Array) -> void:
 	var victim: Dictionary = pool[GameRng.i("combat") % pool.size()]
 	var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 3)), int(spell.get("dmgMax", 6)))
+	dmg = maxi(1, int(round(dmg * float(def.get("dmgMult", 1.0)))))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
 	dmg = _hero_reduction(victim, dmg, str(spell.get("style", "")) != "physical", Resist.style_key(str(spell.get("style", ""))))

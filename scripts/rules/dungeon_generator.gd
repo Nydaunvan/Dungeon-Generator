@@ -508,6 +508,12 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		"xpReward": maxi(20, int(round((60 + i * 25) * diff_mult * boss_power * party_pow * float(mod.xpMult)))),
 		"goldReward": maxi(15, int(round((30 + i * 15) * diff_mult * boss_power * float(mod.goldMult)))), "opensDoorId": ""}
 	boss.merge(Resist.roll(str(bf[1]), true, 100.0, bool(cfg.get("bossResist", true))), true)
+	# boss plus costauds : PV et dégâts majorés (réglages bossHpMult, bossFinalHpMult, bossDmgPct, bossRewardPct)
+	boss["hpMult"] = float(cfg.get("bossFinalHpMult", 2.2)) if i == num_levels - 1 else float(cfg.get("bossHpMult", 1.8))
+	boss["dmgMult"] = 1.0 + float(cfg.get("bossDmgPct", 10)) / 100.0
+	var rw := 1.0 + float(cfg.get("bossRewardPct", 25)) / 100.0
+	boss["xpReward"] = int(round(int(boss.xpReward) * rw))
+	boss["goldReward"] = int(round(int(boss.goldReward) * rw))
 	boss.merge(MonsterEffects.roll(str(bf[1]), true, 100.0, bool(cfg.get("bossStatus", true)), i), true)       # un boss a toujours un effet
 	monsters.append(boss)
 

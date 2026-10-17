@@ -268,3 +268,6 @@ Correctif : l'effet de statut `lifedrain` (« Vol de vie », dégâts par tour a
 ### Icône du Barde (schéma 16)
 La classe Barde utilise le cor de la planche d'objets (`@icon:spr_103`) à la place de `class_bard.png` (conservé dans assets). Migration 15 → 16 (`SaveMigrations._v15_to_v16`) : classe, groupe de la configuration et héros de la partie, seulement si l'icône était encore l'ancienne.
 
+### Boss plus costauds (schéma 17)
+Les boss des donjons générés reçoivent `hpMult` (réglage `bossHpMult`, 1,8 ; `bossFinalHpMult`, 2,2 pour le boss du dernier niveau) et `dmgMult` (1 + `bossDmgPct` / 100, soit +10 %), et leurs récompenses d'expérience et d'or sont majorées de `bossRewardPct` (25 %). `Stats.monster_derived` applique `hpMult` aux PV et `dmgMult` aux dégâts d'attaque ; `Combat._monster_use_ability` applique `dmgMult` aux dégâts de la capacité. Les boss déjà générés et ceux du donjon d'origine ne changent pas. Réglages dans l'Admin (onglet Général, panneau « Boss des donjons générés »). Migration 16 → 17 (`_v16_to_v17`) : ajoute les quatre réglages. Contrôle : `tools/check_boss_hp.tscn` (par exemple niveau 1 : 124 PV, dernier niveau : 195 PV).
+

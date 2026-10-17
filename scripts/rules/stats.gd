@@ -11,9 +11,13 @@ static func char_base(c: Dictionary) -> Dictionary:
 	return {"maxHp": max_hp, "baseAtkMin": atk_min, "baseAtkMax": atk_max}
 
 static func monster_derived(m: Dictionary) -> Dictionary:
-	var max_hp: float = 5.0 + float(m.get("con", 8)) * 2.8
+	var max_hp: float = (5.0 + float(m.get("con", 8)) * 2.8) * float(m.get("hpMult", 1.0))       # hpMult : boss des donjons générés
 	var atk_min: int = maxi(1, int(floor(float(m.get("force", 8)) / 2.5)))
 	var atk_max: int = atk_min + 1 + int(floor(float(m.get("dex", 8)) / 3.3))
+	var dm := float(m.get("dmgMult", 1.0))
+	if dm != 1.0:
+		atk_min = maxi(1, int(round(atk_min * dm)))
+		atk_max = maxi(atk_min, int(round(atk_max * dm)))
 	return {"maxHp": max_hp, "atkMin": atk_min, "atkMax": atk_max}
 
 

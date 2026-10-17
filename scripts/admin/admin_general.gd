@@ -257,6 +257,25 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_status, true]])
 
+	# ---- Boss des donjons générés
+	b = Form.panel(host, L.t("admin.general.boss_titre"))
+	_h(b, L.t("admin.general.boss_aide"))
+	var bs_hp := Form.num_row(b, L.t("admin.general.boss_pv"), float(cfg.get("bossHpMult", 1.8)), 0.1)
+	var bs_fin := Form.num_row(b, L.t("admin.general.boss_pv_final"), float(cfg.get("bossFinalHpMult", 2.2)), 0.1)
+	var bs_dm := Form.num_row(b, L.t("admin.general.boss_degats"), float(cfg.get("bossDmgPct", 10)))
+	var bs_rw := Form.num_row(b, L.t("admin.general.boss_recompense"), float(cfg.get("bossRewardPct", 25)))
+	var act_boss := func():
+		cfg["bossHpMult"] = _clamp(bs_hp.value, 0.5, 10)
+		cfg["bossFinalHpMult"] = _clamp(bs_fin.value, 0.5, 10)
+		cfg["bossDmgPct"] = _clamp(bs_dm.value, 0, 200)
+		cfg["bossRewardPct"] = _clamp(bs_rw.value, 0, 300)
+		_sv(bs_hp, cfg["bossHpMult"])
+		_sv(bs_fin, cfg["bossFinalHpMult"])
+		_sv(bs_dm, cfg["bossDmgPct"])
+		_sv(bs_rw, cfg["bossRewardPct"])
+		save.call()
+	Form.actions(b, [[L.t("admin.general.enregistrer"), act_boss, true]])
+
 	# ---- Résistances des monstres
 	b = Form.panel(host, L.t("admin.general.resistances"))
 	_h(b, L.t("admin.general.resistances_aide"))
