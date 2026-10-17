@@ -14,6 +14,8 @@ const WANDER_CHANCE_BOSS := 0.10
 const CALM_TICKS := 8
 const CALM_DIST := 6
 const PATROL_GAP := 5
+## À l'arrivée dans un niveau (ou à la reprise d'une sauvegarde) : même répit qu'après un combat, plus long, pour laisser le temps au joueur d'arriver.
+const ARRIVAL_CALM_TICKS := 24
 
 var gs: GameState
 var ctrl: CombatController
@@ -38,6 +40,7 @@ func bind_level(lvl: Dictionary, g: DungeonGrid, v: LevelView) -> void:
 	view = v
 	_zones.clear()
 	_acc = 0.0
+	gs.stats["calmTicks"] = maxi(int(gs.stats.get("calmTicks", 0)), ARRIVAL_CALM_TICKS)
 	# monstres qui ont changé de place lors d'un passage précédent ou avant une sauvegarde
 	var st_all: Dictionary = gs.level_state(lvl).monsters
 	for m in lvl.get("monsters", []):

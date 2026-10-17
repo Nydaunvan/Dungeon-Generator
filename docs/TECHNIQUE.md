@@ -209,3 +209,9 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 - L'aura échantillonne la forme de la lame avec son reflet haut/bas (`sym`) : même luminosité au-dessus et en dessous.
 - Contrôle : `tools/check_loading_bar.tscn`.
 
+
+## Arrivée dans un niveau : jamais d'attaque au pop du joueur
+
+- Génération : aucun monstre à moins de `DungeonGenerator.START_CLEAR` (8) cases du départ ni de l'escalier de retour (la distance n'est réduite que si le niveau n'offre rien d'autre, jamais sous 3) ; un boss reste à 6 cases au moins du départ.
+- Exécution : `Wanderers.bind_level` pose `calmTicks = ARRIVAL_CALM_TICKS` (24 pas de 0,5 s = 12 s), le même répit qu'après un combat : aucun monstre ne poursuit le joueur ni ne s'approche de lui. Valable aussi à la reprise d'une sauvegarde.
+- Contrôle : `tools/check_start_calm.tscn`. Attention : ces règles changent les donjons tirés d'une graine et les pas de monstres ; le vérificateur de parties classées doit rejouer chaque partie avec les règles de sa version.

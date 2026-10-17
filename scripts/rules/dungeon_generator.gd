@@ -401,6 +401,12 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	# monstres
 	var monsters: Array = []
 	var pool := rooms.filter(func(r): return not used.has(_key(r.x, r.y)) and not _near_stairs(grid, r.x, r.y, 3) and not _near_door(doors, r.x, r.y))
+	# aucun monstre près de l'arrivée du joueur : il doit avoir le temps de s'orienter (on ne réduit cette distance que si le niveau n'offre rien d'autre)
+	for clear in [START_CLEAR, 5, 3]:
+		var away := pool.filter(func(r): return absi(int(r.x) - sx) + absi(int(r.y) - sy) >= clear and absi(int(r.x) - int(far.x)) + absi(int(r.y) - int(far.y)) >= clear)
+		if away.size() >= maxi(1, pool.size() / 3):
+			pool = away
+			break
 	var monster_count := maxi(1, int(round(pool.size() / 4.0 * count_mult * float(mod.monsterCountMult))))
 	var base_force := 8.0 + _depth_bonus(i, 3)
 	var base_dex := 8.0 + _depth_bonus(i, 2)
@@ -463,7 +469,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		# aucune salle assez loin des monstres : la salle (hors départ et escalier) la plus éloignée de tous
 		var best_d := -1
 		for r in rooms:
-			if used.has(_key(r.x, r.y)) or (r.x == sx and r.y == sy) or _near_stairs(grid, r.x, r.y, 3):
+			if used.has(_key(r.x, r.y)) or absi(int(r.x) - sx) + absi(int(r.y) - sy) < START_CLEAR - 2 or _near_stairs(grid, r.x, r.y, 3):
 				continue
 			var dmin := 99
 			for m in monsters:
@@ -641,8 +647,8 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		"_fwdX": far.x, "_fwdY": far.y, "_since_fountain": since_fountain}
 
 func _boss_spot_ok(r: Dictionary, sx: int, sy: int, used: Dictionary, monsters: Array, grid: Array, doors: Array, check_door: bool) -> bool:
-	if r.x == sx and r.y == sy:
-		return false
+	if absi(int(r.x) - sx) + absi(int(r.y) - sy) < START_CLEAR - 2:
+		return false         # jamais un boss près de l'arrivée du joueur
 	if used.has(_key(r.x, r.y)) or not _far_from_monsters(r.x, r.y, monsters, BOSS_GAP) or _near_stairs(grid, r.x, r.y, 3):
 		return false
 	return not (check_door and _near_door(doors, r.x, r.y))
@@ -767,6 +773,8 @@ static func _wide_wall(rows: Array, x: int, y: int) -> bool:
 
 static func _wall_at(rows: Array, x: int, y: int) -> bool:
 	return y < 0 or y >= rows.size() or x < 0 or x >= (rows[y] as String).length() or (rows[y] as String)[x] == "#"
+
+const START_CLEAR := 8     ## distance minimale (en cases) entre l'arrivée du joueur et un monstre à la création du niveau
 
 static func _wall_sides(rows: Array, x: int, y: int) -> int:
 	var n := 0
