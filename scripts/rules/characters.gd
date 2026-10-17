@@ -26,14 +26,29 @@ static func instantiate_item(lib_id: String, cfg: Dictionary) -> Dictionary:
 			return inst
 	return {}
 
-static func start_weapon(t: Dictionary, cfg: Dictionary) -> Dictionary:
-	var cls := class_def(cfg, str(t.get("classId", "")))
+## Arme emblématique de chaque classe (type d'arme de départ, toujours le même) ; les classes absentes prennent leur premier type autorisé.
+const SIGNATURE_WEAPON := {
+	"class_warrior": "sword", "class_archer": "bow", "class_rogue": "dagger", "class_mage": "staff", "class_priest": "mace",
+	"class_bard": "sword", "class_druid": "staff", "class_skald": "axe", "class_minstrel": "sword", "class_berserker": "axe",
+	"class_paladin": "sword", "class_magearcher": "bow", "class_bladedancer": "dagger", "class_thief": "dagger", "class_assassin": "dagger",
+	"class_elementalist": "staff", "class_warlock": "staff", "class_cleric": "mace", "class_crusader": "sword",
+	"class_warden": "staff", "class_stormcaller": "staff"}
+
+static func signature_weapon_type(cls: Dictionary) -> String:
 	var types: Array = cls.get("allowedWeaponTypes", [])
 	if types.is_empty():
+		return ""
+	var want := str(SIGNATURE_WEAPON.get(str(cls.get("id", "")), ""))
+	return want if types.has(want) else str(types[0])
+
+static func start_weapon(t: Dictionary, cfg: Dictionary) -> Dictionary:
+	var cls := class_def(cfg, str(t.get("classId", "")))
+	var wtype := signature_weapon_type(cls)
+	if wtype == "":
 		return {}
-	var icon: String = {"sword": "⚔️", "axe": "🪓", "dagger": "🗡️", "staff": "🔱", "bow": "🏹", "mace": "🔨"}.get(str(types[0]), "⚔️")
+	var icon: String = {"sword": "⚔️", "axe": "🪓", "dagger": "🗡️", "staff": "🔱", "bow": "🏹", "mace": "🔨"}.get(wtype, "⚔️")
 	return {"id": "start_" + str(t.id), "name": L.t("rules.characters.arme_de_depart"), "icon": icon, "type": "weapon",
-		"weaponType": types[0], "bonusAtkMin": 1, "bonusAtkMax": 2}
+		"weaponType": wtype, "bonusAtkMin": 1, "bonusAtkMax": 2}
 
 static func create(t: Dictionary, cfg: Dictionary) -> Dictionary:
 	var c: Dictionary = t.duplicate(true)

@@ -863,8 +863,11 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 				portrait = choice(free)
 				used_portraits[portrait] = true
 		var weapon_id := ""
-		var wt: Array = cls.get("allowedWeaponTypes", [])
-		var cands: Array = (cfg.get("itemLibrary", []) as Array).filter(func(it): return it.get("type") == "weapon" and wt.has(it.get("weaponType")))
+		var wt: String = Characters.signature_weapon_type(cls)   # arme emblématique de la classe : bâton pour le mage et le druide, épée pour le guerrier…
+		var cands: Array = (cfg.get("itemLibrary", []) as Array).filter(func(it): return it.get("type") == "weapon" and wt == str(it.get("weaponType")))
+		if cands.is_empty():   # bibliothèque personnalisée sans arme de ce type : repli sur un type autorisé
+			var allowed: Array = cls.get("allowedWeaponTypes", [])
+			cands = (cfg.get("itemLibrary", []) as Array).filter(func(it): return it.get("type") == "weapon" and allowed.has(it.get("weaponType")))
 		if not cands.is_empty():
 			weapon_id = str(choice(cands).id)
 		var known: Array = []
