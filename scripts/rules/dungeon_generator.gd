@@ -553,7 +553,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 				"armor": items.append(make_armor("ar_gen_%d_force" % i, L.t("rules.dungeon_generator.equipement_trouve"), r.x, r.y))
 				_: items.append(make_jewelry("jw_gen_%d_force" % i, L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
 	if not key_placed.is_empty():
-		items.append({"id": "key_gen_%d" % i, "name": L.t("rules.dungeon_generator.cle_trouvee"), "icon": "@icon:misc_key", "x": key_placed.x, "y": key_placed.y, "type": "key", "opensDoorId": key_placed.doorId})
+		items.append({"id": "key_gen_%d" % i, "name": L.fa(L.t("rules.dungeon_generator.cle_du_niveau"), i + 1), "icon": "@icon:misc_key", "x": key_placed.x, "y": key_placed.y, "type": "key", "opensDoorId": key_placed.doorId})
 	var spells: Array = cfg.get("spells", [])
 	if not spells.is_empty() and randf() < 0.4:
 		var r: Dictionary = take.call()

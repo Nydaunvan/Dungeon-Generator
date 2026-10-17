@@ -719,7 +719,7 @@
   "rules.dungeon_generator.arme_trouvee": "Arme trouvée",
   "rules.dungeon_generator.equipement_trouve": "Équipement trouvé",
   "rules.dungeon_generator.bijou_trouve": "Bijou trouvé",
-  "rules.dungeon_generator.cle_trouvee": "Clé trouvée",
+  "rules.dungeon_generator.cle_du_niveau": "Clé du niveau %d",
   "common.parchemin_de": "Parchemin de ",
   "rules.dungeon_generator.fontaine_de_vie": "Fontaine de vie",
   "rules.dungeon_generator.arme_du_butin": "Arme du butin",

@@ -719,7 +719,7 @@
   "rules.dungeon_generator.arme_trouvee": "Weapon found",
   "rules.dungeon_generator.equipement_trouve": "Equipment found",
   "rules.dungeon_generator.bijou_trouve": "Jewel found",
-  "rules.dungeon_generator.cle_trouvee": "Key found",
+  "rules.dungeon_generator.cle_du_niveau": "Key to level %d",
   "common.parchemin_de": "Scroll of ",
   "rules.dungeon_generator.fontaine_de_vie": "Fountain of life",
   "rules.dungeon_generator.arme_du_butin": "Loot weapon",
