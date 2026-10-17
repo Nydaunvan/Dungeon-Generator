@@ -106,11 +106,16 @@ func refresh() -> void:
 		return
 	_combat_live = true
 	# se tourner vers l'adversaire s'il n'est pas en face
+	_face_engaged()
+	_run_turns()
+
+## Se tourne vers l'adversaire adjacent s'il n'est pas en face (par exemple le monstre qui attendait sur le côté ou derrière
+## quand le premier combat se termine) : sinon le combat reste engagé mais la scène est vide et les attaques ne touchent rien.
+func _face_engaged() -> void:
 	var eng := combat.engaged()
-	if int(eng.dir) != rig.dir:
+	if not eng.is_empty() and int(eng.dir) != rig.dir:
 		rig.face(int(eng.dir))
 		sync_position()
-	_run_turns()
 
 ## À chaque pas hors combat, les statuts des personnages avancent d'un tour (poison, brûlure…).
 func step_tick() -> void:
@@ -269,6 +274,7 @@ func _after_action(hold: String = "") -> void:
 	_turn_elapsed = 0.0
 	changed.emit()
 	if model_in_combat():
+		_face_engaged()
 		_run_turns()
 
 func _run_turns() -> void:
@@ -277,6 +283,7 @@ func _run_turns() -> void:
 	_busy = true
 	Crumbs.mark("combat tour (%s)" % " ".join(combat.upcoming(6).map(func(k): return str(k).replace("char_", "h").replace("mon_", "m"))))
 	while model_in_combat():
+		_face_engaged()
 		var r := combat.advance()
 		await _drain()
 		if r.kind != "monster":
