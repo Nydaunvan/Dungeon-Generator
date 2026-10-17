@@ -111,6 +111,41 @@ static func icons(host: Node) -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	vp.queue_free()
 
+## Scripts d'effets dont les textures et maillages sont fabriqués à la demande (fonctions statiques sans argument qui les renvoient).
+const FX_SCRIPTS := ["spell_fx_3d", "spell_fx_kit", "spell_fx_styles", "spell_fx_nature", "spell_fx_bard", "spell_fx_holy", "spell_fx_shadow", "spell_fx_physical", "spell_fx_fire", "spell_fx_ice", "spell_fx_arcane"]
+
+## Fabrique d'avance les textures et maillages des effets de sorts (images procédurales calculées pixel par pixel), UNE par image :
+## la préparation des effets n'a plus qu'à les trouver prêts, et l'écran de chargement ne se fige plus pour les calculer.
+## (Sur un fil de travail, ces fonctions déclenchent des erreurs d'affichage du texte : elles restent sur le fil principal.)
+static func pregen_effect_resources(tree: SceneTree) -> void:
+	# la grande texture de runes (512², calcul pur) est la seule à bloquer ~90 ms : elle se calcule sur un fil de travail
+	var rune := WorkerThreadPool.add_task(func(): load("res://scripts/dungeon/spell_fx_kit.gd")._rune_tex())
+	await _pregen_others(tree)
+	while not WorkerThreadPool.is_task_completed(rune):
+		await tree.process_frame
+	WorkerThreadPool.wait_for_task_completion(rune)
+
+static func _pregen_others(tree: SceneTree) -> void:
+	for n in FX_SCRIPTS:
+		var scr := load("res://scripts/dungeon/%s.gd" % n) as GDScript
+		if scr == null:
+			continue
+		for m in scr.get_script_method_list():
+			var mn := str(m.get("name", ""))
+			if int(m.get("flags", 0)) & METHOD_FLAG_STATIC == 0 or not (m.get("args", []) as Array).is_empty() or not mn.begins_with("_"):
+				continue
+			var ret: Dictionary = m.get("return", {})
+			if int(ret.get("type", 0)) != TYPE_OBJECT:
+				continue
+			if mn == "_rune_tex":
+				continue
+			if str(ret.get("class_name", "")) in ["Texture2D", "ArrayMesh", "Mesh", "ImageTexture"]:
+				var t0 := Time.get_ticks_usec()
+				scr.call(mn)
+				if OS.get_environment("LOAD_PROBE") != "":
+					print("PREGEN ", n, ".", mn, " ", (Time.get_ticks_usec() - t0) / 1000, " ms")
+				await tree.process_frame
+
 static func run(host: Node, progress: Callable) -> void:
 	var tree := host.get_tree()
 	var cfg: Dictionary = Data.active()

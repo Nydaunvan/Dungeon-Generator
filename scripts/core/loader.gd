@@ -130,6 +130,7 @@ func boot() -> void:
 	# 4. textures procédurales et matériaux des thèmes
 	screen.set_progress(base, phases[3].label)
 	await _build_decor()
+	await WarmUp.pregen_effect_resources(get_tree())       # textures d'effets de sorts : une par image, pas toutes d'un coup pendant la préparation des effets
 	base += float(phases[3].w)
 	# 5. shaders : une mini-scène (murs, portes, torches, fontaine, monstres, sorts) est dessinée hors écran une fois
 	screen.set_progress(base, phases[4].label)
@@ -249,13 +250,37 @@ func _load_images(base: float, weight: float) -> void:
 	for d in ASSET_DIRS:
 		for n in _list("res://assets/" + d, IMAGE_EXT):
 			paths.append("res://assets/%s/%s" % [d, n])
+	await _load_threaded(paths, base, weight)
+
+## Charge des ressources sur des fils de travail : le fil principal (donc l'épée) ne fait que ramasser les résultats, une image à la fois,
+## au lieu de bloquer l'affichage pendant la lecture et le décodage de chaque fichier.
+func _load_threaded(paths: Array, base: float, weight: float, window: int = 6) -> void:
 	var total := maxi(paths.size(), 1)
-	for i in paths.size():
-		var res := load(paths[i])
-		if res != null:
-			_keep.append(res)
-		screen.set_progress(base + weight * float(i + 1) / total)
-		await _slice()
+	var pending: Array = []
+	var next := 0
+	var done := 0
+	while done < paths.size():
+		while next < paths.size() and pending.size() < window:
+			var p: String = paths[next]
+			next += 1
+			if ResourceLoader.load_threaded_request(p, "", false, ResourceLoader.CACHE_MODE_REUSE) == OK:
+				pending.append(p)
+			else:
+				done += 1
+		var still: Array = []
+		for p in pending:
+			var st := ResourceLoader.load_threaded_get_status(p)
+			if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				still.append(p)
+				continue
+			if st == ResourceLoader.THREAD_LOAD_LOADED:
+				var res := ResourceLoader.load_threaded_get(p)
+				if res != null:
+					_keep.append(res)
+			done += 1
+		pending = still
+		screen.set_progress(base + weight * float(done) / total)
+		await get_tree().process_frame
 	screen.set_progress(base + weight)
 
 ## Compile chaque script du jeu puis charge les scènes principales, un fichier à la fois (l'écran reste animé).
@@ -264,13 +289,7 @@ func _preload_code(base: float, weight: float) -> void:
 	_collect("res://scripts", ["gd"], paths)
 	for sc in ["main", "admin", "home"]:
 		paths.append("res://scenes/%s.tscn" % sc)
-	var total := maxi(paths.size(), 1)
-	for i in paths.size():
-		var res := load(paths[i])
-		if res != null:
-			_keep.append(res)
-		screen.set_progress(base + weight * float(i + 1) / total)
-		await _slice()
+	await _load_threaded(paths, base, weight, 4)
 
 func _collect(dir: String, exts: Array, out: Array) -> void:
 	for n in ResourceLoader.list_directory(dir):

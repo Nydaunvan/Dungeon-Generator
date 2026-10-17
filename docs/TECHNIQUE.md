@@ -199,5 +199,7 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 - `LoadingScreen._advance` : la barre (donc l'épée) avance à vitesse progressive (accélération limitée, `ACCEL`), rattrape l'avancement réel sans à-coup, et continue de ramper (`CREEP`) jusqu'à `LEAD` devant lui pendant une longue étape, sans jamais reculer ni dépasser 98,5 % avant la fin réelle.
 - Les animations (`SwordBar`, sceau) bornent le pas de temps à 50 ms : une image longue ne fait pas sauter l'aura.
 - `Loader._slice` et `Sound` rendent la main toutes les ~5 ms (au lieu de 7-8) ; `Loader._wait_full` laisse la barre finir de se remplir avant de lever le rideau.
+- Aucun gros bloc sur le fil principal (l'animation interne de l'épée tourne sur ce fil) : images et scripts sont chargés par `ResourceLoader.load_threaded_request` (`Loader._load_threaded`, fenêtre de 4 à 6 requêtes, sondage à chaque image) ; les sons sont synthétisés dans une seule tâche `WorkerThreadPool` (`Sound.preload_all`, progression pondérée) ; les textures procédurales d'effets sont fabriquées d'avance, une par image (`WarmUp.pregen_effect_resources`), sauf la grande texture de runes (512², calcul pur) qui part sur un fil de travail. Les autres fabriques ne doivent PAS passer sur un fil (erreurs de texte, plantage).
+- Mesure : images les plus longues ≤ 20 ms en chargement ; restent le décor (1 image ~130 ms) et la compilation des shaders par le GPU pendant la préparation des effets.
 - Contrôle : `tools/check_loading_bar.tscn`.
 

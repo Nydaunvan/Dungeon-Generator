@@ -463,17 +463,26 @@ func preload_all(progress: Callable = Callable()) -> void:
 	var total := 0.0
 	for j in jobs:
 		total += float(j.w)
-	var done := 0.0
-	_yielding = true
-	_last_yield_us = Time.get_ticks_usec()
-	var t0 := Time.get_ticks_msec()
-	for j in jobs:
-		if progress.is_valid():
-			progress.call(done / total, j.label)
-		await j.fn.call()
-		done += float(j.w)
-		await _tick()
+	# Toute la synthèse tourne sur un fil de travail : le fil principal (et l'épée de l'écran de chargement) ne fait que lire l'avancement.
+	# Personne d'autre ne touche à `_cache` pendant ce temps (écran de chargement) ; `_yielding` reste faux, donc `_tick` ne suspend rien.
 	_yielding = false
+	var t0 := Time.get_ticks_msec()
+	var state := {"i": 0}
+	var tid := WorkerThreadPool.add_task(func():
+		for k in jobs.size():
+			state["i"] = k
+			var fn: Callable = jobs[k].fn
+			fn.call()
+		state["i"] = jobs.size())
+	var done_w: Array = [0.0]       # poids cumulé avant chaque travail
+	for j in jobs:
+		done_w.append(float(done_w[done_w.size() - 1]) + float(j.w))
+	while not WorkerThreadPool.is_task_completed(tid):
+		var k := mini(int(state["i"]), jobs.size() - 1)
+		if progress.is_valid():
+			progress.call(float(done_w[k]) / total, jobs[k].label)
+		await get_tree().process_frame
+	WorkerThreadPool.wait_for_task_completion(tid)
 	preloaded = true
 	if progress.is_valid():
 		progress.call(1.0, "")
