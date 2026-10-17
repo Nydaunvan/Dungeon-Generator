@@ -53,6 +53,7 @@ var difficulty: String
 var run_bonus: int = 0
 var diff_mult: float = 1.0
 var lvl_i: int = 0   # index du niveau en cours de génération
+var _legend_pity: float = 0.0   # points de chance de légendaire gagnés par les gardiens sans légendaire
 
 func _init(config: Dictionary, diff: String, run: int, mods: Array) -> void:
 	cfg = config
@@ -205,14 +206,22 @@ func flavor(list: Array, fallback: String) -> Dictionary:
 	var label := _label_for(sprite)
 	return {"name": label if label != "" else fallback, "icon": ("@icon:spr_%d" % sprite) if label != "" else "💎"}
 
+## Tire la rareté d'un objet généré (voir `Rarity.weights`) et la lui applique : bonus multipliés et capacités.
+func roll_rarity(item: Dictionary, source: String) -> Dictionary:
+	if source == "":
+		return item
+	var tier := Rarity.roll(Rarity.weights(source, lvl_i, run_bonus, difficulty), func(): return randf())
+	return Rarity.apply(item, tier, func(): return randf())
+
+## Chance qu'un objet légendaire soit mythique : croît avec le niveau, le numéro de partie et la difficulté.
+func mythic_chance() -> float:
+	return clampf(0.04 * lvl_i + 0.08 * run_bonus + (0.1 if difficulty == "hardcore" else 0.0), 0.0, 0.4)
+
+## Fait de l'objet un légendaire (ou, plus rarement, un mythique) : nom unique, capacités du palier, bonus ×1,7 (×2 pour un mythique).
 func apply_legendary(item: Dictionary) -> Dictionary:
-	item["legendary"] = true
+	var tier := "mythic" if randf() < mythic_chance() else "legendary"
+	Rarity.upgrade_to(item, tier, func(): return randf())
 	item["name"] = choice(LEGENDARY_NAMES)
-	item["legendaryPerk"] = choice(LEGENDARY_PERKS)
-	item["legendaryValue"] = randi_range(15, 25) if item.legendaryPerk == "crit" else randi_range(12, 20)
-	for k in ["bonusAtkMin", "bonusAtkMax", "bonusHp", "bonusSpellDmg", "bonusForce", "bonusDex", "bonusCon", "bonusInt"]:
-		if item.get(k, 0):
-			item[k] = int(round(int(item[k]) * 1.4))
 	return item
 
 func _secondary(base: Dictionary, pool: Array) -> Dictionary:
@@ -256,23 +265,23 @@ func _item(id: String, fl: Dictionary, x: int, y: int, type: String, extra: Dict
 	it.merge(extra, true)
 	return it
 
-func make_weapon(id: String, fallback: String, x: int, y: int, mn: int, mx: int, scale: float = 1.0) -> Dictionary:
+func make_weapon(id: String, fallback: String, x: int, y: int, mn: int, mx: int, scale: float = 1.0, source: String = "floor") -> Dictionary:
 	var wt: String = choice(WEAPON_TYPES)
 	var fl := flavor(EQUIP_ICONS.get(wt, EQUIP_ICONS.sword), fallback)
 	var ex := {"weaponType": wt, "bonusAtkMin": int(round(mn * scale)), "bonusAtkMax": int(round(mx * scale))}
 	ex.merge(weapon_stats(wt), true)
-	return _item(id, fl, x, y, "weapon", ex)
+	return roll_rarity(_item(id, fl, x, y, "weapon", ex), source)
 
-func make_armor(id: String, fallback: String, x: int, y: int, scale: float = 1.0) -> Dictionary:
+func make_armor(id: String, fallback: String, x: int, y: int, scale: float = 1.0, source: String = "floor") -> Dictionary:
 	var slot: String = choice(ARMOR_SLOTS)
 	var fl := flavor(EQUIP_ICONS.get(slot, EQUIP_ICONS.body), fallback)
 	var ex := {"slot": slot}
 	ex.merge(_scaled(armor_stats(), scale) if scale != 1.0 else armor_stats(), true)
-	return _item(id, fl, x, y, "armor", ex)
+	return roll_rarity(_item(id, fl, x, y, "armor", ex), source)
 
-func make_jewelry(id: String, fallback: String, x: int, y: int, scale: float = 1.0) -> Dictionary:
+func make_jewelry(id: String, fallback: String, x: int, y: int, scale: float = 1.0, source: String = "floor") -> Dictionary:
 	var fl := flavor(EQUIP_ICONS.jewelry, fallback)
-	return _item(id, fl, x, y, "jewelry", _scaled(armor_stats(), scale) if scale != 1.0 else armor_stats())
+	return roll_rarity(_item(id, fl, x, y, "jewelry", _scaled(armor_stats(), scale) if scale != 1.0 else armor_stats()), source)
 
 # ------------------------------------------------------------------ niveaux
 
@@ -381,9 +390,9 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 				var rtype: String = choice(["weapon", "armor", "jewelry"])
 				var reward: Dictionary
 				match rtype:
-					"weapon": reward = make_weapon("reward_item_%d" % i, L.t("rules.dungeon_generator.arme_de_la_salle_secrete"), room.x, room.y, 4 + i * 2 + run_bonus, 6 + i * 2 + run_bonus * 2, 1.35)
-					"armor": reward = make_armor("reward_item_%d" % i, L.t("rules.dungeon_generator.equipement_de_la_salle_secrete"), room.x, room.y, 1.35)
-					_: reward = make_jewelry("reward_item_%d" % i, L.t("rules.dungeon_generator.bijou_de_la_salle_secrete"), room.x, room.y, 1.35)
+					"weapon": reward = make_weapon("reward_item_%d" % i, L.t("rules.dungeon_generator.arme_de_la_salle_secrete"), room.x, room.y, 4 + i * 2 + run_bonus, 6 + i * 2 + run_bonus * 2, 1.35, "reward")
+					"armor": reward = make_armor("reward_item_%d" % i, L.t("rules.dungeon_generator.equipement_de_la_salle_secrete"), room.x, room.y, 1.35, "reward")
+					_: reward = make_jewelry("reward_item_%d" % i, L.t("rules.dungeon_generator.bijou_de_la_salle_secrete"), room.x, room.y, 1.35, "reward")
 				var base_pct: float = 55.0 if difficulty == "hardcore" else (35.0 if difficulty == "hard" else float(cfg.get("legendaryChancePct", 25)) * 0.9)
 				if randf() < minf(1.0, base_pct * run_escalation / 100.0):
 					apply_legendary(reward)
@@ -579,9 +588,9 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		match choice(["potion", "potion_sta", "weapon", "armor", "jewelry"]):
 			"potion": loot = {"id": lid, "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": sx, "y": sy, "type": "potion", "heal": 10 + i * 4 + run_bonus * 2}
 			"potion_sta": loot = {"id": lid, "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": sx, "y": sy, "type": "potion", "staminaRestore": 15 + i * 5 + run_bonus * 3}
-			"weapon": loot = make_weapon(lid, L.t("rules.dungeon_generator.arme_du_butin"), sx, sy, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2)
-			"armor": loot = make_armor(lid, L.t("rules.dungeon_generator.equipement_du_butin"), sx, sy)
-			_: loot = make_jewelry(lid, L.t("rules.dungeon_generator.bijou_du_butin"), sx, sy)
+			"weapon": loot = make_weapon(lid, L.t("rules.dungeon_generator.arme_du_butin"), sx, sy, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2, 1.0, "monster")
+			"armor": loot = make_armor(lid, L.t("rules.dungeon_generator.equipement_du_butin"), sx, sy, 1.0, "monster")
+			_: loot = make_jewelry(lid, L.t("rules.dungeon_generator.bijou_du_butin"), sx, sy, 1.0, "monster")
 		loot["startHidden"] = true
 		items.append(loot)
 		mon["lootItemId"] = lid
@@ -592,12 +601,16 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var legend_pct: float = 100.0 if mod.forceLegendary else minf(100.0, roundf(legend_base * run_escalation))
 	var boss_loot: Dictionary
 	match choice(["weapon", "armor", "jewelry"]):
-		"weapon": boss_loot = make_weapon("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 3 + i * 2 + run_bonus, 5 + i * 2 + run_bonus * 2)
-		"armor": boss_loot = make_armor("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 1.3)
-		_: boss_loot = make_jewelry("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 1.3)
+		"weapon": boss_loot = make_weapon("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 3 + i * 2 + run_bonus, 5 + i * 2 + run_bonus * 2, 1.0, "boss")
+		"armor": boss_loot = make_armor("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 1.3, "boss")
+		_: boss_loot = make_jewelry("loot_boss_%d" % i, L.t("rules.dungeon_generator.butin_du_gardien"), sx, sy, 1.3, "boss")
 	boss_loot["startHidden"] = true
+	legend_pct = minf(100.0, legend_pct + _legend_pity)   # « pitié » : chaque gardien sans légendaire rapproche le prochain
 	if randf() < legend_pct / 100.0:
 		apply_legendary(boss_loot)
+		_legend_pity = 0.0
+	else:
+		_legend_pity = minf(40.0, _legend_pity + 8.0)
 	items.append(boss_loot)
 	boss["lootItemId"] = boss_loot.id
 	boss["lootChance"] = 100

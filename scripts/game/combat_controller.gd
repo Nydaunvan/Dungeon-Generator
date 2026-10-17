@@ -95,6 +95,7 @@ func monster_at(x: int, y: int) -> Dictionary:
 func refresh() -> void:
 	sync_position()
 	if not model_in_combat():
+		combat.end_combat_reset()
 		combat.gauges.clear()
 		combat.acted.clear()
 		combat._state.clear()

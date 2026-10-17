@@ -1094,18 +1094,7 @@ static func _legendary(root: VBoxContainer, it: Dictionary) -> void:
 	var sp2 := Control.new()
 	sp2.custom_minimum_size = Vector2(0, 6)
 	root.add_child(sp2)
-	root.add_child(_chk(bool(it.get("legendary", false)), func(on: bool):
-		it["legendary"] = on
-		_render_sub.call_deferred(), "", false, L.t("common.legendaire")))
-	if bool(it.get("legendary", false)):
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 4)
-		h.add_child(_dd(PERKS, it.get("legendaryPerk", ""), func(v): it["legendaryPerk"] = v, 0.74))
-		h.add_child(_num(_or(it.get("legendaryValue"), 15.0), 44, func(v: float, _f: bool):
-			it["legendaryValue"] = _store(v)
-			return it["legendaryValue"], L.t("common.valeur_du_bonus")))
-		h.add_child(_stat_label("%"))
-		root.add_child(h)
+	AdminRarity.build(root, it, func(): _render_sub.call_deferred())
 
 static func _classes_allowing(spell_id: String) -> Array:
 	var out: Array = []

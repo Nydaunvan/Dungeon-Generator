@@ -182,7 +182,7 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 		var sl := _lbl(L.c(str(Inventory.SLOT_LABELS.get(r[0], r[0]))), 12, DIM)
 		sl.custom_minimum_size = Vector2(52, 0)
 		row.add_child(sl)
-		var nl := _lbl(L.c(str(r[1].get("name", "?"))), 13, GOLD if bool(r[1].get("legendary", false)) else PARCH)
+		var nl := _lbl(L.c(str(r[1].get("name", "?"))), 13, Rarity.color(r[1]) if Rarity.is_special(r[1]) else PARCH)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nl.clip_text = true
 		row.add_child(nl)

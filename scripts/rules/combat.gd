@@ -78,21 +78,18 @@ func monster_def(id: String) -> Dictionary:
 			return m
 	return {}
 
-## Bonus spéciaux des objets légendaires équipés : [{perk, value, item}].
+## Capacités des objets équipés (toutes raretés) : [{perk, value, item}].
 static func perks(c: Dictionary) -> Array:
-	var out: Array = []
-	var eq: Dictionary = c.get("equipment", {})
-	for slot in Characters.SLOTS:
-		var it = eq.get(slot)
-		if it != null and it.get("legendary", false) and it.has("legendaryPerk"):
-			out.append({"perk": str(it.legendaryPerk), "value": int(it.get("legendaryValue", 0)), "item": it})
-	return out
+	return Rarity.equipped_perks(c)
 
+## Somme d'une capacité sur tout l'équipement du personnage.
 static func _perk_value(c: Dictionary, perk: String) -> int:
-	for p in perks(c):
-		if p.perk == perk:
-			return int(p.value)
-	return 0
+	return Rarity.perk_sum(c, perk)
+
+## Fin d'un combat : les capacités « une fois par combat » se rechargent.
+func end_combat_reset() -> void:
+	for c in gs.party:
+		c.erase("lastStandUsed")
 
 func _live(m: Dictionary) -> bool:
 	var st: Dictionary = lstate().monsters.get(str(m.id), {})
@@ -611,13 +608,20 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
 	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st)))
 	var dmg := raw_dmg
+	if magic and not aoe:
+		var spell_pct := _perk_value(attacker, "spell")
+		if spell_pct > 0:
+			dmg = int(round(dmg * (1.0 + spell_pct / 100.0)))
 	if resist > 0:
-		dmg = 0 if resist >= 100 else maxi(1, int(round(raw_dmg * (1.0 - resist / 100.0))))
+		dmg = 0 if resist >= 100 else maxi(1, int(round(dmg * (1.0 - resist / 100.0))))
+	var exec_pct := _perk_value(attacker, "execute")
+	if exec_pct > 0 and not aoe and not bool(target.get("isGroup", false)) and float(st.hp) <= float(st.maxHp) * 0.25:
+		dmg = int(round(dmg * (1.0 + exec_pct / 100.0)))
 	var crit := false
 	var crit_chance := int(attacker.get("talentCritChance", 0)) + int(attacker.get("critDexPct", 0)) + _perk_value(attacker, "crit") \
 		+ int(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).critChanceBonus)
 	if crit_chance > 0 and GameRng.f("combat") < crit_chance / 100.0:
-		dmg *= 2
+		dmg = int(round(dmg * (2.0 + _perk_value(attacker, "critdmg") / 100.0)))
 		crit = true
 
 	var is_group: bool = bool(target.get("isGroup", false)) and st.has("members")
@@ -681,6 +685,10 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 				gs.add_log(L.fa(L.t("rules.combat.voit_ses_rangs_decimes"), _mname(target)))
 	if (aoe or not all_dead) and not spell.is_empty():
 		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
+	var bleed := _perk_value(attacker, "bleed")
+	if bleed > 0 and not aoe and not all_dead and dmg > 0 and GameRng.f("combat") * 100.0 < float(bleed):
+		Statuses.give(st, "poison", 3, str(attacker.id))
+		gs.add_log(L.fa(L.t("rules.combat.saigne_sous_l_arme_de"), [_mname(target), attacker.name]))
 
 func _mark_acted(c: Dictionary, turn_gain: bool = true) -> void:
 	tick_char(c)
@@ -768,6 +776,10 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 		dmg -= absorbed
 		gs.add_log(L.fa(L.t("rules.combat.le_bouclier_de_absorbe_degats"), [victim.name, absorbed, L.t("rules.combat.epuise") if int(victim.shieldAmount) <= 0 else ""]), true)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	if int(victim.hp) <= 0 and dmg > 0 and _perk_value(victim, "last_stand") > 0 and not bool(victim.get("lastStandUsed", false)):
+		victim["hp"] = 1
+		victim["lastStandUsed"] = true
+		gs.add_log(L.fa(L.t("rules.combat.dernier_souffle_survit_coup_mortel"), victim.name))
 	var thorns := _perk_value(victim, "thorns")
 	if thorns > 0 and dmg > 0:
 		var reflect := maxi(1, int(round(dmg * thorns / 100.0)))
@@ -923,7 +935,10 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 	if def.get("isGroup", false):
 		group_mult = 2.0 if int(def.get("groupSize", 2)) == 3 else 1.5
 	var xp := int(round(int(def.get("xpReward", 0)) * group_mult))
-	var gold := int(round(int(def.get("goldReward", 0)) * group_mult))
+	var gold_pct := 0
+	for c in gs.alive_party():
+		gold_pct += _perk_value(c, "gold")
+	var gold := int(round(int(def.get("goldReward", 0)) * group_mult * (1.0 + gold_pct / 100.0)))
 	_note_summary(def, xp, gold)
 	_split_xp(st, xp)
 	var tally: int = st.members.size() if def.get("isGroup", false) and st.get("members") is Array else 1

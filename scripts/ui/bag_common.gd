@@ -207,6 +207,9 @@ static func style_tile(b: Button, it: Dictionary, selected: bool) -> void:
 		if selected:
 			sb.border_color = Color("ffd88a")
 			sb.set_border_width_all(2)
+		elif Rarity.is_special(it) and ["weapon", "armor", "jewelry"].has(str(it.get("type", ""))):
+			sb.border_color = Rarity.color(it)      # liseré de la couleur de la rareté
+			sb.set_border_width_all(2)
 		else:
 			sb.border_color = t[1]
 			sb.set_border_width_all(1)
@@ -286,11 +289,16 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 	v.add_theme_constant_override("separation", 2)
 	v.custom_minimum_size = Vector2(210, 0)
 	box.add_child(v)
-	var name_l := _lbl(L.c(str(it.get("name", ""))), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
+	var name_l := _lbl(L.c(str(it.get("name", ""))), 14, Rarity.color(it) if Rarity.is_special(it) else UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_l.custom_minimum_size = Vector2(210, 0)     # largeur connue d'emblée : la hauteur du texte est juste dès la première image
 	v.add_child(name_l)
 	v.add_child(_lbl(EquipDock.type_label(it), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
+	for pline in Rarity.lines(it):
+		var pl := _lbl(str(pline), 12, Rarity.color(it))
+		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		pl.custom_minimum_size = Vector2(210, 0)
+		v.add_child(pl)
 	var c := gs.char_by_id(char_id)
 	var slot := Inventory.slot_of(it)
 	var eq = c.get("equipment", {}).get(slot) if slot != "" else null

@@ -236,9 +236,14 @@ static func stat_rows(it: Dictionary, force_atk: bool) -> Array:
 			rows.append({"key": pair[1], "label": pair[2], "value": int(it[pair[0]])})
 	return rows
 
+## Type de l'objet, précédé de sa rareté s'il n'est pas commun (« Rare · Torse »).
 static func type_label(it: Dictionary) -> String:
-	if bool(it.get("legendary", false)):
-		return L.t("common.legendaire")
+	var base := _base_type_label(it)
+	if Rarity.is_special(it) and ["weapon", "armor", "jewelry"].has(str(it.get("type", ""))):
+		return Rarity.label(it) + " · " + base
+	return base
+
+static func _base_type_label(it: Dictionary) -> String:
 	match str(it.get("type", "")):
 		"weapon": return L.t("common.arme")
 		"jewelry": return L.t("common.bijou")
@@ -452,8 +457,8 @@ func _slot_button(c: Dictionary, def: Dictionary, resolved: Dictionary) -> Contr
 	if item != null:
 		border = Color("5f8f45")
 		fill = Color("16200f")
-		if bool(item.get("legendary", false)):
-			border = Color("ffb84d")
+		if Rarity.is_special(item):
+			border = Rarity.color(item)
 	if is_sel or target:
 		border = UiTheme.GOLD
 	var sb := UiTheme.box(fill, border, 2, 8)
@@ -659,7 +664,7 @@ func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	head.add_child(ic)
 	var hv := VBoxContainer.new()
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var nm := _label(L.u(str(it.get("name", ""))) + (" ×%d" % resolved.count if resolved.get("count", 1) > 1 else ""), 14, UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
+	var nm := _label(L.u(str(it.get("name", ""))) + (" ×%d" % resolved.count if resolved.get("count", 1) > 1 else ""), 14, Rarity.color(it) if Rarity.is_special(it) else UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.custom_minimum_size = Vector2(120, 0)
 	hv.add_child(nm)
@@ -728,6 +733,10 @@ func _add_stat_lines(v: VBoxContainer, it: Dictionary, c: Dictionary, slot: Stri
 			var col := Color("8fd46a") if d > 0 else (Color("e58a8a") if d < 0 else UiTheme.DIM)
 			h.add_child(_label(" (%s)" % (("+%d" % d) if d > 0 else (str(d) if d < 0 else "=")), 13, col))
 		v.add_child(h)
+	for line in Rarity.lines(it):
+		var pl := _wrap_label(str(line))
+		pl.add_theme_color_override("font_color", Rarity.color(it))
+		v.add_child(pl)
 
 func _action_button(text: String, kind: String, cb: Callable) -> Button:
 	var b := Button.new()

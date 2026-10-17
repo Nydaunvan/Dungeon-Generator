@@ -259,10 +259,11 @@ static func _shelf_box() -> StyleBoxFlat:
 	s.set_corner_radius_all(6)
 	return s
 
-static func _card_box(selected: bool, hover: bool, legendary: bool) -> StyleBoxFlat:
+static func _card_box(selected: bool, hover: bool, rarity_col: Color) -> StyleBoxFlat:
+	var legendary: bool = rarity_col.a > 0.0
 	var s := StyleBoxFlat.new()
 	s.bg_color = Color("2a2016") if selected else (Color("221a12") if hover else Color("1c1610"))
-	s.border_color = UiTheme.GOLD if selected else (UiTheme.BRONZE_LIGHT if hover else (Color("c9962f") if legendary else Color("5a4526")))
+	s.border_color = UiTheme.GOLD if selected else (UiTheme.BRONZE_LIGHT if hover else (rarity_col if legendary else Color("5a4526")))
 	s.set_border_width_all(2 if (selected or legendary) else 1)
 	s.set_corner_radius_all(6)
 	if selected:
@@ -302,7 +303,7 @@ static func _gkey(g: Dictionary, buy: bool) -> String:
 static func _card(g: Dictionary, buy: bool, selected: bool, multi_mark: bool, on_pick: Callable) -> Button:
 	var rep: Dictionary = g.rep
 	var count: int = g.idxs.size()
-	var leg: bool = bool(rep.get("legendary", false))
+	var leg: Color = Rarity.color(rep) if (Rarity.is_special(rep) and ["weapon", "armor", "jewelry"].has(str(rep.get("type", "")))) else Color(0, 0, 0, 0)
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(CARD_W, CARD_H)
 	b.focus_mode = Control.FOCUS_NONE
@@ -320,7 +321,7 @@ static func _card(g: Dictionary, buy: bool, selected: bool, multi_mark: bool, on
 	var ic := IconPicker.icon_control(str(rep.get("icon", "")), 52.0)
 	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(ic)
-	var nm := AdminUtil.label(L.c(str(rep.get("name", "?"))), 12, UiTheme.GOLD if leg else UiTheme.PARCH)
+	var nm := AdminUtil.label(L.c(str(rep.get("name", "?"))), 12, leg if leg.a > 0.0 else UiTheme.PARCH)
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.max_lines_visible = 2
@@ -656,7 +657,7 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	var rep: Dictionary = g.rep
 	var idxs: Array = g.idxs
 	var count := idxs.size()
-	var leg: bool = bool(rep.get("legendary", false))
+	var leg: bool = Rarity.is_special(rep) and ["weapon", "armor", "jewelry"].has(str(rep.get("type", "")))
 	var gk := _gkey(g, buy)
 	var qty := clampi(int(st.qty.get(gk, 1)), 1, count)
 	st.qty[gk] = qty
@@ -669,11 +670,15 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	top.add_child(IconPicker.icon_control(str(rep.get("icon", "")), 60.0))
 	var tt := VBoxContainer.new()
 	tt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var nm := AdminUtil.label(("✨ " if leg else "") + L.c(str(rep.get("name", "?"))), 17, UiTheme.GOLD if leg else UiTheme.PARCH)
+	var nm := AdminUtil.label(L.c(str(rep.get("name", "?"))), 17, Rarity.color(rep) if leg else UiTheme.PARCH)
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 	tt.add_child(nm)
-	tt.add_child(AdminUtil.label(_type_line(rep), 13, UiTheme.DIM))
+	tt.add_child(AdminUtil.label((Rarity.label(rep) + " · " if leg else "") + _type_line(rep), 13, UiTheme.DIM))
+	for pline in Rarity.lines(rep):
+		var pl := AdminUtil.label(str(pline), 13, Rarity.color(rep))
+		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		tt.add_child(pl)
 	top.add_child(tt)
 	box.add_child(top)
 	box.add_child(HSeparator.new())

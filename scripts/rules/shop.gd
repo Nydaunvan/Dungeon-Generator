@@ -17,6 +17,8 @@ static func price(item: Dictionary) -> int:
 		p = 3.0 + int(item.get("heal", 0)) * 0.4 + int(item.get("staminaRestore", 0)) * 0.4
 	elif t == "scroll":
 		p = 30.0
+	if t == "weapon" or t == "armor" or t == "jewelry":
+		p *= Rarity.price_mult(item)   # rare ×2,5, épique ×4, légendaire ×7…
 	return maxi(3, int(round(p)))
 
 static func sell_price(item: Dictionary) -> int:
@@ -121,21 +123,26 @@ static func _vary(it: Dictionary, party: Array, upgrade: bool) -> void:
 	else:
 		_scale(it, lerpf(0.75, 1.1, GameRng.f("loot")))
 
-## Passe sur les offres d'équipement : chacune a ~35 % de chances d'être une « belle affaire » ; au moins une l'est toujours
-## quand le groupe porte déjà de l'équipement (sans quoi, à haut niveau, plus rien ne vaudrait l'achat).
-static func _rank_offers(offers: Array, party: Array) -> void:
-	if party.is_empty():
-		return
+## Passe sur les offres d'équipement : chacune reçoit une rareté (voir `Rarity.weights`), puis ~35 % sont des « belles affaires » ; au moins une
+## l'est toujours quand le groupe porte déjà de l'équipement (sans quoi, à haut niveau, plus rien ne vaudrait l'achat). Une belle affaire
+## est au moins rare.
+static func _rank_offers(offers: Array, party: Array, run: int, source: String) -> void:
 	var gear: Array = offers.filter(func(o): return ["weapon", "armor", "jewelry"].has(str(o.type)))
 	if gear.is_empty():
 		return
+	var f := func(): return GameRng.f("loot")
 	var flags: Array = []
-	for o in gear:
-		flags.append(GameRng.f("loot") < 0.35)
-	if not flags.has(true):
-		flags[GameRng.i("loot") % flags.size()] = true
+	if not party.is_empty():
+		for o in gear:
+			flags.append(GameRng.f("loot") < 0.35)
+		if not flags.has(true):
+			flags[GameRng.i("loot") % flags.size()] = true
 	for k in gear.size():
-		_vary(gear[k], party, flags[k])
+		var good: bool = not party.is_empty() and flags[k]
+		var tier: String = Rarity.roll(Rarity.weights("deal" if good else source, mini(run, 6), 0, "normal"), f)
+		Rarity.apply(gear[k], tier, f)
+		if not party.is_empty():
+			_vary(gear[k], party, good)
 
 static func _finish(offers: Array, prefix: String, village: bool) -> Array:
 	for i in offers.size():
@@ -163,7 +170,7 @@ static func random_offers(cfg: Dictionary, run: int, party: Array = []) -> Array
 		offers.append(_gear_offer(run))
 	for k in 2:
 		offers.append({"name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "type": "potion", "heal": 16 + run * 4})
-	_rank_offers(offers, party)
+	_rank_offers(offers, party, run, "shop")
 	var spells: Array = (cfg.get("spells", []) as Array).duplicate()
 	GameRng.shuffle("loot", spells)
 	for i in mini(GameRng.range_i("loot", 2, 3), spells.size()):
@@ -214,7 +221,7 @@ static func village_offers(cfg: Dictionary, run: int, party: Array = []) -> Arra
 		offers.append(_weapon_offer(boosted, 3 + int(floor(boosted / 2.0)), [2, 4]))
 	for k in 2:
 		offers.append(_gear_offer(boosted))
-	_rank_offers(offers, party)
+	_rank_offers(offers, party, boosted, "village")
 	var heal := GameRng.range_i("loot", 8, 15)
 	var sta := GameRng.range_i("loot", 8, 15)
 	offers.append_array(potion_lots(heal, sta))

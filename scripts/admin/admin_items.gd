@@ -195,15 +195,7 @@ static func _legendary(v: Control, it: Dictionary, refresh: Callable) -> void:
 	var sp2 := Control.new()
 	sp2.custom_minimum_size = Vector2(0, UiMetrics.css(3.0))
 	v.add_child(sp2)
-	v.add_child(AdminCells.check(L.t("common.legendaire"), bool(it.get("legendary", false)), func(on: bool):
-		it["legendary"] = on
-		refresh.call()))
-	if bool(it.get("legendary", false)):
-		var f := _line()
-		f.add_child(AdminCells.option(LEGENDARY_PERKS, it.get("legendaryPerk", ""), func(x): it["legendaryPerk"] = x, 150.0))
-		f.add_child(AdminCells.num(it, "legendaryValue", 15, {"w": 44, "or": true, "lo": 1, "hi": 50, "tip": L.t("common.valeur_du_bonus")}))
-		f.add_child(AdminCells.inline("%"))
-		v.add_child(f)
+	AdminRarity.build(v, it, refresh)
 
 
 ## --- API historique (onglet « Niveaux » : fiche d'objet placé dans un niveau) ---
@@ -330,28 +322,9 @@ static func _legacy_boosts(parent: Control, it: Dictionary) -> void:
 		_num(f, x[0], it, x[1], 100.0)
 
 static func _legacy_legendary(parent: Control, it: Dictionary, admin: Node) -> void:
-	var f := AdminUtil.flow(parent)
-	var cb := CheckBox.new()
-	cb.text = L.t("admin.items.legendaire")
-	cb.focus_mode = Control.FOCUS_NONE
-	cb.button_pressed = bool(it.get("legendary", false))
-	cb.toggled.connect(func(on: bool):
-		it["legendary"] = on
-		if on and not it.has("legendaryPerk"):
-			it["legendaryPerk"] = "lifesteal"
+	AdminRarity.build(parent, it, func():
 		if admin != null:
 			admin.refresh_tab())
-	f.add_child(cb)
-	if bool(it.get("legendary", false)):
-		var on_perk := func(v): it["legendaryPerk"] = v
-		AdminUtil.chip(f, L.t("admin.items.bonus"), AdminUtil.dropdown(PERKS, it.get("legendaryPerk", "lifesteal"), on_perk, 150.0))
-		var s := SpinBox.new()
-		s.min_value = 1
-		s.max_value = 50
-		s.value = float(it.get("legendaryValue", 15))
-		s.custom_minimum_size = Vector2(84, 0)
-		s.value_changed.connect(func(v: float): it["legendaryValue"] = int(v))
-		AdminUtil.chip(f, "Valeur (%)", s)
 
 static func _add(admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
