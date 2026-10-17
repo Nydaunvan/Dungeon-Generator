@@ -609,6 +609,9 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
 	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st)))
 	var dmg := raw_dmg
+	var weak := Statuses.damage_reduction_pct(attacker)      # héros affaibli / vulnérable : dégâts réduits
+	if weak > 0:
+		dmg = maxi(1, int(round(dmg * (1.0 - weak / 100.0))))
 	var dmg_mult := float(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).dmgMult)      # « Héros solitaire » : ×2 (attaques et sorts)
 	if dmg_mult != 1.0:
 		dmg = int(round(dmg * dmg_mult))
@@ -743,7 +746,7 @@ func monster_act(key: String) -> void:
 
 ## Dégâts après la réduction du héros (résistance des talents + garde de Constitution, plafonnée) ; un coup qui touche inflige toujours 1 au moins.
 func _hero_reduction(victim: Dictionary, dmg: int, magic: bool) -> int:
-	var red := Stats.reduction(victim, magic)
+	var red := maxi(0, Stats.reduction(victim, magic) - Statuses.resist_reduction_pct(victim))      # « Vulnérable » : protection réduite
 	if red <= 0 or dmg <= 0:
 		return dmg
 	return maxi(1, int(round(dmg * (1.0 - red / 100.0))))
@@ -803,6 +806,8 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 		gs.bump(victim.id, "knockdowns")
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
+	if int(victim.hp) > 0:
+		_monster_inflict(def, victim)
 	if int(victim.hp) <= 0:
 		Sound.sfx_later(0.15, "down")
 		gs.add_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
@@ -812,6 +817,13 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 			gs.add_log(L.t("common.le_groupe_est_aneanti_les"))
 			Sound.sfx("game_over")
 			events.append({"type": "game_over"})
+
+## Effet de famille du monstre (poison, sommeil, brûlure…) : sur un coup qui touche, avec la chance du monstre.
+func _monster_inflict(def: Dictionary, victim: Dictionary) -> void:
+	var sp := MonsterEffects.spell_of(def)
+	if sp.is_empty() or GameRng.f("combat") * 100.0 >= float(def.get("hitStatusChance", 0)):
+		return
+	Statuses.apply_from_spell(gs, sp, victim, str(victim.name), str(def.get("id", "")), true)
 
 ## Capacité spéciale d'un monstre (sort de dégâts) lancée à la place de son attaque.
 func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, pool: Array) -> void:
@@ -842,7 +854,8 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) > 0:
-		Statuses.apply_from_spell(gs, spell, victim, str(victim.name), "", true)
+		if not Statuses.apply_from_spell(gs, spell, victim, str(victim.name), "", true):
+			_monster_inflict(def, victim)
 	else:
 		gs.bump(victim.id, "knockdowns")
 		gs.add_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
@@ -997,7 +1010,9 @@ func _record_bestiary(def: Dictionary) -> void:
 		"xpReward": int(def.get("xpReward", 0)), "goldReward": int(def.get("goldReward", 0)),
 		"speed": int(Stats.monster_speed(def)), "attackSpeed": float(def.get("attackSpeed", 2.0)), "patrolRadius": int(def.get("patrolRadius", 0)),
 		"abilitySpellId": str(def.get("abilitySpellId", "")), "abilityChance": int(def.get("abilityChance", 0)),
-		"enrageThreshold": int(def.get("enrageThreshold", 0))}, true)
+		"enrageThreshold": int(def.get("enrageThreshold", 0)),
+		"hitStatus": str(def.get("hitStatus", "")), "hitStatusLook": str(def.get("hitStatusLook", "")), "hitStatusChance": int(def.get("hitStatusChance", 0)),
+		"hitStatusDuration": int(def.get("hitStatusDuration", 0))}, true)
 	e["killCount"] = int(e.killCount) + 1
 	gs.bestiary[key] = e
 

@@ -446,6 +446,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			"goldReward": maxi(1, int(round((4 + i * 3) * diff_mult * power * float(mod.goldMult)))),
 			"opensDoorId": "", "isGroup": is_group, "groupSize": group_size}
 		m.merge(_resist(), true)
+		m.merge(MonsterEffects.roll(str(fl[1]), false, float(cfg.get("monsterStatusChancePct", 60)), false, i), true)       # effet de famille (au hasard)
 		# rage : tous les monstres peuvent en avoir une, au hasard (chance réglée dans l'admin) ; elle se déclenche sous un seuil de PV
 		var rage_on := randf() * 100.0 < float(cfg.get("monsterRageChancePct", 25))
 		m["enrageThreshold"] = randi_range(30, 50) if rage_on else 0
@@ -505,6 +506,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		"attackSpeed": rand_f1(2.2, 3) * float(mod.attackSpeedMult),
 		"xpReward": maxi(20, int(round((60 + i * 25) * diff_mult * boss_power * party_pow * float(mod.xpMult)))),
 		"goldReward": maxi(15, int(round((30 + i * 15) * diff_mult * boss_power * float(mod.goldMult)))), "opensDoorId": ""}
+	boss.merge(MonsterEffects.roll(str(bf[1]), true, 100.0, bool(cfg.get("bossStatus", true)), i), true)       # un boss a toujours un effet
 	monsters.append(boss)
 
 	# butin au sol

@@ -73,6 +73,9 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		if st.get("enraged", false):
 			t += L.fa(L.t("ui.monster_info_modal.actuellement_enrage"), bonus)
 		m.add_text(t, Color("ff7a6a") if st.get("enraged", false) else UiTheme.DIM, 13)
+	var inflicts := MonsterEffects.describe(def)
+	if inflicts != "":
+		m.add_text(inflicts, Color("e8b86a"), 13)
 	var badges: Array = []
 	for e in Statuses.active(st):
 		badges.append("%s %s (%d)" % [Statuses.icon_of(e), Statuses.label_of(e), int(e.remaining)])

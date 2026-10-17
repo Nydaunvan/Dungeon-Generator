@@ -954,8 +954,8 @@ static func _loot_button(lvl: Dictionary, m: Dictionary, key: String, tip: Strin
 	return b
 
 static func _monsters_sub(host: VBoxContainer, lvl: Dictionary) -> void:
-	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.rage"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
-	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 42, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
+	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.rage"), L.t("admin.levels.effet"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
+	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 190, 42, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
 	var g := AdminTable.create(host, headers, widths)
 	var spells: Array = [["", L.t("admin.levels.attaque_simple")]]
 	for s in _cfg().get("spells", []):
@@ -1027,6 +1027,28 @@ static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spell
 		rg.add_child(_num(_or(m.get("enrageThreshold"), 40.0), 36, _set_clamped(m, "enrageThreshold", 1, 100), L.t("admin.levels.seuil_de_pv_declenchant_la")))
 		rg.add_child(_num(_or(m.get("enrageBonusPct"), 30.0), 36, _set_clamped(m, "enrageBonusPct", 0, 300), L.t("admin.levels.rage_bonus_degats")))
 	AdminTable.cell(g, rg)
+	# effet infligé aux héros par ses coups : statut + chance par coup + durée
+	var ef := HBoxContainer.new()
+	ef.add_theme_constant_override("separation", 3)
+	var cur_fx := "sleep" if str(m.get("hitStatusLook", "")) == "sleep" else str(m.get("hitStatus", ""))
+	var fx_opts: Array = [["", L.t("admin.levels.effet_aucun")]]
+	for t in ["poison", "burn", "lifedrain", "stun", "sleep", "freeze", "slow", "weaken", "warcry"]:
+		fx_opts.append([t, Statuses.icon_of({"type": "stun" if t == "sleep" else t, "look": "sleep" if t == "sleep" else ""}) + " " + Statuses.label_of({"type": "stun" if t == "sleep" else t, "look": "sleep" if t == "sleep" else ""})])
+	ef.add_child(_dd(fx_opts, cur_fx, func(v):
+		m["hitStatus"] = "stun" if v == "sleep" else v
+		m["hitStatusLook"] = "sleep" if v == "sleep" else ""
+		if v != "":
+			if int(_or(m.get("hitStatusChance"), 0.0)) <= 0:
+				m["hitStatusChance"] = 30
+			if int(_or(m.get("hitStatusDuration"), 0.0)) <= 0:
+				m["hitStatusDuration"] = 2
+			if int(_or(m.get("hitStatusPower"), 0.0)) <= 0:
+				m["hitStatusPower"] = 2
+		_render_sub.call_deferred(), 0.68, 90, L.t("admin.levels.effet_tip")))
+	if cur_fx != "":
+		ef.add_child(_num(_or(m.get("hitStatusChance"), 30.0), 36, _set_clamped(m, "hitStatusChance", 0, 100), L.t("admin.levels.effet_chance")))
+		ef.add_child(_num(_or(m.get("hitStatusDuration"), 2.0), 30, _set_clamped(m, "hitStatusDuration", 1, 20), L.t("admin.levels.effet_duree")))
+	AdminTable.cell(g, ef)
 	var set_zone := func(v: float, _f: bool):
 		m["patrolRadius"] = _store(maxf(0.0, v))
 		return m["patrolRadius"]

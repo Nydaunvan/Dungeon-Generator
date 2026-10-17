@@ -235,3 +235,7 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 
 ### Raretés sur la fiche
 Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche ne montrait que talents et caractéristiques. `Characters.recompute` stocke `perkCrit` et `perkLifesteal` (valeurs dérivées, recalculées) ; `party_modal`, `party_tip`, `equip_dock`, `shop_modal` et `StatExplain` les ajoutent, et la fiche liste les autres capacités (`spell`, `execute`, `bleed`, `critdmg`, `thorns`, `gold`, `last_stand`) quand elles sont présentes. Aucune migration.
+
+### Effets des monstres
+`MonsterEffects` (scripts/rules/monster_effects.gd) : tables `FAMILY` (par icône `mon_*`) et `BOSS` → statut, aspect (`sleep`), chance par coup, durée. À la génération, `roll` pose `hitStatus`, `hitStatusLook`, `hitStatusChance`, `hitStatusDuration`, `hitStatusPower` sur le monstre avec la chance `monsterStatusChancePct` (60 par défaut) ; les boss l'ont toujours (`bossStatus`, désactivable). `Combat._monster_inflict` applique le statut après un coup qui touche (attaque normale, ou capacité sans statut propre). Les héros affaiblis (`weaken`/`warcry`) infligent moins de dégâts et protègent moins (`_hit_monster`, `_hero_reduction`). Migration `_v12_to_v13` (réglages). Vérification : `tools/check_monster_effects.tscn`.
+

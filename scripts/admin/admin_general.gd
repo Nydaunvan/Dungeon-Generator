@@ -246,6 +246,17 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_rage, true]])
 
+	# ---- Effets des monstres
+	b = Form.panel(host, L.t("admin.general.effets_monstres"))
+	_h(b, L.t("admin.general.effets_monstres_aide"))
+	var s_ch := Form.num_row(b, L.t("admin.general.effets_monstres_chance"), float(cfg.get("monsterStatusChancePct", 60)))
+	Form.check(b, L.t("admin.general.effets_boss_systematique"), cfg, "bossStatus", true)
+	var act_status := func():
+		cfg["monsterStatusChancePct"] = _clamp(s_ch.value, 0, 100)
+		_sv(s_ch, cfg["monsterStatusChancePct"])
+		save.call()
+	Form.actions(b, [[L.t("admin.general.enregistrer"), act_status, true]])
+
 	# ---- Répartition de l'expérience
 	b = Form.panel(host, L.t("admin.general.repartition_de_l_experience"))
 	var xp: Dictionary = cfg.get("xpSettings", {})

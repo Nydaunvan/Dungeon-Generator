@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 12
+const SCHEMA := 13
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -60,6 +60,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v10_to_v11(d))
 			11:
 				notes.append_array(_v11_to_v12(d))
+			12:
+				notes.append_array(_v12_to_v13(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -369,3 +371,15 @@ static func _v11_to_v12(d: Dictionary) -> Array[String]:
 	if n > 0:
 		notes.append("sorts de dégâts du Druide rééquilibrés : %d" % n)
 	return notes
+
+
+## v12 → v13 : effets des monstres selon leur famille (réglages de la configuration). Les niveaux existants ne changent pas : leurs monstres n'ont aucun effet
+## tant que le créateur n'en choisit pas un (colonne « Effet » de l'éditeur de niveaux).
+static func _v12_to_v13(d: Dictionary) -> Array[String]:
+	var cfg = d.get("config")
+	if cfg is Dictionary:
+		if not (cfg as Dictionary).has("monsterStatusChancePct"):
+			cfg["monsterStatusChancePct"] = 60
+		if not (cfg as Dictionary).has("bossStatus"):
+			cfg["bossStatus"] = true
+	return []
