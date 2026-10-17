@@ -194,3 +194,10 @@ Départ des effets : le point de départ d'un sort de héros est le milieu du bo
 
 Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucune ligne de type d'objet (emplacements, types, raretés, deux langues) ne montre une clé de langue brute. Cause du bug « ui.equip_dock.bottes » : `EquipDock._base_type_label` renvoyait le libellé de `SLOT_DEFS` sans le traduire.
 
+## Écran de chargement fluide
+
+- `LoadingScreen._advance` : la barre (donc l'épée) avance à vitesse progressive (accélération limitée, `ACCEL`), rattrape l'avancement réel sans à-coup, et continue de ramper (`CREEP`) jusqu'à `LEAD` devant lui pendant une longue étape, sans jamais reculer ni dépasser 98,5 % avant la fin réelle.
+- Les animations (`SwordBar`, sceau) bornent le pas de temps à 50 ms : une image longue ne fait pas sauter l'aura.
+- `Loader._slice` et `Sound` rendent la main toutes les ~5 ms (au lieu de 7-8) ; `Loader._wait_full` laisse la barre finir de se remplir avant de lever le rideau.
+- Contrôle : `tools/check_loading_bar.tscn`.
+

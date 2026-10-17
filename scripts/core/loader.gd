@@ -71,15 +71,21 @@ func _hide(fade: float = 0.4) -> void:
 	if token == _token and not _busy:
 		visible = false
 
-## Rend la main à l'affichage dès que ~8 ms de calcul se sont écoulées (écran de chargement fluide).
+## Rend la main à l'affichage dès que ~5 ms de calcul se sont écoulées (écran de chargement fluide).
 func _slice() -> void:
-	if Time.get_ticks_usec() - _last_yield_us > 8000:
+	if Time.get_ticks_usec() - _last_yield_us > 5000:
 		await get_tree().process_frame
 		_last_yield_us = Time.get_ticks_usec()
 
 ## Pour le code qui travaille longtemps : `await Loader.slice()` rend la main à l'affichage (donc à l'épée) toutes les ~8 ms.
 func slice() -> void:
 	await _slice()
+
+## Laisse la barre (et l'épée) finir de se remplir avant de lever le rideau, au plus `max_s` secondes.
+func _wait_full(max_s: float = 1.5) -> void:
+	var t0 := Time.get_ticks_msec()
+	while screen != null and not screen.is_full() and Time.get_ticks_msec() - t0 < int(max_s * 1000.0):
+		await get_tree().process_frame
 
 func _frames(n: int = 2) -> void:
 	for i in n:
@@ -196,6 +202,7 @@ func go(path: String, kind: String = "game") -> void:
 	else:
 		await _frames(3)
 		screen.set_progress(1.0)
+		await _wait_full(1.0)
 		await get_tree().create_timer(0.15).timeout
 		_hide(0.3)
 
@@ -226,6 +233,7 @@ func finish() -> void:
 	screen.set_progress(1.0, L.t("loading.pret"))
 	# quelques images derrière l'écran : les premières compilations de shaders se font ici, pas devant le joueur
 	await _frames(5)
+	await _wait_full()
 	_hide(0.45)
 
 # ------------------------------------------------------------------ étapes de chargement

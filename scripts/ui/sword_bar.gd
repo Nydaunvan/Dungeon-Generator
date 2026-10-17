@@ -111,6 +111,7 @@ func _ready() -> void:
 	add_child(_rect)
 
 func _process(delta: float) -> void:
+	delta = minf(delta, 0.05)      # une image longue (chargement lourd) ne fait pas sauter l'animation de l'aura
 	_t += delta
 	if _mat == null:
 		return

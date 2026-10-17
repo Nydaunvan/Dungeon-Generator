@@ -398,7 +398,7 @@ func _breath() -> void:
 ## Rend la main à l'affichage dès que ~7 ms de calcul se sont écoulées : l'écran de chargement reste fluide, sans perdre de temps
 ## à attendre une image entre deux petits calculs.
 func _tick() -> void:
-	if _yielding and Time.get_ticks_usec() - _last_yield_us > 7000:
+	if _yielding and Time.get_ticks_usec() - _last_yield_us > 5000:
 		await get_tree().process_frame
 		_last_yield_us = Time.get_ticks_usec()
 

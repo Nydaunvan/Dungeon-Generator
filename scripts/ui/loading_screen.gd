@@ -20,6 +20,7 @@ var _bar_box: Control
 var _embers: CPUParticles2D
 var _target := 0.0
 var _shown := 0.0
+var _vel := 0.0              ## vitesse affichée de la barre (par seconde) : elle change progressivement, jamais d'un coup
 var _t := 0.0
 var _tip_i := 0
 var _tip_t := 0.0
@@ -221,6 +222,7 @@ func set_progress(v: float, text: String = "") -> void:
 func reset() -> void:
 	_target = 0.0
 	_shown = 0.0
+	_vel = 0.0
 	_bar.value = 0.0
 	_pct.text = "0 %"
 	_step.text = ""
@@ -270,10 +272,29 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			entered.emit()
 
+## Barre affichée : avance à vitesse progressive (accélère et ralentit en douceur) vers l'avancement réel, et continue de ramper un peu devant
+## lui pendant une longue étape, pour que l'épée ne s'arrête jamais ; ne recule jamais, ne dépasse pas 100 % avant la fin réelle.
+const LEAD := 0.035         ## avance maximale sur l'avancement réel pendant une étape longue
+const CREEP := 0.012        ## vitesse minimale (part de la barre par seconde)
+const MAX_SPEED := 0.45
+const ACCEL := 0.6
+
+func _advance(delta: float) -> void:
+	var d := minf(delta, 0.05)       # une image longue (calcul lourd) ne fait pas sauter la barre
+	var ceiling := 1.0 if _target >= 1.0 else minf(_target + LEAD, 0.985)
+	ceiling = maxf(ceiling, _shown)
+	var gap := _target - _shown
+	var want := 0.0
+	if gap > 0.0005:
+		want = clampf(gap * 2.2, CREEP, MAX_SPEED)
+	elif _shown < ceiling:
+		want = CREEP * clampf((ceiling - _shown) / 0.01, 0.0, 1.0)      # ralentit en douceur en arrivant au plafond
+	_vel = move_toward(_vel, want, ACCEL * d)
+	_shown = minf(_shown + _vel * d, ceiling)
+
 func _process(delta: float) -> void:
-	_t += delta
-	# la barre rattrape sa cible en douceur (et ne recule jamais)
-	_shown = minf(_target, _shown + maxf((_target - _shown) * minf(delta * 7.0, 1.0), delta * 0.04))
+	_t += minf(delta, 0.05)
+	_advance(delta)
 	_bar.value = _shown
 	_pct.text = "%d %%" % int(round(_shown * 100.0))
 	_seal.scale = Vector2.ONE * (1.0 + 0.025 * sin(_t * 2.2))
