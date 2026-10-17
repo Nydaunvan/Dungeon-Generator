@@ -954,7 +954,7 @@ static func _loot_button(lvl: Dictionary, m: Dictionary, key: String, tip: Strin
 	return b
 
 static func _monsters_sub(host: VBoxContainer, lvl: Dictionary) -> void:
-	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.seuil_rage"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
+	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("admin.levels.position"), L.t("common.for"), "Dex", "Con", L.t("common.vitesse"), L.t("common.apercu"), L.t("admin.levels.res_phys"), L.t("admin.levels.res_mag"), "XP", L.t("common.or"), L.t("admin.levels.capacite_chance"), L.t("admin.levels.rage"), "Zone", L.t("admin.levels.ouvre_porte"), L.t("admin.levels.butin"), L.t("admin.levels.chance"), L.t("admin.levels.butin_2"), L.t("admin.levels.chance_2"), "Boss", L.t("admin.levels.groupe"), L.t("admin.levels.cache"), "", ""]
 	var widths := [38, 90, 40, 42, 42, 42, 42, 64, 42, 42, 42, 42, 220, 42, 42, 100, 110, 44, 110, 44, 15, 40, 15, 0, 0]
 	var g := AdminTable.create(host, headers, widths)
 	var spells: Array = [["", L.t("admin.levels.attaque_simple")]]
@@ -1010,7 +1010,23 @@ static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spell
 			return m["abilityChance"]
 		cap.add_child(_num(m.get("abilityChance", 30), 48, set_ch, L.t("admin.levels.chance_utiliser_la_capacite")))
 	AdminTable.cell(g, cap)
-	AdminTable.cell(g, _num(_or(m.get("enrageThreshold"), 0.0), 40, _set_clamped(m, "enrageThreshold", 0, 100), L.t("admin.levels.seuil_de_pv_declenchant_la")))
+	# rage (tout monstre peut en avoir une) : case + seuil de PV + bonus de dégâts
+	var rg := HBoxContainer.new()
+	rg.add_theme_constant_override("separation", 3)
+	var rage_on := int(_or(m.get("enrageThreshold"), 0.0)) > 0
+	rg.add_child(_chk(rage_on, func(on: bool):
+		if on:
+			if int(_or(m.get("enrageThreshold"), 0.0)) <= 0:
+				m["enrageThreshold"] = 40
+			if int(_or(m.get("enrageBonusPct"), 0.0)) <= 0:
+				m["enrageBonusPct"] = 30
+		else:
+			m["enrageThreshold"] = 0
+		_render_sub.call_deferred(), L.t("admin.levels.rage_case")))
+	if rage_on:
+		rg.add_child(_num(_or(m.get("enrageThreshold"), 40.0), 36, _set_clamped(m, "enrageThreshold", 1, 100), L.t("admin.levels.seuil_de_pv_declenchant_la")))
+		rg.add_child(_num(_or(m.get("enrageBonusPct"), 30.0), 36, _set_clamped(m, "enrageBonusPct", 0, 300), L.t("admin.levels.rage_bonus_degats")))
+	AdminTable.cell(g, rg)
 	var set_zone := func(v: float, _f: bool):
 		m["patrolRadius"] = _store(maxf(0.0, v))
 		return m["patrolRadius"]
@@ -1029,6 +1045,9 @@ static func _monster_row(g: GridContainer, lvl: Dictionary, m: Dictionary, spell
 		m["isBoss"] = on
 		if on:
 			m["isGroup"] = false
+			if int(_or(m.get("enrageThreshold"), 0.0)) <= 0:      # un boss a une rage par défaut (décochable)
+				m["enrageThreshold"] = 40
+				m["enrageBonusPct"] = 30
 		_render_sub.call_deferred(), L.t("admin.levels.affichage_imposant_monstre_de"), bool(m.get("isGroup", false)))
 	var bc := CenterContainer.new()
 	bc.add_child(boss)

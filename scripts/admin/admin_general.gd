@@ -235,6 +235,17 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act6, true]])
 
+	# ---- Rage des monstres
+	b = Form.panel(host, L.t("admin.general.rage_des_monstres"))
+	_h(b, L.t("admin.general.rage_des_monstres_aide"))
+	var r_ch := Form.num_row(b, L.t("admin.general.rage_chance_monstres"), float(cfg.get("monsterRageChancePct", 25)))
+	Form.check(b, L.t("admin.general.rage_boss_systematique"), cfg, "bossRage", true)
+	var act_rage := func():
+		cfg["monsterRageChancePct"] = _clamp(r_ch.value, 0, 100)
+		_sv(r_ch, cfg["monsterRageChancePct"])
+		save.call()
+	Form.actions(b, [[L.t("admin.general.enregistrer"), act_rage, true]])
+
 	# ---- Répartition de l'expérience
 	b = Form.panel(host, L.t("admin.general.repartition_de_l_experience"))
 	var xp: Dictionary = cfg.get("xpSettings", {})

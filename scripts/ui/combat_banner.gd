@@ -64,4 +64,4 @@ func _process(_d: float) -> void:
 	var def: Dictionary = eng.monster
 	var st: Dictionary = ctrl.combat.lstate().monsters[str(def.id)]
 	var nm := str(def.get("name", "Monstre")) + (" (Boss)" if bool(def.get("isBoss", false)) else "")
-	_label.text = "⚔️ " + nm + ("  😡" if st.get("enraged", false) else "")
+	_label.text = "⚔️ " + nm + (L.fa(L.t("ui.combat_banner.rage"), int(def.get("enrageBonusPct", 30))) if st.get("enraged", false) else "")

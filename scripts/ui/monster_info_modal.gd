@@ -67,11 +67,12 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(hp)
 		m.content.add_child(row)
-	if bool(def.get("isBoss", false)):
-		var t := L.fa(L.t("ui.monster_info_modal.entre_en_rage_sous_pv"), [int(def.get("enrageThreshold", 50)), int(def.get("enrageBonusPct", 0))])
+	if int(def.get("enrageThreshold", 0)) > 0:
+		var bonus := int(def.get("enrageBonusPct", 30))
+		var t := L.fa(L.t("ui.monster_info_modal.entre_en_rage_sous_pv"), [int(def.get("enrageThreshold", 50)), bonus])
 		if st.get("enraged", false):
-			t += L.t("ui.monster_info_modal.actuellement_enrage")
-		m.add_text(t, UiTheme.DIM, 13)
+			t += L.fa(L.t("ui.monster_info_modal.actuellement_enrage"), bonus)
+		m.add_text(t, Color("ff7a6a") if st.get("enraged", false) else UiTheme.DIM, 13)
 	var badges: Array = []
 	for e in Statuses.active(st):
 		var sd := Statuses.def(str(e.type))

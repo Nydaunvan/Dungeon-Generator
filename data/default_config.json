@@ -36,6 +36,8 @@
   "dmgPctMax": 30
  },
  "legendaryChancePct": 25,
+ "monsterRageChancePct": 25,
+ "bossRage": true,
  "xpSettings": {
   "healRatio": 0.8
  },

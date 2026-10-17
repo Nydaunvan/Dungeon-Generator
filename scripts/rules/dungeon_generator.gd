@@ -446,6 +446,10 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			"goldReward": maxi(1, int(round((4 + i * 3) * diff_mult * power * float(mod.goldMult)))),
 			"opensDoorId": "", "isGroup": is_group, "groupSize": group_size}
 		m.merge(_resist(), true)
+		# rage : tous les monstres peuvent en avoir une, au hasard (chance réglée dans l'admin) ; elle se déclenche sous un seuil de PV
+		var rage_on := randf() * 100.0 < float(cfg.get("monsterRageChancePct", 25))
+		m["enrageThreshold"] = randi_range(30, 50) if rage_on else 0
+		m["enrageBonusPct"] = randi_range(15, 30) if rage_on else 0
 		monsters.append(m)
 
 	# boss
@@ -497,7 +501,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		"force": b_force, "dex": b_dex, "con": b_con, "speed": randi_range(8, 12),
 		"resistPhys": randi_range(10, 25) if randf() < 0.4 else 0, "resistMagic": randi_range(10, 25) if randf() < 0.4 else 0,
 		"abilitySpellId": b_ability, "abilityChance": randi_range(35, 50) if b_ability != "" else 0,
-		"enrageThreshold": randi_range(35, 55), "enrageBonusPct": randi_range(25, 40), "patrolRadius": randi_range(2, 3),
+		"enrageThreshold": randi_range(35, 55) if bool(cfg.get("bossRage", true)) else 0, "enrageBonusPct": randi_range(25, 40), "patrolRadius": randi_range(2, 3),
 		"attackSpeed": rand_f1(2.2, 3) * float(mod.attackSpeedMult),
 		"xpReward": maxi(20, int(round((60 + i * 25) * diff_mult * boss_power * party_pow * float(mod.xpMult)))),
 		"goldReward": maxi(15, int(round((30 + i * 15) * diff_mult * boss_power * float(mod.goldMult)))), "opensDoorId": ""}

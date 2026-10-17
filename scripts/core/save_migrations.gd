@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 10
+const SCHEMA := 11
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -56,6 +56,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v8_to_v9(d, defaults))
 			9:
 				notes.append_array(_v9_to_v10(d, defaults))
+			10:
+				notes.append_array(_v10_to_v11(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -237,6 +239,29 @@ static func _v9_to_v10(d: Dictionary, defaults: Dictionary) -> Array[String]:
 		notes.append(n)
 	if n_icons > 0:
 		notes.append("icônes des sorts de nature : %d mise(s) à jour" % n_icons)
+	return notes
+
+## v10 → v11 : la rage devient possible pour tout monstre (seuil de PV > 0). Avant, seuls les boss s'enrageaient et le seuil des autres monstres
+## était ignoré : on le remet à 0 pour que les niveaux existants gardent leur comportement. Réglages de rage ajoutés à la configuration.
+static func _v10_to_v11(d: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary):
+		return notes
+	var n := 0
+	for lvl in (cfg as Dictionary).get("levels", []):
+		if not (lvl is Dictionary):
+			continue
+		for m in lvl.get("monsters", []):
+			if m is Dictionary and not bool(m.get("isBoss", false)) and int(m.get("enrageThreshold", 0)) > 0:
+				m["enrageThreshold"] = 0
+				n += 1
+	if not (cfg as Dictionary).has("monsterRageChancePct"):
+		cfg["monsterRageChancePct"] = 25
+	if not (cfg as Dictionary).has("bossRage"):
+		cfg["bossRage"] = true
+	if n > 0:
+		notes.append("rage des monstres ordinaires inchangée (désactivée) : %d" % n)
 	return notes
 
 ## v3 → v4 : le piège de vapeur reste en place quand le jet échoue (il se redéclenche si on repasse dessus) : ses objets deviennent « permanents »

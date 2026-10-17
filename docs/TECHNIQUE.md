@@ -215,3 +215,11 @@ Garde-fou des textes d'objets : `tools/check_item_labels.tscn` vérifie qu'aucun
 - Génération : aucun monstre à moins de `DungeonGenerator.START_CLEAR` (8) cases du départ ni de l'escalier de retour (la distance n'est réduite que si le niveau n'offre rien d'autre, jamais sous 3) ; un boss reste à 6 cases au moins du départ.
 - Exécution : `Wanderers.bind_level` pose `calmTicks = ARRIVAL_CALM_TICKS` (24 pas de 0,5 s = 12 s), le même répit qu'après un combat : aucun monstre ne poursuit le joueur ni ne s'approche de lui. Valable aussi à la reprise d'une sauvegarde.
 - Contrôle : `tools/check_start_calm.tscn`. Attention : ces règles changent les donjons tirés d'une graine et les pas de monstres ; le vérificateur de parties classées doit rejouer chaque partie avec les règles de sa version.
+
+## Rage des monstres
+
+- Tout monstre peut avoir une rage : `enrageThreshold` (> 0 : % de PV sous lequel elle se déclenche, 0 = aucune) et `enrageBonusPct` (bonus de dégâts, 30 par défaut). Elle se déclenche dans `Combat` (plus réservée aux boss) ; l'état `enraged` est celui du monstre (ou du groupe).
+- Donjons générés : chaque monstre ordinaire a `monsterRageChancePct` % de chance (25 par défaut) d'en avoir une (seuil 30-50 %, bonus 15-30 %) ; les boss en ont toujours une (seuil 35-55 %, bonus 25-40 %) sauf si `bossRage` est faux. Ces deux réglages sont dans l'admin, onglet Général, panneau « Rage des monstres ».
+- Admin des niveaux : colonne « Rage » (case + seuil + bonus) ; cocher « Boss » active la rage par défaut (décochable).
+- Affichage : halo rouge sombre qui pulse derrière le monstre (`CombatStage._make_rage_halo`, distinct du halo de sélection de groupe), bandeau de combat « en rage : +X % de dégâts », fiche du monstre (seuil, bonus, état).
+- Migration de sauvegarde v10 → v11 : le seuil des monstres ordinaires (jusque-là ignoré) est remis à 0 pour garder le comportement des niveaux existants. Contrôles : `tools/check_rage.tscn`, `tools/shot_rage.tscn` (rendu réel).

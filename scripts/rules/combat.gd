@@ -645,7 +645,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		_add_contrib(st, str(attacker.id), dmg)
 		gs.bump(attacker.id, "damageDealt", dmg)
 	lstate()["last_engaged_id"] = str(target.id)
-	if not aoe and bool(target.get("isBoss", false)) and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
+	if not aoe and not st.enraged and int(target.get("enrageThreshold", 0)) > 0 \
 			and st.hp > 0 and st.hp <= st.maxHp * (int(target.enrageThreshold) / 100.0):
 		st["enraged"] = true
 		gs.add_log(L.fa(L.t("rules.combat.entre_en_rage_ses_attaques"), _mname(target)))

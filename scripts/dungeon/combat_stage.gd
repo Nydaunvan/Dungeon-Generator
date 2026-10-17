@@ -89,6 +89,8 @@ func _free_entry(k, dying: bool = false) -> void:
 		e.node.queue_free()
 	if e.halo != null:
 		e.halo.queue_free()
+	if e.get("rage") != null:
+		e.rage.queue_free()
 	_nodes.erase(k)
 
 func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
@@ -162,7 +164,7 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 				continue
 			node.name = "Combatant_%d" % idx
 			add_child(node)
-			e = {"node": node, "halo": null, "idx": idx, "h": float(node.get_meta("h"))}
+			e = {"node": node, "halo": null, "rage": null, "idx": idx, "h": float(node.get_meta("h"))}
 			_nodes[key] = e
 			_sprite_mass(node)      # précalcule le centre visible (visée des sorts)
 			node.set_meta("ph", randf() * TAU)      # animations (voir EntityLayer.animate_stage)
@@ -190,6 +192,15 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			e.halo.visible = targeted
 			e.halo.position = at + Vector3(0, -h * 0.12, 0) - Vector3(fwd.x, 0, fwd.y) * 0.05
 			(e.halo.mesh as QuadMesh).size = Vector2(h * 1.75, h * 1.4)
+		# rage : halo rouge sombre qui pulse derrière le monstre (différent du halo de sélection)
+		var raged: bool = bool(st.get("enraged", false))
+		if raged and e.rage == null:
+			e.rage = _make_rage_halo()
+			add_child(e.rage)
+		if e.rage != null:
+			e.rage.visible = raged
+			e.rage.position = at + Vector3(0, -h * 0.02, 0) - Vector3(fwd.x, 0, fwd.y) * 0.12
+			(e.rage.mesh as QuadMesh).size = Vector2(h * 2.2, h * 1.8)
 	for k in _nodes.keys():
 		if not wanted.has(k):
 			_free_entry(k)
@@ -208,6 +219,43 @@ func _make_halo() -> MeshInstance3D:
 	m.render_priority = -1
 	mi.material_override = m
 	return mi
+
+## Halo de rage : braise rouge sombre à cœur transparent (le monstre reste lisible), liseré orangé, qui pulse sans fin.
+func _make_rage_halo() -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = QuadMesh.new()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_texture = _rage_texture()
+	m.albedo_color = Color(1, 1, 1, 0.9)
+	m.render_priority = -2
+	mi.material_override = m
+	var tw := mi.create_tween().set_loops()
+	tw.tween_property(m, "albedo_color:a", 0.45, 0.55).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(m, "albedo_color:a", 1.0, 0.55).set_trans(Tween.TRANS_SINE)
+	return mi
+
+static var _rage_tex: Texture2D
+
+static func _rage_texture() -> Texture2D:
+	if _rage_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.35, 0.62, 0.8, 0.92, 1.0])
+		g.colors = PackedColorArray([Color(0.5, 0.0, 0.0, 0.0), Color(0.55, 0.02, 0.0, 0.25), Color(0.85, 0.05, 0.02, 0.75),
+				Color(1.0, 0.25, 0.05, 0.9), Color(1.0, 0.1, 0.02, 0.35), Color(0.6, 0.0, 0.0, 0.0)])
+		var t := GradientTexture2D.new()
+		t.gradient = g
+		t.fill = GradientTexture2D.FILL_RADIAL
+		t.fill_from = Vector2(0.5, 0.5)
+		t.fill_to = Vector2(1.0, 0.5)
+		t.width = 256
+		t.height = 256
+		_rage_tex = t
+	return _rage_tex
 
 static func _halo_texture() -> Texture2D:
 	if _halo_tex == null:
