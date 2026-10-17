@@ -34,7 +34,7 @@ func _init() -> void:
 	mouse_entered.connect(func():
 		_hover = true
 		queue_redraw()
-		if tone == "spell":
+		if tone == "spell" or tone == "attack":
 			tip_show.emit())
 	mouse_exited.connect(func():
 		_hover = false

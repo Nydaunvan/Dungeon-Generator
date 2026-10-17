@@ -135,10 +135,10 @@
    "style": "bard",
    "mode": "damage",
    "dmgMin": 3,
-   "dmgMax": 6,
+   "dmgMax": 5,
    "ignoreAllResist": true,
-   "staminaCost": 9,
-   "cooldownSec": 4
+   "staminaCost": 11,
+   "cooldownSec": 5
   },
   {
    "id": "spell_skald1",
@@ -711,14 +711,14 @@
    "icon": "@icon:spell_nature1",
    "style": "nature",
    "mode": "damage",
-   "dmgMin": 6,
-   "dmgMax": 11,
+   "dmgMin": 5,
+   "dmgMax": 10,
    "staminaCost": 16,
    "statusEffect": "poison",
    "statusChance": 30,
    "statusDuration": 3,
    "statusPower": 2,
-   "cooldownSec": 7
+   "cooldownSec": 6
   },
   {
    "id": "spell_nature2",
@@ -726,11 +726,11 @@
    "icon": "@icon:spell_nature2",
    "style": "nature",
    "mode": "damage",
-   "dmgMin": 8,
-   "dmgMax": 14,
+   "dmgMin": 7,
+   "dmgMax": 12,
    "staminaCost": 20,
    "statusEffect": "slow",
-   "statusChance": 45,
+   "statusChance": 40,
    "statusDuration": 3,
    "cooldownSec": 9
   },
@@ -769,9 +769,9 @@
    "icon": "@icon:spell_nature5",
    "style": "nature",
    "mode": "healSingle",
-   "healMin": 8,
-   "healMax": 14,
-   "staminaCost": 14,
+   "healMin": 7,
+   "healMax": 12,
+   "staminaCost": 13,
    "cooldownSec": 6
   },
   {

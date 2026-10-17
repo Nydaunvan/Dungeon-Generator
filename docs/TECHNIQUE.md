@@ -241,3 +241,7 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 
 ### Fiche du marchand
 `ShopModal._stats_block` (capacités de rareté puis bonus, pour tout objet équipable) précède le bouton d'achat ; `_hero_chip` fabrique les boutons de comparaison (pastille, nom, classe) rangés dans une grille de 2 colonnes. Présentation seule : aucune migration. Capture : `tools/shot_shop.gd`.
+
+### Attaque de base et sorts de base
+`SpellTip.show_attack` affiche la fiche de l'attaque de base (`SpellBar`, disque d'attaque). `_v13_to_v14` (SaveMigrations, `BASE_SPELLS`) applique les nouvelles valeurs de `spell_bard2`, `spell_nature1`, `spell_nature2` et `spell_nature5` aux configurations enregistrées si le sort a encore ses valeurs d'origine ou celles de la v12. Capture : `tools/shot_attack_tip.tscn`.
+

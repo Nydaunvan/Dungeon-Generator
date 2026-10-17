@@ -108,6 +108,32 @@ static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0, c
 		y = r.end.y + 6.0
 	t.position = Vector2(x, y)
 
+## Infobulle de l'attaque de base du héros : dégâts, critique, vol de vie, endurance (sans les touches du clavier).
+static func show_attack(host: Control, caster: Dictionary, attack_cost: int) -> void:
+	if caster.is_empty():
+		return
+	var t := _inst_for(host)
+	var ls: Array[String] = [L.fa(L.t("ui.spell_tip.degats"), [int(caster.get("atkMin", 0)), int(caster.get("atkMax", 0))]),
+		L.fa(L.t("ui.spell_tip.attaque_crit"), int(caster.get("talentCritChance", 0)) + int(caster.get("critDexPct", 0)) + int(caster.get("perkCrit", 0)))]
+	var ls_pct := int(caster.get("talentLifestealPct", 0)) + int(caster.get("perkLifesteal", 0))
+	if ls_pct > 0:
+		ls.append(L.fa(L.t("ui.spell_tip.vol_de_vie_des_degats"), ls_pct))
+	ls.append(L.t("ui.spell_tip.reduit_par_cible"))
+	ls.append(L.fa(L.t("ui.spell_tip.attaque_endurance"), attack_cost))
+	t._label.text = "[b][color=#e8b45c]%s[/color][/b]\n%s" % [L.t("ui.spell_tip.attaque_base"), "\n".join(ls)]
+	t.size = Vector2.ZERO
+	t.visible = true
+	await host.get_tree().process_frame
+	if not is_instance_valid(t) or not is_instance_valid(host):
+		return
+	var r := host.get_global_rect()
+	var vs := host.get_viewport().get_visible_rect().size
+	var x := clampf(r.position.x + r.size.x * 0.5 - t.size.x * 0.5, 4.0, maxf(4.0, vs.x - t.size.x - 4.0))
+	var y := r.position.y - t.size.y - 6.0
+	if y < 4.0:
+		y = r.end.y + 6.0
+	t.position = Vector2(x, y)
+
 static func hide_tip() -> void:
 	if _inst != null and is_instance_valid(_inst):
 		_inst.visible = false

@@ -22,7 +22,10 @@ func setup(state: GameState, controller: CombatController) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_attack = SpellDisc.new()
 	_attack.tone = "attack"
-	_attack.tooltip_text = "Attaquer (X / Espace)"
+	_attack.tip_show.connect(func():
+		var cost := mini(int((gs.cfg.get("staminaSettings", {}) as Dictionary).get("attackCost", 0)), 2)
+		SpellTip.show_attack(_attack, gs.char_by_id(gs.active_char_id), cost))
+	_attack.tip_hide.connect(SpellTip.hide_tip)
 	_attack.pressed.connect(func(): attack_pressed.emit())
 	add_child(_attack)
 	for i in SLOTS:

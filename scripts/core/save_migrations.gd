@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 13
+const SCHEMA := 14
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -62,6 +62,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v11_to_v12(d))
 			12:
 				notes.append_array(_v12_to_v13(d))
+			13:
+				notes.append_array(_v13_to_v14(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -383,3 +385,39 @@ static func _v12_to_v13(d: Dictionary) -> Array[String]:
 		if not (cfg as Dictionary).has("bossStatus"):
 			cfg["bossStatus"] = true
 	return []
+
+
+## v13 → v14 : sorts de base du Barde et du Druide alignés sur ceux des autres classes. {id : [champs de reconnaissance (valeurs d'origine ou de la v12), nouvelles valeurs]}.
+## Un sort modifié par le créateur n'est pas touché.
+const BASE_SPELLS := {
+	"spell_nature1": {"old": [{"dmgMin": 8, "dmgMax": 14}, {"dmgMin": 6, "dmgMax": 11}], "new": {"dmgMin": 5, "dmgMax": 10, "cooldownSec": 6}},
+	"spell_nature2": {"old": [{"dmgMin": 10, "dmgMax": 18}, {"dmgMin": 8, "dmgMax": 14}], "new": {"dmgMin": 7, "dmgMax": 12, "statusChance": 40}},
+	"spell_nature5": {"old": [{"healMin": 8, "healMax": 14}], "new": {"healMin": 7, "healMax": 12, "staminaCost": 13}},
+	"spell_bard2": {"old": [{"dmgMin": 3, "dmgMax": 6}], "new": {"dmgMax": 5, "staminaCost": 11, "cooldownSec": 5}},
+}
+
+static func _v13_to_v14(d: Dictionary) -> Array[String]:
+	var notes: Array[String] = []
+	var cfg = d.get("config")
+	if not (cfg is Dictionary):
+		return notes
+	var n := 0
+	for sp in (cfg as Dictionary).get("spells", []):
+		if not (sp is Dictionary) or not BASE_SPELLS.has(str(sp.get("id", ""))):
+			continue
+		var def: Dictionary = BASE_SPELLS[str(sp.id)]
+		var match_ := false
+		for o in def.old:
+			var ok := true
+			for k in (o as Dictionary).keys():
+				if int(sp.get(k, -1)) != int(o[k]):
+					ok = false
+			match_ = match_ or ok
+		if not match_:
+			continue
+		for k in (def.new as Dictionary).keys():
+			sp[k] = def.new[k]
+		n += 1
+	if n > 0:
+		notes.append("sorts de base du Barde et du Druide rééquilibrés : %d" % n)
+	return notes
