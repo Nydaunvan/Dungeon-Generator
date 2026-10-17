@@ -558,6 +558,69 @@ static func _num(v: float) -> String:
 	var r := snappedf(v, 0.1)
 	return str(int(r)) if is_equal_approx(r, floorf(r)) else "%.1f" % r
 
+## Statistiques de l'objet, comme dans l'inventaire : la capacité de rareté d'abord (couleur de la rareté), puis les bonus.
+static func _stats_block(box: VBoxContainer, it: Dictionary) -> void:
+	for pline in Rarity.lines(it):
+		var pl := AdminUtil.label(str(pline), 14, Rarity.color(it))
+		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(pl)
+	var mine := _stat_rows(it)
+	if mine.has("atk"):
+		var a: Array = mine.atk
+		_row(box, L.t("ui.shop_modal.attaque"), "+%d / +%d" % [a[0], a[1]], 0.0, false)
+	for f in STAT_FIELDS:
+		if mine.has(f[0]):
+			_row(box, L.t(str(f[1])), "%+d" % int(mine[f[0]]), 0.0, false)
+
+## Bouton de comparaison d'un héros : pastille d'initiale, nom, classe en dessous (petit et rangé en grille de 2 colonnes).
+static func _hero_chip(hero_name: String, class_name_: String) -> Button:
+	var b := Button.new()
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 38)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.clip_contents = true
+	var m := MarginContainer.new()
+	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for s in ["left", "right"]:
+		m.add_theme_constant_override("margin_" + s, 7)
+	for s in ["top", "bottom"]:
+		m.add_theme_constant_override("margin_" + s, 2)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 7)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dot := PanelContainer.new()
+	dot.custom_minimum_size = Vector2(22, 22)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sb := UiTheme.box(Color("140e09"), UiTheme.BRONZE_LIGHT, 1, 11)
+	dot.add_theme_stylebox_override("panel", sb)
+	var ini := AdminUtil.label(hero_name.substr(0, 1).to_upper(), 11, UiTheme.GOLD)
+	ini.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ini.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ini.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_child(ini)
+	h.add_child(dot)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", -2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var n := AdminUtil.label(hero_name, 12, UiTheme.PARCH)
+	n.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	v.add_child(n)
+	var cl := AdminUtil.label(class_name_, 11, UiTheme.DIM)
+	cl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	v.add_child(cl)
+	h.add_child(v)
+	m.add_child(h)
+	b.add_child(m)
+	return b
+
 static func _row(parent: Control, label: String, value: String, delta: float, show_delta: bool) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 6)
@@ -675,13 +738,18 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 	nm.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 	tt.add_child(nm)
 	tt.add_child(AdminUtil.label((Rarity.label(rep) + " · " if ["weapon", "armor", "jewelry"].has(str(rep.get("type", ""))) else "") + _type_line(rep), 13, UiTheme.DIM))
-	for pline in Rarity.lines(rep):
-		var pl := AdminUtil.label(str(pline), 13, Rarity.color(rep))
-		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		tt.add_child(pl)
+	var is_equip := Inventory.slot_of(rep) != ""
+	if not is_equip:
+		for pline in Rarity.lines(rep):
+			var pl := AdminUtil.label(str(pline), 13, Rarity.color(rep))
+			pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			tt.add_child(pl)
 	top.add_child(tt)
 	box.add_child(top)
 	box.add_child(HSeparator.new())
+	if is_equip:
+		_stats_block(box, rep)
+		box.add_child(HSeparator.new())
 
 	# ---- action : le bouton est tout en haut de la fiche (plus besoin de faire défiler pour l'atteindre) ; en vente groupée, c'est le
 	# bouton du résumé (en haut du panneau) qui vend
@@ -765,18 +833,19 @@ static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: D
 		eq = ev if ev is Dictionary else {}
 	var compare := slot != ""
 	if compare:
-		var wb := AdminUtil.flow(box)
-		wb.add_theme_constant_override("h_separation", 5)
-		wb.add_child(AdminUtil.label(L.t("ui.shop_modal.comparer_avec"), 12, UiTheme.DIM))
+		box.add_child(AdminUtil.label(L.t("ui.shop_modal.comparer_avec"), 12, UiTheme.DIM))
+		var wb := GridContainer.new()
+		wb.columns = 2
+		wb.add_theme_constant_override("h_separation", 6)
+		wb.add_theme_constant_override("v_separation", 6)
+		wb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(wb)
 		var wg := ButtonGroup.new()
 		for c in gs.party:
-			var b := Button.new()
 			var cn := str(Characters.class_def(gs.cfg, str(c.get("classId", ""))).get("name", ""))
-			b.text = str(c.name) + (" (%s)" % L.c(cn) if cn != "" else "")
-			b.toggle_mode = true
+			var b := _hero_chip(str(c.name), L.c(cn))
 			b.button_group = wg
 			b.button_pressed = str(c.id) == str(st.who)
-			b.focus_mode = Control.FOCUS_NONE
 			var cid: String = str(c.id)
 			b.pressed.connect(func():
 				st.who = cid

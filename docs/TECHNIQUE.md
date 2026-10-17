@@ -239,3 +239,5 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 ### Effets des monstres
 `MonsterEffects` (scripts/rules/monster_effects.gd) : tables `FAMILY` (par icône `mon_*`) et `BOSS` → statut, aspect (`sleep`), chance par coup, durée. À la génération, `roll` pose `hitStatus`, `hitStatusLook`, `hitStatusChance`, `hitStatusDuration`, `hitStatusPower` sur le monstre avec la chance `monsterStatusChancePct` (60 par défaut) ; les boss l'ont toujours (`bossStatus`, désactivable). `Combat._monster_inflict` applique le statut après un coup qui touche (attaque normale, ou capacité sans statut propre). Les héros affaiblis (`weaken`/`warcry`) infligent moins de dégâts et protègent moins (`_hit_monster`, `_hero_reduction`). Migration `_v12_to_v13` (réglages). Vérification : `tools/check_monster_effects.tscn`.
 
+### Fiche du marchand
+`ShopModal._stats_block` (capacités de rareté puis bonus, pour tout objet équipable) précède le bouton d'achat ; `_hero_chip` fabrique les boutons de comparaison (pastille, nom, classe) rangés dans une grille de 2 colonnes. Présentation seule : aucune migration. Capture : `tools/shot_shop.gd`.
