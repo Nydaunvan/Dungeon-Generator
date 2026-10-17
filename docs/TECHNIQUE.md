@@ -300,3 +300,6 @@ Mur et plafond du thème `lava` : pack « Lava003 » (couleur, normales OpenGL, 
 ### Thème Temple ancien en matériau 3D
 Mur et plafond du thème `temple` : pack « Bricks075A » (pierres plates ; le plafond reprend le mur) ; sol : pack « Ground068 » (mousse et feuilles mortes). Jeux `assets/themes/temple_hd/` (2048 px) et `temple_lite/` (1024 px, exclu des exports PC), construits par `ThemeMaterials._stone_pbr(part, repeat, "temple")` ; répétitions `TEMPLE_WALL_REPEAT` / `TEMPLE_FLOOR_REPEAT` = 1. Capture : `THEME=temple` avec `tools/shot_theme.tscn`.
 
+### Boss toujours au fond du niveau
+`DungeonGenerator._one_level` : le boss exige une distance de chemin depuis l'arrivée d'au moins `boss_min_d` = min(max(8, 60 % du chemin jusqu'à la sortie), chemin de sortie − 2), dans les trois étapes de recherche ; le dernier recours prend la salle libre la plus éloignée de l'arrivée (plus jamais la première salle de la liste). Auparavant, seule la distance à vol d'oiseau (6 cases) comptait : le boss pouvait se trouver à 6 cases du départ (120 niveaux sur 800 dans le test, `tools/check_boss_place.tscn`). Les niveaux déjà générés ne changent pas.
+

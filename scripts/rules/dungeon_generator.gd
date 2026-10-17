@@ -455,19 +455,20 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		m["enrageBonusPct"] = randi_range(15, 30) if rage_on else 0
 		monsters.append(m)
 
-	# boss
+	# boss : toujours au fond du niveau, jamais près de l'arrivée (distance de chemin d'au moins 60 % du chemin jusqu'à la sortie, et 8 cases)
 	var boss_cell := {}
 	var boss_cands: Array = []
+	var boss_min_d: int = mini(maxi(8, int(ceil(float(far.d) * 0.6))), maxi(int(far.d) - 2, 0))
 	for r in rooms:
 		var gap: int = far.d - r.d
-		if gap >= 3 and gap <= 6 and _boss_spot_ok(r, sx, sy, used, monsters, grid, doors, true):
+		if gap >= 3 and gap <= 6 and int(r.d) >= boss_min_d and _boss_spot_ok(r, sx, sy, used, monsters, grid, doors, true):
 			boss_cands.append(r)
 	if not boss_cands.is_empty():
 		boss_cell = choice(boss_cands)
 	if boss_cell.is_empty():
 		for gap in range(2, 11):
 			for r in rooms:
-				if far.d - r.d == gap and _boss_spot_ok(r, sx, sy, used, monsters, grid, doors, false):
+				if far.d - r.d == gap and int(r.d) >= boss_min_d and _boss_spot_ok(r, sx, sy, used, monsters, grid, doors, false):
 					boss_cell = r
 					break
 			if not boss_cell.is_empty():
@@ -476,13 +477,20 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		# aucune salle assez loin des monstres : la salle (hors départ et escalier) la plus éloignée de tous
 		var best_d := -1
 		for r in rooms:
-			if used.has(_key(r.x, r.y)) or absi(int(r.x) - sx) + absi(int(r.y) - sy) < START_CLEAR - 2 or _near_stairs(grid, r.x, r.y, 3):
+			if used.has(_key(r.x, r.y)) or int(r.d) < boss_min_d or absi(int(r.x) - sx) + absi(int(r.y) - sy) < START_CLEAR - 2 or _near_stairs(grid, r.x, r.y, 3):
 				continue
 			var dmin := 99
 			for m in monsters:
 				dmin = mini(dmin, absi(int(m.x) - int(r.x)) + absi(int(m.y) - int(r.y)))
 			if dmin > best_d:
 				best_d = dmin
+				boss_cell = r
+	if boss_cell.is_empty():
+		# dernier recours : la salle libre la plus éloignée de l'arrivée (jamais près du départ)
+		var deepest := -1
+		for r in rooms:
+			if not used.has(_key(r.x, r.y)) and int(r.d) > deepest:
+				deepest = int(r.d)
 				boss_cell = r
 	if boss_cell.is_empty():
 		boss_cell = pool[0] if not pool.is_empty() else {"x": far.x, "y": far.y}
