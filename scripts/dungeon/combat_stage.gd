@@ -200,13 +200,19 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			(e.halo.mesh as QuadMesh).size = Vector2(h * 1.75, h * 1.4)
 		# rage : halo rouge sombre qui pulse derrière le monstre (différent du halo de sélection)
 		var raged: bool = bool(st.get("enraged", false))
+		if not e.has("was"):
+			e["was"] = raged            # déjà enragé à la première image (chargement d'une partie) : pas de mise en scène
 		if raged and e.rage == null:
-			e.rage = _make_rage_halo()
+			e.rage = _make_rage_aura()
 			add_child(e.rage)
+			(e.rage.get_meta("mat") as ShaderMaterial).set_shader_parameter("grow", 1.0 if e.was else 0.0)
+		if raged and not e.was and e.rage != null:
+			_rage_burst(e.rage)          # entrée en rage : grognement, onde de choc, l'aura monte en puissance
+		e["was"] = raged
 		if e.rage != null:
 			e.rage.visible = raged
 			e.rage.position = at + Vector3(0, -h * 0.02, 0) - Vector3(fwd.x, 0, fwd.y) * 0.12
-			(e.rage.mesh as QuadMesh).size = Vector2(h * 2.2, h * 1.8)
+			_size_rage(e.rage, h)
 	for k in _nodes.keys():
 		if not wanted.has(k):
 			_free_entry(k)
@@ -246,6 +252,177 @@ func _make_halo() -> MeshInstance3D:
 	mi.material_override = m
 	return mi
 
+const RAGE_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
+uniform float grow = 1.0;     // 0 → 1 : montée en puissance à l'entrée en rage
+uniform float flash = 0.0;    // éclat d'entrée
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p){
+	vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float fbm(vec2 p){ return vnoise(p) * 0.55 + vnoise(p * 2.1 + 7.3) * 0.3 + vnoise(p * 4.3 + 2.9) * 0.15; }
+void vertex(){
+	float sx = length(MODEL_MATRIX[0].xyz);
+	float sy = length(MODEL_MATRIX[1].xyz);
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * sx, INV_VIEW_MATRIX[1] * sy, INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+void fragment(){
+	float x = (UV.x - 0.5) * 2.0;
+	float y = 1.0 - UV.y;                              // 0 en bas, 1 en haut
+	float t = TIME;
+	// flammes qui montent : le bruit défile vers le haut, les langues s'étirent avec la hauteur
+	float n = fbm(vec2(x * 3.4 + sin(t * 0.9) * 0.25, y * 2.6 - t * 2.3));
+	float n2 = fbm(vec2(x * 6.5 - 3.1, y * 4.2 - t * 3.6));
+	float width = (0.5 - 0.2 * y) * (0.5 + 0.5 * grow) + 0.05 * sin(t * 6.0 + y * 4.0);
+	float tongue = (n * 0.75 + n2 * 0.45) * (1.0 - y * 0.5);
+	float d = abs(x) - width * (0.4 + 0.95 * tongue);
+	float body = smoothstep(0.16, -0.08, d);
+	float top = smoothstep(0.95, 0.3 + 0.2 * grow, y + (1.0 - n) * 0.3);     // les flammes se dissipent en haut
+	float bottom = smoothstep(0.0, 0.08, y);
+	// cœur creux : le monstre reste lisible, l'énergie est surtout sur le contour
+	float core = mix(0.1, 1.0, smoothstep(0.1, 0.8, abs(x) / max(width, 0.05)));
+	float a = body * top * bottom * core;
+	vec3 deep = vec3(0.45, 0.0, 0.0);
+	vec3 hot = vec3(0.95, 0.1, 0.02);
+	vec3 col = mix(deep, hot, smoothstep(0.1, 0.9, a + n2 * 0.25));
+	col += vec3(0.8, 0.06, 0.0) * smoothstep(0.55, 1.0, a) * 0.5;             // liseré incandescent : toujours dans les rouges
+	float pulse = 0.88 + 0.12 * sin(t * 7.0);
+	float alpha = clamp(a * 1.15, 0.0, 1.0) * grow * pulse * (1.0 + flash * 1.6);
+	ALBEDO = col * (1.0 + flash * 0.8);
+	ALPHA = alpha;
+}
+"""
+
+## Aura de rage façon « ki » : flammes rouges qui montent le long du monstre (shader), braises, halo sombre au fond.
+## Se compose de : halo de braise (mesh `halo`), flammes (mesh `flames`, shader), braises (CPUParticles3D `embers`) ; réglages dans `_size_rage`.
+func _make_rage_aura() -> Node3D:
+	var root := Node3D.new()
+	root.set_meta("halo", _make_rage_halo())
+	root.add_child(root.get_meta("halo"))
+	var fl := MeshInstance3D.new()
+	fl.mesh = QuadMesh.new()
+	var sm := ShaderMaterial.new()
+	var sh := Shader.new()
+	sh.code = RAGE_SHADER
+	sm.shader = sh
+	sm.render_priority = -1
+	fl.material_override = sm
+	fl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(fl)
+	root.set_meta("flames", fl)
+	root.set_meta("mat", sm)
+	var em := CPUParticles3D.new()
+	em.amount = 22
+	em.lifetime = 1.4
+	em.preprocess = 0.8
+	em.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	em.direction = Vector3(0, 1, 0)
+	em.spread = 14.0
+	em.gravity = Vector3(0, 0.6, 0)
+	em.initial_velocity_min = 0.5
+	em.initial_velocity_max = 1.3
+	em.scale_amount_min = 0.5
+	em.scale_amount_max = 1.2
+	var pm := QuadMesh.new()
+	pm.size = Vector2(0.09, 0.09)
+	var pmat := StandardMaterial3D.new()
+	pmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	pmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pmat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	pmat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	pmat.vertex_color_use_as_albedo = true
+	pmat.albedo_texture = _rage_dot()
+	pm.material = pmat
+	em.mesh = pm
+	var cr := Gradient.new()
+	cr.offsets = PackedFloat32Array([0.0, 0.3, 1.0])
+	cr.colors = PackedColorArray([Color(1.0, 0.3, 0.05, 0.0), Color(1.0, 0.18, 0.02, 1.0), Color(0.5, 0.0, 0.0, 0.0)])
+	em.color_ramp = cr
+	root.add_child(em)
+	root.set_meta("embers", em)
+	return root
+
+static var _dot_tex: Texture2D
+
+static func _rage_dot() -> Texture2D:
+	if _dot_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 1.0])
+		g.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0)])
+		var t := GradientTexture2D.new()
+		t.gradient = g
+		t.fill = GradientTexture2D.FILL_RADIAL
+		t.fill_from = Vector2(0.5, 0.5)
+		t.fill_to = Vector2(1.0, 0.5)
+		t.width = 32
+		t.height = 32
+		_dot_tex = t
+	return _dot_tex
+
+func _size_rage(root: Node3D, h: float) -> void:
+	((root.get_meta("halo") as MeshInstance3D).mesh as QuadMesh).size = Vector2(h * 1.7, h * 1.5)
+	var fl: MeshInstance3D = root.get_meta("flames")
+	(fl.mesh as QuadMesh).size = Vector2(h * 1.5, h * 1.9)
+	fl.position = Vector3(0, h * 0.32, 0.02)
+	var em: CPUParticles3D = root.get_meta("embers")
+	em.emission_box_extents = Vector3(h * 0.45, 0.05, 0.1)
+	em.position = Vector3(0, -h * 0.4, 0)
+
+## Entrée en rage : grognement, éclat, onde de choc rouge, l'aura enfle (1,1 s) puis se stabilise.
+func _rage_burst(root: Node3D) -> void:
+	Sound.rage()
+	var sm: ShaderMaterial = root.get_meta("mat")
+	sm.set_shader_parameter("grow", 0.0)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_method(func(v: float): sm.set_shader_parameter("grow", v), 0.0, 1.0, 1.1).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float): sm.set_shader_parameter("flash", v), 1.0, 0.0, 0.9).set_trans(Tween.TRANS_SINE)
+	var ring := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(1, 1)
+	ring.mesh = q
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.billboard_keep_scale = true
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.no_depth_test = true
+	m.albedo_texture = _ring_texture()
+	m.albedo_color = Color(1.0, 0.2, 0.05, 0.95)
+	ring.material_override = m
+	var h := ((root.get_meta("halo") as MeshInstance3D).mesh as QuadMesh).size.x / 1.7
+	ring.scale = Vector3(h * 0.6, h * 0.6, 1.0)
+	root.add_child(ring)
+	var t2 := create_tween().set_parallel(true)
+	t2.tween_property(ring, "scale", Vector3(h * 3.6, h * 3.6, 1.0), 0.8).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t2.tween_property(m, "albedo_color:a", 0.0, 0.8)
+	t2.chain().tween_callback(ring.queue_free)
+	var em: CPUParticles3D = root.get_meta("embers")
+	em.amount = 70
+	var t3 := create_tween()
+	t3.tween_interval(1.0)
+	t3.tween_callback(func(): if is_instance_valid(em): em.amount = 22)
+
+static var _ring_tex: Texture2D
+
+static func _ring_texture() -> Texture2D:
+	if _ring_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.72, 0.86, 0.94, 1.0])
+		g.colors = PackedColorArray([Color(1, 0.1, 0, 0), Color(1, 0.15, 0.02, 0.0), Color(1, 0.3, 0.08, 1.0), Color(0.8, 0.05, 0, 0.5), Color(0.5, 0, 0, 0)])
+		var t := GradientTexture2D.new()
+		t.gradient = g
+		t.fill = GradientTexture2D.FILL_RADIAL
+		t.fill_from = Vector2(0.5, 0.5)
+		t.fill_to = Vector2(1.0, 0.5)
+		t.width = 256
+		t.height = 256
+		_ring_tex = t
+	return _ring_tex
+
 ## Halo de rage : braise rouge sombre à cœur transparent (le monstre reste lisible), liseré orangé, qui pulse sans fin.
 func _make_rage_halo() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -261,8 +438,8 @@ func _make_rage_halo() -> MeshInstance3D:
 	m.render_priority = -2
 	mi.material_override = m
 	var tw := mi.create_tween().set_loops()
-	tw.tween_property(m, "albedo_color:a", 0.45, 0.55).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(m, "albedo_color:a", 1.0, 0.55).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(m, "albedo_color:a", 0.18, 0.55).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(m, "albedo_color:a", 0.5, 0.55).set_trans(Tween.TRANS_SINE)
 	return mi
 
 static var _rage_tex: Texture2D

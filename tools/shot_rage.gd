@@ -30,9 +30,15 @@ func _ready() -> void:
 		var st: Dictionary = main.ctrl.combat.lstate().monsters[str(eng.monster.id)]
 		eng.monster["enrageThreshold"] = 40
 		eng.monster["enrageBonusPct"] = 30
-		st["enraged"] = true
 	main.ctrl.refresh()
 	await get_tree().create_timer(1.0).timeout
+	if not eng.is_empty():
+		var st2: Dictionary = main.ctrl.combat.lstate().monsters[str(eng.monster.id)]
+		st2["enraged"] = true
+	main.ctrl.refresh()
+	for i in 4:
+		await get_tree().create_timer([0.25, 0.35, 0.6, 1.5][i]).timeout
+		get_viewport().get_texture().get_image().save_png("/tmp/claude-0/rage_%d.png" % i)
 	get_viewport().get_texture().get_image().save_png("/tmp/claude-0/rage.png")
 	print("RAGE ", not eng.is_empty())
 	get_tree().quit()

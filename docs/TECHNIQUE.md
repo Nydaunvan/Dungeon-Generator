@@ -245,3 +245,6 @@ Le combat utilisait déjà les capacités (`Combat._perk_value`), mais la fiche 
 ### Attaque de base et sorts de base
 `SpellTip.show_attack` affiche la fiche de l'attaque de base (`SpellBar`, disque d'attaque). `_v13_to_v14` (SaveMigrations, `BASE_SPELLS`) applique les nouvelles valeurs de `spell_bard2`, `spell_nature1`, `spell_nature2` et `spell_nature5` aux configurations enregistrées si le sort a encore ses valeurs d'origine ou celles de la v12. Capture : `tools/shot_attack_tip.tscn`.
 
+### Aura de rage
+`CombatStage._make_rage_aura` : halo de braise + quad à shader spatial (`RAGE_SHADER`, flammes qui montent, uniformes `grow` et `flash`) + `CPUParticles3D` de braises. `_rage_burst` joue `Sound.rage()` (assets/sounds/rage.ogg, gain -15 dB dans `SFX_GAIN_DB`, mesuré à -34 LUFS avec `tools/sfx_levels.py`), l'onde de choc et la montée de `grow`. Pas de mise en scène si le monstre est déjà enragé à la première image (partie chargée). Capture : `tools/shot_rage.tscn` (séquence rage_0..3.png).
+
