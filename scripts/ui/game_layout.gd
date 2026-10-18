@@ -55,7 +55,7 @@ var _map_fold: Button
 static var map_folded := false   # carte repliée (état de la session : ne fait partie ni des sauvegardes ni des configurations)
 
 var _root: Control
-var footer: Label
+var footer: VBoxContainer
 var _scroll: ScrollContainer
 var _portrait: bool = false
 var _compact: bool = false     # mobile (portrait, écran tactile ou fenêtre très basse) : la carte quitte l'écran
@@ -676,18 +676,33 @@ func _rebuild() -> void:
 	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(v)
 	if footer == null:
-		footer = Label.new()
-		footer.text = L.t("common.editeur_de_donjon") + " " + AppVersion.label() + " · " + L.t("common.portage_godot") + "\nMade by Claude & Nydaunvan"
-		footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-		footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
-		footer.add_theme_color_override("font_color", Color("6f5e44"))
-		footer.mouse_filter = Control.MOUSE_FILTER_STOP   # clic : générique
-		footer.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		footer.gui_input.connect(func(ev: InputEvent):
-			var mb := ev as InputEventMouseButton
-			if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-				credits_pressed.emit())
+		footer = VBoxContainer.new()
+		footer.add_theme_constant_override("separation", 0)
+		footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ver := Label.new()
+		ver.text = L.t("common.editeur_de_donjon") + " " + AppVersion.label() + " · " + L.t("common.portage_godot")
+		ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ver.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+		ver.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
+		ver.add_theme_color_override("font_color", Color("6f5e44"))
+		ver.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		footer.add_child(ver)
+		# seule la mention « Made by … » ouvre la page de remerciements (bouton aussi large que son texte, pas toute la ligne)
+		var made := Button.new()
+		made.text = "Made by Claude & Nydaunvan"
+		made.flat = true
+		made.focus_mode = Control.FOCUS_NONE
+		made.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		made.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		made.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+		made.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
+		for st in ["normal", "hover", "pressed", "focus"]:
+			made.add_theme_stylebox_override(st, StyleBoxEmpty.new())
+		made.add_theme_color_override("font_color", Color("6f5e44"))
+		made.add_theme_color_override("font_hover_color", Color("c9a15a"))
+		made.add_theme_color_override("font_pressed_color", Color("c9a15a"))
+		made.pressed.connect(func(): credits_pressed.emit())
+		footer.add_child(made)
 	v.add_child(header)
 	await _yield()
 	if _portrait:

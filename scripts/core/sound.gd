@@ -30,6 +30,7 @@ var _shimmer: Timer
 var _shimmer_kind: String = ""
 var _bus_sfx: int = -1
 var _bus_music: int = -1
+var _bus_dry: int = -1        # musique sans réverbération (générique)
 var _last_yield_us: int = 0
 var _yielding: bool = false     # pendant le préchargement : la synthèse rend la main entre deux étapes (barre de progression, page Web vivante)
 var _unlocked: bool = false
@@ -54,6 +55,7 @@ func _ready() -> void:
 	_load_settings()
 	_bus_sfx = _make_bus("SFX", 0.14)
 	_bus_music = _make_bus("Music", 0.5)
+	_bus_dry = _make_bus("MusicDry", 0.0, false)
 	var lp := AudioEffectLowPassFilter.new()
 	lp.cutoff_hz = 8500.0
 	AudioServer.add_bus_effect(0, lp)
@@ -73,7 +75,7 @@ func _ready() -> void:
 	_menu.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_menu)
 	_credits = AudioStreamPlayer.new()
-	_credits.bus = "Music"
+	_credits.bus = "MusicDry"      # la musique du générique n'a aucun écho
 	_credits.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(_credits)
 	_shimmer = Timer.new()
@@ -81,11 +83,13 @@ func _ready() -> void:
 	add_child(_shimmer)
 	_apply_volumes()
 
-func _make_bus(bus_name: String, wet: float) -> int:
+func _make_bus(bus_name: String, wet: float, reverb: bool = true) -> int:
 	AudioServer.add_bus()
 	var idx := AudioServer.bus_count - 1
 	AudioServer.set_bus_name(idx, bus_name)
 	AudioServer.set_bus_send(idx, "Master")
+	if not reverb:
+		return idx
 	var rev := AudioEffectReverb.new()
 	rev.room_size = 0.8
 	rev.damping = 0.5
@@ -113,6 +117,7 @@ func _apply_volumes() -> void:
 	AudioServer.set_bus_mute(0, not enabled)
 	AudioServer.set_bus_volume_db(_bus_sfx, linear_to_db(maxf(sfx_volume, 0.0001)))
 	AudioServer.set_bus_volume_db(_bus_music, linear_to_db(maxf(music_volume, 0.0001)))
+	AudioServer.set_bus_volume_db(_bus_dry, linear_to_db(maxf(music_volume, 0.0001)))
 
 func set_enabled(v: bool) -> void:
 	enabled = v
