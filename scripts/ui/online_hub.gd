@@ -438,7 +438,8 @@ func _fill_mode(box: VBoxContainer) -> void:
 			_load_daily(day_box, _gen)
 		"hardcore":
 			var key := _month_key()
-			_mode_head(box, "🔥", L.fa(L.t("ui.hub.hc_title"), key.substr(5) + "/" + key.substr(0, 4)), HubKit.FIRE)
+			_mode_head(box, "🔥", L.t("ui.hub.mode_hardcore"), HubKit.FIRE)
+			box.add_child(HubKit.label(key.substr(5) + "/" + key.substr(0, 4), HubKit.FIRE, 18, true, false))      # la date du mois, sous le titre
 			box.add_child(HubKit.label(L.t("ui.hub.hc_desc"), UiTheme.PARCH, 14))
 			_cta(box, "hardcore")
 			HubKit.facts(box, [
