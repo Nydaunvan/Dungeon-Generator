@@ -978,7 +978,7 @@ func resolve_instinct(quality: String) -> void:
 			Sound.sfx("heal")
 		_:
 			gs.add_log(L.fa(L.t("rules.combat.instinct_rate") if quality != "none" else L.t("rules.combat.instinct_pas_le_temps"), victim.name))
-			events.append({"type": "popup", "text": L.t("rules.combat.instinct_popup_rate"), "on": on, "color": Color("8fc8e8")})
+			events.append({"type": "popup", "text": L.t("rules.combat.instinct_popup_rate" if quality != "none" else "rules.combat.instinct_popup_none"), "on": on, "color": Color("8fc8e8")})
 	events.append({"type": "instinct_result", "char": str(victim.id), "outcome": outcome})
 	(p.cont as Callable).call(outcome, int(p.dmg))
 	if outcome != "fail" and int(victim.hp) > 0:
