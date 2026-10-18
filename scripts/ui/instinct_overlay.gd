@@ -15,6 +15,9 @@ var _vignette: TextureRect
 var _seal: Control
 var _ring: Control
 var _name: Label
+var _word: Label       # « SURVIVRE ! » dans le disque
+var _timer: Label      # temps restant qui défile dans le disque
+var _hint: Label       # « Clic / Espace » sous le nom
 var _t0 := 0
 var _seconds := 3.0
 var _active := false
@@ -57,6 +60,10 @@ func _ready() -> void:
 	pic.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_seal.add_child(pic)
+	_word = _disc_label(Color("ffe3a0"))
+	_timer = _disc_label(Color("fff4d0"))
+	_seal.add_child(_word)
+	_seal.add_child(_timer)
 	add_child(_seal)
 	_name = Label.new()
 	_name.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.0)))
@@ -66,9 +73,27 @@ func _ready() -> void:
 	_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_name)
+	_hint = Label.new()
+	_hint.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.8)))
+	_hint.add_theme_color_override("font_color", Color("e8dcc0"))
+	_hint.add_theme_color_override("font_outline_color", Color.BLACK)
+	_hint.add_theme_constant_override("outline_size", 5)
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hint)
 	if ctrl != null:
 		ctrl.instinct_prompt.connect(_on_prompt)
 		ctrl.instinct_end.connect(func(_o): _hide())
+
+func _disc_label(col: Color) -> Label:
+	var l := Label.new()
+	l.add_theme_color_override("font_color", col)
+	l.add_theme_color_override("font_outline_color", Color(0.12, 0.0, 0.0, 1.0))
+	l.add_theme_constant_override("outline_size", 8)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
 
 func _on_prompt(char_id: String, seconds: float) -> void:
 	_seconds = maxf(0.5, seconds)
@@ -76,6 +101,8 @@ func _on_prompt(char_id: String, seconds: float) -> void:
 	_active = true
 	var hero: Dictionary = ctrl.gs.char_by_id(char_id)
 	_name.text = str(hero.get("name", ""))
+	_word.text = L.t("ui.instinct.bouton")
+	_hint.text = L.t("ui.instinct.touche")
 	_place()
 	_seal.scale = Vector2(0.6, 0.6)
 	_seal.modulate.a = 0.0
@@ -102,18 +129,27 @@ func _hide() -> void:
 func _frac() -> float:
 	return clampf(float(Time.get_ticks_msec() - _t0) / (_seconds * 1000.0), 0.0, 1.0)
 
-## Centre le bouton sur la vue 3D ; rappelé à chaque image car la vue peut encore bouger (ouverture du combat, redimensionnement).
+## Place le bouton sur le côté gauche de la vue 3D (le monstre reste libre au centre) ; rappelé à chaque image car la vue peut encore bouger.
 func _place() -> void:
 	var area: Rect2 = view.get_global_rect() if view != null else get_viewport_rect()
-	var d := clampf(minf(area.size.x, area.size.y) * 0.42, 130.0, 260.0)
+	var d := clampf(minf(area.size.x, area.size.y) * 0.36, 120.0, 210.0)
+	var center := Vector2(area.position.x + maxf(d * 1.25, area.size.x * 0.17), area.get_center().y)
 	_seal.size = Vector2(d, d)
 	_seal.pivot_offset = _seal.size * 0.5
-	_seal.global_position = area.get_center() - _seal.size * 0.5
+	_seal.global_position = center - _seal.size * 0.5
 	_ring.size = area.size
 	_ring.global_position = area.position
+	# texte dans le disque : mot d'action en haut, temps restant en grand au centre
+	_word.add_theme_font_size_override("font_size", int(d * 0.125))
+	_timer.add_theme_font_size_override("font_size", int(d * 0.30))
+	_word.size = Vector2(d, d * 0.2)
+	_word.position = Vector2(0.0, d * 0.20)
+	_timer.size = Vector2(d, d * 0.36)
+	_timer.position = Vector2(0.0, d * 0.40)
 	_name.size = Vector2(d * 1.6, 28)
-	_name.global_position = Vector2(area.get_center().x - _name.size.x * 0.5, _seal.global_position.y + d + 6.0)
-
+	_name.global_position = Vector2(center.x - _name.size.x * 0.5, _seal.global_position.y + d + 6.0)
+	_hint.size = Vector2(d * 1.6, 22)
+	_hint.global_position = Vector2(center.x - _hint.size.x * 0.5, _name.global_position.y + 26.0)
 
 func _process(_d: float) -> void:
 	if not _active:
@@ -121,6 +157,10 @@ func _process(_d: float) -> void:
 	_place()
 	var f := _frac()
 	_ring.queue_redraw()
+	var left := maxf(0.0, _seconds * (1.0 - f))
+	_timer.text = ("%.1f" % left).replace(".", L.t("ui.instinct.decimal"))
+	var hot := f >= PERFECT_FROM
+	_timer.add_theme_color_override("font_color", Color("ffe08a") if hot else Color("fff4d0"))
 	_seal.scale = Vector2.ONE * (1.0 + 0.04 * sin(Time.get_ticks_msec() * 0.012))
 	if f >= 1.0:
 		_finish("none")
