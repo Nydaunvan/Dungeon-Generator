@@ -229,11 +229,27 @@ func _paginate() -> void:
 				await get_tree().process_frame
 				if gen != _gen or not is_instance_valid(meter):
 					return
+			if used + h > budget and ln.begins_with("[table="):
+				# un tableau qui ne tient pas dans la place restante est coupé par lignes (l'en-tête est répété) au lieu de laisser un grand vide
+				var sp := _table_split(meter, ln, budget - used)
+				if not sp.is_empty():
+					cur.append(sp.fit)
+					_push(ti, cur)
+					cur = []
+					used = 0.0
+					lines[i] = str(sp.rest)
+					continue
 			if used + h > budget and not cur.is_empty():
-				# ne finit pas une page sur un intitulé : il passe avec son paragraphe
+				# ne finit pas une page sur un intitulé : il passe avec son paragraphe (les lignes vides qui le suivent ne comptent pas)
 				var carry: Array = []
-				while cur.size() > 1 and _is_heading(str(cur[cur.size() - 1])) :
-					carry.push_front(cur.pop_back())
+				var tail: Array = []
+				while cur.size() > 1 and str(cur[cur.size() - 1]).strip_edges() == "":
+					tail.push_front(cur.pop_back())
+				var heads: Array = []
+				while cur.size() > 1 and _is_heading(str(cur[cur.size() - 1])):
+					heads.push_front(cur.pop_back())
+				if not heads.is_empty():
+					carry = heads + tail
 				_push(ti, cur)
 				cur = carry
 				used = 0.0
@@ -248,9 +264,37 @@ func _paginate() -> void:
 		_push(ti, cur)
 	meter.queue_free()
 
+## Coupe une ligne `[table=N]…[/table]` : `fit` = les premières lignes qui tiennent dans `room` (au moins en-tête + une ligne),
+## `rest` = l'en-tête répété suivi des lignes restantes. Vide si le tableau ne se coupe pas utilement.
+func _table_split(meter: RichTextLabel, ln: String, room: float) -> Dictionary:
+	var close := ln.find("]")
+	var cols := int(ln.substr(7, close - 7))
+	if cols <= 0 or not ln.ends_with("[/table]"):
+		return {}
+	var cells: Array = []
+	var pos := 0
+	while true:
+		var a := ln.find("[cell]", pos)
+		if a < 0:
+			break
+		var b := ln.find("[/cell]", a)
+		if b < 0:
+			return {}
+		cells.append(ln.substr(a, b + 7 - a))
+		pos = b + 7
+	var rows := cells.size() / cols
+	if rows < 4 or cells.size() % cols != 0:
+		return {}
+	var head := "".join(cells.slice(0, cols))
+	for k in range(rows - 1, 1, -1):          # k lignes au total (en-tête comprise)
+		var part := "[table=%d]%s[/table]" % [cols, "".join(cells.slice(0, k * cols))]
+		if _measure(meter, part) <= room:
+			return {"fit": part, "rest": "[table=%d]%s%s[/table]" % [cols, head, "".join(cells.slice(k * cols))]}
+	return {}
+
 func _is_heading(line: String) -> bool:
 	var s := line.strip_edges()
-	return s.begins_with("[b]") and s.ends_with("[/b]") or s.begins_with("[font_size=") or s.ends_with(":[/b]")
+	return s.begins_with("[b]") and s.ends_with("[/b]") or s.begins_with("[font_size=") or s.ends_with(":[/b]") or (s.begins_with("[b]") and s.ends_with(":"))
 
 func _push(ti: int, lines: Array) -> void:
 	while not lines.is_empty() and str(lines[lines.size() - 1]).strip_edges() == "":
