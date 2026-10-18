@@ -355,3 +355,6 @@ Le découpage en blocs change très légèrement l'éclairage (les lumières son
 
 ### Critique, esquive, garde : provenance des bonus affichés
 Critique ← Dextérité (équipement compris) + talents + capacités de rareté des objets (+ effet d'ensemble mythique) + bonus de critique des modificateurs de partie ; esquive ← Dextérité + capacités « esquive » ; garde ← Constitution. `Stats.crit_total` est l'unique formule du critique (combat et tous les affichages : fiche, infobulles, boutique, dock). Les cartes de `StatExplain` listent maintenant, pour chaque objet, son bonus de Dextérité et sa capacité de rareté (`_sources(…, perk)`), l'ensemble mythique et les modificateurs de partie. Test : `tools/check_stat_items.tscn`.
+
+### Détail des résistances et des capacités d'objets
+`StatExplain.data` accepte `res_<école>` (`_resist_section` : bonus de classe `Resist.CLASS_RESISTS`, somme des `resists` des objets équipés, total borné −50 / +90) et `perk_<id>` (`_perk_section` : `Rarity.perk_sum` et les objets qui portent la capacité, via `_sources`). `PartyModal._combat_grid` liste toujours les six écoles et les sept capacités, chacune avec son `StatTip`. Test : `tools/check_stat_details.tscn`.

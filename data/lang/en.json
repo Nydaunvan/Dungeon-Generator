@@ -3255,7 +3255,19 @@
   "ui.instinct.decimal": ".",
   "ui.stat_explain.set_mythic": "Mythic set",
   "ui.stat_explain.set": "2 mythic pieces",
-  "ui.stat_explain.r_run": "Run modifiers"
+  "ui.stat_explain.r_run": "Run modifiers",
+  "ui.stat_explain.r_class": "Class bonus",
+  "ui.stat_explain.rule_res": "Reduces the '%s' school damage this hero takes by this percentage; a negative value is a weakness (more damage). Class bonus + equipped items.",
+  "ui.stat_explain.res_limits": "Limited to %d %% … +%d %%",
+  "ui.stat_explain.perk_has": "Yes",
+  "ui.stat_explain.perk_none": "No",
+  "ui.stat_explain.rule_perk_spell": "Increases the damage of your single-target spells by this percentage (not area spells, not healing).",
+  "ui.stat_explain.rule_perk_execute": "Extra damage by this percentage against a single monster below 25% HP (never on a group or area spell).",
+  "ui.stat_explain.rule_perk_bleed": "Chance, on every hit that lands (not area), to poison the target for 3 turns.",
+  "ui.stat_explain.rule_perk_critdmg": "A critical hit deals x2 plus this percentage (e.g. +40% -> x2.4).",
+  "ui.stat_explain.rule_perk_thorns": "Reflects this percentage of the damage taken back to the attacker (at least 1).",
+  "ui.stat_explain.rule_perk_gold": "Increases the gold dropped by defeated monsters by this percentage.",
+  "ui.stat_explain.rule_perk_last_stand": "Once per combat, a blow that would kill this hero leaves them at 1 HP (after the survival instinct, which comes first)."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

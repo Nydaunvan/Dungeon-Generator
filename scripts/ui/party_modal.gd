@@ -445,15 +445,13 @@ func _combat_grid(p: Control, c: Dictionary) -> void:
 		["🔮", L.t("ui.party_modal.reduc_mag"), "%d %%" % Stats.reduction(c, true), "reduc_mag"],
 		["✨", L.t("ui.party_modal.puissance_sorts"), "+%d" % (int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))), "spell_power"],
 		["🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % (int(c.get("talentLifestealPct", 0)) + int(c.get("perkLifesteal", 0))), "lifesteal"]]
-	var hres := Resist.hero(c)      # résistances d'école : classe + objets (négatif = faiblesse)
+	var hres := Resist.hero(c)      # résistances d'école : classe + objets (négatif = faiblesse) ; les six écoles sont toujours listées, avec leur détail au survol
 	for rk in Resist.KEYS:
 		var rv := int(hres.get(rk, 0))
-		if rv != 0:
-			cells.append([str(Resist.ICONS[rk]), L.fa(L.t("ui.party_modal.resistance_de"), L.t(str(Resist.NAME_KEYS[rk]))), "%s%d %%" % ["+" if rv > 0 else "−", absi(rv)], ""])
-	for pk in ["spell", "execute", "bleed", "critdmg", "thorns", "gold", "last_stand"]:      # capacités des objets rares : sinon invisibles sur la fiche
+		cells.append([str(Resist.ICONS[rk]), L.fa(L.t("ui.party_modal.resistance_de"), L.t(str(Resist.NAME_KEYS[rk]))), "%s%d %%" % ["+" if rv > 0 else ("−" if rv < 0 else ""), absi(rv)], "res_" + rk])
+	for pk in ["spell", "execute", "bleed", "critdmg", "thorns", "gold", "last_stand"]:      # capacités des objets rares : toutes listées, avec les objets qui les donnent
 		var pv := Rarity.perk_sum(c, pk)
-		if pv > 0:
-			cells.append(["✦", L.t(str(Rarity.PERK_NAMES[pk])), "×1" if pk == "last_stand" else "+%d %%" % pv, ""])
+		cells.append(["✦", L.t(str(Rarity.PERK_NAMES[pk])), ("×1" if pv > 0 else "—") if pk == "last_stand" else "%s%d %%" % ["+" if pv > 0 else "", pv], "perk_" + pk])
 	for cl in cells:
 		var cell := _stat_cell(cl[0], cl[1], cl[2])
 		var ckey: String = cl[3]

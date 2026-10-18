@@ -159,6 +159,10 @@ static func data(c: Dictionary, cfg: Dictionary, key: String) -> Dictionary:
 			return _sec(key, "🛡️", L.t("ui.party_modal.garde"), "%d %%" % Stats.guard_from_con(cn), L.t("ui.party_modal.tip_garde"),
 				[_row(L.fa(L.t("ui.stat_explain.r_con_guard"), cn), _pct(Stats.guard_from_con(cn))), _row(L.t("ui.stat_explain.r_total"), "%d %%" % Stats.guard_from_con(cn), "total")],
 				[], _sources(c, cfg, ["bonusCon"], ["bonusCon"]), L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_GUARD))
+		"res_phys", "res_fire", "res_ice", "res_nature", "res_holy", "res_shadow":
+			return _resist_section(c, key.substr(4))
+		"perk_spell", "perk_execute", "perk_bleed", "perk_critdmg", "perk_thorns", "perk_gold", "perk_last_stand":
+			return _perk_section(c, cfg, key.substr(5))
 		"reduc_phys", "reduc_mag":
 			var mag := key == "reduc_mag"
 			var rf := "resistMagic" if mag else "resistPhys"
@@ -183,7 +187,7 @@ static func data(c: Dictionary, cfg: Dictionary, key: String) -> Dictionary:
 			var rl := int(c.get("perkLifesteal", 0))
 			return _sec(key, "🩸", L.t("ui.party_modal.vol_vie"), "%d %%" % (ls + rl), L.t("ui.party_modal.tip_vol_vie"),
 				[_row(L.t("ui.stat_explain.r_life"), _pct(ls), _tone(ls)), _row(L.t("ui.stat_explain.r_rarity"), _pct(rl), _tone(rl)),
-				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (ls + rl), "total")], [], _sources(c, cfg, [], ["lifestealPct"], " %"))
+				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (ls + rl), "total")], [], _sources(c, cfg, [], ["lifestealPct"], " %", false, "lifesteal"))
 		"hp":
 			var k2 := int(c.get("effCon", 10))
 			var base_hp := 10 + 3 * k2 + 4 * (lvl - 1)
@@ -239,3 +243,41 @@ static func flatten(sections: Array) -> String:
 
 static func text(c: Dictionary, cfg: Dictionary, key: String) -> String:
 	return flatten(many_data(c, cfg, [key]))
+
+
+## Résistance à une école : bonus de la classe + `resists` de chaque objet équipé (négatif = faiblesse), bornée.
+static func _resist_section(c: Dictionary, k: String) -> Dictionary:
+	var base := int((Resist.CLASS_RESISTS.get(str(c.get("classId", "")), {}) as Dictionary).get(k, 0))
+	var out_src: Array = []
+	var gear := 0
+	var eq: Dictionary = c.get("equipment", {})
+	for slot in Characters.SLOTS:
+		var it = eq.get(slot)
+		if it is Dictionary and it.get("resists") is Dictionary:
+			var v := int((it.resists as Dictionary).get(k, 0))
+			if v != 0:
+				gear += v
+				out_src.append(_source(str(it.get("icon", "")), L.c(str(it.get("name", "?"))), L.c(str(Inventory.SLOT_LABELS.get(slot, slot))),
+					[{"label": "", "value": _pct(v), "tone": _tone(v)}]))
+	var total := Resist.of_hero(c, k)
+	var rows: Array = [_row(L.t("ui.stat_explain.r_class"), _pct(base), _tone(base))]
+	if gear != 0:
+		rows.append(_row(L.t("ui.stat_explain.r_equip"), _pct(gear), _tone(gear)))
+	rows.append(_row(L.t("ui.stat_explain.r_total"), _pct(total), "total"))
+	return _sec("res_" + k, str(Resist.ICONS[k]), L.fa(L.t("ui.party_modal.resistance_de"), L.t(str(Resist.NAME_KEYS[k]))), _pct(total),
+		L.fa(L.t("ui.stat_explain.rule_res"), L.t(str(Resist.NAME_KEYS[k]))), rows, [], out_src,
+		L.fa(L.t("ui.stat_explain.res_limits"), [Resist.MIN_PCT, Resist.MAX_PCT]))
+
+const PERK_RULES := {"spell": "ui.stat_explain.rule_perk_spell", "execute": "ui.stat_explain.rule_perk_execute", "bleed": "ui.stat_explain.rule_perk_bleed",
+	"critdmg": "ui.stat_explain.rule_perk_critdmg", "thorns": "ui.stat_explain.rule_perk_thorns", "gold": "ui.stat_explain.rule_perk_gold",
+	"last_stand": "ui.stat_explain.rule_perk_last_stand"}
+
+## Capacité de rareté (dégâts de sort, exécution, saignement, dégâts critiques, épines, or, dernier souffle) : total et objets qui la donnent.
+static func _perk_section(c: Dictionary, cfg: Dictionary, perk: String) -> Dictionary:
+	var total := Rarity.perk_sum(c, perk)
+	var shown := _pct(total)
+	if perk == "last_stand":
+		shown = L.t("ui.stat_explain.perk_has") if total > 0 else L.t("ui.stat_explain.perk_none")
+	var rows: Array = [_row(L.t("ui.stat_explain.r_rarity"), shown, _tone(total)), _row(L.t("ui.stat_explain.r_total"), shown, "total")]
+	return _sec("perk_" + perk, "✦", L.t(str(Rarity.PERK_NAMES[perk])), shown, L.t(str(PERK_RULES[perk])), rows, [],
+		_sources(c, cfg, [], [], "", false, perk))
