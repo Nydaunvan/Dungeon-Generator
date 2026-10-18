@@ -367,3 +367,6 @@ Les statuts (brûlure, poison, gel, sommeil, ralentissement…) vivent sur le **
 
 ### Indicateur de zoom de la mini-carte
 `Minimap._draw_zoom_ui` dessine, quand le zoom est possible (`_max_zoom() > 1`, donc une carte d'au moins 20 cases, hors carte plein écran), « ×N » et deux boutons − / + en haut à droite ; un bouton est grisé à la limite. Clic gauche sur − / + (`_zoom_by`), info-bulle explicative au survol. La molette et le double-clic restent inchangés.
+
+### Bonus et effets (fiche d'inventaire)
+`BonusOverview.build(c, cfg)` regroupe tout ce qui améliore un héros en sept groupes (caractéristiques, combat, résistances d'école, capacités des objets + ensemble mythique, talents, statuts actifs, classe / Constitution / modificateurs d'expédition) en réutilisant les sections de `StatExplain.data` : valeur finale, puis chaque source (objet et emplacement, talent, statut, classe). Les effets sans source sont résumés en une ligne « sans effet ». `EquipDock._add_bonus_overview` l'affiche dans le volet « Détails et sorts » ; les libellés qui retournent à la ligne ont une largeur minimale (sinon coupure lettre par lettre). Test : `tools/check_bonus_overview.tscn`.

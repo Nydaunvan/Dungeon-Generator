@@ -55,7 +55,7 @@ static func _sources(c: Dictionary, cfg: Dictionary, eq_fields: Array, tal_field
 		if perk != "":
 			for pk in Rarity.perks_of(it):          # capacités de rareté de l'objet (ex. « +4 % critique »)
 				if str(pk.get("id", "")) == perk and int(pk.get("value", 0)) != 0:
-					parts.append({"label": L.t(str(Rarity.PERK_NAMES.get(perk, perk))), "value": _sg(int(pk.value)) + " %", "tone": _tone(int(pk.value))})
+					parts.append({"label": L.t(str(Rarity.PERK_NAMES.get(perk, perk))), "value": L.t("ui.stat_explain.perk_has") if perk == "last_stand" else _sg(int(pk.value)) + " %", "tone": _tone(int(pk.value))})
 		if not parts.is_empty():
 			out.append(_source(str(it.get("icon", "")), L.c(str(it.get("name", "?"))), L.c(str(Inventory.SLOT_LABELS.get(slot, slot))), parts))
 	if perk != "":

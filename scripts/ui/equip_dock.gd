@@ -792,6 +792,7 @@ func _build_drawer(c: Dictionary) -> Control:
 		var lkeys: Array = ["force", "dex", "con", "int"] if line == lines_stat[0] else ["spell_power"]
 		StatTip.attach(ln, func(): return StatExplain.many_data(c, gs.cfg, lkeys))
 		_drawer_inner.add_child(ln)
+	_add_bonus_overview(c)
 	_drawer_inner.add_child(_label(L.t("ui.equip_dock.sorts_et_capacites"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
 	var known: Array = c.get("spellsKnown", [])
 	if known.is_empty():
@@ -814,6 +815,45 @@ func _build_drawer(c: Dictionary) -> Control:
 		call_deferred("_grow_drawer", _anim_drawer)
 		_anim_drawer = false
 	return _drawer_clip
+
+## « Bonus et effets » : tout ce qui améliore ce héros (équipement, raretés, talents, statuts, classe, partie), chaque source détaillée.
+func _add_bonus_overview(c: Dictionary) -> void:
+	_drawer_inner.add_child(_label(L.t("ui.bonus.titre"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
+	var tones := {"pos": Color("8fcf6a"), "neg": Color("e0785a"), "dim": UiTheme.DIM}
+	var any := false
+	for g in BonusOverview.build(c, gs.cfg):
+		var entries: Array = g.entries
+		var off: Array = g.inactive
+		if entries.is_empty() and off.is_empty():
+			continue
+		var head := _label(g.title, 12, Color("d9b56e"), UiTheme.F_BODY_BOLD)
+		_drawer_inner.add_child(head)
+		for e in entries:
+			any = true
+			var row := HBoxContainer.new()
+			var nm := _label(("%s %s" % [e.icon, e.label]).strip_edges(), 13)
+			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(nm)
+			if str(e.value) != "":
+				row.add_child(_label(str(e.value), 13, tones.get(str(e.tone), UiTheme.PARCH), UiTheme.F_BODY_BOLD))
+			_drawer_inner.add_child(row)
+			for sub in e.subs:
+				if str(sub.text).strip_edges() == "":
+					continue
+				var m := MarginContainer.new()
+				m.add_theme_constant_override("margin_left", 14)
+				var sl := _wrap_label("· " + str(sub.text), 12, tones.get(str(sub.tone), UiTheme.DIM))
+				sl.custom_minimum_size = Vector2(200, 0)       # sans largeur minimale, le retour à la ligne coupe lettre par lettre
+				sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				m.add_child(sl)
+				m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				_drawer_inner.add_child(m)
+		if not off.is_empty():
+			var il := _wrap_label(L.fa(L.t("ui.bonus.sans_effet"), ", ".join(off)), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
+			il.custom_minimum_size = Vector2(200, 0)
+			_drawer_inner.add_child(il)
+	if not any:
+		_drawer_inner.add_child(_label(L.t("ui.bonus.aucun"), 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 
 func _grow_drawer(animate: bool) -> void:
 	if _drawer_clip == null or not is_instance_valid(_drawer_clip):
