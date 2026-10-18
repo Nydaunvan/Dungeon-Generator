@@ -1,5 +1,32 @@
 [
  {
+  "version": "1.36.1",
+  "date": "2026-10-18",
+  "changes": [
+   "## Chargement et accueil",
+   "La création du donjon se fait entièrement derrière l'écran de chargement à l'épée (plus de fenêtre « Création du donjon »), dans un fil de travail pour garder l'épée fluide.",
+   "Le sursaut de l'écran à l'épée au lancement du donjon est corrigé : l'écran se recale dès que l'échelle de l'interface change.",
+   "La mention « portage Godot » disparaît du bas de l'accueil. Dans le Hardcore du mois, la date passe sous le titre.",
+   "## Fiche des héros et inventaire",
+   "La fiche détaille les six résistances d'école et les sept capacités d'objets, avec les objets sources. Critique, esquive et garde affichent tous les bonus des objets, des capacités de rareté, de l'ensemble mythique et des modificateurs de partie.",
+   "Nouvelle section « Bonus et effets » dans l'inventaire : tout ce qui améliore un héros (équipement, raretés, talents, statuts, classe, partie en cours), chaque source détaillée.",
+   "Les icônes d'objets s'affichent en image dans « Bonus et effets » et dans le détail des statistiques, au lieu du code brut.",
+   "Les formules n'utilisent plus les crochets ⌊ ⌋ mal rendus par la police : ils deviennent ent(x) (floor(x) en anglais), avec une légende dans le guide.",
+   "L'icône du sort Drain de Vie est un cœur lumineux violet-rose bien visible.",
+   "## Combat",
+   "Les statuts d'un groupe de monstres sont propres à chaque membre : un sort sur une cible ne touche que ce membre, un sort de zone les touche tous.",
+   "Instinct de survie : « En vain… » quand le clic était dans le temps mais le dé raté, « Trop tard… » seulement sans clic.",
+   "## Pièges et énigmes",
+   "Nouveau choix « Effort collectif », toujours proposé : jet de Constitution du groupe, chaque héros vivant y laisse 35 % de son endurance max. Échec : tout le groupe est touché à dégâts réduits. Réglable dans l'administration.",
+   "Les pièges générés sont toujours sur le passage obligé vers la sortie, jamais dans une impasse ; faute de place, un objet à ramasser les remplace.",
+   "Audit des 120 énigmes : cinq énigmes ambiguës ou discutables sont réécrites (en français et en anglais).",
+   "## Carte et guide",
+   "Sur une grande carte, la mini-carte indique « Molette : zoom / dézoom ».",
+   "Le guide coupe un tableau trop haut pour la fin de la page au lieu de laisser un grand vide (en-tête répété), et garde un intitulé avec son paragraphe.",
+   "Le guide est mis à jour : formules du critique, des capacités d'objets, des résistances d'école, de l'instinct et du second souffle ; statuts par monstre ; effet des objets ; pièges."
+  ]
+ },
+ {
   "version": "1.36.0",
   "date": "2026-10-18",
   "changes": [
