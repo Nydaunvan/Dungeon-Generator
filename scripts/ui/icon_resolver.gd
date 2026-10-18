@@ -66,11 +66,11 @@ static func texture(icon: String) -> Texture2D:
 	var legacy: Dictionary = consts.get("ITEM_SPRITE_LEGACY", {})
 	var remake: Dictionary = consts.get("REMAKE_MAP", {})
 	if NEW_MONSTER_IDS.has(id):
-		tex = _cell(MONSTER_SHEET, NEW_MONSTER_IDS.find(id), 30, 220)
+		tex = _monster_tex(NEW_MONSTER_IDS.find(id))
 	elif legacy.has(id):
 		tex = _cell(ITEM_SHEET, int(legacy[id]), 8, 128)
 	elif remake.has(id):
-		tex = _cell(MONSTER_SHEET, int(remake[id]), 30, 220)
+		tex = _monster_tex(int(remake[id]))
 	elif id.begins_with("spr_") and id.substr(4).is_valid_int():
 		tex = _cell(ITEM_SHEET, int(id.substr(4)), 8, 128)
 	elif ResourceLoader.exists("res://assets/icons/%s.webp" % id):
@@ -79,6 +79,13 @@ static func texture(icon: String) -> Texture2D:
 		tex = load("res://assets/icons/%s.png" % id)
 	_cache[icon] = tex
 	return tex
+
+## Vignette d'un monstre de la planche : le fichier individuel agrandi ×2 (assets/monsters/mNN.webp, comme dans la vue 3D) s'il existe, sinon la case de la planche.
+static func _monster_tex(index: int) -> Texture2D:
+	var path := "res://assets/monsters/m%02d.webp" % index
+	if ResourceLoader.exists(path):
+		return load(path)
+	return _cell(MONSTER_SHEET, index, 30, 220)
 
 static func _cell(sheet: String, index: int, cols: int, cell: int) -> Texture2D:
 	var at := AtlasTexture.new()

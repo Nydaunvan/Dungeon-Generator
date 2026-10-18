@@ -321,3 +321,6 @@ Les événements `popup` du combat portent une cible `on` : `""` (monstre, colon
 
 ### Anneau d'or redessiné
 La vignette de la planche d'objets (case 40, `ITEM_SPRITE_LEGACY`) était rognée sur les côtés. `ring_gold` n'est plus dans cette table : l'icône vient de `assets/icons/ring_gold.png` (256 px), générée par `tools/gen_ring_icon.py` (jonc doré rendu en 3D, éclairage métallique, bords lissés). La table `ITEM_SPRITE_LEGACY` est prioritaire sur `assets/icons/`, d'où le retrait de l'entrée.
+
+### Ogre : marteau complété
+La tête arrière du marteau de l'ogre (case 22 de la planche des monstres) était rognée à plat par le bord de l'image d'origine. `tools/fix_ogre.py` redessine la face supérieure manquante (arêtes claires, contour sombre) sous les pixels existants et rend `assets/monsters/m22.webp` (l'ogre est réduit de ~4,5 % pour faire de la place, il garde la même position au sol). `IconResolver` lit désormais ces vignettes individuelles (`assets/monsters/mNN.webp`, agrandies ×2, déjà utilisées en 3D) pour les monstres de la planche quand elles existent, de sorte que la fiche et la vue 3D montrent la même image ; la planche d'origine n'est pas ré-encodée (aucune perte de qualité pour les autres monstres). Aperçu : `tools/shot_ogre.tscn`.
