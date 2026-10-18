@@ -41,8 +41,9 @@ static func open(host: Node, gs: GameState, on_change: Callable = Callable()) ->
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 6)
 	m.content.add_child(body)
+	var rf := {}      # une fonction anonyme ne peut pas se rappeler elle-même (variable capturée par copie, vide) : on passe par ce dictionnaire
 	var render := Callable()
-	render = func():
+	rf["f"] = func():
 		gold.text = L.fa(L.t("common.pieces_or"), gs.gold)
 		for ch in tabs.get_children():
 			ch.queue_free()
@@ -61,7 +62,7 @@ static func open(host: Node, gs: GameState, on_change: Callable = Callable()) ->
 			tb.focus_mode = Control.FOCUS_NONE
 			tb.pressed.connect(func():
 				st.tab = tid
-				render.call())
+				rf.f.call())
 			tabs.add_child(tb)
 		var entries: Array = []   # [item, owner]
 		if st.tab == "bag":
@@ -101,7 +102,7 @@ static func open(host: Node, gs: GameState, on_change: Callable = Callable()) ->
 				Actions.forge(str(owner.get("id", "")), slot if not owner.is_empty() else gs.inventory.find(it))
 				if on_change.is_valid():
 					on_change.call()
-				render.call())
+				rf.f.call())
 			top.add_child(ub)
 			row.add_child(top)
 			var d := AdminUtil.label(_detail(it), 13, UiTheme.DIM)
@@ -109,6 +110,7 @@ static func open(host: Node, gs: GameState, on_change: Callable = Callable()) ->
 			row.add_child(d)
 			body.add_child(row)
 			body.add_child(HSeparator.new())
+	render = rf.f
 	render.call()
 	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m

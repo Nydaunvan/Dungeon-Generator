@@ -18,12 +18,14 @@ static func open(host: Node, snapshot: Callable, on_load: Callable, on_saved: Ca
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	m.content.add_child(list)
 	var state := {"busy": false}
+	var rf := {}      # une fonction anonyme ne peut pas se rappeler elle-même (variable capturée par copie, vide) : on passe par ce dictionnaire
 	var fill := Callable()
-	fill = func():
+	rf["f"] = func():
 		for ch in list.get_children():
 			ch.queue_free()
 		for i in Saves.SLOTS:
-			list.add_child(_row(i, can_save, snapshot, on_load, m, fill, on_saved, opts, list, state))
+			list.add_child(_row(i, can_save, snapshot, on_load, m, rf.f, on_saved, opts, list, state))
+	fill = rf.f
 	fill.call()
 	return m
 

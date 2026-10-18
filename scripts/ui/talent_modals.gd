@@ -90,8 +90,9 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 	body.add_theme_constant_override("separation", 6)
 	var tabs := AdminUtil.flow(m.content)
 	m.content.add_child(body)
+	var rf := {}      # une fonction anonyme ne peut pas se rappeler elle-même (variable capturée par copie, vide) : on passe par ce dictionnaire
 	var render := Callable()
-	render = func():
+	rf["f"] = func():
 		for ch in tabs.get_children():
 			ch.queue_free()
 		for ch in body.get_children():
@@ -105,7 +106,7 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 			tb.focus_mode = Control.FOCUS_NONE
 			tb.pressed.connect(func():
 				st.who = cid
-				render.call())
+				rf.f.call())
 			tabs.add_child(tb)
 		var c := gs.char_by_id(str(st.who))
 		if c.is_empty():
@@ -140,7 +141,7 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 						if int(c.hp) > int(c.maxHp):
 							c["hp"] = c.maxHp
 						on_change.call()
-						render.call())
+						rf.f.call())
 					fl.add_child(ob)
 			else:
 				var cur := Talents.find_option(gs.cfg, str(chosen[lv].id))
@@ -161,10 +162,11 @@ static func master(host: Node, gs: GameState, on_change: Callable) -> Modal:
 					rb.pressed.connect(func():
 						Talents.respec(gs, c, lv, oid2)
 						on_change.call()
-						render.call())
+						rf.f.call())
 					row.add_child(rb)
 			body.add_child(row)
 			body.add_child(HSeparator.new())
+	render = rf.f
 	render.call()
 	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m

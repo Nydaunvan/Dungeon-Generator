@@ -318,8 +318,9 @@ static func open(host: Node, current: String, on_pick: Callable) -> Modal:
 	var pick := func(v: String):
 		on_pick.call(v)
 		m.close()
+	var rf := {}      # une fonction anonyme ne peut pas se rappeler elle-même (variable capturée par copie, vide) : on passe par ce dictionnaire
 	var render := Callable()
-	render = func():
+	rf["f"] = func():
 		for ch in grid.get_children():
 			grid.remove_child(ch)
 			ch.queue_free()
@@ -357,6 +358,7 @@ static func open(host: Node, current: String, on_pick: Callable) -> Modal:
 				grid.add_child(mm)
 		scroll.scroll_vertical = 0
 		grid.queue_sort()
+	render = rf.f
 	var switch_tab := func(t: String):
 		_tab = t
 		_mark_tab(b_emoji, t == "emoji")
