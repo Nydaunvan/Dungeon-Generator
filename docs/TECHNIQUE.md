@@ -330,3 +330,6 @@ Le disque de la case 147 de la planche d'objets est rogné à droite (coupure ve
 
 ### Mort individuelle des membres d'un groupe
 Quand un membre d'un groupe tombe sans que le groupe soit anéanti, `CombatStage._refresh_monsters` libère son sprite avec l'animation de mort (`_free_entry(k, true)` → `EntityLayer.die_node` : il s'affaisse et s'efface en 0,5 s) au lieu de le retirer d'un coup ; seul le dernier membre déclenchait jusque-là cette animation (événement `monster_died` → `die_all`). Les survivants glissent vers leur nouvelle place (`slide`, lissage exponentiel dans `_process`) plutôt que de sauter. Le rafraîchissement a lieu après l'impact du coup (`_drain` attend `SpellFx3D.wait_hit`), donc le membre tombe quand le coup le touche. Test : `tools/shot_group_death.tscn`.
+
+### Les monstres ne franchissent pas les pièges actifs
+`Wanderers._free` refuse toute case portant un piège encore actif (ni désamorcé, ni pris, ni caché : même condition que le déclenchement sous les pas du joueur, `Interactions.step_items`), pour la poursuite comme pour la patrouille ; la zone de garde n'y change rien. L'état est relu à chaque pas (un piège désamorcé redevient franchissable). Lecture seule de `level_states` pour ne pas créer d'entrée d'état. Test : `tools/check_monster_trap.tscn`.

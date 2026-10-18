@@ -100,6 +100,8 @@ func _free(p: Vector2i, except_id: String, include_merchant: bool = true) -> boo
 		return false
 	if p == Vector2i(rig.gx, rig.gy):
 		return false
+	if _active_trap_at(p):
+		return false
 	if _monster_cells(except_id).has(p):
 		return false
 	if include_merchant:
@@ -107,6 +109,16 @@ func _free(p: Vector2i, except_id: String, include_merchant: bool = true) -> boo
 		if not mm.is_empty() and p == Vector2i(int(mm.x), int(mm.y)):
 			return false
 	return true
+
+## Piège encore actif (ni désamorcé, ni pris, ni caché) sur la case : aucun monstre ne le franchit, même dans sa zone de patrouille ou en poursuite.
+func _active_trap_at(p: Vector2i) -> bool:
+	for it in level.get("items", []):
+		if str(it.get("type", "")) != "trap" or int(it.x) != p.x or int(it.y) != p.y:
+			continue
+		var st: Dictionary = ((gs.level_states.get(str(level.id), {}) as Dictionary).get("items_state", {}) as Dictionary).get(str(it.id), {})   # lecture seule (item_state créerait l'entrée)
+		if not (st.get("taken", false) or st.get("disarmed", false) or st.get("hidden", bool(it.get("startHidden", false)))):
+			return true
+	return false
 
 ## Zone de patrouille : cases atteignables en `radius` pas depuis (ox, oy).
 func _zone(key: String, ox: int, oy: int, radius: int) -> Dictionary:
