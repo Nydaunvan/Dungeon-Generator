@@ -174,7 +174,7 @@ func participant_speed(key: String) -> float:
 	var base := Stats.monster_speed(def)
 	# chaque membre d'un groupe agit à la vitesse du monstre (avant, la vitesse était divisée par le nombre de membres : le groupe entier agissait
 	# comme un seul monstre et les héros jouaient 2 à 3 fois de suite avant lui)
-	return maxf(1.0, round(base) + Statuses.speed_bonus(st))
+	return maxf(1.0, round(base) + Statuses.speed_bonus(_status_holder(st, mi)))
 
 func ensure_gauges() -> void:
 	var wanted := {}
@@ -600,7 +600,11 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			eff_spell["statusLook"] = "" if boss else "sleep"      # l'étourdissement de la berceuse se voit comme un sommeil (Z) pendant toute sa durée
 			eff_spell["statusDuration"] = int(spell.get("statusDuration", 3)) if boss else maxi(1, int(round(int(spell.get("statusDuration", 3)) / 2.0)))
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_3"), [caster.name, spell.get("icon", ""), spell.name, _mname(target)]), true)
-			if not Statuses.apply_from_spell(gs, eff_spell, tst, _mname(target), str(caster.id), false):
+			var any_hit := false
+			for h in _hit_holders(target, tst, true):      # la berceuse vise tout le groupe : un jet par membre
+				if Statuses.apply_from_spell(gs, eff_spell, h, _mname(target), str(caster.id), false):
+					any_hit = true
+			if not any_hit:
 				gs.add_log(L.fa(L.t("rules.combat.resiste_a_la_berceuse"), _mname(target)))
 			events.append({"type": "popup", "text": "💤", "color": Color("b9a0ff")})
 			events.append({"type": "mon_stun", "id": str(target.id)})
@@ -638,12 +642,43 @@ func _credit_heal(caster: Dictionary, healed: int, stat: bool = true) -> void:
 	var ratio := float((gs.cfg.get("xpSettings", {}) as Dictionary).get("healRatio", 0.8))
 	_add_contrib(st, str(caster.id), healed * ratio)
 
+## Porteur des statuts d'un monstre : le membre `mi` d'un groupe (chaque membre a les siens), sinon le monstre lui-même.
+func _status_holder(st: Dictionary, mi: int) -> Dictionary:
+	if mi >= 0 and st.has("members") and mi < st.members.size():
+		return st.members[mi]
+	return st
+
+## Indice d'un membre dans son groupe, par identité (deux membres de mêmes PV sont égaux en valeur).
+func _member_idx(st: Dictionary, h: Dictionary) -> int:
+	for i in st.members.size():
+		if is_same(st.members[i], h):
+			return i
+	return -1
+
+## Membres (ou monstre seul) touchés par une attaque sur `target` : tout le groupe si `all_members`, sinon le membre visé.
+func _hit_holders(target: Dictionary, st: Dictionary, all_members: bool) -> Array:
+	var out: Array = []
+	if bool(target.get("isGroup", false)) and st.has("members"):
+		if all_members:
+			for mem in st.members:
+				if mem.alive:
+					out.append(mem)
+		else:
+			var sel := gs.selected_member_idx(str(target.id), st)
+			if sel >= 0:
+				out.append(st.members[sel])
+	else:
+		out.append(st)
+	return out
+
 ## Applique une attaque (physique ou magique) au monstre visé. `all_members` : frappe tout un groupe.
 func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic: bool, verb: String,
 		all_members: bool, ignore_resist: bool, spell: Dictionary = {}, aoe: bool = false) -> void:
 	var st: Dictionary = lstate().monsters[str(target.id)]
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
-	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(st)))
+	var first_h: Array = _hit_holders(target, st, all_members)
+	var sh: Dictionary = first_h[0] if not first_h.is_empty() else st      # statuts du monstre (ou du membre) réellement frappé
+	var resist := base_resist if aoe else (0 if ignore_resist else maxi(0, base_resist - Statuses.resist_reduction_pct(sh)))
 	# résistance de l'école du coup (feu, glace, sacré…) : s'ajoute ; négative = faiblesse (dégâts accrus)
 	var rkey := Resist.style_key(str(spell.get("style", ""))) if not spell.is_empty() else "phys"
 	var elem := 0 if ignore_resist else Resist.of_monster(target, rkey)
@@ -673,18 +708,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		crit = true
 
 	var is_group: bool = bool(target.get("isGroup", false)) and st.has("members")
-	var holders: Array = []
-	if is_group:
-		if all_members:
-			for mem in st.members:
-				if mem.alive:
-					holders.append(mem)
-		else:
-			var sel := gs.selected_member_idx(str(target.id), st)   # membre choisi par le joueur (clic sur le monstre)
-			if sel >= 0:
-				holders.append(st.members[sel])
-	else:
-		holders.append(st)
+	var holders: Array = first_h
 	for h in holders:
 		h["hp"] = float(h.hp) - dmg
 		_add_contrib(st, str(attacker.id), dmg)
@@ -707,7 +731,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		events.append({"type": "popup", "text": L.t("rules.combat.popup_resiste"), "color": Color("8fc8e8")})
 	elif elem <= -25:
 		events.append({"type": "popup", "text": L.t("rules.combat.popup_faiblesse"), "color": Color("ffb347")})
-	events.append({"type": "mon_hit", "id": str(target.id), "crit": crit})
+	events.append({"type": "mon_hit", "id": str(target.id), "crit": crit, "mi": (_member_idx(st, holders[0]) if is_group and not holders.is_empty() else -1)})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
 	if lifesteal > 0 and dmg > 0 and not aoe:
@@ -736,10 +760,13 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 			if not h.alive:
 				gs.add_log(L.fa(L.t("rules.combat.voit_ses_rangs_decimes"), _mname(target)))
 	if (aoe or not all_dead) and not spell.is_empty():
-		Statuses.apply_from_spell(gs, spell, st, _mname(target), str(attacker.id), false)
+		for h in holders:      # le statut va sur le monstre touché, ou sur chaque membre touché (sort de zone) ; jamais sur le reste du groupe
+			if bool(h.get("alive", true)):
+				var shown := _mname(target) + (" #%d" % (_member_idx(st, h) + 1) if is_group and st.members.size() > 1 else "")
+				Statuses.apply_from_spell(gs, spell, h, shown, str(attacker.id), false)
 	var bleed := _perk_value(attacker, "bleed")
-	if bleed > 0 and not aoe and not all_dead and dmg > 0 and GameRng.f("combat") * 100.0 < float(bleed):
-		Statuses.give(st, "poison", 3, str(attacker.id))
+	if bleed > 0 and not aoe and not all_dead and dmg > 0 and not holders.is_empty() and bool(holders[0].get("alive", true)) and GameRng.f("combat") * 100.0 < float(bleed):
+		Statuses.give(holders[0], "poison", 3, str(attacker.id))
 		gs.add_log(L.fa(L.t("rules.combat.saigne_sous_l_arme_de"), [_mname(target), attacker.name]))
 
 func _mark_acted(c: Dictionary, turn_gain: bool = true) -> void:
@@ -782,9 +809,10 @@ func monster_act(key: String) -> void:
 	var st: Dictionary = lstate().monsters.get(mid, {})
 	var member_alive: bool = mi < 0 or (st.has("members") and mi < st.members.size() and bool(st.members[mi].alive))
 	if not def.is_empty() and not st.is_empty() and st.alive and member_alive:
-		var stunned := tick_monster(def, st)
-		if st.alive and not stunned:
-			_monster_attack_party(def, st)
+		var holder := _status_holder(st, mi)
+		var stunned := tick_monster(def, st, holder)
+		if st.alive and bool(holder.get("alive", true)) and not stunned:
+			_monster_attack_party(def, st, holder)
 	gauges[key] = 0.0
 	turn_seq += 1
 	ensure_gauges()
@@ -797,7 +825,9 @@ func _hero_reduction(victim: Dictionary, dmg: int, magic: bool, key: String = ""
 		return dmg
 	return maxi(1, int(round(dmg * (1.0 - red / 100.0))))
 
-func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
+func _monster_attack_party(def: Dictionary, st: Dictionary, holder: Dictionary = {}) -> void:
+	if holder.is_empty():
+		holder = st
 	var alive := gs.alive_party()
 	if alive.is_empty():
 		return
@@ -819,7 +849,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	var dmg := GameRng.range_i("combat", int(st.atkMin), int(st.atkMax))
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
-	var reduction := Statuses.damage_reduction_pct(st)
+	var reduction := Statuses.damage_reduction_pct(holder)
 	if reduction > 0:
 		dmg = maxi(0, int(round(dmg * (1.0 - reduction / 100.0))))
 	dmg = _hero_reduction(victim, dmg, false, "phys")
@@ -1126,18 +1156,21 @@ func tick_char(c: Dictionary) -> void:
 	Characters.recompute(c, gs.cfg)
 
 ## Statuts d'un monstre au début de son action. Renvoie true s'il est étourdi / gelé (il perd son action).
-func tick_monster(def: Dictionary, st: Dictionary) -> bool:
+func tick_monster(def: Dictionary, st: Dictionary, holder: Dictionary = {}) -> bool:
+	if holder.is_empty():
+		holder = st
+	var is_member: bool = not is_same(holder, st)
 	var stunned := false
-	if (st.get("statusEffects", []) as Array).is_empty():
+	if (holder.get("statusEffects", []) as Array).is_empty():
 		return false
 	var remaining: Array = []
-	for eff in st.statusEffects:
+	for eff in holder.statusEffects:
 		var sdef := Statuses.def(str(eff.type))
 		if sdef.is_empty():
 			continue
-		if bool(sdef.get("dot", false)) and float(st.hp) > 0.0:
+		if bool(sdef.get("dot", false)) and float(holder.hp) > 0.0:
 			var dmg := maxi(1, int(eff.get("power", 3)))
-			st["hp"] = maxf(0.0, float(st.hp) - dmg)
+			holder["hp"] = maxf(0.0, float(holder.hp) - dmg)
 			gs.add_log(L.fa(L.t("rules.combat.subit_degats_de"), [sdef.icon, _mname(def), dmg, sdef.label]))
 			events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("c98bff")})
 			if bool(sdef.get("heals", false)) and str(eff.get("casterId", "")) != "":
@@ -1147,9 +1180,20 @@ func tick_monster(def: Dictionary, st: Dictionary) -> bool:
 					caster["hp"] = mini(int(caster.maxHp), before + dmg)
 					if int(caster.hp) > before:
 						gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [caster.name, int(caster.hp) - before]), true)
-			if float(st.hp) <= 0.0 and st.alive:
-				st["alive"] = false
-				_handle_death(def, st)
+			if float(holder.hp) <= 0.0 and bool(holder.get("alive", true)):
+				holder["alive"] = false
+				if is_member:
+					var left := false
+					for mem in st.members:
+						if mem.alive:
+							left = true
+					if left:
+						gs.add_log(L.fa(L.t("rules.combat.voit_ses_rangs_decimes"), _mname(def)))
+					else:
+						st["alive"] = false
+						_handle_death(def, st)
+				else:
+					_handle_death(def, st)
 		elif bool(sdef.get("disables", false)):
 			stunned = true
 			gs.add_log(L.fa(L.t("rules.combat.est_et_ne_peut_agir"), [sdef.icon, _mname(def), L.t("rules.combat.gele") if str(eff.type) == "freeze" else L.t("rules.combat.etourdi")]))
@@ -1158,7 +1202,7 @@ func tick_monster(def: Dictionary, st: Dictionary) -> bool:
 			remaining.append(eff)
 		else:
 			gs.add_log(L.fa(L.t("rules.combat.n_est_plus_affecte_par"), [sdef.icon, _mname(def), sdef.label]))
-	st["statusEffects"] = remaining
+	holder["statusEffects"] = remaining
 	return stunned
 
 # ------------------------------------------------------------------ mort d'un monstre

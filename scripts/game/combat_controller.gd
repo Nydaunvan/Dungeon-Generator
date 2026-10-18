@@ -367,9 +367,11 @@ func _drain() -> void:
 				popup.emit(str(e.text), e.color, str(e.get("on", "")))
 			"mon_hit":
 				var mst: Dictionary = combat.lstate().monsters.get(str(e.id), {})
-				view.entities.play(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
+				var mi := int(e.get("mi", -1))
+				var hst: Dictionary = mst.members[mi] if mi >= 0 and mst.has("members") and mi < mst.members.size() else mst
+				view.entities.play(str(e.id), "stun" if Statuses.has(hst, "stun") else "hit")
 				if view.stage != null:
-					view.stage.react(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
+					view.stage.react(str(e.id), "stun" if Statuses.has(hst, "stun") else "hit")
 			"mon_stun":
 				view.entities.play(str(e.id), "stun")
 				if view.stage != null:

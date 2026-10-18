@@ -235,9 +235,12 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 
 ## Effets de statut persistants sur chaque combattant affiché : ils restent tant que le statut dure (sommeil, poison, brûlure, gel…).
 func _sync_auras() -> void:
-	var looks: Array = StatusAura.looks_for(_cur_st) if not _cur_st.is_empty() and bool(_cur_st.get("alive", true)) else []
+	var live: bool = not _cur_st.is_empty() and bool(_cur_st.get("alive", true))
 	for k in _nodes:
 		var e: Dictionary = _nodes[k]
+		var idx := int(e.get("idx", -1))
+		var holder: Dictionary = _cur_st.members[idx] if live and idx >= 0 and _cur_st.has("members") and idx < _cur_st.members.size() else _cur_st      # chaque membre d'un groupe a ses propres statuts
+		var looks: Array = StatusAura.looks_for(holder) if live else []
 		if e.get("aura") == null:
 			if looks.is_empty():
 				continue
