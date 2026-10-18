@@ -3,7 +3,7 @@ extends TrapPuzzle
 ## Énigmes : une inscription sur une tablette de pierre, éclairée par deux bougies ; quatre réponses, une seule juste.
 ## Plusieurs énigmes s'enchaînent (réglable) et les erreurs permises valent pour l'ensemble.
 
-const COUNT := 12
+const COUNT := 120
 var rounds := 2
 var _round := 0
 var _order: Array = []

@@ -21,5 +21,15 @@ for fn in glob.glob('scripts/**/*.gd', recursive=True):
         for m in pat.finditer(l):
             if m.group(1) not in fr['ui']:
                 print('clé absente', fn, i, m.group(1)); bad += 1
+# Énigmes des pièges : chaque numéro jusqu'à COUNT doit avoir sa question et ses quatre réponses, avec la bonne en « a »
+m = re.search(r'const COUNT := (\d+)', open('scripts/ui/trap_puzzle_riddle.gd').read())
+for n in range(1, int(m.group(1)) + 1):
+    for lang, d in (('fr', fr), ('en', en)):
+        ks = ['ui.trap_puzzle.riddle_%d_%s' % (n, s) for s in 'qabcd']
+        miss = [k for k in ks if k not in d['ui']]
+        if miss:
+            print('énigme incomplète', lang, n, miss); bad += 1
+        elif len({d['ui'][k] for k in ks[1:]}) < 4:
+            print('énigme : réponses en double', lang, n); bad += 1
 print('OK' if not bad else f'{bad} écart(s)')
 sys.exit(1 if bad else 0)
