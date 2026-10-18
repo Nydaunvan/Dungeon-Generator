@@ -28,6 +28,7 @@ var _combat_live: bool = false     # le combat est « affiché » (la porte est 
 var _gate_pending: bool = false    # un combat attend que la porte s'ouvre
 var _hold_until: int = 0           # petite respiration après la dernière fenêtre / le dernier effet
 var _draining: bool = false
+const DEATH_ANIM_SEC := 0.65      # animation de mort d'un monstre (0,5 s) + une courte respiration avant de quitter la fenêtre de combat
 ## Participant dont l'action est encore en cours de présentation (effet visuel, chiffres) : la file d'initiative le garde au centre
 ## tant que l'animation n'est pas finie, même si le modèle a déjà donné la main au suivant.
 var queue_hold: String = ""
@@ -370,7 +371,14 @@ func _drain() -> void:
 					view.stage.react(str(e.id), "stun")
 			"monster_died":
 				Crumbs.mark("monstre mort %s%s" % [str(e.id), "" if model_in_combat() else " (combat fini)"])
+				var stage_on: bool = view.stage != null and view.stage.active
 				view.entities.remove_monster(str(e.id), true)
+				if not model_in_combat() and stage_on and Settings.monster_anim:
+					# dernier monstre : la fenêtre de combat reste affichée le temps de son animation de mort (`in_combat` reste vrai tant que `_draining`)
+					_draining = true
+					await get_tree().create_timer(DEATH_ANIM_SEC).timeout
+					_draining = false
+					changed.emit()      # la salle de combat peut maintenant se refermer
 				if not model_in_combat():
 					gs.stats["calmTicks"] = Wanderers.CALM_TICKS       # répit : aucun monstre ne s'approche juste après un combat
 				if not model_in_combat() and not combat.summary.is_empty():
