@@ -21,6 +21,7 @@ var message_label: Label
 var _message_tween: Tween
 var _popup_layer: Control
 var dmg_popups: DamagePopups
+var instinct_ui: InstinctOverlay
 var _modal_layer: CanvasLayer
 
 ## Temps de jeu d'un donjon aléatoire (départage les égalités du classement des défis).
@@ -186,6 +187,10 @@ func _ready() -> void:
 	dmg_popups.view = layout.sub_container
 	dmg_popups.hud = layout.hud
 	ui.add_child(dmg_popups)
+	instinct_ui = InstinctOverlay.new()
+	instinct_ui.ctrl = ctrl
+	instinct_ui.view = layout.sub_container
+	ui.add_child(instinct_ui)
 	card_fx.ref_cam = rig.camera
 	card_fx.ref_view = layout.sub_container
 	# la vue 3D ne dessine rien tant que le chargement n'est pas fini : tout le temps d'image va à l'écran de chargement (épée fluide)

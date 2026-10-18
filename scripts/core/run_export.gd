@@ -34,6 +34,7 @@ static func label(e: Array) -> String:
 		"forge": return "Forge"
 		"tm": return "Talent choisi"
 		"drink": return "Potion bue"
+		"ins": return "Instinct de survie (" + str(a1) + ")"
 		"w": return "Déplacement d'un monstre errant"
 		"e": return "Engagement d'un combat"
 	return str(e[1])

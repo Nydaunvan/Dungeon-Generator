@@ -97,6 +97,7 @@ static func apply(m: Node, e: Array) -> String:
 		"forge": Actions.forge(str(e[2]), _norm(e[3]))
 		"tm": Actions.master_pick(str(e[2]), int(_norm(e[3])[0]), str(e[3][1]))
 		"drink": Actions.drink(str(e[2]), int(e[3]))
+		"ins": m.ctrl.instinct_input(str(e[2]))
 		"w": m.wand.replay_tick()
 		"e": m.wand.replay_engage()
 		_:
@@ -114,6 +115,10 @@ static func step(tree: SceneTree, m: Node, e: Array, applied: int) -> String:
 		var ok_e: bool = await _until(tree, func(): return wm.get_ref() == null or wm.get_ref().wand.engage_pending, SETTLE_TIMEOUT)
 		if not ok_e:
 			return "engagement_inattendu@%d" % applied
+	elif cmd == "ins":
+		var ok_i: bool = await _until(tree, func(): return wm.get_ref() == null or wm.get_ref().ctrl.instinct_waiting, SETTLE_TIMEOUT)
+		if not ok_i:
+			return "instinct_absent@%d" % applied
 	elif cmd == "ui":
 		var flow := str(e[2])
 		var ok_u: bool = await _until(tree, func():

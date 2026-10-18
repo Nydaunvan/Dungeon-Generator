@@ -148,7 +148,7 @@ func _play(stream: AudioStream, gain_key: String = "") -> void:
 ## Correction de niveau par bruitage (dB), mesurée en loudness (EBU R128, cible -34 LUFS)
 ## pour que tous les effets sonnent au même volume. Régénérable avec tools/sfx_levels.py.
 const SFX_GAIN_DB := {
-	"blocked": 5.0, "combat_start": -4.5, "door_locked": 0.0, "down": 1.0, "evolve": -3.5,
+	"blocked": 5.0, "heartbeat": 6.0, "combat_start": -4.5, "door_locked": 0.0, "down": 1.0, "evolve": -3.5,
 	"fountain": -1.0, "game_over": -2.0, "heal": 2.5, "hit": 5.0, "level_up": -0.5,
 	"monster_attack": 5.5, "pickup": 3.5, "victory": -2.0,
 	"spell|arcane": 3.0, "spell|bard": 0.5, "spell|fire": -2.0, "spell|holy": 0.5,
@@ -265,6 +265,9 @@ func _build_sfx(name: String, arg) -> AudioStreamWAV:
 				b.tone(f[i], 0.05, "square", 0.07, 0.012, 0.04, i * 0.09)
 			b.tone(400.0, 0.1, "sine", 0.10, 0.012, 0.2, 4 * 0.09 + 0.05, 900.0)
 		"blocked": b.tone(150.0, 0.06, "square", 0.08, 0.012, 0.06)
+		"heartbeat":
+			b.tone(70.0, 0.12, "sine", 0.30, 0.012, 0.16)
+			b.tone(58.0, 0.14, "sine", 0.24, 0.012, 0.18, 0.2)
 		"combat_start":
 			b.tone(90.0, 0.22, "sawtooth", 0.22, 0.012, 0.18)
 			b.tone(620.0, 0.08, "square", 0.14, 0.012, 0.08, 0.02)
@@ -482,7 +485,7 @@ func _boss_stream() -> AudioStream:
 const PRELOAD_SWINGS := ["sword", "axe", "dagger", "staff", "bow", "mace", "unarmed"]
 const PRELOAD_SPELLS := ["fire", "ice", "holy", "nature", "shadow", "physical", "bard", "arcane"]
 const PRELOAD_PLAIN := ["door_locked", "hit", "monster_attack", "pickup", "level_up", "evolve", "down",
-	"game_over", "victory", "fountain", "heal", "blocked", "combat_start"]
+	"game_over", "victory", "fountain", "heal", "blocked", "combat_start", "heartbeat"]
 
 ## Synthétise à l'avance tous les sons du jeu : effets, petits sons d'ambiance, nappes de chaque thème, musique de boss.
 ## `progress.call(fraction, texte)` est appelé au fil de l'eau ; la synthèse rend la main à chaque étape (page Web vivante).

@@ -245,6 +245,12 @@ func _graphics() -> void:
 	_hint(L.t("ui.settings.monster_anim_hint"))
 	_check(L.t("ui.settings.card_fx"), Settings.card_fx, func(v: bool): Settings.set_card_fx(v))
 	_hint(L.t("ui.settings.card_fx_hint"))
+	_section(L.t("ui.settings.instinct_title"))
+	_row(L.t("ui.settings.instinct_mode"), _drop([["on", L.t("ui.settings.instinct_mode_on")], ["auto", L.t("ui.settings.instinct_mode_auto")],
+			["off", L.t("ui.settings.instinct_mode_off")]], Settings.instinct_mode, func(v): Settings.set_instinct_mode(str(v))))
+	_row(L.t("ui.settings.instinct_scale"), _drop([[1.0, L.t("ui.settings.instinct_scale_1")], [1.5, L.t("ui.settings.instinct_scale_15")],
+			[2.0, L.t("ui.settings.instinct_scale_2")]], Settings.instinct_scale, func(v): Settings.set_instinct_scale(float(v))))
+	_hint(L.t("ui.settings.instinct_hint"))
 
 func _opt(key: String, options: Array) -> OptionButton:
 	return _drop(options, Settings.opt(key), func(v):

@@ -56,6 +56,8 @@ var _peak_fps := 0.0             # meilleure moyenne mesurée en jeu (cible plaf
 var reduced_motion := false
 var card_fx := true              ## effets des monstres et des soins affichés sur les cartes du groupe (couche au-dessus de l'interface)
 var monster_anim := true         ## animations des monstres (respiration au repos, réactions en combat)
+var instinct_scale := 1.0        ## « Instinct de survie » : durée de la fenêtre de réaction ×1 / ×1,5 / ×2 (sans effet en partie classée)
+var instinct_mode := "on"        ## « on » : le joueur appuie ; « auto » : jet automatique à chance réduite ; « off » : pas d'instinct (sans effet en partie classée)
 var perf_overlay := false
 var ceiling := ""                # niveau maximal tenu lors des essais (mode Auto, mémorisé)
 var detect_info: Dictionary = {}
@@ -219,6 +221,14 @@ func set_card_fx(v: bool) -> void:
 	card_fx = v
 	_commit()
 
+func set_instinct_scale(v: float) -> void:
+	instinct_scale = clampf(v, 1.0, 2.0)
+	_save()
+
+func set_instinct_mode(v: String) -> void:
+	instinct_mode = v if ["on", "auto", "off"].has(v) else "on"
+	_save()
+
 func set_monster_anim(v: bool) -> void:
 	monster_anim = v
 	_commit()
@@ -259,6 +269,8 @@ func reset_graphics() -> void:
 	custom = preset_values("high")
 	reduced_motion = false
 	monster_anim = true
+	instinct_scale = 1.0
+	instinct_mode = "on"
 	card_fx = true
 	redetect()
 
@@ -328,6 +340,8 @@ func _load() -> void:
 		_fullscreen_pref = int(cf.get_value("display", "fullscreen", -1))
 		reduced_motion = bool(cf.get_value("access", "reduced_motion", false))
 		monster_anim = bool(cf.get_value("game", "monster_anim", true))
+		instinct_scale = clampf(float(cf.get_value("game", "instinct_scale", 1.0)), 1.0, 2.0)
+		instinct_mode = str(cf.get_value("game", "instinct_mode", "on"))
 		card_fx = bool(cf.get_value("game", "card_fx", true))
 		if cf.has_section_key("diag", "perf_overlay"):
 			perf_overlay = bool(cf.get_value("diag", "perf_overlay", false))
@@ -365,6 +379,8 @@ func _save() -> void:
 	cf.set_value("display", "fullscreen", _fullscreen_pref)
 	cf.set_value("access", "reduced_motion", reduced_motion)
 	cf.set_value("game", "monster_anim", monster_anim)
+	cf.set_value("game", "instinct_scale", instinct_scale)
+	cf.set_value("game", "instinct_mode", instinct_mode)
 	cf.set_value("game", "card_fx", card_fx)
 	cf.set_value("diag", "perf_overlay", perf_overlay)
 	cf.save(CFG)

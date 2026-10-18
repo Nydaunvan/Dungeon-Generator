@@ -24,6 +24,7 @@ func _init(state: GameState, lvl: Dictionary, g: DungeonGrid) -> void:
 
 ## Bilan du combat en cours (monstres vaincus, XP, or, butin) ; vidé par take_summary().
 var summary: Dictionary = {}
+var pending_instinct: Dictionary = {}   # coup mortel suspendu en attendant l'appui de « Instinct de survie » : {victim, dmg, def, st, cont}
 
 func take_summary() -> Dictionary:
 	var s := summary
@@ -90,6 +91,7 @@ static func _perk_value(c: Dictionary, perk: String) -> int:
 func end_combat_reset() -> void:
 	for c in gs.party:
 		c.erase("lastStandUsed")
+		c.erase("instinctUsed")
 
 func _live(m: Dictionary) -> bool:
 	var st: Dictionary = lstate().monsters.get(str(m.id), {})
@@ -794,7 +796,18 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 		victim["shieldAmount"] = int(victim.shieldAmount) - absorbed
 		dmg -= absorbed
 		gs.add_log(L.fa(L.t("rules.combat.le_bouclier_de_absorbe_degats"), [victim.name, absorbed, L.t("rules.combat.epuise") if int(victim.shieldAmount) <= 0 else ""]), true)
+	if _offer_instinct(def, st, victim, dmg, func(o: String, d: int): _basic_hit_tail(def, st, victim, d, o)):
+		return
+	_basic_hit_tail(def, st, victim, dmg, "")
+
+## Suite du coup d'un monstre : applique les dégâts, le « Dernier souffle », l'épine, les journaux et la chute éventuelle du héros.
+## `outcome` : résultat d'« Instinct de survie » ("" = pas d'instinct, "fail", "ok", "perfect").
+func _basic_hit_tail(def: Dictionary, st: Dictionary, victim: Dictionary, dmg: int, outcome: String) -> void:
+	var raw := dmg
+	dmg = _instinct_damage(victim, dmg, outcome)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	if outcome == "perfect":
+		_instinct_class_effect(def, st, victim, raw)
 	if int(victim.hp) <= 0 and dmg > 0 and _perk_value(victim, "last_stand") > 0 and not bool(victim.get("lastStandUsed", false)):
 		victim["hp"] = 1
 		victim["lastStandUsed"] = true
@@ -830,6 +843,129 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 			_game_over_sound(def)
 			events.append({"type": "game_over"})
 
+# ------------------------------------------------------------------ Instinct de survie
+
+## Chance de base du jet (%) et plafond selon la difficulté de la partie.
+const INSTINCT_BASE := {"easy": 45.0, "normal": 40.0, "hard": 35.0, "hardcore": 30.0}
+const INSTINCT_CAP := {"easy": 90.0, "normal": 85.0, "hard": 80.0, "hardcore": 75.0}
+const INSTINCT_BONUS := {"early": 0.0, "good": 10.0, "perfect": 25.0, "auto": -10.0}
+const INSTINCT_SECONDS := {"easy": 3.5, "normal": 3.0, "hard": 2.5, "hardcore": 2.0}
+const INSTINCT_MIN_PCT := 15.0
+
+func difficulty() -> String:
+	return str(gs.cfg.get("genDifficulty", "normal")) if Data.play_origin == "random" else "normal"
+
+## Fenêtre de réaction (s) : la valeur de la difficulté, allongée par l'option d'accessibilité (jamais en partie classée).
+func instinct_seconds() -> float:
+	var sec := float(INSTINCT_SECONDS.get(difficulty(), 3.0))
+	return sec if RunLog.ranked() else sec * Settings.instinct_scale
+
+## Un coup de monstre qui ferait tomber ce héros à 0 PV peut-il être suspendu pour l'instinct ? (une fois par combat et par héros)
+func _instinct_eligible(victim: Dictionary, dmg: int) -> bool:
+	if dmg <= 0 or int(victim.hp) <= 0 or dmg < int(victim.hp) or bool(victim.get("instinctUsed", false)):
+		return false
+	if Statuses.is_disabled(victim) or not in_combat():
+		return false
+	return RunLog.ranked() or Settings.instinct_mode != "off"
+
+## Suspend le coup si l'instinct s'offre au héros. Renvoie vrai quand le coup attend la réponse (voir resolve_instinct).
+func _offer_instinct(def: Dictionary, st: Dictionary, victim: Dictionary, dmg: int, cont: Callable) -> bool:
+	if not _instinct_eligible(victim, dmg):
+		return false
+	pending_instinct = {"victim": victim, "dmg": dmg, "def": def, "st": st, "cont": cont}
+	events.append({"type": "instinct", "char": str(victim.id), "seconds": instinct_seconds()})
+	return true
+
+func _instinct_chance(quality: String) -> float:
+	var p := pending_instinct
+	var victim: Dictionary = p.victim
+	var diff := difficulty()
+	var chance := float(INSTINCT_BASE.get(diff, 40.0)) + float(INSTINCT_BONUS.get(quality, 0.0))
+	chance += maxf(0.0, float(victim.get("effCon", victim.get("con", 10))) - 10.0)
+	chance += float(_perk_value(victim, "instinct"))
+	var over := float(int(p.dmg) - int(victim.hp))
+	if over > 0.5 * float(victim.maxHp):
+		chance -= 15.0         # coup très dur : bien au-delà de ce qui restait de PV
+	if bool(p.def.get("isBoss", false)) and bool(p.st.get("enraged", false)):
+		chance -= 10.0
+	return clampf(chance, INSTINCT_MIN_PCT, float(INSTINCT_CAP.get(diff, 85.0)))
+
+## Réponse du joueur : `quality` = "none" (rien appuyé), "early", "good", "perfect" ou "auto" (mode automatique d'accessibilité).
+## Lance le dé, applique le résultat et poursuit le coup suspendu.
+func resolve_instinct(quality: String) -> void:
+	if pending_instinct.is_empty():
+		return
+	var p := pending_instinct
+	pending_instinct = {}
+	var victim: Dictionary = p.victim
+	victim["instinctUsed"] = true
+	var outcome := "fail"
+	if quality != "none":
+		var chance := _instinct_chance(quality)
+		if GameRng.f("combat") * 100.0 < chance:
+			outcome = "perfect" if quality == "perfect" else "ok"
+	var on := "char:" + str(victim.id)
+	match outcome:
+		"perfect":
+			gs.add_log(L.fa(L.t("rules.combat.instinct_parfait"), victim.name))
+			events.append({"type": "popup", "text": L.t("rules.combat.instinct_popup_parfait"), "on": on, "color": Color("ffd88a")})
+			Sound.sfx("level_up")
+		"ok":
+			gs.add_log(L.fa(L.t("rules.combat.instinct_ok"), victim.name))
+			events.append({"type": "popup", "text": L.t("rules.combat.instinct_popup_ok"), "on": on, "color": Color("ffb347")})
+			Sound.sfx("heal")
+		_:
+			gs.add_log(L.fa(L.t("rules.combat.instinct_rate") if quality != "none" else L.t("rules.combat.instinct_pas_le_temps"), victim.name))
+			events.append({"type": "popup", "text": L.t("rules.combat.instinct_popup_rate"), "on": on, "color": Color("8fc8e8")})
+	events.append({"type": "instinct_result", "char": str(victim.id), "outcome": outcome})
+	(p.cont as Callable).call(outcome, int(p.dmg))
+	if outcome != "fail" and int(victim.hp) > 0:
+		Statuses.give(victim, "slow", 2, "")           # « Hébété » : ralenti pendant 2 tours, l'instinct a un prix
+	if outcome != "fail":
+		gs.bump(victim.id, "instinctSaves", 1)
+
+## Famille de classe du héros (« Guerrier », « Archer »…) : les classes évoluées reprennent celle dont elles dérivent.
+func _class_family(c: Dictionary) -> String:
+	var cls := Characters.class_def(gs.cfg, str(c.get("classId", "")))
+	return str(cls.get("evolvesFrom", cls.get("name", "")))
+
+## Dégâts réellement encaissés selon le résultat : "ok" laisse 1 PV, "perfect" 15 % des PV max (Archer et Roublard esquivent tout).
+func _instinct_damage(victim: Dictionary, dmg: int, outcome: String) -> int:
+	match outcome:
+		"ok":
+			return maxi(0, int(victim.hp) - 1)
+		"perfect":
+			if ["Archer", "Roublard"].has(_class_family(victim)):
+				return 0
+			return maxi(0, int(victim.hp) - maxi(1, int(ceil(float(victim.maxHp) * 0.15))))
+	return dmg
+
+## Effet de classe d'un instinct parfait (le coup d'origine fait `raw` dégâts).
+func _instinct_class_effect(def: Dictionary, st: Dictionary, victim: Dictionary, raw: int) -> void:
+	match _class_family(victim):
+		"Guerrier":
+			var back := maxi(1, int(round(raw * 0.5)))
+			if not st.has("members"):
+				st["hp"] = float(st.hp) - back
+				gs.add_log(L.fa(L.t("rules.combat.instinct_renvoi"), [victim.name, back, _mname(def)]))
+				if float(st.hp) <= 0.0 and st.alive:
+					st["alive"] = false
+					_handle_death(def, st)
+		"Archer", "Roublard":
+			gs.add_log(L.fa(L.t("rules.combat.instinct_esquive"), victim.name))
+		"Mage":
+			var sh := maxi(1, int(round(float(victim.maxHp) * 0.2)))
+			victim["shieldAmount"] = int(victim.get("shieldAmount", 0)) + sh
+			gs.add_log(L.fa(L.t("rules.combat.instinct_barriere"), [victim.name, sh]))
+		"Prêtre", "Druide":
+			var heal := maxi(1, int(round(float(victim.maxHp) * 0.1)))
+			victim["hp"] = mini(int(victim.maxHp), int(victim.hp) + heal)
+			gs.add_log(L.fa(L.t("rules.combat.instinct_soin"), [victim.name, heal]))
+		"Barde":
+			for c in gs.alive_party():
+				c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + 10)
+			gs.add_log(L.fa(L.t("rules.combat.instinct_cri"), victim.name))
+
 ## Anéantissement du groupe : un boss a ses propres sons de victoire (en alternance selon le boss), les autres monstres le jingle habituel.
 func _game_over_sound(def: Dictionary) -> void:
 	if bool(def.get("isBoss", false)):
@@ -852,7 +988,17 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	if st.enraged:
 		dmg = int(round(dmg * (1.0 + int(def.get("enrageBonusPct", 30)) / 100.0)))
 	dmg = _hero_reduction(victim, dmg, str(spell.get("style", "")) != "physical", Resist.style_key(str(spell.get("style", ""))))
+	if _offer_instinct(def, st, victim, dmg, func(o: String, d: int): _ability_hit_tail(def, st, spell, victim, d, o)):
+		return
+	_ability_hit_tail(def, st, spell, victim, dmg, "")
+
+## Suite d'une capacité de monstre (voir _basic_hit_tail pour `outcome`).
+func _ability_hit_tail(def: Dictionary, st: Dictionary, spell: Dictionary, victim: Dictionary, dmg: int, outcome: String) -> void:
+	var raw := dmg
+	dmg = _instinct_damage(victim, dmg, outcome)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	if outcome == "perfect":
+		_instinct_class_effect(def, st, victim, raw)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})
 	victim["stamina"] = mini(int(victim.get("maxStamina", 100)), int(victim.get("stamina", 0)) + int(sta.get("hitGain", 0)))
 	gs.add_log(L.fa(L.t("rules.combat.utilise_sur_degats"), [_mname(def), spell.get("icon", ""), spell.name, victim.name, dmg, " 😡" if st.enraged else ""]), true)

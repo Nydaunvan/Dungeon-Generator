@@ -6,6 +6,10 @@ extends Node
 signal changed
 signal popup(text: String, color: Color, on: String)
 signal game_over
+## « Instinct de survie » : un coup mortel est suspendu, l'interface montre le bouton rouge pendant `seconds` secondes.
+signal instinct_prompt(char_id: String, seconds: float)
+signal instinct_end(outcome: String)
+signal _instinct_done(quality: String)
 signal combat_won(summary: Dictionary)
 signal fx(type: String)
 signal fx3d(spell_id: String, ctx: Dictionary)
@@ -28,6 +32,7 @@ var _combat_live: bool = false     # le combat est « affiché » (la porte est 
 var _gate_pending: bool = false    # un combat attend que la porte s'ouvre
 var _hold_until: int = 0           # petite respiration après la dernière fenêtre / le dernier effet
 var _draining: bool = false
+var instinct_waiting: bool = false      # la fenêtre de l'instinct est ouverte : le prochain appui (ou « ins » du journal au rejeu) la referme
 const DEATH_ANIM_SEC := 0.65      # animation de mort d'un monstre (0,5 s) + une courte respiration avant de quitter la fenêtre de combat
 ## Participant dont l'action est encore en cours de présentation (effet visuel, chiffres) : la file d'initiative le garde au centre
 ## tant que l'animation n'est pas finie, même si le modèle a déjà donné la main au suivant.
@@ -368,6 +373,14 @@ func _drain() -> void:
 				view.entities.play(str(e.id), "stun")
 				if view.stage != null:
 					view.stage.react(str(e.id), "stun")
+			"instinct":
+				_draining = true
+				var q := await _await_instinct(str(e.char), float(e.seconds))
+				combat.resolve_instinct(q)
+				await _drain()                  # suite du coup suspendu : chiffres, réaction, chute éventuelle du héros
+				_draining = false
+			"instinct_result":
+				instinct_end.emit(str(e.outcome))
 			"monster_died":
 				Crumbs.mark("monstre mort %s%s" % [str(e.id), "" if model_in_combat() else " (combat fini)"])
 				var stage_on: bool = view.stage != null and view.stage.active
@@ -393,6 +406,27 @@ func _drain() -> void:
 			"game_over":
 				Crumbs.mark("partie perdue")
 				game_over.emit()
+
+## Attend la réponse du joueur à « Instinct de survie » et renvoie sa qualité ("none", "early", "good", "perfect" ou "auto").
+## Au rejeu, la réponse vient du journal (commande « ins ») ; en partie classée le mode automatique n'existe pas.
+func _await_instinct(char_id: String, seconds: float) -> String:
+	if not RunLog.replaying and not RunLog.ranked() and Settings.instinct_mode == "auto":
+		await get_tree().create_timer(0.4).timeout
+		return "auto"
+	instinct_waiting = true
+	if not RunLog.replaying:
+		instinct_prompt.emit(char_id, seconds)
+		get_tree().create_timer(seconds + 0.6).timeout.connect(func(): instinct_input("none"))      # filet de sécurité (l'interface se charge normalement de la fin)
+	var q: String = await _instinct_done
+	return q
+
+## Réponse du joueur (ou fin du temps). Journalisée : en partie classée le vérificateur la rejoue à l'identique.
+func instinct_input(quality: String) -> void:
+	if not instinct_waiting:
+		return
+	instinct_waiting = false
+	RunLog.rec("ins", quality)
+	_instinct_done.emit(quality)
 
 ## Part (0..1) du temps de réflexion restant pour le personnage dont c'est le tour.
 func turn_timer_fraction() -> float:
