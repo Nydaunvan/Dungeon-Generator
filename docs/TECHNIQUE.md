@@ -339,3 +339,6 @@ Quand un membre d'un groupe tombe sans que le groupe soit anéanti, `CombatStage
 
 ### Sons de victoire des boss
 `Sound.boss_win` joue sur un lecteur dédié (`_boss_player`, -5 dB, 0,5 s après le coup fatal) : sur le tourniquet partagé de 8 lecteurs à -14 dB, il était couvert par les bruits du coup et de la mort du héros. Test : `tools/check_bosswin.tscn`.
+
+### Régénération en exploration (second souffle)
+`ExploreRegen.on_step` (appelée par `Interactions.step_stamina` après chaque pas) compte les pas sur des cases absentes des 4 dernières (`regenTrail`) ; tous les N pas (`STEPS` : 6 / 8 / 12 / 20 selon la difficulté) chaque héros vivant, ni empoisonné ni brûlé, regagne 1 % de ses PV max (min. 1, ×1,25 pour la famille Prêtre/Druide, +0,1 % par point de Constitution au-dessus de 10) jusqu'à 60 % des PV max. Aucun gain en combat ni pendant `regenCooldown` (2 pas, posé par `CombatController` à la fin d'un combat). Fondée sur les pas, pas sur le temps : déterministe en rejeu et en partie classée. Option `staminaSettings.exploreRegen` (Admin › Général). Test : `tools/check_regen.tscn`.

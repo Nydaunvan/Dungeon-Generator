@@ -3247,7 +3247,9 @@
   "ui.settings.instinct_scale_1": "Normale",
   "ui.settings.instinct_scale_15": "Longue (×1,5)",
   "ui.settings.instinct_scale_2": "Très longue (×2)",
-  "ui.settings.instinct_hint": "Quand un coup de monstre allait vous faire tomber, un bouton rouge apparaît : appuyez dessus quand l'anneau est près du bord. Sans effet en partie classée (fenêtre et règles identiques pour tous)."
+  "ui.settings.instinct_hint": "Quand un coup de monstre allait vous faire tomber, un bouton rouge apparaît : appuyez dessus quand l'anneau est près du bord. Sans effet en partie classée (fenêtre et règles identiques pour tous).",
+  "admin.general.regen_exploration": "Régénération des PV en exploration (second souffle)",
+  "admin.general.regen_exploration_hint": "Hors combat, chaque héros regagne 1 % de ses PV max tous les N pas (facile 6, normal 8, difficile 12, cauchemar 20), jusqu'à 60 % de ses PV max. Prêtres et druides : +25 %. Pas de gain pendant le poison ou la brûlure, ni juste après un combat, ni en revenant sur ses pas."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",

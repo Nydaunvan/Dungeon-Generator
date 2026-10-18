@@ -398,6 +398,7 @@ func _drain() -> void:
 					changed.emit()      # la salle de combat peut maintenant se refermer
 				if not model_in_combat():
 					gs.stats["calmTicks"] = Wanderers.CALM_TICKS       # répit : aucun monstre ne s'approche juste après un combat
+					gs.stats["regenCooldown"] = ExploreRegen.AFTER_COMBAT_STEPS     # pas de régénération juste après un combat
 				if not model_in_combat() and not combat.summary.is_empty():
 					combat_won.emit(combat.take_summary())
 			"door_open":

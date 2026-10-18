@@ -16,7 +16,8 @@
    "hardcore": 13
   },
   "levelTransitionHpPct": 25,
-  "levelTransitionStaPct": 35
+  "levelTransitionStaPct": 35,
+  "exploreRegen": true
  },
  "levelUpGrowth": {
   "statPerLevel": 0.4,

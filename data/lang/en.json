@@ -3247,7 +3247,9 @@
   "ui.settings.instinct_scale_1": "Normal",
   "ui.settings.instinct_scale_15": "Long (×1.5)",
   "ui.settings.instinct_scale_2": "Very long (×2)",
-  "ui.settings.instinct_hint": "When a monster's blow would have knocked you down, a red button appears: press it when the ring is close to the edge. No effect in ranked runs (same window and rules for everyone)."
+  "ui.settings.instinct_hint": "When a monster's blow would have knocked you down, a red button appears: press it when the ring is close to the edge. No effect in ranked runs (same window and rules for everyone).",
+  "admin.general.regen_exploration": "HP regeneration while exploring (second wind)",
+  "admin.general.regen_exploration_hint": "Out of combat, each hero regains 1% of max HP every N steps (easy 6, normal 8, hard 12, nightmare 20), up to 60% of max HP. Priests and druids: +25%. No gain while poisoned or burning, right after a combat, or when retracing steps."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

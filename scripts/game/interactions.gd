@@ -75,6 +75,10 @@ func step_stamina() -> void:
 	if int(gs.stats.moves) % interval == 0:
 		for c in gs.alive_party():
 			c["stamina"] = mini(int(c.get("maxStamina", 100)), int(c.get("stamina", 0)) + int(sta.get("moveGain", 2)))
+	var diff := str(gs.cfg.get("genDifficulty", "normal")) if Data.play_origin == "random" else "normal"
+	var healed := ExploreRegen.on_step(gs, Vector2i(rig.gx, rig.gy), diff, ctrl.model_in_combat())
+	for cid in healed:
+		ctrl.popup.emit("+%d" % int(healed[cid]), Color("7fe08a"), "char:" + str(cid))
 
 ## Ordre de l'original : déplacement, endurance, statuts (step_tick), puis objet de la case et marchand.
 func step_items() -> void:

@@ -123,6 +123,8 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	_h(b, L.t("admin.general.regeneration_partielle_de_pv"), 10.0)
 	var t_hp := Form.num_row(b, L.t("admin.general.arrivee_sur_un_niveau_pv"), float(sta.get("levelTransitionHpPct", 0)))
 	var t_sta := Form.num_row(b, L.t("admin.general.arrivee_sur_un_niveau_endurance"), float(sta.get("levelTransitionStaPct", 0)))
+	var t_regen := Form.check(b, L.t("admin.general.regen_exploration"), sta, "exploreRegen", true)
+	Form.hint(b, L.t("admin.general.regen_exploration_hint"))
 	var act2 := func():
 		var ns: Dictionary = sta.duplicate(true)
 		ns["attackCost"] = _num0(s_atk)

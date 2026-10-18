@@ -414,6 +414,8 @@ func _ensure_growth_defaults(cfg: Dictionary) -> void:
 		sta["victoryGainPct"] = {"easy": 4, "normal": 6, "hard": 9, "hardcore": 13}
 	if not sta.has("levelTransitionHpPct"):
 		sta["levelTransitionHpPct"] = 25
+	if not sta.has("exploreRegen"):
+		sta["exploreRegen"] = true
 	if not sta.has("levelTransitionStaPct"):
 		sta["levelTransitionStaPct"] = 35
 	if not (cfg.get("levelUpGrowth") is Dictionary):
