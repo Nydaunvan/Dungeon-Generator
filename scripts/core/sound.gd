@@ -13,6 +13,8 @@ var music_volume: float = 0.5
 var _cache: Dictionary = {}
 var _pool: Array[AudioStreamPlayer] = []
 var _pool_next: int = 0
+var _boss_player: AudioStreamPlayer
+const BOSS_WIN_DB := -5.0   # plus fort que les autres fichiers (-14) : jingle de défaite, il doit passer au-dessus de la musique
 var _music: AudioStreamPlayer
 var _menu: AudioStreamPlayer          # musique de l'accueil (fichier OGG en boucle, lecture en flux)
 var _menu_tween: Tween
@@ -325,7 +327,19 @@ func attack_standard() -> void:
 ## Un boss emporte le combat (groupe anéanti) : deux sons en alternance, toujours le même pour un boss donné.
 func boss_win(boss_id: String) -> void:
 	var k := "boss_win_%d" % (1 + (boss_id.hash() % 2))
-	_play(_file_stream(k, MISC_SOUNDS[k]), k)
+	var st := _file_stream(k, MISC_SOUNDS[k])
+	if not enabled or st == null:
+		return
+	# Lecteur dédié (le tourniquet de 8 lecteurs des bruitages le coupait sous les sons du coup fatal) et un peu après le coup, pour l'entendre seul.
+	if _boss_player == null:
+		_boss_player = AudioStreamPlayer.new()
+		_boss_player.bus = "SFX"
+		_boss_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+		add_child(_boss_player)
+	get_tree().create_timer(0.5).timeout.connect(func():
+		_boss_player.stream = st
+		_boss_player.volume_db = BOSS_WIN_DB
+		_boss_player.play())
 
 ## Potion de vie ou d'endurance bue (même son).
 func potion() -> void:
