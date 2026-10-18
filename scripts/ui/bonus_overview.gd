@@ -12,7 +12,7 @@ const PERKS := ["spell", "execute", "bleed", "critdmg", "thorns", "gold", "last_
 static func _subs_of(sec: Dictionary) -> Array:
 	var subs: Array = []
 	for s in sec.get("sources", []):
-		var head := ("%s %s" % [str(s.get("icon", "")), str(s.get("name", ""))]).strip_edges()
+		var head := str(s.get("name", "")).strip_edges()
 		var tag := str(s.get("tag", ""))
 		var txt := head + (" (%s)" % tag if tag != "" else "")
 		var parts: Array = s.get("parts", [])
@@ -23,7 +23,7 @@ static func _subs_of(sec: Dictionary) -> Array:
 			for p in parts:
 				bits.append(("%s %s" % [str(p.get("label", "")), str(p.get("value", ""))]).strip_edges())
 			txt += "  " + " · ".join(bits)
-		subs.append({"text": txt, "tone": str(s.get("tone", ""))})
+		subs.append({"icon": str(s.get("icon", "")), "text": txt, "tone": str(s.get("tone", ""))})
 	return subs
 
 static func _entry(sec: Dictionary, extra_subs: Array = [], tone: String = "pos") -> Dictionary:

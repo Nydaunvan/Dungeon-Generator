@@ -124,7 +124,7 @@ func _card(s: Dictionary, outer: float) -> Control:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_child(_lbl(str(s.icon), 20, PARCH))
+	head.add_child(IconPicker.icon_control(str(s.icon), 28.0))
 	var title := _lbl(str(s.title), 17, GOLD, UiTheme.F_TITLE_BOLD)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.clip_text = true

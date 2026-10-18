@@ -831,7 +831,10 @@ func _add_bonus_overview(c: Dictionary) -> void:
 		for e in entries:
 			any = true
 			var row := HBoxContainer.new()
-			var nm := _label(("%s %s" % [e.icon, e.label]).strip_edges(), 13)
+			row.add_theme_constant_override("separation", 5)
+			if str(e.icon) != "":
+				row.add_child(IconPicker.icon_control(str(e.icon), 18.0))   # vraie image pour « @icon:… », emoji sinon
+			var nm := _label(str(e.label).strip_edges(), 13)
 			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(nm)
 			if str(e.value) != "":
@@ -842,10 +845,16 @@ func _add_bonus_overview(c: Dictionary) -> void:
 					continue
 				var m := MarginContainer.new()
 				m.add_theme_constant_override("margin_left", 14)
-				var sl := _wrap_label("· " + str(sub.text), 12, tones.get(str(sub.tone), UiTheme.DIM))
-				sl.custom_minimum_size = Vector2(200, 0)       # sans largeur minimale, le retour à la ligne coupe lettre par lettre
+				var sl := _wrap_label(str(sub.text), 12, tones.get(str(sub.tone), UiTheme.DIM))
+				sl.custom_minimum_size = Vector2(160, 0)       # sans largeur minimale, le retour à la ligne coupe lettre par lettre
 				sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				m.add_child(sl)
+				var sr := HBoxContainer.new()
+				sr.add_theme_constant_override("separation", 4)
+				sr.add_child(_label("·", 12, tones.get(str(sub.tone), UiTheme.DIM)))
+				if str(sub.get("icon", "")) != "":
+					sr.add_child(IconPicker.icon_control(str(sub.icon), 15.0))
+				sr.add_child(sl)
+				m.add_child(sr)
 				m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				_drawer_inner.add_child(m)
 		if not off.is_empty():
