@@ -354,7 +354,7 @@ func _drain() -> void:
 	# 2) le reste (chiffres, mort d'un monstre, porte, fin de partie) attend la fin de l'effet visuel
 	if SpellFx3D.busy():
 		_draining = true
-		await SpellFx3D.wait_idle(get_tree())
+		await SpellFx3D.wait_hit(get_tree())        # chiffres, réaction et mort à l'IMPACT du sort (le fondu de l'effet continue de jouer)
 		_draining = false
 	for e in rest:
 		match str(e.type):
@@ -378,6 +378,11 @@ func _drain() -> void:
 					_draining = true
 					await get_tree().create_timer(DEATH_ANIM_SEC).timeout
 					_draining = false
+				if not model_in_combat() and SpellFx3D.busy():
+					_draining = true
+					await SpellFx3D.wait_idle(get_tree())           # la victoire attend la fin de l'effet visuel, comme avant
+					_draining = false
+				if stage_on and not model_in_combat():
 					changed.emit()      # la salle de combat peut maintenant se refermer
 				if not model_in_combat():
 					gs.stats["calmTicks"] = Wanderers.CALM_TICKS       # répit : aucun monstre ne s'approche juste après un combat

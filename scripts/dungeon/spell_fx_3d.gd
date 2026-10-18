@@ -66,6 +66,41 @@ func _exit_tree() -> void:
 func visual_active() -> bool:
 	return not _started or not _parts.is_empty() or _vis_pending > 0
 
+# --- instant d'impact : le coup (chiffres, réaction, mort du monstre) s'applique à l'IMPACT du sort, pas à la fin de son fondu.
+const HIT_CAP := 0.35          # au plus tard 0,35 s après le départ de l'effet (coups au corps à corps et sorts sans projectile)
+var _fly_started: int = 0      # projectiles lancés (`_fly`, `_projectile`)
+var _fly_pending: int = 0      # projectiles pas encore arrivés
+var _later_fired: bool = false # premier impact différé (`_later`) joué : coup d'épée, éclat d'arrivée…
+
+## Enveloppe le rappel d'arrivée d'un projectile pour savoir quand il touche.
+func _track_hit(on_hit: Callable) -> Callable:
+	_fly_started += 1
+	_fly_pending += 1
+	return func():
+		_fly_pending = maxi(0, _fly_pending - 1)
+		on_hit.call()
+
+## Le coup a-t-il porté ? Tous les projectiles sont arrivés (ou, sans projectile, le premier impact différé a joué),
+## ou le délai maximal est écoulé, ou il n'y a plus rien à jouer.
+func hit_ready() -> bool:
+	if not _started:
+		return false
+	if _t >= HIT_CAP or (_parts.is_empty() and _vis_pending <= 0):
+		return true
+	return _fly_pending <= 0 and (_fly_started > 0 or _later_fired) and _t >= 0.12
+
+static func hit_pending() -> bool:
+	for fx in _live:
+		if is_instance_valid(fx) and not (fx as SpellFx3D).hit_ready():
+			return true
+	return false
+
+## Attend l'impact de tous les effets en cours (sécurité de 4 s).
+static func wait_hit(tree: SceneTree) -> void:
+	var t0 := Time.get_ticks_msec()
+	while hit_pending() and Time.get_ticks_msec() - t0 < 4000:
+		await tree.process_frame
+
 static func busy() -> bool:
 	for fx in _live:
 		if is_instance_valid(fx) and (fx as SpellFx3D).visual_active():
@@ -165,6 +200,7 @@ func _later(sec: float, fn: Callable) -> void:
 			return
 		_pending -= 1
 		fn.call()
+		_later_fired = true
 		_vis_pending -= 1)
 
 ## Garde le nœud en vie (particules qui finissent) sans compter comme du visuel à attendre.
@@ -192,6 +228,7 @@ func _fwd() -> Vector3:
 	return -cam.global_transform.basis.z
 
 func _projectile(start: Vector3, end: Vector3, tex: Texture2D, col: Color, trail_col: Color, size: float, trail_size: float, dur: float, trail_chance: float, spin: bool, on_hit: Callable) -> void:
+	on_hit = _track_hit(on_hit)
 	var b := _sprite(tex, col, size, start)
 	_add(b, dur, func(u: float):
 		(b.node as Node3D).position = start.lerp(end, u)

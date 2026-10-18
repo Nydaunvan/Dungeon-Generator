@@ -817,6 +817,7 @@ func _trail_emitter(t: Dictionary, at: Vector3) -> GPUParticles3D:
 ## Projectile de `start` à `end` en `dur` s. `p` : body {kind: plasma|shard|mesh|none, …}, halo [couleur, taille], core taille, trail {…},
 ## motes {n, c, rad}, arc, lift, ease (accel|smooth|lin), spin, lamp [couleur, énergie, portée], lens [taille, force].
 func _fly(start: Vector3, end: Vector3, dur: float, p: Dictionary, on_hit: Callable) -> void:
+	on_hit = _track_hit(on_hit)
 	var right := cam.global_transform.basis.x
 	var up := cam.global_transform.basis.y
 	var arc := float(_pk(p, "arc", 0.2)) * (1.0 if randf() < 0.5 else -1.0)
