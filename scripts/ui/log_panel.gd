@@ -11,8 +11,8 @@ func setup(gs: GameState) -> void:
 	text = RichTextLabel.new()
 	text.bbcode_enabled = true
 	text.scroll_following = true
-	# plus lisible qu'à 14 px : ≈ 16 px en paysage (0,9 rem), un peu moins gros en portrait où l'échelle est déjà relevée
-	text.add_theme_font_size_override("normal_font_size", int(UiMetrics.rem(0.8 if UiMetrics.portrait else 0.9)))
+	# ≈ 14 px en paysage (0,78 rem), un peu moins en portrait où l'échelle est déjà relevée (le 0,9 rem d'avant était trop gros)
+	text.add_theme_font_size_override("normal_font_size", int(UiMetrics.rem(0.7 if UiMetrics.portrait else 0.78)))
 	add_child(text)
 	for l in gs.log_lines:
 		_add(l, false)
