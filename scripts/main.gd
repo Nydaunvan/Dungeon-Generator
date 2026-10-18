@@ -20,6 +20,7 @@ var _we: WorldEnvironment
 var message_label: Label
 var _message_tween: Tween
 var _popup_layer: Control
+var dmg_popups: DamagePopups
 var _modal_layer: CanvasLayer
 
 ## Temps de jeu d'un donjon aléatoire (départage les égalités du classement des défis).
@@ -180,6 +181,11 @@ func _ready() -> void:
 	ui.add_child(card_fx)
 	card_fx.status_source = _hero_status_entries
 	await layout.setup(gs, ctrl, rig)
+	dmg_popups = DamagePopups.new()
+	dmg_popups.gs = gs
+	dmg_popups.view = layout.sub_container
+	dmg_popups.hud = layout.hud
+	ui.add_child(dmg_popups)
 	card_fx.ref_cam = rig.camera
 	card_fx.ref_view = layout.sub_container
 	# la vue 3D ne dessine rien tant que le chargement n'est pas fini : tout le temps d'image va à l'écran de chargement (épée fluide)
@@ -1229,19 +1235,7 @@ func show_message(text: String, seconds: float = 1.8) -> void:
 	_message_tween.tween_interval(seconds)
 	_message_tween.tween_property(message_label, "modulate:a", 0.0, 0.6)
 
-## Chiffre de dégâts qui monte et s'efface au centre de l'écran.
-func _show_popup(text: String, color: Color) -> void:
-	var lbl := Label.new()
-	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 30)
-	lbl.add_theme_color_override("font_color", color)
-	lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-	lbl.add_theme_constant_override("outline_size", 8)
-	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var vp := _popup_layer.size
-	lbl.position = Vector2(vp.x * 0.5 - 40 + randf_range(-30, 30), vp.y * 0.5)
-	_popup_layer.add_child(lbl)
-	var t := create_tween().set_parallel(true)
-	t.tween_property(lbl, "position:y", lbl.position.y - 70, 1.0)
-	t.tween_property(lbl, "modulate:a", 0.0, 1.0)
-	t.chain().tween_callback(lbl.queue_free)
+## Chiffre de dégâts / soin : empilé en ligne sur le monstre, la carte du héros ou le bandeau d'équipe (voir DamagePopups).
+func _show_popup(text: String, color: Color, on: String) -> void:
+	if dmg_popups != null:
+		dmg_popups.show_popup(text, color, on)

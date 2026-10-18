@@ -432,7 +432,7 @@ func _use_fountain(it: Dictionary) -> void:
 	_log(L.fa(L.t("game.interactions.redonne_toutes_ses_forces_au"), it.get("name", L.t("game.interactions.la_fontaine"))))
 	if not revived.is_empty():
 		_log(L.fa(L.t("game.interactions.ramene_a_la_vie_par"), [", ".join(revived), "est" if revived.size() == 1 else "sont"]))
-	ctrl.popup.emit(L.t("game.interactions.pv_endurance_restaures"), Color("3aa8c8"))
+	ctrl.popup.emit(L.t("game.interactions.pv_endurance_restaures"), Color("3aa8c8"), "")
 	ctrl.changed.emit()
 
 # ------------------------------------------------------------------ pièges
@@ -525,18 +525,18 @@ func _give_trap_reward(rw: Dictionary) -> void:
 			gs.gold += int(rw.amount)
 			gs.stats["goldEarnedTotal"] = int(gs.stats.get("goldEarnedTotal", 0)) + int(rw.amount)
 			_log(L.fa(L.t("game.interactions.piege_butin_or"), int(rw.amount)))
-			ctrl.popup.emit("+%d 💰" % int(rw.amount), Color("ffd76a"))
+			ctrl.popup.emit("+%d 💰" % int(rw.amount), Color("ffd76a"), "")
 		"xp":
 			for c in gs.alive_party():
 				Characters.award_xp(gs, c, int(rw.amount))
 			gs.stats["xpEarnedTotal"] = int(gs.stats.get("xpEarnedTotal", 0)) + int(rw.amount)
 			_log(L.fa(L.t("game.interactions.piege_butin_xp"), int(rw.amount)))
-			ctrl.popup.emit("+%d XP" % int(rw.amount), Color("8fd0ff"))
+			ctrl.popup.emit("+%d XP" % int(rw.amount), Color("8fd0ff"), "")
 		"heal":
 			for c in gs.alive_party():
 				c["hp"] = mini(int(c.maxHp), int(c.hp) + int(ceil(float(c.maxHp) * float(rw.amount) / 100.0)))
 			_log(L.fa(L.t("game.interactions.piege_butin_soin"), int(rw.amount)))
-			ctrl.popup.emit("+%d %% PV" % int(rw.amount), Color("7fe08a"))
+			ctrl.popup.emit("+%d %% PV" % int(rw.amount), Color("7fe08a"), "")
 			Sound.sfx("heal")
 
 func _pick_victim(it: Dictionary, mult: float) -> Dictionary:
@@ -572,7 +572,7 @@ func _apply_trap_hits(it: Dictionary, hits: Array) -> void:
 		if int(victim.hp) <= 0:
 			gs.bump(victim.id, "knockdowns")
 		_log(L.fa(L.t("game.interactions.piege_declenche_subit_degats"), [it.get("name", ""), victim.name, int(hit.dmg)]), true)
-		ctrl.popup.emit("-%d" % int(hit.dmg), Color("ff6a6a"))
+		ctrl.popup.emit("-%d" % int(hit.dmg), Color("ff6a6a"), "char:" + str(victim.id))
 		if int(victim.hp) <= 0:
 			_log(L.fa(L.t("common.effondre_a_terre"), victim.name))
 	if gs.alive_party().is_empty():

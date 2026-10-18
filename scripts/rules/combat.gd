@@ -516,7 +516,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_2"), [caster.name, spell.get("icon", ""), spell.name, ally.name,
 				L.fa(L.t("rules.combat.et_soigne_pv"), healed) if healed > 0 else ""]), true)
 			_credit_heal(caster, healed)
-			events.append({"type": "popup", "text": "+%d" % healed, "color": Color("7fd17f")})
+			events.append({"type": "popup", "text": "+%d" % healed, "on": "char:" + str(ally.id), "color": Color("7fd17f")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 			Characters.recompute(ally, gs.cfg)
 		"healParty":
@@ -533,7 +533,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			gs.add_log(L.fa(L.t("rules.combat.lance_et_soigne_tout_le"), [caster.name, spell.get("icon", ""), spell.name,
 				", ".join(details) if not details.is_empty() else L.t("rules.combat.personne_n_avait_besoin_de")]), true)
 			_credit_heal(caster, total)
-			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "color": Color("7fd17f")})
+			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "on": "party", "color": Color("7fd17f")})
 		"staminaRestoreSingle":
 			var amt := GameRng.range_i("combat", int(spell.get("staminaMin", 0)) + power, int(spell.get("staminaMax", 0)) + power)
 			var before := int(ally.get("stamina", 0))
@@ -541,13 +541,13 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var got := int(ally.stamina) - before
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_2"), [caster.name, spell.get("icon", ""), spell.name, ally.name,
 				L.fa(L.t("rules.combat.et_restaure_endurance"), got) if got > 0 else ""]), true)
-			events.append({"type": "popup", "text": "+%d ⚡" % got, "color": Color("7fd1c9")})
+			events.append({"type": "popup", "text": "+%d ⚡" % got, "on": "char:" + str(ally.id), "color": Color("7fd1c9")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 		"shieldSingle":
 			var amt := GameRng.range_i("combat", int(spell.get("shieldMin", 0)) + power, int(spell.get("shieldMax", 0)) + power)
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_l_entoure"), [caster.name, spell.get("icon", ""), spell.name, ally.name, amt]), true)
-			events.append({"type": "popup", "text": "🛡️ %d" % amt, "color": Color("8fc8e8")})
+			events.append({"type": "popup", "text": "🛡️ %d" % amt, "on": "char:" + str(ally.id), "color": Color("8fc8e8")})
 		"dispelSingle":
 			var removed := Statuses.dispel(ally)
 			Characters.recompute(ally, gs.cfg)
@@ -555,7 +555,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				gs.add_log(L.fa(L.t("rules.combat.lance_sur_qui_n_etait"), [caster.name, spell.get("icon", ""), spell.name, ally.name]), true)
 			else:
 				gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_dissipe"), [caster.name, spell.get("icon", ""), spell.name, ally.name, ", ".join(removed)]), true)
-			events.append({"type": "popup", "text": L.t("rules.combat.purifie"), "color": Color("8fc8e8")})
+			events.append({"type": "popup", "text": L.t("rules.combat.purifie"), "on": "char:" + str(ally.id), "color": Color("8fc8e8")})
 		"sleepGroup":
 			var tst: Dictionary = lstate().monsters[str(target.id)]
 			var boss := bool(target.get("isBoss", false))
@@ -582,7 +582,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				Statuses.give(c, "vigor", int(spell.get("statusDuration", 4)), str(caster.id))
 				Characters.recompute(c, gs.cfg)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_tout_le_groupe"), [caster.name, spell.get("icon", ""), spell.name]), true)
-			events.append({"type": "popup", "text": "🎶 Vigueur", "color": Color("ffd88a")})
+			events.append({"type": "popup", "text": "🎶 Vigueur", "on": "party", "color": Color("ffd88a")})
 	_mark_acted(caster, mode != "damage")
 	return true
 
@@ -779,7 +779,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	if dodge > 0 and GameRng.f("combat") * 100.0 < float(dodge):
 		gs.add_log(L.fa(L.t("rules.combat.esquive_attaque"), [victim.name, _mname(def), dodge]), true)
 		Sound.sfx("swing", "dagger")
-		events.append({"type": "popup", "text": L.t("rules.combat.esquive"), "color": Color("8fc8e8")})
+		events.append({"type": "popup", "text": L.t("rules.combat.esquive"), "on": "char:" + str(victim.id), "color": Color("8fc8e8")})
 		return
 	var dmg := GameRng.range_i("combat", int(st.atkMin), int(st.atkMax))
 	if st.enraged:
@@ -815,7 +815,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
-	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
+	events.append({"type": "popup", "text": "-%d" % dmg, "on": "char:" + str(victim.id), "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	if int(victim.hp) > 0:
 		_monster_inflict(def, victim)
@@ -863,7 +863,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 	gs.bump(victim.id, "damageTaken", dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
-	events.append({"type": "popup", "text": "%s -%d" % [victim.name, dmg], "color": Color("ff5050")})
+	events.append({"type": "popup", "text": "-%d" % dmg, "on": "char:" + str(victim.id), "color": Color("ff5050")})
 	events.append({"type": "hit", "char": victim.id})
 	# vol de vie de la capacité (sort de drain) : le monstre récupère une part des dégâts infligés
 	var steal := int(spell.get("spellLifestealPct", 0))
@@ -909,7 +909,7 @@ func tick_char(c: Dictionary) -> void:
 			var dmg := maxi(1, int(eff.get("power", 3)))
 			c["hp"] = maxi(0, int(c.hp) - dmg)
 			gs.add_log(L.fa(L.t("rules.combat.subit_degats_de"), [sdef.icon, c.name, dmg, sdef.label]), true)
-			events.append({"type": "popup", "text": "%s -%d" % [c.name, dmg], "color": Color("c98bff")})
+			events.append({"type": "popup", "text": "-%d" % dmg, "on": "char:" + str(c.id), "color": Color("c98bff")})
 			events.append({"type": "hit", "char": c.id})
 			# « Vol de vie » infligé par un monstre : le monstre se soigne du montant drainé
 			if bool(sdef.get("heals", false)) and str(eff.get("casterId", "")) != "":

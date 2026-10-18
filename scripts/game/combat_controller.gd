@@ -4,7 +4,7 @@ extends Node
 ## chronomètre de tour, mort des monstres à l'écran, portes ouvertes par les monstres vaincus.
 
 signal changed
-signal popup(text: String, color: Color)
+signal popup(text: String, color: Color, on: String)
 signal game_over
 signal combat_won(summary: Dictionary)
 signal fx(type: String)
@@ -348,7 +348,7 @@ func _drain() -> void:
 		support_only = rest.all(func(r): return str(r.type) == "popup")
 	if support_only:
 		for e in rest:
-			popup.emit(str(e.text), e.color)
+			popup.emit(str(e.text), e.color, str(e.get("on", "")))
 		rest = []
 		changed.emit()
 	# 2) le reste (chiffres, mort d'un monstre, porte, fin de partie) attend la fin de l'effet visuel
@@ -359,7 +359,7 @@ func _drain() -> void:
 	for e in rest:
 		match str(e.type):
 			"popup":
-				popup.emit(str(e.text), e.color)
+				popup.emit(str(e.text), e.color, str(e.get("on", "")))
 			"mon_hit":
 				var mst: Dictionary = combat.lstate().monsters.get(str(e.id), {})
 				view.entities.play(str(e.id), "stun" if Statuses.has(mst, "stun") else "hit")
