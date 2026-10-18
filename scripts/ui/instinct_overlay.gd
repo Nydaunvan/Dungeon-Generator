@@ -85,6 +85,14 @@ func _ready() -> void:
 		ctrl.instinct_prompt.connect(_on_prompt)
 		ctrl.instinct_end.connect(func(_o): _hide())
 
+## Plus grande taille de police (≤ `max_size`) pour laquelle le texte du libellé tient dans `max_w` pixels.
+func _fit_size(l: Label, max_w: float, max_size: int) -> int:
+	var font := l.get_theme_font("font")
+	var size := max_size
+	while size > 8 and font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > max_w:
+		size -= 1
+	return size
+
 func _disc_label(col: Color) -> Label:
 	var l := Label.new()
 	l.add_theme_color_override("font_color", col)
@@ -140,10 +148,10 @@ func _place() -> void:
 	_ring.size = area.size
 	_ring.global_position = area.position
 	# texte dans le disque : mot d'action en haut, temps restant en grand au centre
-	_word.add_theme_font_size_override("font_size", int(d * 0.125))
+	_word.add_theme_font_size_override("font_size", _fit_size(_word, d * 0.56, int(d * 0.125)))   # reste dans l'intérieur du disque, quelle que soit la langue
 	_timer.add_theme_font_size_override("font_size", int(d * 0.30))
 	_word.size = Vector2(d, d * 0.2)
-	_word.position = Vector2(0.0, d * 0.20)
+	_word.position = Vector2(0.0, d * 0.215)
 	_timer.size = Vector2(d, d * 0.36)
 	_timer.position = Vector2(0.0, d * 0.40)
 	_name.size = Vector2(d * 1.6, 28)
