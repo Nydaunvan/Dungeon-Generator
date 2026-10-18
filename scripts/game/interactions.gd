@@ -507,6 +507,10 @@ func _trap_resolved(it: Dictionary, res: Dictionary) -> void:
 		var c := gs.char_by_id(str(sta.id))
 		if not c.is_empty():
 			c["stamina"] = maxi(0, int(c.stamina) - int(sta.amt))
+	for e in res.get("sta_list", []):       # « Effort collectif » : chaque héros vivant paie
+		var ce := gs.char_by_id(str(e.id))
+		if not ce.is_empty():
+			ce["stamina"] = maxi(0, int(ce.stamina) - int(e.amt))
 	var sac := int(res.get("sac_idx", -1))
 	if sac >= 0 and sac < gs.inventory.size():
 		var gone: Dictionary = gs.inventory[sac]

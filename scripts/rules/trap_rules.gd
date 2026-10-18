@@ -10,6 +10,7 @@ const DEFAULTS := {
 	# méthodes
 	"methodCount": 3.0, "statBonus": 2.5, "forceBase": 45.0, "forceFailPct": 125.0, "dispelBase": 40.0, "dispelStaCost": 12.0,
 	"probeBase": 65.0, "probeBonus": 20.0, "volunteerBase": 55.0, "volunteerDmgPct": 35.0, "bypassBase": 45.0, "bypassDmgPct": 40.0,
+	"exertBase": 70.0, "exertStaPct": 35.0, "exertDmgPct": 60.0,
 	# puzzles
 	"puzzleChancePct": 50.0, "puzzleTwistsOn": 1.0, "skipDmgPct": 200.0,
 	"puzzleRuneOn": 1.0, "puzzleRuneLen": 5.0, "puzzleRuneErrors": 1.0,
@@ -30,6 +31,7 @@ const METHODS := {
 	"sacrifice": {"icon": "⚗️", "stat": ""},
 	"volunteer": {"icon": "🛡️", "stat": "con"},
 	"bypass": {"icon": "🌀", "stat": "dex"},
+	"exert": {"icon": "💪", "stat": "con"},   # toujours proposé en plus des méthodes tirées : coûte de l'endurance à tout le groupe
 }
 
 ## Types de piège : les méthodes possibles et les puzzles qui s'y prêtent.
@@ -153,12 +155,33 @@ static func method_chance(gs: GameState, s: Dictionary, id: String, disarm_chanc
 				tot += maxf(0.0, float(c.get("effDex", 10)) - 10.0)
 				n += 1
 			raw = float(s.bypassBase) + float(s.statBonus) * (tot / maxf(1.0, float(n)))
+		"exert":
+			var tot_c := 0.0
+			var n_c := 0
+			for c in gs.alive_party():
+				tot_c += maxf(0.0, float(c.get("effCon", 10)) - 10.0)
+				n_c += 1
+			raw = float(s.exertBase) + float(s.statBonus) * (tot_c / maxf(1.0, float(n_c)))
 		"sacrifice":
 			return {"chance": 100, "who": who, "raw": 100}
 	if id != "probe":
 		raw += probe_bonus
 	var ch := int(round(clampf(raw, float(s.min), maxf(float(s.min), float(s.max)))))
 	return {"chance": ch, "who": who, "raw": int(round(raw)), "detail": detail}
+
+## Endurance que « Effort collectif » retire à chaque héros vivant : part de son maximum, sans dépasser ce qui lui reste. [{id, amt}]
+static func exert_costs(gs: GameState, s: Dictionary) -> Array:
+	var out: Array = []
+	for c in gs.alive_party():
+		var amt := mini(int(c.get("stamina", 0)), int(round(float(c.get("maxStamina", 100)) * float(s.exertStaPct) / 100.0)))
+		out.append({"id": str(c.get("id", "")), "amt": maxi(0, amt)})
+	return out
+
+static func exert_total(gs: GameState, s: Dictionary) -> int:
+	var t := 0
+	for e in exert_costs(gs, s):
+		t += int(e.amt)
+	return t
 
 ## Seuil du d20 pour une chance donnée (même formule que le crochetage).
 static func threshold(chance: int) -> int:

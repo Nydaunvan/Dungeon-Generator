@@ -21,7 +21,7 @@ var _offer: Dictionary
 var _methods: Array = []
 var _puzzle := ""
 var _probe := 0.0
-var _res: Dictionary = {"disarm": false, "hits": [], "reward": {}, "sta": {}, "sac_idx": -1}
+var _res: Dictionary = {"disarm": false, "hits": [], "reward": {}, "sta": {}, "sta_list": [], "sac_idx": -1}
 var _busy := false
 var _stage := "choose"            # choose | sacrifice | roll | puzzle | after : étape en cours (sert à accepter ou refuser une entrée)
 var _pz: TrapPuzzle = null
@@ -55,6 +55,8 @@ static func open(host: Node, item: Dictionary, ctx: Dictionary) -> TrapModal:
 	m._s = ctx.s
 	m._offer = ctx.offer
 	m._methods = (ctx.offer.methods as Array).duplicate()
+	if not m._methods.has("exert"):
+		m._methods.append("exert")      # choix supplémentaire toujours proposé : l'effort du groupe, au prix de son endurance
 	m._puzzle = str(ctx.offer.puzzle)
 	m._build()
 	host.add_child(m)
@@ -282,7 +284,8 @@ func can_input(a: Array) -> bool:
 			return _stage == "choose" and not _busy
 		"method":
 			return _stage == "choose" and not _busy and a.size() > 1 and _methods.has(str(a[1])) \
-				and not (str(a[1]) == "sacrifice" and TrapRules.sacrifice_candidates(_gs).is_empty())
+				and not (str(a[1]) == "sacrifice" and TrapRules.sacrifice_candidates(_gs).is_empty()) \
+				and not (str(a[1]) == "exert" and TrapRules.exert_total(_gs, _s) <= 0)
 		"puzzle":
 			return _stage == "choose" and not _busy and _puzzle != ""
 		"sac":
@@ -440,12 +443,18 @@ func _method_card(id: String, idx: int) -> Button:
 		tip = _disarm_tip() + "\n" + tip
 	elif id == "dispel":
 		tip += "\n" + L.fa(L.t("ui.trap_method.cout_endurance"), int(_s.dispelStaCost))
+	elif id == "exert":
+		tip += "\n" + L.fa(L.t("ui.trap_method.cout_endurance_groupe"), [int(_s.exertStaPct), TrapRules.exert_total(_gs, _s)])
 	var b := _card(str(d.icon), L.t("ui.trap_method.name_%s" % str(id)), sub, "%d %%" % ch, L.t("ui.trap_modal.chance_court"), _chance_color(ch), tip, idx)
 	b.pressed.connect(func(): Flows.input("trap", ["method", id]))
 	if id == "sacrifice" and TrapRules.sacrifice_candidates(_gs).is_empty():
 		b.disabled = true
 		b.modulate = Color(1, 1, 1, 0.5)
 		b.tooltip_text = L.t("ui.trap_modal.sacrifice_aucun")
+	if id == "exert" and TrapRules.exert_total(_gs, _s) <= 0:
+		b.disabled = true
+		b.modulate = Color(1, 1, 1, 0.5)
+		b.tooltip_text = L.t("ui.trap_modal.exert_aucun")
 	return b
 
 func _puzzle_card(idx: int) -> Button:
@@ -608,6 +617,20 @@ func _roll_outcome(id: String, roll: int, thr: int, outcome: String, info: Dicti
 				msg = L.t("ui.trap_modal.dissipe_ko")
 				_hit_random(1.0)
 			_roll_info.text += "   ·   💧 " + L.fa(L.t("ui.trap_modal.perd_endurance"), [who.get("name", "?"), cost])
+		"exert":
+			var costs := TrapRules.exert_costs(_gs, s)
+			_res.sta_list = costs
+			var spent := 0
+			for e in costs:
+				spent += int(e.amt)
+			if good:
+				_res.disarm = true
+				msg = L.t("ui.trap_modal.exert_ok")
+				reward_src = "perfect" if roll == 20 else "dice"
+			else:
+				msg = L.t("ui.trap_modal.exert_ko")
+				_hit_all(float(s.exertDmgPct) / 100.0)
+			_roll_info.text += "   ·   💧 " + L.fa(L.t("ui.trap_modal.perd_endurance_groupe"), spent)
 		"probe":
 			if good:
 				_probe = float(s.probeBonus)

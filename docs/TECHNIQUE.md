@@ -370,3 +370,7 @@ Les statuts (brûlure, poison, gel, sommeil, ralentissement…) vivent sur le **
 
 ### Bonus et effets (fiche d'inventaire)
 `BonusOverview.build(c, cfg)` regroupe tout ce qui améliore un héros en sept groupes (caractéristiques, combat, résistances d'école, capacités des objets + ensemble mythique, talents, statuts actifs, classe / Constitution / modificateurs d'expédition) en réutilisant les sections de `StatExplain.data` : valeur finale, puis chaque source (objet et emplacement, talent, statut, classe). Les effets sans source sont résumés en une ligne « sans effet ». `EquipDock._add_bonus_overview` l'affiche dans le volet « Détails et sorts » ; les libellés qui retournent à la ligne ont une largeur minimale (sinon coupure lettre par lettre). Test : `tools/check_bonus_overview.tscn`.
+
+
+## Pièges : Effort collectif
+`TrapRules.METHODS["exert"]` (💪) est un choix **toujours ajouté** aux méthodes tirées du piège (`TrapModal.open` l'ajoute à `_methods` ; l'offre sauvegardée dans `trapOffer` n'est pas modifiée, donc aucune migration). Chance : `exertBase` (70) + `statBonus` × moyenne de (Constitution − 10) des héros vivants. Coût : `exertStaPct` (35 %) de l'endurance max de chaque héros vivant, limité à son endurance actuelle (`TrapRules.exert_costs`), payé même en cas d'échec ; le résultat part dans `res.sta_list`, appliqué par `Interactions._trap_resolved`. Échec : `_hit_all(exertDmgPct)`. Bouton désactivé (et entrée refusée par `can_input`) si le coût total est nul. Réglages dans `trapSettings` et l'administration (Général).
