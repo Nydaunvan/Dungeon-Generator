@@ -3268,8 +3268,6 @@
   "ui.stat_explain.rule_perk_thorns": "Reflects this percentage of the damage taken back to the attacker (at least 1).",
   "ui.stat_explain.rule_perk_gold": "Increases the gold dropped by defeated monsters by this percentage.",
   "ui.stat_explain.rule_perk_last_stand": "Once per combat, a blow that would kill this hero leaves them at 1 HP (after the survival instinct, which comes first).",
-  "ui.minimap.zoom": "×%d",
-  "ui.minimap.zoom_aide": "Map zoom: mouse wheel, the − and + buttons, or double-click (touch: double-tap).",
   "ui.bonus.titre": "BONUSES AND EFFECTS",
   "ui.bonus.aucun": "No bonus for now: no item, talent or status improves this hero.",
   "ui.bonus.g_stats": "Attributes",
@@ -3293,7 +3291,8 @@
   "ui.bonus.healer": "Healer (Priest / Druid)",
   "ui.bonus.healer_rule": "Faster second wind: ×1.25 HP regained while exploring.",
   "ui.bonus.hardcore": "Hardcore mode",
-  "ui.bonus.hardcore_rule": "Starting HP doubled."
+  "ui.bonus.hardcore_rule": "Starting HP doubled.",
+  "ui.minimap.zoom_hint": "Wheel: zoom in / out"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
