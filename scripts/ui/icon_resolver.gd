@@ -72,7 +72,8 @@ static func texture(icon: String) -> Texture2D:
 	elif remake.has(id):
 		tex = _monster_tex(int(remake[id]))
 	elif id.begins_with("spr_") and id.substr(4).is_valid_int():
-		tex = _cell(ITEM_SHEET, int(id.substr(4)), 8, 128)
+		var own := "res://assets/icons/%s.png" % id           # vignette corrigée à part (prioritaire sur la planche : ex. spr_147, médaillon rogné)
+		tex = load(own) if ResourceLoader.exists(own) else _cell(ITEM_SHEET, int(id.substr(4)), 8, 128)
 	elif ResourceLoader.exists("res://assets/icons/%s.webp" % id):
 		tex = load("res://assets/icons/%s.webp" % id)
 	elif ResourceLoader.exists("res://assets/icons/%s.png" % id):

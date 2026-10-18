@@ -9,7 +9,7 @@ func _ready() -> void:
 	row.position = Vector2(20, 20)
 	row.add_theme_constant_override("separation", 20)
 	add_child(row)
-	for id in ["mon_ogre", "mon_wolf", "mon_troll"]:
+	for id in ["spr_147", "spr_153", "spr_103"]:
 		for sz in [64.0, 220.0]:
 			row.add_child(IconPicker.icon_control("@icon:" + id, sz))
 	await get_tree().create_timer(1.0).timeout

@@ -588,7 +588,7 @@ func _material_for(icon: String, is_boss: bool, is_item: bool) -> StandardMateri
 		mat = _base_material(load(hd))      # vignette individuelle agrandie ×2 (Lanczos + netteté)
 	elif legacy.has(id):
 		mat = _sheet_material(ITEM_SHEET, int(legacy[id]), ITEM_COLS, ITEM_ROWS)
-	elif id.begins_with("spr_") and id.substr(4).is_valid_int():
+	elif id.begins_with("spr_") and id.substr(4).is_valid_int() and not ResourceLoader.exists(single):
 		mat = _sheet_material(ITEM_SHEET, int(id.substr(4)), ITEM_COLS, ITEM_ROWS)
 	elif ResourceLoader.exists(single):
 		mat = _base_material(load(single))
