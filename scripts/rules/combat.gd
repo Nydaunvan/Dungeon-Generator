@@ -385,8 +385,7 @@ func player_attack(attacker: Dictionary) -> bool:
 	var wtype := str(wpn_v.get("weaponType", "sword")) if wpn_v is Dictionary else "fist"
 	gs.bump(attacker.id, "actions")
 	events.append({"type": "fx", "fx": "unarmed" if wtype == "fist" else wtype, "char": str(attacker.id)})
-	Sound.sfx("swing", wtype)
-	Sound.sfx_later(0.09, "hit")
+	Sound.attack_standard()
 	_hit_monster(attacker, target, dmg, false, "frappe", false, false)
 	_mark_acted(attacker, false)
 	return true
@@ -495,7 +494,9 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", "")), "solo": gs.party.size() == 1}
 	fx_ctx.merge(SpellFxLibrary.fx_keys(spell))      # effet visuel choisi dans l'éditeur (fx, teinte, intensité)
 	events.append({"type": "fx3d", "spell": spell_id, "ctx": fx_ctx})
-	if ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
+	if Sound.spell_sound(str(spell_id)):
+		pass        # son fourni pour ce sort
+	elif ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:
 		Sound.sfx("spell", str(spell.get("style", "arcane")))
@@ -826,8 +827,15 @@ func _monster_attack_party(def: Dictionary, st: Dictionary) -> void:
 		if gs.alive_party().is_empty():
 			gs.game_over = true
 			gs.add_log(L.t("common.le_groupe_est_aneanti_les"))
-			Sound.sfx("game_over")
+			_game_over_sound(def)
 			events.append({"type": "game_over"})
+
+## Anéantissement du groupe : un boss a ses propres sons de victoire (en alternance selon le boss), les autres monstres le jingle habituel.
+func _game_over_sound(def: Dictionary) -> void:
+	if bool(def.get("isBoss", false)):
+		Sound.boss_win(str(def.get("id", def.get("name", ""))))
+	else:
+		Sound.sfx("game_over")
 
 ## Effet de famille du monstre (poison, sommeil, brûlure…) : sur un coup qui touche, avec la chance du monstre.
 func _monster_inflict(def: Dictionary, victim: Dictionary) -> void:
@@ -884,7 +892,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 		if gs.alive_party().is_empty():
 			gs.game_over = true
 			gs.add_log(L.t("common.le_groupe_est_aneanti_les"))
-			Sound.sfx("game_over")
+			_game_over_sound(def)
 			events.append({"type": "game_over"})
 
 # ------------------------------------------------------------------ statuts (tick)

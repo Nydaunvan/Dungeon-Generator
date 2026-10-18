@@ -426,7 +426,7 @@ func _use_fountain(it: Dictionary) -> void:
 			revived.append(str(c.name))
 		c["hp"] = c.maxHp
 		c["stamina"] = c.get("maxStamina", 100)
-	Sound.sfx("fountain")
+	Sound.fountain()
 	view.entities.refresh_fountains()
 	ctrl.fx.emit("fountain")
 	_log(L.fa(L.t("game.interactions.redonne_toutes_ses_forces_au"), it.get("name", L.t("game.interactions.la_fontaine"))))

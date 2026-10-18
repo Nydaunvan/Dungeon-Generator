@@ -82,6 +82,7 @@ static func drink(char_id: String, idx: int) -> int:
 	var healed := Inventory.use_potion(gs, c, idx)
 	RunLog.leave()
 	if healed >= 0:
+		Sound.potion()
 		ctrl.potion_drunk(char_id, healed)
 	return healed
 

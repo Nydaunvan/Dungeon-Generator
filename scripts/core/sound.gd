@@ -156,6 +156,7 @@ const SFX_GAIN_DB := {
 	"stairs|true": 1.0, "stairs|false": 1.0,
 	"swing|axe": 12.0, "swing|bow": 10.5, "swing|dagger": 11.5, "swing|mace": 12.0,
 	"swing|staff": 12.0, "swing|sword": 11.5, "swing|unarmed": 12.0,
+	"spell_file": -14.0, "attack_standard": -14.0, "boss_win_1": -14.0, "boss_win_2": -14.0, "potion": -14.0, "fountain_file": -14.0,
 	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5, "wood_thud": -13.5, "rune_seal": -13.0, "rage": -7.0,
 }
 
@@ -290,6 +291,46 @@ func _spell(b: Synth, style: String) -> void:
 			for i in 4:
 				b.tone([660.0, 880.0, 1100.0, 1320.0][i], 0.08 if i < 3 else 0.1, "triangle", [0.12, 0.11, 0.10, 0.09][i], 0.012, [0.1, 0.1, 0.12, 0.16][i], i * 0.05, 0.0, i == 3)
 		_: b.tone(500.0, 0.1, "sawtooth", 0.10, 0.012, 0.18, 0.0, 1400.0)   # arcane
+
+# ------------------------------------------------------------------ sons fournis (fichiers OGG)
+## Un fichier par sort (assets/sounds/spells/<id du sort>.ogg) et quelques sons divers (assets/sounds/misc). Tous sont stockés à -20 LUFS
+## et ramenés à -34 LUFS (volume commun des effets) par un gain de -14 dB (clés « spell_file », « attack_standard »… de SFX_GAIN_DB).
+const SPELL_SOUND_IDS := ["spell_arc1", "spell_archer1", "spell_assassin1", "spell_assassin2", "spell_assassin3", "spell_assassin4", "spell_bard1", "spell_bard2", "spell_berserker1", "spell_berserker2", "spell_berserker3", "spell_berserker4", "spell_bladedancer1", "spell_bladedancer2", "spell_bladedancer3", "spell_bladedancer4", "spell_cleric2", "spell_cleric3", "spell_cleric4", "spell_crusader1", "spell_crusader2", "spell_crusader3", "spell_elementalist1", "spell_elementalist2", "spell_elementalist3", "spell_fire1", "spell_frost1", "spell_haste1", "spell_heal1", "spell_heal2", "spell_holy1", "spell_magearcher1", "spell_magearcher2", "spell_magearcher3", "spell_minstrel1", "spell_minstrel2", "spell_minstrel3", "spell_minstrel4", "spell_nature1", "spell_nature10", "spell_nature11", "spell_nature2", "spell_nature3", "spell_nature4", "spell_nature5", "spell_nature6", "spell_nature7", "spell_nature8", "spell_nature9", "spell_paladin1", "spell_paladin2", "spell_rogue1", "spell_skald1", "spell_skald2", "spell_skald3", "spell_skald4", "spell_slow1", "spell_thief1", "spell_thief2", "spell_thief3", "spell_thief4", "spell_warlock1", "spell_warlock2", "spell_warlock3", "spell_warlock4", "spell_warrior1"]
+const MISC_SOUNDS := {"attack_standard": "res://assets/sounds/misc/attack_standard.ogg", "boss_win_1": "res://assets/sounds/misc/boss_win_1.ogg",
+		"boss_win_2": "res://assets/sounds/misc/boss_win_2.ogg", "potion": "res://assets/sounds/misc/potion.ogg", "fountain_file": "res://assets/sounds/misc/fountain.ogg"}
+
+func _spell_path(spell_id: String) -> String:
+	return "res://assets/sounds/spells/%s.ogg" % spell_id
+
+func _file_stream(key: String, path: String) -> AudioStream:
+	if not _cache.has(key):
+		_cache[key] = load(path) if ResourceLoader.exists(path) else null
+	return _cache[key]
+
+## Son propre à un sort. Renvoie false si le sort n'a pas de fichier (sort créé dans l'éditeur) : l'appelant joue alors le bruit de son style.
+func spell_sound(spell_id: String) -> bool:
+	var st := _file_stream("spellfile|" + spell_id, _spell_path(spell_id))
+	if st == null:
+		return false
+	_play(st, "spell_file")
+	return true
+
+## Attaque de base (remplace le coup d'arme + l'impact synthétisés).
+func attack_standard() -> void:
+	_play(_file_stream("attack_standard", MISC_SOUNDS["attack_standard"]), "attack_standard")
+
+## Un boss emporte le combat (groupe anéanti) : deux sons en alternance, toujours le même pour un boss donné.
+func boss_win(boss_id: String) -> void:
+	var k := "boss_win_%d" % (1 + (boss_id.hash() % 2))
+	_play(_file_stream(k, MISC_SOUNDS[k]), k)
+
+## Potion de vie ou d'endurance bue (même son).
+func potion() -> void:
+	_play(_file_stream("potion", MISC_SOUNDS["potion"]), "potion")
+
+## Fontaine (soins complets).
+func fountain() -> void:
+	_play(_file_stream("fountain_file", MISC_SOUNDS["fountain_file"]), "fountain_file")
 
 # ------------------------------------------------------------------ ambiance et musique
 
@@ -462,6 +503,10 @@ func preload_all(progress: Callable = Callable()) -> void:
 		jobs.append({"label": lbl_sfx, "w": 0.8, "fn": func(): _sfx_stream("spell", st)})
 	for fk in FILE_SOUNDS:
 		jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): _cache[fk] = load(FILE_SOUNDS[fk])})
+	for mk in MISC_SOUNDS:
+		jobs.append({"label": lbl_sfx, "w": 0.4, "fn": func(): _cache[mk] = load(MISC_SOUNDS[mk])})
+	for sid in SPELL_SOUND_IDS:
+		jobs.append({"label": lbl_sfx, "w": 0.2, "fn": func(): _cache["spellfile|" + sid] = load(_spell_path(sid))})
 	for up in [true, false]:
 		jobs.append({"label": lbl_sfx, "w": 1.0, "fn": func(): _sfx_stream("stairs", up)})
 	for kind in ["shimmer", "drip", "crackle", "wind", "bell"]:

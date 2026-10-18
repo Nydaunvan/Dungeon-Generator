@@ -527,7 +527,7 @@ func _do_sacrifice(idx: int, it: Dictionary) -> void:
 	var t := create_tween()
 	t.tween_property(big, "scale", Vector2(1.35, 1.35), 0.35).set_trans(Tween.TRANS_BACK)
 	t.tween_property(big, "modulate", Color(1, 0.5, 0.2, 0.0), 0.7)
-	Sound.sfx("fountain")
+	Sound.fountain()
 	_spark_burst()
 	_set_glow(Color("ffd76a"), 18, 0.5, 40, 0.9, true)
 	_end_with(L.t("ui.trap_modal.sacrifice_ok"), Color("ffe08a"), "", "none")
