@@ -185,11 +185,40 @@ func finish_boot() -> void:
 
 # ------------------------------------------------------------------ changements de scène
 
-## Change de scène derrière l'écran de chargement. genre : "game" (nouvelle partie), "save" (partie chargée), "admin", "home".
-func go(path: String, kind: String = "game") -> void:
+var _keep_screen := false
+
+## Génère un donjon DERRIÈRE l'écran de chargement à l'épée : `builder()` (calcul lourd, sans toucher à l'interface) tourne sur un fil de
+## travail, l'épée continue de s'animer, puis `on_done(résultat)` est appelé, normalement pour lancer la partie (`Data.launch`) sur le même écran.
+func generate(builder: Callable, on_done: Callable) -> void:
 	if _busy:
 		return
-	_show(_subtitle(kind))
+	_show(_subtitle("game"))
+	Sound.menu_music(false, 1.0)
+	await _frames(2)
+	screen.set_progress(0.004, L.t("ui.generator_dialog.generation_des_couloirs_et_du"))
+	var box := {}
+	var tid := WorkerThreadPool.add_task(func(): box["cfg"] = builder.call())
+	var t0 := Time.get_ticks_msec()
+	while not WorkerThreadPool.is_task_completed(tid):
+		await get_tree().process_frame
+		var sec := float(Time.get_ticks_msec() - t0) / 1000.0
+		screen.set_progress(0.004 + 0.03 * (1.0 - exp(-sec / 2.5)))     # avance sans jamais se figer, sans promettre une durée
+	WorkerThreadPool.wait_for_task_completion(tid)
+	var cfg: Dictionary = box.get("cfg", {})
+	if cfg.is_empty():
+		_hide(0.3)
+		return
+	_keep_screen = true
+	on_done.call(cfg)
+
+## Change de scène derrière l'écran de chargement. genre : "game" (nouvelle partie), "save" (partie chargée), "admin", "home".
+func go(path: String, kind: String = "game") -> void:
+	if _busy and not _keep_screen:
+		return
+	if _keep_screen:
+		_keep_screen = false        # l'écran de chargement est déjà affiché (génération du donjon) : on poursuit sur le même, sans le refaire
+	else:
+		_show(_subtitle(kind))
 	Sound.menu_music(kind == "home" or kind == "admin", 1.0)
 	await _frames(2)
 	screen.set_progress(0.04)

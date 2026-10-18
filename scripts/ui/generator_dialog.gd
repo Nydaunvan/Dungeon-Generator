@@ -113,10 +113,11 @@ static func pick_modifiers(host: Node, on_chosen: Callable, on_back: Callable = 
 	refs["validate"] = m._buttons_row.get_child(0)
 	refresh.call()
 
-static func _generate(host: Node, params: Dictionary, mods: Array, on_launch: Callable) -> void:
-	var wait := Modal.open(host, L.t("ui.generator_dialog.creation_du_donjon"), 380.0)
-	wait.add_text(L.t("ui.generator_dialog.generation_des_couloirs_et_du"), UiTheme.PARCH, 16, true)
-	await host.get_tree().create_timer(0.35).timeout
-	var cfg := DungeonGenerator.build_config(Data.config, int(params.levels), int(params.width), int(params.height), str(params.diff), mods)
-	wait.close()
-	on_launch.call(cfg)
+## La génération se fait derrière l'écran de chargement à l'épée (plus de fenêtre d'attente) : calcul sur un fil de travail, épée fluide.
+static func _generate(_host: Node, params: Dictionary, mods: Array, on_launch: Callable) -> void:
+	var base: Dictionary = Data.config
+	var levels := int(params.levels)
+	var width := int(params.width)
+	var height := int(params.height)
+	var diff := str(params.diff)
+	Loader.generate(func(): return DungeonGenerator.build_config(base, levels, width, height, diff, mods), on_launch)
