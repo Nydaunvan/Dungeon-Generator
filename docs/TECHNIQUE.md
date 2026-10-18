@@ -342,3 +342,6 @@ Quand un membre d'un groupe tombe sans que le groupe soit anéanti, `CombatStage
 
 ### Régénération en exploration (second souffle)
 `ExploreRegen.on_step` (appelée par `Interactions.step_stamina` après chaque pas) compte les pas sur des cases absentes des 4 dernières (`regenTrail`) ; tous les N pas (`STEPS` : 6 / 8 / 12 / 20 selon la difficulté) chaque héros vivant, ni empoisonné ni brûlé, regagne 1 % de ses PV max (min. 1, ×1,25 pour la famille Prêtre/Druide, +0,1 % par point de Constitution au-dessus de 10) jusqu'à 60 % des PV max. Aucun gain en combat ni pendant `regenCooldown` (2 pas, posé par `CombatController` à la fin d'un combat). Fondée sur les pas, pas sur le temps : déterministe en rejeu et en partie classée. Option `staminaSettings.exploreRegen` (Admin › Général). Test : `tools/check_regen.tscn`.
+
+### Mort d'un monstre : après la fin de l'effet
+Dans `CombatController._drain`, les chiffres et la réaction (`mon_hit`) restent calés sur l'impact du sort (`SpellFx3D.wait_hit`), mais l'événement `monster_died` attend `SpellFx3D.wait_idle` avant de lancer l'animation de mort (`remove_monster`, ou la chute du membre de groupe via le `changed` qui suit) : elle part donc à la fin de l'effet, quelle que soit sa durée. Signal de test `monster_death_started` ; test : `tools/check_death_timing.tscn` (mort mesurée à 1 ms de la fin de l'effet).

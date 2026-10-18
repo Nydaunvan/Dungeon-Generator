@@ -9,6 +9,7 @@ signal game_over
 ## « Instinct de survie » : un coup mortel est suspendu, l'interface montre le bouton rouge pendant `seconds` secondes.
 signal instinct_prompt(char_id: String, seconds: float)
 signal instinct_end(outcome: String)
+signal monster_death_started(id: String)      ## l'animation de mort d'un monstre part (après la fin de l'effet visuel) ; sert aux tests
 signal _instinct_done(quality: String)
 signal combat_won(summary: Dictionary)
 signal fx(type: String)
@@ -384,6 +385,12 @@ func _drain() -> void:
 			"monster_died":
 				Crumbs.mark("monstre mort %s%s" % [str(e.id), "" if model_in_combat() else " (combat fini)"])
 				var stage_on: bool = view.stage != null and view.stage.active
+				if SpellFx3D.busy():
+					# l'animation de mort ne part qu'à la FIN de l'effet visuel (et non à l'impact, ni pendant son fondu) ; chiffres et réaction, eux, restent à l'impact
+					_draining = true
+					await SpellFx3D.wait_idle(get_tree())
+					_draining = false
+				monster_death_started.emit(str(e.id))
 				view.entities.remove_monster(str(e.id), true)
 				if not model_in_combat() and stage_on and Settings.monster_anim:
 					# dernier monstre : la fenêtre de combat reste affichée le temps de son animation de mort (`in_combat` reste vrai tant que `_draining`)
