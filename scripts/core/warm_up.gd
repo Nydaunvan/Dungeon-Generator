@@ -153,12 +153,15 @@ static func run(host: Node, progress: Callable) -> void:
 	vp.size = SIZE
 	vp.own_world_3d = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	vp.msaa_3d = Viewport.MSAA_DISABLED
+	# même anticrénelage et mêmes effets d'environnement que la vue de jeu (voir Main._apply_quality / _apply_fx) : le moteur compile un pipeline
+	# par format d'image (MSAA, occlusion ambiante…) ; chauffer avec d'autres réglages laissait la première apparition de chaque effet (rage…) compiler en plein jeu
+	vp.msaa_3d = Settings.msaa_mode() as Viewport.MSAA
 	host.add_child(vp)
 	var root := Node3D.new()
 	vp.add_child(root)
 	var we := WorldEnvironment.new()
 	we.environment = make_environment()
+	VisualFx.apply_environment(we.environment, "stone", false)
 	root.add_child(we)
 	var rig := PlayerRig.new()
 	root.add_child(rig)

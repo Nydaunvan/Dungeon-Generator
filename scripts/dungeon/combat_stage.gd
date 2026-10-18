@@ -295,6 +295,16 @@ void fragment(){
 }
 """
 
+static var _rage_sh: Shader
+
+## Shader des flammes de rage, créé une seule fois : un `Shader.new()` par monstre obligeait le moteur à le recompiler à chaque entrée en rage
+## (micro-saccade), puisque le shader chauffé au chargement n'était pas celui utilisé.
+static func _rage_shader() -> Shader:
+	if _rage_sh == null:
+		_rage_sh = Shader.new()
+		_rage_sh.code = RAGE_SHADER
+	return _rage_sh
+
 ## Aura de rage façon « ki » : flammes rouges qui montent le long du monstre (shader), braises, halo sombre au fond.
 ## Se compose de : halo de braise (mesh `halo`), flammes (mesh `flames`, shader), braises (CPUParticles3D `embers`) ; réglages dans `_size_rage`.
 static func _make_rage_aura() -> Node3D:
@@ -304,9 +314,7 @@ static func _make_rage_aura() -> Node3D:
 	var fl := MeshInstance3D.new()
 	fl.mesh = QuadMesh.new()
 	var sm := ShaderMaterial.new()
-	var sh := Shader.new()
-	sh.code = RAGE_SHADER
-	sm.shader = sh
+	sm.shader = _rage_shader()      # UN SEUL shader pour toutes les auras : celui compilé au préchauffage est aussi celui du combat
 	sm.render_priority = -1
 	fl.material_override = sm
 	fl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
