@@ -59,7 +59,15 @@ func _process(delta: float) -> void:
 		_sync_auras()
 	var nodes: Array = []
 	for k in _nodes.keys():
-		nodes.append(_nodes[k].node)
+		var en: Dictionary = _nodes[k]
+		var sl: Vector3 = en.get("slide", Vector3.ZERO)
+		if sl != Vector3.ZERO:                      # glissement vers la nouvelle place (voir _refresh_monsters)
+			var step := sl * clampf(delta * 9.0, 0.0, 1.0)
+			if sl.length() < 0.01:
+				step = sl
+			(en.node as Node3D).position += Vector3(step.x, 0.0, step.z)
+			en["slide"] = sl - step if sl.length() >= 0.01 else Vector3.ZERO
+		nodes.append(en.node)
 	view.entities.animate_stage(nodes, delta)
 
 ## Réaction visuelle d'un combattant : « hit » touche le membre ciblé (ou tous), « attack » fait avancer un membre à tour de rôle.
@@ -181,11 +189,17 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 		var off := view.entities.anchor_offset(icon) * h
 		var at := Vector3(cell.x * CELL + right.x * slot * gap, h * 0.5 + 0.02 + off, cell.y * CELL + right.y * slot * gap)
 		var mirrored: bool = is_group and idx == int(st.get("mirrorSlot", -1))
-		if e.node.get_meta("at", Vector3.INF) != at:       # on ne touche à la pose animée que si l'emplacement change
-			e.node.position = at
-			e.node.set_meta("at", at)
-			e.node.set_meta("by", at.y)
-			e.node.set_meta("off", Vector3.ZERO)
+		var prev_at: Vector3 = e.node.get_meta("at", Vector3.INF)
+		if prev_at != at:       # on ne touche à la pose animée que si l'emplacement change
+			if prev_at != Vector3.INF and Settings.monster_anim and absf(prev_at.y - at.y) < 0.001:
+				# un membre du groupe est tombé : les survivants glissent vers leur nouvelle place au lieu de sauter
+				e["slide"] = Vector3(e.get("slide", Vector3.ZERO)) + (at - prev_at)
+				e.node.set_meta("at", at)
+			else:
+				e.node.position = at
+				e.node.set_meta("at", at)
+				e.node.set_meta("by", at.y)
+				e.node.set_meta("off", Vector3.ZERO)
 		e.node.set_meta("mirror", -1.0 if mirrored else 1.0)
 		if not e.node.has_meta("by") or e.node.scale.y == 1.0:
 			e.node.scale = Vector3(-1.0 if mirrored else 1.0, 1.0, 1.0)
@@ -215,7 +229,7 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			_size_rage(e.rage, h)
 	for k in _nodes.keys():
 		if not wanted.has(k):
-			_free_entry(k)
+			_free_entry(k, true)       # membre du groupe tombé : il s'effondre et s'efface lui-même, les autres restent debout
 	_cur_st = st
 	_sync_auras()
 

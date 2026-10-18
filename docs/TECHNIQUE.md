@@ -327,3 +327,6 @@ La tête arrière du marteau de l'ogre (case 22 de la planche des monstres) éta
 
 ### Médaillon rond (`spr_147`) complété
 Le disque de la case 147 de la planche d'objets est rogné à droite (coupure verticale à x ≈ 117 sur 128). `tools/fix_medallion.py` reprend la partie manquante sur la moitié gauche retournée (axe de symétrie trouvé par recherche, raccord fondu sur 5 px), sans dessin ajouté, et écrit `assets/icons/spr_147.png`. Mécanisme général : une icône `assets/icons/spr_N.png` est prioritaire sur la case N de la planche (`IconResolver` et `EntityLayer`), ce qui permet de corriger une vignette sans ré-encoder la planche (enregistrée avec perte).
+
+### Mort individuelle des membres d'un groupe
+Quand un membre d'un groupe tombe sans que le groupe soit anéanti, `CombatStage._refresh_monsters` libère son sprite avec l'animation de mort (`_free_entry(k, true)` → `EntityLayer.die_node` : il s'affaisse et s'efface en 0,5 s) au lieu de le retirer d'un coup ; seul le dernier membre déclenchait jusque-là cette animation (événement `monster_died` → `die_all`). Les survivants glissent vers leur nouvelle place (`slide`, lissage exponentiel dans `_process`) plutôt que de sauter. Le rafraîchissement a lieu après l'impact du coup (`_drain` attend `SpellFx3D.wait_hit`), donc le membre tombe quand le coup le touche. Test : `tools/shot_group_death.tscn`.
