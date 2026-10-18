@@ -76,15 +76,7 @@ func _on_prompt(char_id: String, seconds: float) -> void:
 	_active = true
 	var hero: Dictionary = ctrl.gs.char_by_id(char_id)
 	_name.text = str(hero.get("name", ""))
-	var area: Rect2 = view.get_global_rect() if view != null else get_viewport_rect()
-	var d := clampf(minf(area.size.x, area.size.y) * 0.42, 130.0, 260.0)
-	_seal.size = Vector2(d, d)
-	_seal.pivot_offset = _seal.size * 0.5
-	_seal.global_position = area.get_center() - _seal.size * 0.5
-	_ring.size = area.size
-	_ring.global_position = area.position
-	_name.size = Vector2(d * 1.6, 28)
-	_name.global_position = Vector2(area.get_center().x - _name.size.x * 0.5, _seal.global_position.y + d + 6.0)
+	_place()
 	_seal.scale = Vector2(0.6, 0.6)
 	_seal.modulate.a = 0.0
 	_vignette.modulate.a = 0.0
@@ -110,9 +102,23 @@ func _hide() -> void:
 func _frac() -> float:
 	return clampf(float(Time.get_ticks_msec() - _t0) / (_seconds * 1000.0), 0.0, 1.0)
 
+## Centre le bouton sur la vue 3D ; rappelé à chaque image car la vue peut encore bouger (ouverture du combat, redimensionnement).
+func _place() -> void:
+	var area: Rect2 = view.get_global_rect() if view != null else get_viewport_rect()
+	var d := clampf(minf(area.size.x, area.size.y) * 0.42, 130.0, 260.0)
+	_seal.size = Vector2(d, d)
+	_seal.pivot_offset = _seal.size * 0.5
+	_seal.global_position = area.get_center() - _seal.size * 0.5
+	_ring.size = area.size
+	_ring.global_position = area.position
+	_name.size = Vector2(d * 1.6, 28)
+	_name.global_position = Vector2(area.get_center().x - _name.size.x * 0.5, _seal.global_position.y + d + 6.0)
+
+
 func _process(_d: float) -> void:
 	if not _active:
 		return
+	_place()
 	var f := _frac()
 	_ring.queue_redraw()
 	_seal.scale = Vector2.ONE * (1.0 + 0.04 * sin(Time.get_ticks_msec() * 0.012))
