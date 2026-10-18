@@ -31,6 +31,11 @@ func _process(_delta: float) -> void:
 	if visible and screen != null:
 		_fit()
 
+## Recalage immédiat (appelé dès que l'échelle de l'interface change, sans attendre l'image suivante).
+func refit() -> void:
+	if visible and screen != null:
+		_fit()
+
 func _fit() -> void:
 	var win := get_window()
 	var f := maxf(win.content_scale_factor, 0.001)

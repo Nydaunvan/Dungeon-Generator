@@ -488,6 +488,7 @@ func _update_scale() -> void:
 		var real := minf(sz.x / GAME_DESIGN.x, sz.y / GAME_DESIGN.y)
 		factor = real / base
 	win.content_scale_factor = factor
+	Loader.refit()   # l'écran de chargement se recale dans la même image : pas d'image à la mauvaise échelle (sursaut de l'épée)
 
 ## « Créer votre propre donjon » : part d'un donjon aléatoire modifiable dans l'administration (`startCreateOwnDungeon`).
 func create_own_dungeon() -> void:
