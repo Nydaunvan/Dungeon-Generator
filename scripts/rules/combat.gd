@@ -667,8 +667,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	if exec_pct > 0 and not aoe and not bool(target.get("isGroup", false)) and float(st.hp) <= float(st.maxHp) * 0.25:
 		dmg = int(round(dmg * (1.0 + exec_pct / 100.0)))
 	var crit := false
-	var crit_chance := int(attacker.get("talentCritChance", 0)) + int(attacker.get("critDexPct", 0)) + _perk_value(attacker, "crit") \
-		+ int(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).critChanceBonus)
+	var crit_chance := Stats.crit_total(attacker)
 	if crit_chance > 0 and GameRng.f("combat") < crit_chance / 100.0:
 		dmg = int(round(dmg * (2.0 + _perk_value(attacker, "critdmg") / 100.0)))
 		crit = true

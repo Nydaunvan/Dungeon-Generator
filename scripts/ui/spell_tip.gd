@@ -114,7 +114,7 @@ static func show_attack(host: Control, caster: Dictionary, attack_cost: int) -> 
 		return
 	var t := _inst_for(host)
 	var ls: Array[String] = [L.fa(L.t("ui.spell_tip.degats"), [int(caster.get("atkMin", 0)), int(caster.get("atkMax", 0))]),
-		L.fa(L.t("ui.spell_tip.attaque_crit"), int(caster.get("talentCritChance", 0)) + int(caster.get("critDexPct", 0)) + int(caster.get("perkCrit", 0)))]
+		L.fa(L.t("ui.spell_tip.attaque_crit"), Stats.crit_total(caster))]
 	var ls_pct := int(caster.get("talentLifestealPct", 0)) + int(caster.get("perkLifesteal", 0))
 	if ls_pct > 0:
 		ls.append(L.fa(L.t("ui.spell_tip.vol_de_vie_des_degats"), ls_pct))

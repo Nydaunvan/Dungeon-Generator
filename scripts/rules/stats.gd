@@ -35,6 +35,11 @@ const CAP_GUARD := 25
 static func crit_from_dex(dex: int) -> int:
 	return clampi(dex - 10, 0, CAP_CRIT)
 
+## Chance de coup critique totale d'un héros (%) : Dextérité (équipement compris) + talents + capacités des objets + modificateurs de partie.
+## C'est la valeur utilisée en combat ET affichée partout.
+static func crit_total(c: Dictionary) -> int:
+	return int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + Rarity.perk_sum(c, "crit") + int(c.get("runCrit", 0))
+
 ## Chance d'esquiver l'attaque d'un monstre (%) : 0,8 % par point de Dextérité au-dessus de 10.
 static func dodge_from_dex(dex: int) -> int:
 	return clampi(int(floor((dex - 10) * 0.8)), 0, CAP_DODGE)

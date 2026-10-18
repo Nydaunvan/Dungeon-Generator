@@ -126,6 +126,7 @@ static func recompute(c: Dictionary, cfg: Dictionary) -> void:
 	c["resistPhys"] = int(tal.resistPhys)
 	c["resistMagic"] = int(tal.resistMagic)
 	c["critDexPct"] = Stats.crit_from_dex(d)
+	c["runCrit"] = int(run.critChanceBonus)               # modificateurs de partie : compté en combat, donc affiché aussi
 	c["dodgePct"] = Stats.dodge_from_dex(d) + Rarity.perk_sum(c, "dodge")
 	c["perkCrit"] = Rarity.perk_sum(c, "crit")             # capacités des objets (raretés), pour l'affichage des valeurs dérivées
 	c["perkLifesteal"] = Rarity.perk_sum(c, "lifesteal")

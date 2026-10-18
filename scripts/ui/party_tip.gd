@@ -147,7 +147,7 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 		cell.add_child(k)
 		stats.add_child(cell)
 	b.add_child(stats)
-	var sec := _lbl(L.fa(L.t("ui.party_tip.derives"), [int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + int(c.get("perkCrit", 0)), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0)), int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))]), 12, DIM)
+	var sec := _lbl(L.fa(L.t("ui.party_tip.derives"), [Stats.crit_total(c), int(c.get("dodgePct", 0)), int(c.get("guardPct", 0)), int(c.get("spellPower", 0)) + int(c.get("bonusSpellDmg", 0))]), 12, DIM)
 	sec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.add_child(sec)
 	var red := _lbl(L.fa(L.t("ui.party_tip.reductions"), [Stats.reduction(c, false), Stats.reduction(c, true), int(c.get("talentLifestealPct", 0)) + int(c.get("perkLifesteal", 0))]), 12, DIM)

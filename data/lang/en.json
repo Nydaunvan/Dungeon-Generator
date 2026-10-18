@@ -3252,7 +3252,10 @@
   "admin.general.regen_exploration_hint": "Out of combat, each hero regains 1% of max HP every N steps (easy 6, normal 8, hard 12, nightmare 20), up to 60% of max HP. Priests and druids: +25%. No gain while poisoned or burning, right after a combat, or when retracing steps.",
   "ui.instinct.bouton": "SURVIVE!",
   "ui.instinct.touche": "Click / Space",
-  "ui.instinct.decimal": "."
+  "ui.instinct.decimal": ".",
+  "ui.stat_explain.set_mythic": "Mythic set",
+  "ui.stat_explain.set": "2 mythic pieces",
+  "ui.stat_explain.r_run": "Run modifiers"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

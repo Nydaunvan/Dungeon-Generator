@@ -434,7 +434,7 @@ func _attr_table(p: Control, c: Dictionary) -> void:
 
 ## Valeurs dérivées, chacune avec une infobulle qui donne le détail du calcul.
 func _combat_grid(p: Control, c: Dictionary) -> void:
-	var crit_tot := int(c.get("talentCritChance", 0)) + int(c.get("critDexPct", 0)) + int(c.get("perkCrit", 0))
+	var crit_tot := Stats.crit_total(c)
 	var g := _grid(p)
 	var cells := [
 		["⚔️", L.t("common.attaque"), "%d – %d" % [int(c.atkMin), int(c.atkMax)], "atk"],

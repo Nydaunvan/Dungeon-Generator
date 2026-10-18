@@ -38,7 +38,7 @@ static func _part(field: String, v: int, unit: String) -> Dictionary:
 	return {"label": L.t(FIELD_KEYS[field]) if FIELD_KEYS.has(field) else field, "value": _sg(v) + unit, "tone": _tone(v)}
 
 ## Sources d'un bonus : objets équipés (champs `eq_fields`), talents (effets `tal_fields`), statuts de vitesse si demandé.
-static func _sources(c: Dictionary, cfg: Dictionary, eq_fields: Array, tal_fields: Array, unit: String = "", status_speed: bool = false) -> Array:
+static func _sources(c: Dictionary, cfg: Dictionary, eq_fields: Array, tal_fields: Array, unit: String = "", status_speed: bool = false, perk: String = "", eq_unit: String = "\u0001") -> Array:
 	var out: Array = []
 	var eq: Dictionary = c.get("equipment", {})
 	for slot in Characters.SLOTS:
@@ -51,9 +51,17 @@ static func _sources(c: Dictionary, cfg: Dictionary, eq_fields: Array, tal_field
 				continue
 			var v := int(it.get(f, 0))
 			if v != 0:
-				parts.append(_part(f, v, unit))
+				parts.append(_part(f, v, unit if eq_unit == "\u0001" else eq_unit))
+		if perk != "":
+			for pk in Rarity.perks_of(it):          # capacités de rareté de l'objet (ex. « +4 % critique »)
+				if str(pk.get("id", "")) == perk and int(pk.get("value", 0)) != 0:
+					parts.append({"label": L.t(str(Rarity.PERK_NAMES.get(perk, perk))), "value": _sg(int(pk.value)) + " %", "tone": _tone(int(pk.value))})
 		if not parts.is_empty():
 			out.append(_source(str(it.get("icon", "")), L.c(str(it.get("name", "?"))), L.c(str(Inventory.SLOT_LABELS.get(slot, slot))), parts))
+	if perk != "":
+		for ep in Rarity.equipped_perks(c):         # effet d'ensemble mythique (sans objet précis)
+			if ep.item == null and str(ep.perk) == perk:
+				out.append(_source("", L.t("ui.stat_explain.set_mythic"), L.t("ui.stat_explain.set"), [{"label": "", "value": _sg(int(ep.value)) + " %", "tone": _tone(int(ep.value))}]))
 	for t in c.get("talents", []):
 		var opt := Talents.find_option(cfg, str(t.get("id", "")))
 		var tparts: Array = []
@@ -130,19 +138,22 @@ static func data(c: Dictionary, cfg: Dictionary, key: String) -> Dictionary:
 		"crit":
 			var dx := int(c.get("effDex", 10))
 			var tc := int(c.get("talentCritChance", 0))
-			var rc := int(c.get("perkCrit", 0))
-			return _sec(key, "💥", L.t("ui.party_modal.critique"), "%d %%" % (Stats.crit_from_dex(dx) + tc + rc), L.t("ui.stat_explain.rule_crit"),
-				[_row(L.fa(L.t("ui.stat_explain.r_dex_crit"), dx), _pct(Stats.crit_from_dex(dx))), _row(L.t("ui.stat_explain.r_talents"), _pct(tc), _tone(tc)),
-				_row(L.t("ui.stat_explain.r_rarity"), _pct(rc), _tone(rc)),
-				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (Stats.crit_from_dex(dx) + tc + rc), "total")], [], _sources(c, cfg, [], ["critChance"], " %"),
-				L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_CRIT) + " (" + L.t("common.dexterite") + ")")
+			var rc := Rarity.perk_sum(c, "crit")
+			var rn := int(c.get("runCrit", 0))
+			var crit_rows: Array = [_row(L.fa(L.t("ui.stat_explain.r_dex_crit"), dx), _pct(Stats.crit_from_dex(dx))), _row(L.t("ui.stat_explain.r_talents"), _pct(tc), _tone(tc)),
+				_row(L.t("ui.stat_explain.r_rarity"), _pct(rc), _tone(rc))]
+			if rn != 0:
+				crit_rows.append(_row(L.t("ui.stat_explain.r_run"), _pct(rn), _tone(rn)))
+			crit_rows.append(_row(L.t("ui.stat_explain.r_total"), "%d %%" % Stats.crit_total(c), "total"))
+			return _sec(key, "💥", L.t("ui.party_modal.critique"), "%d %%" % Stats.crit_total(c), L.t("ui.stat_explain.rule_crit"), crit_rows, [],
+				_sources(c, cfg, ["bonusDex"], ["critChance"], " %", false, "crit", ""), L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_CRIT) + " (" + L.t("common.dexterite") + ")")
 		"dodge":
 			var dd := int(c.get("effDex", 10))
 			var rd := Rarity.perk_sum(c, "dodge")
 			return _sec(key, "💨", L.t("ui.party_modal.esquive"), "%d %%" % (Stats.dodge_from_dex(dd) + rd), L.t("ui.party_modal.tip_esquive"),
 				[_row(L.fa(L.t("ui.stat_explain.r_dex_dodge"), dd), _pct(Stats.dodge_from_dex(dd))), _row(L.t("ui.stat_explain.r_rarity"), _pct(rd), _tone(rd)),
 				_row(L.t("ui.stat_explain.r_total"), "%d %%" % (Stats.dodge_from_dex(dd) + rd), "total")],
-				[], _sources(c, cfg, ["bonusDex"], ["bonusDex"]), L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_DODGE))
+				[], _sources(c, cfg, ["bonusDex"], ["bonusDex"], "", false, "dodge"), L.fa(L.t("ui.stat_explain.cap"), Stats.CAP_DODGE))
 		"guard":
 			var cn := int(c.get("effCon", 10))
 			return _sec(key, "🛡️", L.t("ui.party_modal.garde"), "%d %%" % Stats.guard_from_con(cn), L.t("ui.party_modal.tip_garde"),

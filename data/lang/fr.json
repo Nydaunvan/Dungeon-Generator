@@ -3252,7 +3252,10 @@
   "admin.general.regen_exploration_hint": "Hors combat, chaque héros regagne 1 % de ses PV max tous les N pas (facile 6, normal 8, difficile 12, cauchemar 20), jusqu'à 60 % de ses PV max. Prêtres et druides : +25 %. Pas de gain pendant le poison ou la brûlure, ni juste après un combat, ni en revenant sur ses pas.",
   "ui.instinct.bouton": "SURVIVRE !",
   "ui.instinct.touche": "Clic / Espace",
-  "ui.instinct.decimal": ","
+  "ui.instinct.decimal": ",",
+  "ui.stat_explain.set_mythic": "Ensemble mythique",
+  "ui.stat_explain.set": "2 pièces mythiques",
+  "ui.stat_explain.r_run": "Modificateurs de partie"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",
