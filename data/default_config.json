@@ -393,7 +393,7 @@
   {
    "id": "spell_warlock1",
    "name": "Drain de Vie",
-   "icon": "🖤",
+   "icon": "@icon:spell_lifedrain",
    "style": "shadow",
    "mode": "damage",
    "dmgMin": 12,
