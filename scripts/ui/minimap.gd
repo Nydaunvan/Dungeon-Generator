@@ -110,10 +110,27 @@ func _gui_input(event: InputEvent) -> void:
 	if grid == null:
 		return
 	if event is InputEventMouseMotion:
-		_cell_tip((event as InputEventMouseMotion).position)
+		var mp := (event as InputEventMouseMotion).position
+		if _zoom_available():
+			var zr := _zoom_rects()
+			if (zr.plus as Rect2).has_point(mp) or (zr.minus as Rect2).has_point(mp) or (zr.label as Rect2).has_point(mp):
+				tooltip_text = L.t("ui.minimap.zoom_aide")
+				remove_meta("tip_rect")
+				return
+		_cell_tip(mp)
 		return
 	if full:
 		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _zoom_available():
+		var zr2 := _zoom_rects()
+		if (zr2.plus as Rect2).has_point(event.position):
+			_zoom_by(1)
+			accept_event()
+			return
+		if (zr2.minus as Rect2).has_point(event.position):
+			_zoom_by(-1)
+			accept_event()
+			return
 	var step := 0
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -233,6 +250,50 @@ func _draw() -> void:
 		var ol := PackedVector2Array([tip, bl, br, tip])
 		draw_polyline(ol, Color(0, 0, 0, 0.95), maxf(3.5, r2 * 0.45), true)
 		draw_colored_polygon(tri, Color("ffd88a"))
+	_draw_zoom_ui()
+
+## Indication de zoom (grande carte seulement) : « Zoom ×2 » et deux boutons − / + en haut à droite. La molette fait la même chose.
+func _zoom_available() -> bool:
+	return grid != null and not full and _max_zoom() > 1
+
+func _zoom_rects() -> Dictionary:
+	var b := UiMetrics.css(22.0)
+	var m := UiMetrics.css(4.0)
+	var plus := Rect2(Vector2(size.x - m - b, m), Vector2(b, b))
+	var minus := Rect2(Vector2(plus.position.x - b - m * 0.5, m), Vector2(b, b))
+	var label := Rect2(Vector2(minus.position.x - UiMetrics.css(34.0) - m * 0.5, m), Vector2(UiMetrics.css(34.0), b))
+	return {"plus": plus, "minus": minus, "label": label}
+
+func _draw_zoom_ui() -> void:
+	if not _zoom_available():
+		return
+	var r := _zoom_rects()
+	var font := UiTheme.font(UiTheme.F_BODY_BOLD)
+	var fs := int(UiMetrics.css(13.0))
+	var z := clampi(zoom, 1, _max_zoom())
+	var label: Rect2 = r.label
+	draw_rect(label, Color(0.05, 0.04, 0.03, 0.78))
+	draw_rect(label, Color(0.91, 0.71, 0.36, 0.55), false, 1.0)
+	var txt := L.fa(L.t("ui.minimap.zoom"), z)
+	var tw := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, label.size.x, fs).x
+	draw_string(font, label.position + Vector2((label.size.x - tw) * 0.5, label.size.y * 0.5 + fs * 0.35), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("ffd88a"))
+	for k in ["minus", "plus"]:
+		var rc: Rect2 = r[k]
+		var ok: bool = (z > 1) if k == "minus" else (z < _max_zoom())
+		draw_rect(rc, Color(0.05, 0.04, 0.03, 0.78 if ok else 0.45))
+		draw_rect(rc, Color(0.91, 0.71, 0.36, 0.8 if ok else 0.25), false, 1.0)
+		var c := rc.get_center()
+		var arm := rc.size.x * 0.26
+		var col := Color("ffd88a") if ok else Color(0.7, 0.6, 0.45, 0.4)
+		draw_line(c - Vector2(arm, 0), c + Vector2(arm, 0), col, 2.0)
+		if k == "plus":
+			draw_line(c - Vector2(0, arm), c + Vector2(0, arm), col, 2.0)
+
+func _zoom_by(step: int) -> void:
+	var nz := clampi(zoom + step, 1, _max_zoom())
+	if nz != zoom:
+		zoom = nz
+		queue_redraw()
 
 ## Proportions du canevas de l'original (cases visibles en largeur / hauteur) : le cadre s'y adapte.
 func view_aspect() -> float:

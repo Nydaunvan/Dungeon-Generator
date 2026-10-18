@@ -3267,7 +3267,9 @@
   "ui.stat_explain.rule_perk_critdmg": "Un coup critique inflige ×2 plus ce pourcentage (ex. +40 % → ×2,4).",
   "ui.stat_explain.rule_perk_thorns": "Renvoie ce pourcentage des dégâts reçus à l'attaquant (au moins 1).",
   "ui.stat_explain.rule_perk_gold": "Augmente de ce pourcentage l'or rapporté par les monstres vaincus.",
-  "ui.stat_explain.rule_perk_last_stand": "Une fois par combat, un coup qui devait tuer ce héros le laisse à 1 PV (après l'instinct de survie, qui passe en premier)."
+  "ui.stat_explain.rule_perk_last_stand": "Une fois par combat, un coup qui devait tuer ce héros le laisse à 1 PV (après l'instinct de survie, qui passe en premier).",
+  "ui.minimap.zoom": "×%d",
+  "ui.minimap.zoom_aide": "Zoom de la carte : molette de la souris, boutons − et +, ou double-clic (tactile : double-toucher)."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Ce donjon sert de <b>démonstration</b> : un parcours fixe en 3 niveaux pensé pour découvrir les mécaniques principales du jeu (combats, groupe de monstres, portes verrouillées, fontaine, marchand, objets légendaires, montée de niveau et évolution de classe...).</p><p>Pour explorer tout ce que le jeu propose réellement (taille et difficulté réglables, butin et rencontres variés à chaque partie, contenu généré différemment à chaque fois), lancez plutôt un <b>donjon aléatoire</b> depuis l'accueil.</p><p>Commencer cette démonstration ?",
