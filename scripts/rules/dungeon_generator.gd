@@ -573,16 +573,38 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			if not r.is_empty():
 				items.append(make_jewelry("jw_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
 				equip_here = true
+	# pièges : toujours sur le passage obligé (une case que le groupe doit traverser pour atteindre la sortie), jamais dans une impasse
+	# où le joueur ne s'aventurerait pas ; faute de passage libre, la case est remplacée par un objet à ramasser
+	var forced: Array = _forced_passage(grid, dist, item_pool, far, sx, sy)
 	for ti in randi_range(2, 3):
 		var tk: Dictionary = choice(TRAP_KINDS)
-		# fléchettes : mécanisme fixé au mur, donc seulement sur une case adossée à un mur (jamais à une intersection) ; à défaut, des pointes
-		var walled_cells := item_pool.filter(func(c): return _has_wall_side(grid, c.x, c.y)) if tk.kind == "dart" else []
-		if tk.kind == "dart" and walled_cells.is_empty():
-			tk = TRAP_KINDS[0]
-		var r: Dictionary = take_walled.call() if tk.kind == "dart" else take.call()
-		if not r.is_empty():
-			items.append({"id": "trap_gen_%d_%d" % [i, ti], "name": tk.name, "icon": tk.icon, "x": r.x, "y": r.y, "type": "trap", "trapKind": tk.kind, "permanent": tk.permanent,
-				"trapDmgMin": 2 + int(i * 0.8) + int(run_bonus * 0.5), "trapDmgMax": 5 + int(i * 1.2) + run_bonus})
+		var r: Dictionary = {}
+		if tk.kind == "dart":     # fléchettes : mécanisme fixé au mur, donc seulement sur une case adossée à un mur ; à défaut, des pointes
+			var wl := forced.filter(func(c): return _has_wall_side(grid, c.x, c.y))
+			if wl.is_empty():
+				tk = TRAP_KINDS[0]
+			else:
+				r = wl[randi_range(0, wl.size() - 1)]
+		if r.is_empty() and not forced.is_empty():
+			r = forced[randi_range(0, forced.size() - 1)]
+		if r.is_empty():
+			r = take.call()
+			if not r.is_empty():
+				match choice(["potion", "armor", "jewelry", "stamina"]):
+					"potion": items.append({"id": "pot_trapless_%d_%d" % [i, ti], "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": r.x, "y": r.y, "type": "potion", "heal": 12 + heal_tier * 8 + run_bonus * 2})
+					"stamina": items.append({"id": "pot_sta_trapless_%d_%d" % [i, ti], "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": r.x, "y": r.y, "type": "potion", "staminaRestore": 18 + sta_tier * 9 + run_bonus * 3})
+					"armor":
+						items.append(make_armor("ar_trapless_%d_%d" % [i, ti], L.t("rules.dungeon_generator.equipement_trouve"), r.x, r.y))
+						equip_here = true
+					_:
+						items.append(make_jewelry("jw_trapless_%d_%d" % [i, ti], L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
+						equip_here = true
+			continue
+		forced.erase(r)
+		item_pool.erase(r)
+		used[_key(r.x, r.y)] = true
+		items.append({"id": "trap_gen_%d_%d" % [i, ti], "name": tk.name, "icon": tk.icon, "x": r.x, "y": r.y, "type": "trap", "trapKind": tk.kind, "permanent": tk.permanent,
+			"trapDmgMin": 2 + int(i * 0.8) + int(run_bonus * 0.5), "trapDmgMax": 5 + int(i * 1.2) + run_bonus})
 	if not equip_here:
 		var r: Dictionary = take.call()
 		if not r.is_empty():
@@ -709,6 +731,39 @@ func _near_door(doors: Array, gx: int, gy: int) -> bool:
 
 ## Cherche une case de couloir à verrouiller : la sortie doit rester accessible et au moins `min_locked` salles être coupées.
 ## Vrai si au moins un des 4 voisins de la case est un mur plein (là où un décroché peut être creusé).
+## Jusqu'à 6 cases (parmi `pool`) du plus court chemin départ → sortie dont le blocage coupe la sortie : le groupe ne peut pas les éviter.
+## On écarte les abords des escaliers (pas de piège dès l'arrivée). Chaque case est testée par un parcours : seul le chemin est examiné.
+static func _forced_passage(grid: Array, dist: Array, pool: Array, far: Dictionary, sx: int, sy: int) -> Array:
+	var in_pool := {}
+	for c in pool:
+		in_pool[_key(c.x, c.y)] = c
+	var out: Array = []
+	var cur := Vector2i(int(far.x), int(far.y))
+	var guard := 0
+	while cur != Vector2i(sx, sy) and guard < 100000:
+		guard += 1
+		var step := Vector2i(-1, -1)
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = cur + d
+			if n.y >= 0 and n.y < grid.size() and n.x >= 0 and n.x < grid[0].size() and int(dist[n.y][n.x]) == int(dist[cur.y][cur.x]) - 1 and int(dist[n.y][n.x]) >= 0:
+				step = n
+				break
+		if step.x < 0:
+			break
+		cur = step
+		var k := _key(cur.x, cur.y)
+		if in_pool.has(k) and maxi(absi(cur.x - sx), absi(cur.y - sy)) >= 4 and maxi(absi(cur.x - int(far.x)), absi(cur.y - int(far.y))) >= 4:
+			out.append(in_pool[k])
+	# seules quelques cases sont vérifiées (un parcours chacune) : trois pièges au plus, le reste du chemin est inutile à tester
+	out.shuffle()
+	var sure: Array = []
+	for c in out:
+		if sure.size() >= 6:
+			break
+		if int(bfs(grid, sx, sy, Vector2i(int(c.x), int(c.y)))[far.y][far.x]) < 0:
+			sure.append(c)
+	return sure
+
 static func _has_wall_side(grid: Array, x: int, y: int) -> bool:
 	for d in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
 		var nx: int = x + d.x
