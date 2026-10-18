@@ -40,19 +40,26 @@ func _ready() -> void:
 	main.ctrl.instinct_prompt.connect(func(cid, secs):
 		prompts += 1
 		print("PROMPT ", cid, " ", secs, " s"))
+	main.ctrl._instinct_done.connect(func(q): print("QUALITE ", q))
 	main.ctrl.instinct_end.connect(func(o): outcomes.append(o))
+	Settings.instinct_scale = 3.0     # le rendu logiciel est lent : fenêtre allongée pour que l'appui tombe dedans
+	main.ctrl.combat.debug_roll_pct = float(OS.get_environment("ROLL")) if OS.get_environment("ROLL") != "" else -1.0
 	main.ctrl.refresh()
 	var t0 := Time.get_ticks_msec()
 	var shot := false
 	var pressed := 0
-	while Time.get_ticks_msec() - t0 < 90000 and pressed < 2:
+	while Time.get_ticks_msec() - t0 < 90000 and pressed < int(OS.get_environment("N") if OS.get_environment("N") != "" else "2"):
 		await tree.process_frame
 		if main.ctrl.instinct_waiting and not shot:
 			shot = true
-			await tree.create_timer(1.0).timeout
+			await tree.create_timer(0.4).timeout
 			get_viewport().get_texture().get_image().save_png(out + "_prompt.png")
-		if main.ctrl.instinct_waiting:
-			await tree.create_timer(2.2).timeout     # appui tardif = « parfait »
+		if main.ctrl.instinct_waiting and OS.get_environment("DIRECT") != "":
+			pressed += 1
+			main.ctrl.instinct_input(OS.get_environment("DIRECT"))
+			await tree.create_timer(1.5).timeout
+		elif main.ctrl.instinct_waiting:
+			await tree.create_timer(float(OS.get_environment("PRESS")) if OS.get_environment("PRESS") != "" else 6.0).timeout     # appui tardif = « parfait »
 			var ev := InputEventMouseButton.new()
 			ev.button_index = MOUSE_BUTTON_LEFT
 			ev.pressed = true

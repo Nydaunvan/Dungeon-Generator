@@ -25,6 +25,7 @@ func _init(state: GameState, lvl: Dictionary, g: DungeonGrid) -> void:
 ## Bilan du combat en cours (monstres vaincus, XP, or, butin) ; vidé par take_summary().
 var summary: Dictionary = {}
 var pending_instinct: Dictionary = {}   # coup mortel suspendu en attendant l'appui de « Instinct de survie » : {victim, dmg, def, st, cont}
+var debug_roll_pct := -1.0              # tests : force le jet de l'instinct (0 = réussite assurée)
 
 func take_summary() -> Dictionary:
 	var s := summary
@@ -908,8 +909,7 @@ func _offer_instinct(def: Dictionary, st: Dictionary, victim: Dictionary, dmg: i
 	events.append({"type": "instinct", "char": str(victim.id), "seconds": instinct_seconds()})
 	return true
 
-func _instinct_chance(quality: String) -> float:
-	var p := pending_instinct
+func _instinct_chance(quality: String, p: Dictionary) -> float:
 	var victim: Dictionary = p.victim
 	var diff := difficulty()
 	var chance := float(INSTINCT_BASE.get(diff, 40.0)) + float(INSTINCT_BONUS.get(quality, 0.0))
@@ -933,8 +933,9 @@ func resolve_instinct(quality: String) -> void:
 	victim["instinctUsed"] = true
 	var outcome := "fail"
 	if quality != "none":
-		var chance := _instinct_chance(quality)
-		if GameRng.f("combat") * 100.0 < chance:
+		var chance := _instinct_chance(quality, p)
+		var roll := GameRng.f("combat") * 100.0 if debug_roll_pct < 0.0 else debug_roll_pct     # debug_roll_pct : tests (force le jet)
+		if roll < chance:
 			outcome = "perfect" if quality == "perfect" else "ok"
 	var on := "char:" + str(victim.id)
 	match outcome:
