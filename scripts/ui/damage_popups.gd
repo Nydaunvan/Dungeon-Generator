@@ -5,7 +5,7 @@ extends Control
 ## "party" : colonne au-dessus du bandeau d'équipe. Chaque ligne prend la plus haute place libre de sa colonne, dans l'ordre d'arrivée.
 
 const LINE_H := 34.0
-const HERO_LINE_H := 25.0       ## les cartes sont basses : lignes plus serrées
+const HERO_LINE_H := 32.0       ## lignes des héros : juste au-dessus de la carte, empilées vers le haut
 const LIFE := 1.6
 const FADE := 0.5
 
@@ -30,7 +30,7 @@ func show_popup(text: String, color: Color, on: String) -> void:
 		slot += 1
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.5)) if on == "" else int(UiMetrics.rem(1.0)))
+	lbl.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.5)) if on == "" else int(UiMetrics.rem(1.4)))
 	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	lbl.add_theme_constant_override("outline_size", 8)
@@ -39,7 +39,10 @@ func show_popup(text: String, color: Color, on: String) -> void:
 	lbl.size = Vector2(anchor.size.x, lh)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(lbl)
-	lbl.global_position = Vector2(anchor.position.x, anchor.position.y + slot * lh)
+	if on.begins_with("char:"):
+		lbl.global_position = Vector2(anchor.position.x, anchor.position.y - (slot + 1) * lh)      # au-dessus du cadre, la plus ancienne ligne au plus près
+	else:
+		lbl.global_position = Vector2(anchor.position.x, anchor.position.y + slot * lh)
 	var entry := {"lbl": lbl, "slot": slot}
 	col.append(entry)
 	var t := create_tween()
@@ -59,7 +62,7 @@ func _anchor(on: String) -> Rect2:
 				var rs: Array = hud.card_rects()
 				if i < rs.size():
 					var r: Rect2 = rs[i]
-					return Rect2(r.position + Vector2(0, r.size.y * 0.08), Vector2(r.size.x, LINE_H))
+					return Rect2(r.position, Vector2(r.size.x, LINE_H))
 			i += 1
 	if on == "party" and hud != null:
 		var rs2: Array = hud.card_rects()
@@ -67,6 +70,6 @@ func _anchor(on: String) -> Rect2:
 			var u: Rect2 = rs2[0]
 			for r2 in rs2:
 				u = u.merge(r2)
-			return Rect2(u.position + Vector2(0, -LINE_H * 1.2), Vector2(u.size.x, LINE_H))
+			return Rect2(u.position + Vector2(0, -LINE_H * 3.4), Vector2(u.size.x, LINE_H))
 	var v := view.get_global_rect() if view != null else get_viewport_rect()
 	return Rect2(v.position + Vector2(0, v.size.y * 0.30), Vector2(v.size.x, LINE_H))
