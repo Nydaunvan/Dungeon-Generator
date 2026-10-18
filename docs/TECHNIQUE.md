@@ -345,3 +345,10 @@ Quand un membre d'un groupe tombe sans que le groupe soit anéanti, `CombatStage
 
 ### Mort d'un monstre : après la fin de l'effet
 Dans `CombatController._drain`, les chiffres et la réaction (`mon_hit`) restent calés sur l'impact du sort (`SpellFx3D.wait_hit`), mais l'événement `monster_died` attend `SpellFx3D.wait_idle` avant de lancer l'animation de mort (`remove_monster`, ou la chute du membre de groupe via le `changed` qui suit) : elle part donc à la fin de l'effet, quelle que soit sa durée. Signal de test `monster_death_started` ; test : `tools/check_death_timing.tscn` (mort mesurée à 1 ms de la fin de l'effet).
+
+### Grands donjons (60×60) : ce qui coûtait, ce qui a été fait
+Mesures sur un 61×61 (308 monstres, 1 601 torches) avec `tools/perf_big.gd` et `tools/prim_census.gd` :
+- **`Combat.monster_at`** parcourait tous les monstres à chaque appel (2,2 ms par `in_combat()`, appelé par chaque écouteur de `ctrl.changed` : 41 ms par pas). Il lit maintenant un index case → monstre (`_cell_idx`, refait à chaque image, à chaque déplacement ou apparition via `mark_monsters_dirty`, et revérifié à la lecture) : 8 µs, `ctrl.refresh` 0,3 ms.
+- **`Wanderers._tick`** (toutes les 0,5 s) refaisait la liste des cases occupées et la liste des pièges pour chaque monstre : 100 ms. Un cache par pas (`_occ`, `_trap_cells`, `_apart_fast`) donne 6 à 8 ms, avec **exactement** les mêmes déplacements (même ordre des tirages ; `tools/check_wander_equiv.tscn` compare avec les parcours d'origine via `force_slow`).
+- **Rendu** : le décor est découpé en blocs de 8×8 cases (`LevelBuilder.CHUNK`), un maillage par bloc, et les torches en lots par bloc (`TorchLayer._build_batches`) : seuls les blocs vus par la caméra sont dessinés. Les torches 3D (512 triangles pièce, 1,4 M de triangles au total sur ce niveau) ne sont de plus dessinées que dans 60 u autour de la caméra (`BODY_RANGE`, ×distance de vue). Triangles par image : 1,5 M → 0,4 M.
+Le découpage en blocs change très légèrement l'éclairage (les lumières sont choisies par maillage).

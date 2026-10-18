@@ -382,6 +382,7 @@ func _trigger_switch(it: Dictionary) -> void:
 		var mst: Dictionary = _lstate().monsters.get(mid, {})
 		if not mst.is_empty() and mst.get("hidden", false):
 			mst["hidden"] = false
+			ctrl.combat.mark_monsters_dirty()
 			view.entities.set_monster_visible(mid, true)
 			_log(L.t("game.interactions.une_presence_hostile_se_revele"))
 	var iid := str(it.get("switchRevealItemId", ""))

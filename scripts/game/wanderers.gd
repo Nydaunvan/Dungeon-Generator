@@ -100,9 +100,9 @@ func _free(p: Vector2i, except_id: String, include_merchant: bool = true) -> boo
 		return false
 	if p == Vector2i(rig.gx, rig.gy):
 		return false
-	if _active_trap_at(p):
+	if (_trap_cells.has(p) if _cache_on else _active_trap_at(p)):
 		return false
-	if _monster_cells(except_id).has(p):
+	if (_occupied(p, except_id) if _cache_on else _monster_cells(except_id).has(p)):
 		return false
 	if include_merchant:
 		var mm := merchant()
@@ -153,10 +153,10 @@ func _has_los(from: Vector2i, to: Vector2i) -> bool:
 func _wander_target(from: Vector2i, zone: Dictionary, except_id: String, avoid: Vector2i = Vector2i(-1, -1)) -> Vector2i:
 	var dirs := DungeonGrid.DIRS.duplicate()
 	GameRng.shuffle("wander", dirs)
-	var others := _monster_cells(except_id)
+	var others := {} if _cache_on else _monster_cells(except_id)
 	for v in dirs:
 		var n: Vector2i = from + v
-		if zone.has(n) and _free(n, except_id) and _apart(n, others, from) and (avoid.x < 0 or absi(n.x - avoid.x) + absi(n.y - avoid.y) >= CALM_DIST):
+		if zone.has(n) and _free(n, except_id) and (_apart_fast(n, except_id, from) if _cache_on else _apart(n, others, from)) and (avoid.x < 0 or absi(n.x - avoid.x) + absi(n.y - avoid.y) >= CALM_DIST):
 			return n
 	return Vector2i(-1, -1)
 
@@ -166,6 +166,55 @@ func _apart(n: Vector2i, others: Dictionary, from: Vector2i = Vector2i(-1, -1)) 
 		var d: int = absi(c.x - n.x) + absi(c.y - n.y)
 		if d < PATROL_GAP and (from.x < 0 or d <= absi(c.x - from.x) + absi(c.y - from.y)):
 			return false
+	return true
+
+# ------------------------------------------------------------------ cache du pas (mêmes résultats que les parcours complets, sans les refaire à chaque monstre)
+
+var _cache_on := false
+var force_slow := false            # tests : parcours complets d'origine, pour comparer les résultats
+var _occ: Dictionary = {}          # case -> nombre de monstres vivants et visibles
+var _trap_cells: Dictionary = {}   # cases portant un piège encore actif
+var _ms: Dictionary = {}           # états des monstres du niveau
+
+func _build_cache(ls: Dictionary) -> void:
+	_ms = ls.monsters
+	_occ = {}
+	for m in level.get("monsters", []):
+		var st: Dictionary = _ms.get(str(m.id), {})
+		if st.is_empty() or not st.alive or st.hidden:
+			continue
+		var k := Vector2i(int(st.x), int(st.y))
+		_occ[k] = int(_occ.get(k, 0)) + 1
+	_trap_cells = {}
+	for it in level.get("items", []):
+		if str(it.get("type", "")) == "trap":
+			var p := Vector2i(int(it.x), int(it.y))
+			if _active_trap_at(p):
+				_trap_cells[p] = true
+	_cache_on = not force_slow
+
+## Un monstre autre que `except_id` occupe-t-il la case ?
+func _occupied(p: Vector2i, except_id: String) -> bool:
+	var n := int(_occ.get(p, 0))
+	if n == 0:
+		return false
+	if except_id != "":
+		var st: Dictionary = _ms.get(except_id, {})
+		if not st.is_empty() and st.alive and not st.hidden and int(st.x) == p.x and int(st.y) == p.y:
+			n -= 1
+	return n > 0
+
+## Même règle que `_apart`, en ne regardant que les cases à moins de PATROL_GAP pas de `n`.
+func _apart_fast(n: Vector2i, except_id: String, from: Vector2i) -> bool:
+	for dx in range(-PATROL_GAP + 1, PATROL_GAP):
+		var rem := PATROL_GAP - 1 - absi(dx)
+		for dy in range(-rem, rem + 1):
+			var c := Vector2i(n.x + dx, n.y + dy)
+			if not _occupied(c, except_id):
+				continue
+			var d := absi(dx) + absi(dy)
+			if from.x < 0 or d <= absi(c.x - from.x) + absi(c.y - from.y):
+				return false
 	return true
 
 # ------------------------------------------------------------------ tick
@@ -188,6 +237,7 @@ func _tick() -> void:
 		if d > 1 and d < best and _has_los(e.pos, player):
 			best = d
 			lead = str(e.def.id)
+	_build_cache(ls)
 	var calm := int(gs.stats.get("calmTicks", 0)) > 0
 	if calm:
 		gs.stats["calmTicks"] = int(gs.stats.calmTicks) - 1
@@ -209,11 +259,17 @@ func _tick() -> void:
 				target = _wander_target(p, zone, id, player if calm else Vector2i(-1, -1))
 		if target.x < 0:
 			continue
+		var old_k := Vector2i(int(e.st.x), int(e.st.y))
+		_occ[old_k] = int(_occ.get(old_k, 1)) - 1
 		e.st["x"] = target.x
 		e.st["y"] = target.y
+		_occ[target] = int(_occ.get(target, 0)) + 1
+		if ctrl.combat != null:
+			ctrl.combat.mark_monsters_dirty()
 		view.entities.move_monster(id, target.x, target.y)
 		if absi(target.x - player.x) + absi(target.y - player.y) <= 1:
 			engaged = true
+	_cache_on = false
 	_tick_merchant()
 	if engaged or movers.any(func(e): return int(e.st.x) != int(e.pos.x) or int(e.st.y) != int(e.pos.y)):
 		monsters_moved.emit()

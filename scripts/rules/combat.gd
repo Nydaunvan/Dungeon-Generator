@@ -99,11 +99,43 @@ func _live(m: Dictionary) -> bool:
 
 ## Monstre vivant sur la case (x, y), ou {}.
 func monster_at(x: int, y: int) -> Dictionary:
+	var ms: Dictionary = lstate().monsters
+	if _cell_dirty or _cell_frame != Engine.get_process_frames() or not is_same(_cell_src, ms) or _cell_level != level.get("id"):
+		_rebuild_cells(ms)
+	var m = _cell_idx.get(Vector2i(x, y))
+	if m == null:
+		return {}
+	var st: Dictionary = ms.get(str(m.id), {})
+	if not st.is_empty() and st.alive and not st.hidden and st.x == x and st.y == y:
+		return m
+	# l'index était périmé (mort, apparition, déplacement dans la même image) : on le refait, puis on relit
+	_rebuild_cells(ms)
+	m = _cell_idx.get(Vector2i(x, y))
+	return m if m != null else {}
+
+## Index case → monstre vivant et visible (le premier de la liste en cas de doublon, comme l'ancien parcours). Refait à chaque image,
+## et dès qu'un monstre bouge ou apparaît (`mark_monsters_dirty`) ; un résultat périmé est de toute façon revérifié dans `monster_at`.
+var _cell_idx: Dictionary = {}
+var _cell_dirty := true
+var _cell_frame := -1
+var _cell_src: Dictionary = {}
+var _cell_level = null
+
+func mark_monsters_dirty() -> void:
+	_cell_dirty = true
+
+func _rebuild_cells(ms: Dictionary) -> void:
+	_cell_idx = {}
 	for m in level.get("monsters", []):
-		var st: Dictionary = lstate().monsters.get(str(m.id), {})
-		if not st.is_empty() and st.alive and not st.hidden and st.x == x and st.y == y:
-			return m
-	return {}
+		var st: Dictionary = ms.get(str(m.id), {})
+		if not st.is_empty() and st.alive and not st.hidden:
+			var k := Vector2i(int(st.x), int(st.y))
+			if not _cell_idx.has(k):
+				_cell_idx[k] = m
+	_cell_dirty = false
+	_cell_frame = Engine.get_process_frames()
+	_cell_src = ms
+	_cell_level = level.get("id")
 
 ## Premier monstre adjacent (direction du regard d'abord). Renvoie {"monster": def, "dir": int} ou {}.
 func engaged() -> Dictionary:

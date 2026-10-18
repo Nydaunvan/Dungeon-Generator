@@ -181,45 +181,58 @@ func add_torch(pos: Vector3, rot: float, theme: String) -> void:
 
 # ---------------------------------------------------------------- lots (MultiMesh)
 
-## Regroupe toutes les torches en quelques MultiMesh : flamme + cœur + halo par thème, et un seul lot pour les torches 3D.
+## Regroupe les torches en MultiMesh par thème et par bloc de décor (LevelBuilder.CHUNK × CHUNK cases) : flamme + cœur + halo par thème,
+## et un lot pour les torches 3D. Un lot par bloc, pour que le moteur n'envoie à la carte graphique que les blocs vus par la caméra
+## (un seul lot géant pour tout le niveau était redessiné en entier à chaque image : 1,4 M de triangles dans un donjon 60×60).
 func _build_batches() -> void:
 	if _torches.is_empty():
 		return
-	var by_theme := {}
-	var bodies: Array = []
-	var tints: Array = []
+	var span := LevelBuilder.CELL * float(LevelBuilder.CHUNK)
+	var by_chunk := {}      # Vector2i(bloc) -> {theme -> {...}} + "bodies" + "tints"
 	for t in _torches:
 		var th: String = t.theme
-		if not by_theme.has(th):
-			by_theme[th] = {"flame": [], "inner": [], "glow": [], "fc": t.flame, "gc": t.glow}
-		var g: Dictionary = by_theme[th]
+		var ck := Vector2i(int(floor((float(t.pos.x) + LevelBuilder.CELL * 0.5) / span)), int(floor((float(t.pos.z) + LevelBuilder.CELL * 0.5) / span)))
+		if not by_chunk.has(ck):
+			by_chunk[ck] = {"themes": {}, "bodies": [], "tints": []}
+		var ch: Dictionary = by_chunk[ck]
+		if not ch.themes.has(th):
+			ch.themes[th] = {"flame": [], "inner": [], "glow": [], "fc": t.flame, "gc": t.glow}
+		var g: Dictionary = ch.themes[th]
 		var b := Basis(Vector3.UP, float(t.rot))
 		g.flame.append(Transform3D(b, t.fpos))
 		g.inner.append(Transform3D(b.scaled_local(Vector3(0.52, 0.72, 0.52)), t.fpos))
 		g.glow.append(Transform3D(Basis.IDENTITY, t.gpos))
-		bodies.append(Transform3D(b, t.pos))
-		tints.append(TORCH_TINT.get(th, Color.WHITE))
+		ch.bodies.append(Transform3D(b, t.pos))
+		ch.tints.append(TORCH_TINT.get(th, Color.WHITE))
 	var glow_quad := QuadMesh.new()
 	glow_quad.size = Vector2(0.5, 0.5)
-	for th in by_theme:
-		var g: Dictionary = by_theme[th]
-		add_child(_multimesh(glow_quad, g.glow, _get_glow_mat(str(th), g.gc)))
-		add_child(_multimesh(_get_flame_mesh(), g.flame, _get_flame_mat(str(th), false, g.fc)))
-		add_child(_multimesh(_get_flame_mesh(), g.inner, _get_flame_mat(str(th), true, g.fc)))
-	# torches 3D : matériaux portés par le maillage (bois / fer éclairés, braise lumineuse), teinte par instance
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.mesh = _get_torch_mesh()
-	mm.instance_count = bodies.size()
-	for i in bodies.size():
-		mm.set_instance_transform(i, bodies[i])
-		mm.set_instance_color(i, tints[i])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.name = "TorchBodies"
-	mmi.multimesh = mm
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mmi)
+	for ck in by_chunk:
+		var ch: Dictionary = by_chunk[ck]
+		for th in ch.themes:
+			var g: Dictionary = ch.themes[th]
+			add_child(_multimesh(glow_quad, g.glow, _get_glow_mat(str(th), g.gc)))
+			add_child(_multimesh(_get_flame_mesh(), g.flame, _get_flame_mat(str(th), false, g.fc)))
+			add_child(_multimesh(_get_flame_mesh(), g.inner, _get_flame_mat(str(th), true, g.fc)))
+		# torches 3D : matériaux portés par le maillage (bois / fer éclairés, braise lumineuse), teinte par instance
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = _get_torch_mesh()
+		mm.instance_count = ch.bodies.size()
+		for i in ch.bodies.size():
+			mm.set_instance_transform(i, ch.bodies[i])
+			mm.set_instance_color(i, ch.tints[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "TorchBodies"
+		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mmi)
+		var lo := Vector3(INF, INF, INF)
+		var hi := Vector3(-INF, -INF, -INF)
+		for xf in ch.bodies:
+			lo = lo.min(xf.origin)
+			hi = hi.max(xf.origin)
+		_far_bodies.append({"node": mmi, "center": (lo + hi) * 0.5, "radius": (hi - lo).length() * 0.5 + 1.0})
 
 static func _multimesh(mesh: Mesh, xforms: Array, mat: Material) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
@@ -360,6 +373,16 @@ func _release(r: TorchFx) -> void:
 	r.sparks.emitting = false
 	r.root.visible = false
 
+## Les torches 3D (500 triangles pièce) ne sont dessinées que dans ce rayon autour de la caméra, par bloc : au-delà, le brouillard les
+## rend presque invisibles. Les flammes et halos, bien moins lourds, restent soumis à la seule portée de la caméra.
+const BODY_RANGE := 60.0
+var _far_bodies: Array = []
+
+func _cull_far_bodies(cam_pos: Vector3) -> void:
+	var rng := BODY_RANGE * Settings.view_distance()
+	for b in _far_bodies:
+		b.node.visible = cam_pos.distance_to(b.center) - float(b.radius) <= rng
+
 ## Réaffecte les rigs aux torches les plus proches de la caméra (position dans le repère de la couche).
 func _refresh(cam_pos: Vector3) -> void:
 	var r2 := ACTIVATE_R * ACTIVATE_R
@@ -408,6 +431,7 @@ func _process(delta: float) -> void:
 		var cam := get_viewport().get_camera_3d()
 		if cam != null and not _torches.is_empty():
 			_refresh(to_local(cam.global_position))
+			_cull_far_bodies(to_local(cam.global_position))
 	for r in _rigs:
 		_update_rig(r, delta)
 

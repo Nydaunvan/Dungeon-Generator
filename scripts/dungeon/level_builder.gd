@@ -5,6 +5,9 @@ extends RefCounted
 ## Murs / sol / plafond : un seul mesh (3 surfaces) => très peu d'appels de dessin sur mobile.
 
 const CELL := 4.0
+## Le décor est découpé en blocs de CHUNK × CHUNK cases, chacun son maillage : le moteur n'envoie à la carte graphique que les blocs vus par la caméra
+## (un niveau 60×60 faisait 1,5 M de triangles par image quand tout était un seul maillage).
+const CHUNK := 8
 const NICHE_HALF_W := 1.25    # demi-largeur du décroché de la fontaine
 const NICHE_H := 2.8          # hauteur du décroché
 const NICHE_DEPTH := 1.9      # profondeur dans le mur
@@ -30,10 +33,9 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 
 	var outdoor := bool(level.get("outdoor", false))
 	var path_cells: Array = level.get("pathCells", [])
-	var parts := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new()}
-	var counts := {"wall": 0, "floor": 0, "ceil": 0, "path": 0}
-	for k in parts:
-		parts[k].begin(Mesh.PRIMITIVE_TRIANGLES)
+	var chunks := {}      # Vector2i(bloc) -> {"parts": {...}, "counts": {...}}
+	var parts: Dictionary = {}
+	var counts: Dictionary = {}
 
 	var half := CELL * 0.5
 	var pits := {}        # Vector2i(case) -> true : cases dont le sol est percé par un piège de fosse
@@ -51,6 +53,14 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 			if ch == "#" or ch == "S":
 				continue
 			var c := Vector3(x * CELL, 0.0, y * CELL)
+			var ck := Vector2i(x / CHUNK, y / CHUNK)
+			if not chunks.has(ck):
+				var np := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new()}
+				for kk in np:
+					np[kk].begin(Mesh.PRIMITIVE_TRIANGLES)
+				chunks[ck] = {"parts": np, "counts": {"wall": 0, "floor": 0, "ceil": 0, "path": 0}}
+			parts = chunks[ck].parts
+			counts = chunks[ck].counts
 			var pit := pits.has(Vector2i(x, y))     # fosse : le sol de la case est percé d'un trou (voir TrapPit)
 			if outdoor and path_cells.has("%d,%d" % [x, y]):
 				_floor_cell(parts["path"], c, half, pit)
@@ -85,27 +95,30 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 				elif n == "D":
 					_add_door(view, edge, rot, theme_name, grid.door_at(x + d.x, y + d.y))
 
-	var mesh := ArrayMesh.new()
-	for k in ["wall", "floor", "ceil", "path"]:
-		if counts[k] == 0:
-			continue
-		if sliced:
-			await Loader.slice()
-		if k != "path":
-			parts[k].generate_tangents()   # nécessaires aux cartes de normales (mur, sol, plafond)
+	for ck in chunks:
+		var cparts: Dictionary = chunks[ck].parts
+		var ccounts: Dictionary = chunks[ck].counts
+		var mesh := ArrayMesh.new()
+		for k in ["wall", "floor", "ceil", "path"]:
+			if ccounts[k] == 0:
+				continue
 			if sliced:
 				await Loader.slice()
-		parts[k].commit(mesh)
-		var mat: Material = theme.get(k)
-		if outdoor and k == "floor":
-			mat = Outdoor.grass()
-		elif k == "path":
-			mat = Outdoor.path()
-		mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
-	var mi := MeshInstance3D.new()
-	mi.name = "LevelMesh"
-	mi.mesh = mesh
-	view.add_child(mi)
+			if k != "path":
+				cparts[k].generate_tangents()   # nécessaires aux cartes de normales (mur, sol, plafond)
+			cparts[k].commit(mesh)
+			var mat: Material = theme.get(k)
+			if outdoor and k == "floor":
+				mat = Outdoor.grass()
+			elif k == "path":
+				mat = Outdoor.path()
+			mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
+		if mesh.get_surface_count() == 0:
+			continue
+		var mi := MeshInstance3D.new()
+		mi.name = "LevelMesh_%d_%d" % [ck.x, ck.y]
+		mi.mesh = mesh
+		view.add_child(mi)
 	if sliced:
 		await Loader.slice()
 	var ents := EntityLayer.new()
