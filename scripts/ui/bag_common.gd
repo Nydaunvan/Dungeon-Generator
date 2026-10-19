@@ -302,6 +302,9 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 	var c := gs.char_by_id(char_id)
 	var slot := Inventory.slot_of(it)
 	var eq = c.get("equipment", {}).get(slot) if slot != "" else null
+	var worn: bool = eq != null and is_same(eq, it)       # l'objet survolé est déjà porté par ce héros : stats seules, sans comparaison
+	if worn:
+		eq = null
 	if slot != "":
 		var is_w := str(it.get("type", "")) == "weapon"
 		var rn := EquipDock.stat_rows(it, is_w)
@@ -337,7 +340,7 @@ static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Contr
 				hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				hl.custom_minimum_size = Vector2(210, 0)
 				v.add_child(hl)
-		var foot := L.fa(L.t("ui.bag.remplace"), str(eq.get("name", ""))) if eq != null else L.t("ui.bag.emplacement_libre")
+		var foot := L.fa(L.t("ui.bag.equipe_par"), str(c.get("name", ""))) if worn else (L.fa(L.t("ui.bag.remplace"), str(eq.get("name", ""))) if eq != null else L.t("ui.bag.emplacement_libre"))
 		v.add_child(_lbl(foot, 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	else:
 		for line in Inventory.describe(it, gs.cfg):

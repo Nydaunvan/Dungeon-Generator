@@ -491,6 +491,12 @@ func _slot_button(c: Dictionary, def: Dictionary, resolved: Dictionary) -> Contr
 		_pulses.append(UiFx.pulse(glow, 0.1, 1.0, 1.1))
 	var sid: String = str(def.id)
 	b.pressed.connect(func(): _slot_clicked(sid))
+	if item != null:
+		var cid: String = str(c.id)
+		b.mouse_entered.connect(func(): BagCommon.show_item_tip(b, gs, item, cid))
+		b.mouse_exited.connect(BagCommon.hide_item_tip)
+		b.button_down.connect(BagCommon.hide_item_tip)
+		b.tree_exiting.connect(BagCommon.hide_item_tip)
 	UiFx.hover_pop(b, 1.05)
 	return b
 

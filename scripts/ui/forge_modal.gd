@@ -85,10 +85,17 @@ static func open(host: Node, gs: GameState, on_change: Callable = Callable()) ->
 			var row := VBoxContainer.new()
 			var top := HBoxContainer.new()
 			top.add_theme_constant_override("separation", 8)
-			top.add_child(IconPicker.icon_control(str(it.get("icon", "")), 32.0))
+			var ic := IconPicker.icon_control(str(it.get("icon", "")), 32.0)
+			top.add_child(ic)
 			var nm := AdminUtil.label("%s%s" % [it.name, ("  +%d" % int(it.enchantLevel)) if int(it.get("enchantLevel", 0)) > 0 else ""], 15, UiTheme.PARCH)
 			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			top.add_child(nm)
+			var tip_id: String = str(owner.get("id", gs.active_char_id))
+			for hv in [ic, nm]:
+				hv.mouse_filter = Control.MOUSE_FILTER_STOP
+				hv.mouse_entered.connect(func(): BagCommon.show_item_tip(hv, gs, it, tip_id))
+				hv.mouse_exited.connect(BagCommon.hide_item_tip)
+				hv.tree_exiting.connect(BagCommon.hide_item_tip)
 			var ub := Button.new()
 			ub.text = L.fa(L.t("ui.forge_modal.cout_or"), cost(it))
 			ub.disabled = gs.gold < cost(it)

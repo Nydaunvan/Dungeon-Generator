@@ -2150,6 +2150,7 @@
   "ui.bag.total": "Total %d / %d",
   "ui.bag.remplace": "Replaces: %s",
   "ui.bag.emplacement_libre": "Free slot",
+  "ui.bag.equipe_par": "Equipped by %s",
   "ui.bag.trier": "Sort: %s",
   "ui.bag.tri_type": "type",
   "ui.bag.tri_power": "power",

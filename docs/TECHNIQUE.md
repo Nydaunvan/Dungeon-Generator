@@ -380,3 +380,6 @@ Les statuts (brûlure, poison, gel, sommeil, ralentissement…) vivent sur le **
 
 ## Défi de la semaine « Héros solitaire » : Butin légendaire
 Le modificateur `mod_legend` (`weeklyOnly`, sans badge : jamais proposé en partie libre) ajoute à `combine_mods` : `lootMult` (tours de butin au sol et chance de butin des monstres ×2), `itemMult` ×2, `allLegendary` (`DungeonGenerator.roll_rarity` renvoie toujours un légendaire, mythique selon `mythic_chance`), `forceLegendary` (boss) et `monsterHpMult` 1,25 / `monsterDmgMult` 1,15, reportés sur `hpMult` / `dmgMult` de chaque monstre et du boss. La règle serveur `solo` reçoit `mods = [mod_solo, mod_legend]` et `params = {levels: 2}` par la migration `20261019000100_defi_solitaire_legendaire.sql`, à appliquer une fois la version publiée. Contrôle : `tools/check_legend.tscn`.
+
+## Infobulle d'un objet équipé
+`BagCommon.tooltip_for` détecte l'objet porté (`is_same` avec l'équipement du héros de `char_id`) : mêmes lignes de statistiques mais sans écart ni conséquence, pied `ui.bag.equipe_par`. Branchée par `EquipDock._slot_button` (survol des emplacements) et `ForgeModal` (icône + nom) via `BagCommon.show_item_tip` ; `PartyTip` ajoute une ligne de statistiques (`EquipDock.stat_rows`) sous chaque pièce. Test : `tools/check_equip_tip.tscn`.

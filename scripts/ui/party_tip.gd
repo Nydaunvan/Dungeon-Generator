@@ -187,6 +187,14 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 		nl.clip_text = true
 		row.add_child(nl)
 		b.add_child(row)
+		var parts: Array = []
+		for sr in EquipDock.stat_rows(r[1], str(r[1].get("type", "")) == "weapon"):
+			parts.append("%s %s%d" % [sr.label, "+" if int(sr.value) > 0 else "", int(sr.value)])
+		if not parts.is_empty():
+			var sl2 := _lbl("   " + " · ".join(PackedStringArray(parts)), 11, DIM, UiTheme.F_BODY_ITALIC)
+			sl2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			sl2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(sl2)
 	t.size = Vector2.ZERO
 	t.visible = true
 	await card.get_tree().process_frame
