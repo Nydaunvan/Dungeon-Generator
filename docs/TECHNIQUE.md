@@ -181,11 +181,11 @@ Icônes de classes : chaque classe fournie par le jeu doit avoir une icône en i
 
 Onglet **Tests** de l'administration : un sélecteur liste les 12 règles (`admin_test_rules`) et un format, **semaine** (réglages propres à la règle : niveaux, taille, difficulté) ou **jour** (2 niveaux 13×11 normal). Le bouton appelle `admin_start_rule_run(règle, format, version)` (super admin uniquement), qui crée une partie `test` à graine aléatoire : hors classements, sans essai consommé, sans XP ni badge. Côté jeu : `RankedRun.launch_rule`. Migration : `20261017000300_test_regle_defi.sql`. Les règles marquées `*` n'existent qu'au format semaine (métrique ou réglages spéciaux).
 
-## Héros solitaire : dégâts ×2 et héros centré
+## Héros solitaire : dégâts ×2 et héros dans la deuxième fente
 
 - Le modificateur `mod_solo` (data/game_constants.json) porte `soloParty`, `hpMult` 2 et `dmgMult` 2. `dmgMult` est combiné par `DungeonGenerator.combine_mods` et appliqué au début de `Combat._hit_monster` (attaques et sorts de zone ou ciblés, avant résistances et critiques).
-- Bandeau d'équipe : avec un seul héros, `PartyHud` garde le cadre orné et place la carte dans la fente `SOLO_SLOT`, centrée sur l'image (milieu = 978 px).
-- Effets visuels : `Combat` ajoute `solo: true` au contexte des effets 3D quand le groupe n'a qu'un héros ; `SpellFxLibrary.cast` le copie dans `SpellFx3D.solo_party`, et `SpellFxStyles._slot_pos` vise alors le centre du bandeau (coups et capacités de monstres, sorts de soin ou de soutien).
+- Bandeau d'équipe : avec un seul héros, `PartyHud` garde le cadre orné et place la carte dans la fente `SOLO_SLOT` (la deuxième en partant de la gauche, comme `SLOTS[1]`).
+- Effets visuels : `Combat` ajoute `solo: true` au contexte des effets 3D quand le groupe n'a qu'un héros ; `SpellFxLibrary.cast` le copie dans `SpellFx3D.solo_party`, et `SpellFxStyles._slot_pos` vise alors la deuxième fente du bandeau (coups et capacités de monstres, sorts de soin ou de soutien).
 - Migration `20261017000400_heros_solitaire_degats.sql` : texte de la règle côté serveur. Contrôle : `tools/check_solo.tscn`.
 
 ## Effets de sorts sur les cartes du groupe (essai)
@@ -377,3 +377,6 @@ Les statuts (brûlure, poison, gel, sommeil, ralentissement…) vivent sur le **
 
 ## Pièges : placement sur le passage obligé
 `DungeonGenerator._forced_passage` remonte le plus court chemin départ → sortie (distances de `bfs`), garde les salles libres à au moins 4 cases (Chebyshev) du départ et de la sortie, les mélange, puis ne retient (jusqu'à 6) que celles dont le blocage (`bfs(..., block)`) coupe la sortie : seules ces cases sont testées, d'où un coût négligeable (génération max ~230 ms en 25×25). `_one_level` y pose les 2–3 pièges (fléchettes : seulement sur une case adossée à un mur, sinon des pointes). S'il ne reste aucune case, le piège est remplacé par un objet ramassable (potion de soin ou d'endurance, armure ou bijou). Test : `tools/check_trap_pass.tscn`. Les donjons générés à partir d'une graine ne sont plus identiques à ceux d'avant ce changement.
+
+## Défi de la semaine « Héros solitaire » : Butin légendaire
+Le modificateur `mod_legend` (`weeklyOnly`, sans badge : jamais proposé en partie libre) ajoute à `combine_mods` : `lootMult` (tours de butin au sol et chance de butin des monstres ×2), `itemMult` ×2, `allLegendary` (`DungeonGenerator.roll_rarity` renvoie toujours un légendaire, mythique selon `mythic_chance`), `forceLegendary` (boss) et `monsterHpMult` 1,25 / `monsterDmgMult` 1,15, reportés sur `hpMult` / `dmgMult` de chaque monstre et du boss. La règle serveur `solo` reçoit `mods = [mod_solo, mod_legend]` et `params = {levels: 2}` par la migration `20261019000100_defi_solitaire_legendaire.sql`, à appliquer une fois la version publiée. Contrôle : `tools/check_legend.tscn`.

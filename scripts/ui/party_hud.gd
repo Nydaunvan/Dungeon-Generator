@@ -67,8 +67,8 @@ const BAR_H := 340.0
 ## Fentes du bandeau (px de l'image d'origine) : x début, x fin ; y 125 → 258 (hauteur 133).
 const SLOTS := [[99.0, 471.0], [560.0, 935.0], [1022.0, 1391.0], [1479.0, 1851.0]]
 const SLOT_Y := [125.0, 258.0]
-## Héros seul (« Héros solitaire ») : il occupe une fente centrée sur le bandeau (milieu de l'image = 978 px), les autres fentes restent vides.
-const SOLO_SLOT := [792.0, 1164.0]
+## Héros seul (« Héros solitaire ») : il occupe la deuxième fente en partant de la gauche, les autres fentes restent vides.
+const SOLO_SLOT := [560.0, 935.0]
 var _bar_cache: Dictionary = {}
 var _flames: Array = []
 const TORCH_BASE := [[47.0, 108.0], [1909.0, 108.0]]    # centre des vasques (px de l'image d'origine)

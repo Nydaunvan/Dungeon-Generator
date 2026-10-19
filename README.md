@@ -62,7 +62,7 @@ Structure du code, vérifications automatiques, publication des versions, partie
 
 Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQUE.md#sous-dossiers). La branche `migration/donnees` est la branche de développement : les versions sont publiées depuis elle.
 - Administration : onglet Tests, lancer une partie de test de n'importe quelle règle de défi, au format semaine ou jour (hors classement).
-- Héros solitaire : dégâts ×2 (attaques et sorts) en plus des PV ×2, héros affiché au centre du bandeau d'équipe.
+- Héros solitaire : dégâts ×2 (attaques et sorts) en plus des PV ×2, héros affiché dans la deuxième fente du bandeau d'équipe. Défi de la semaine : deux niveaux, butin ×2 et entièrement légendaire (modificateur « Butin légendaire »), monstres un peu plus costauds (+25 % de PV, +15 % de dégâts).
 - Tous les effets de sorts partent des cartes du groupe ou y arrivent, par-dessus l'interface ; le coup d'un monstre frappe la carte du héros touché ; l'attaque normale reste sur le monstre (option « Effets sur les cartes », essai).
 - Les statuts durent visuellement autant que leur effet : tant qu'un monstre est endormi (berceuse du ménestrel), empoisonné, brûlé, gelé, étourdi, ralenti ou affaibli, ses « Z », bulles, flammes, givre ou étoiles restent sur lui ; sur les héros, l'effet reste sur leur carte. Un boss a toujours une capacité spéciale.
 - Sorts de dégâts du Druide rééquilibrés : moins de dégâts, recharge plus longue et statuts moins fréquents (les sorts modifiés par le créateur ne sont pas touchés).

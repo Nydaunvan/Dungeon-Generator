@@ -83,19 +83,19 @@ static func all_modifiers() -> Array:
 ## Effets cumulés des modificateurs d'expédition choisis (ids).
 static func combine_mods(ids: Array) -> Dictionary:
 	var eff := {"attackSpeedMult": 1.0, "xpMult": 1.0, "goldMult": 1.0, "monsterCountMult": 1.0, "itemMult": 1.0, "staminaMult": 1.0,
-		"hpMult": 1.0, "dmgMult": 1.0, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
+		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "allLegendary": false, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
 	for id in ids:
 		for m in all_modifiers():
 			if m.id != id:
 				continue
-			for k in ["attackSpeedMult", "xpMult", "goldMult", "monsterCountMult", "itemMult", "staminaMult", "hpMult", "dmgMult", "groupChanceMult"]:
+			for k in ["attackSpeedMult", "xpMult", "goldMult", "monsterCountMult", "itemMult", "staminaMult", "hpMult", "dmgMult", "groupChanceMult", "lootMult", "monsterHpMult", "monsterDmgMult"]:
 				if m.has(k):
 					eff[k] = float(eff[k]) * float(m[k])
 			if m.has("maxGroupSize"):
 				eff["maxGroupSize"] = mini(int(eff["maxGroupSize"]), int(m.maxGroupSize))
 			if m.has("critChanceBonus"):
 				eff["critChanceBonus"] = float(eff["critChanceBonus"]) + float(m.critChanceBonus)
-			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells"]:
+			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells", "allLegendary"]:
 				if m.get(k, false):
 					eff[k] = true
 	return eff
@@ -210,6 +210,8 @@ func flavor(list: Array, fallback: String) -> Dictionary:
 func roll_rarity(item: Dictionary, source: String) -> Dictionary:
 	if source == "":
 		return item
+	if mod.allLegendary:          # « Butin légendaire » : tout équipement généré est légendaire (ou mythique)
+		return apply_legendary(item)
 	var tier := Rarity.roll(Rarity.weights(source, lvl_i, run_bonus, difficulty), func(): return randf())
 	return Rarity.apply(item, tier, func(): return randf())
 
@@ -446,6 +448,10 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			"xpReward": maxi(3, int(round((10 + i * 6) * diff_mult * power * party_pow * float(mod.xpMult)))),
 			"goldReward": maxi(1, int(round((4 + i * 3) * diff_mult * power * float(mod.goldMult)))),
 			"opensDoorId": "", "isGroup": is_group, "groupSize": group_size}
+		if float(mod.monsterHpMult) != 1.0:
+			m["hpMult"] = float(mod.monsterHpMult)
+		if float(mod.monsterDmgMult) != 1.0:
+			m["dmgMult"] = float(mod.monsterDmgMult)
 		m.merge(_resist(), true)
 		m.merge(Resist.roll(str(fl[1]), false, 100.0, true), true)        # résistances de famille : toujours présentes, valeurs au hasard (jamais zéro)
 		m.merge(MonsterEffects.roll(str(fl[1]), false, float(cfg.get("monsterStatusChancePct", 60)), false, i), true)       # effet de famille (au hasard)
@@ -519,7 +525,8 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	boss.merge(Resist.roll(str(bf[1]), true, 100.0, bool(cfg.get("bossResist", true))), true)
 	# boss plus costauds : PV et dégâts majorés (réglages bossHpMult, bossFinalHpMult, bossDmgPct, bossRewardPct)
 	boss["hpMult"] = float(cfg.get("bossFinalHpMult", 2.2)) if i == num_levels - 1 else float(cfg.get("bossHpMult", 1.8))
-	boss["dmgMult"] = 1.0 + float(cfg.get("bossDmgPct", 10)) / 100.0
+	boss["dmgMult"] = (1.0 + float(cfg.get("bossDmgPct", 10)) / 100.0) * float(mod.monsterDmgMult)
+	boss["hpMult"] = float(boss["hpMult"]) * float(mod.monsterHpMult)
 	var rw := 1.0 + float(cfg.get("bossRewardPct", 25)) / 100.0
 	boss["xpReward"] = int(round(int(boss.xpReward) * rw))
 	boss["goldReward"] = int(round(int(boss.goldReward) * rw))
@@ -546,7 +553,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	var item_mult := float(mod.itemMult)
 	var heal_tier := i / 3
 	var sta_tier := i / 3
-	var loot_rounds := maxi(1, int(round(rooms.size() / 36.0)))
+	var loot_rounds := maxi(1, int(round(rooms.size() / 36.0 * float(mod.lootMult))))
 	var equip_here := false
 	for lr in loot_rounds:
 		if randf() < minf(1.0, 0.7 * item_mult):
@@ -645,7 +652,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		loot["startHidden"] = true
 		items.append(loot)
 		mon["lootItemId"] = lid
-		mon["lootChance"] = randi_range(40, 80)
+		mon["lootChance"] = mini(100, int(round(randi_range(40, 80) * float(mod.lootMult))))
 
 	# butin du boss
 	var legend_base: float = 45.0 if difficulty == "hardcore" else (25.0 if difficulty == "hard" else float(cfg.get("legendaryChancePct", 25)) * 0.6)

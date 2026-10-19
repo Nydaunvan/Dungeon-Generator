@@ -68,7 +68,7 @@ func _slot_pos(i: int, depth: float = 2.2) -> Vector3:
 		return cam.project_position(slot_px[k], depth)
 	var vs := _viewport_size()
 	var n := 4.0
-	var col := 2.0 if solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : entre les fentes 2 et 3 (centre du bandeau)
+	var col := 1.5 if solo_party else clampf(float(i), 0.0, 3.0) + 0.5     # héros seul : la deuxième fente du bandeau
 	return cam.project_position(Vector2(vs.x * col / n, vs.y * 0.8), depth)
 
 ## Places des héros qui reçoivent un effet de groupe : celles des cartes réelles (au-dessus de l'interface), sinon les quatre du bandeau.

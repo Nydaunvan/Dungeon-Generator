@@ -260,6 +260,21 @@
    "unlockBadge": "wk_r_solo"
   },
   {
+   "id": "mod_legend",
+   "icon": "👑",
+   "labelFr": "Butin légendaire",
+   "labelEn": "Legendary Loot",
+   "descFr": "Deux fois plus de butin, et tout l'équipement trouvé est légendaire. Les monstres sont un peu plus costauds (+25 % de PV, +15 % de dégâts).",
+   "descEn": "Twice the loot, and every piece of gear found is legendary. Monsters are a little tougher (+25% HP, +15% damage).",
+   "itemMult": 2.0,
+   "lootMult": 2.0,
+   "allLegendary": true,
+   "forceLegendary": true,
+   "monsterHpMult": 1.25,
+   "monsterDmgMult": 1.15,
+   "weeklyOnly": true
+  },
+  {
    "id": "mod_nospells",
    "icon": "🗡️",
    "labelFr": "Armes seules",
