@@ -77,6 +77,9 @@ static func create(t: Dictionary, cfg: Dictionary) -> Dictionary:
 		var sw := start_weapon(t, cfg)
 		if not sw.is_empty():
 			eq["weapon"] = sw
+	var wr := str(DungeonGenerator.combine_mods(cfg.get("runModifierIds", [])).startWeaponRarity)
+	if wr != "" and eq["weapon"] is Dictionary and Rarity.index(Rarity.of(eq["weapon"])) < Rarity.index(wr):
+		Rarity.upgrade_to(eq["weapon"], wr, func(): return GameRng.f("ids"))      # « Héros solitaire » : le héros part avec une arme de ce palier
 	recompute(c, cfg)
 	c["hp"] = c["maxHp"]
 	return c

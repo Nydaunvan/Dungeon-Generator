@@ -45,6 +45,10 @@ static func _stats_lines(m: Modal, gs: GameState) -> void:
 	for c in gs.party:
 		m.add_text(L.fa(L.t("ui.dialogs.niveau"), [c.name, int(c.level), L.t("ui.dialogs.tombe") if int(c.hp) <= 0 else ""]), UiTheme.PARCH, 14)
 
+## Libellé du bouton de sortie : retour au mode en ligne si la partie en vient, sinon à l'accueil.
+static func _home_label() -> String:
+	return L.t("ui.dialogs.retour_mode_en_ligne") if Data.hub_return and Cloud.is_configured() else L.t("ui.dialogs.retour_a_l_accueil")
+
 static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable(), on_village: Callable = Callable()) -> Modal:
 	var m := Modal.open(host, L.t("common.victoire"), 480.0)
 	m.esc_closes = false
@@ -59,8 +63,9 @@ static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Ca
 		btns.append({"text": L.t("ui.dialogs.aller_au_village"), "cb": func(): Flows.choose("victoire", "village")})
 	if on_next.is_valid():
 		btns.append({"text": L.t("ui.dialogs.continuer_dans_un_donjon_plus"), "primary": true, "cb": func(): Flows.choose("victoire", "next")})
-	btns.append({"text": L.t("ui.dialogs.repartir_de_zero"), "cb": _then(m, on_restart)})
-	btns.append({"text": L.t("ui.dialogs.retour_a_l_accueil"), "cb": _then(m, on_home)})
+	if str(gs.cfg.get("rankedKind", "")) != "weekly":      # défi de la semaine : seul le retour au mode en ligne est proposé
+		btns.append({"text": L.t("ui.dialogs.repartir_de_zero"), "cb": _then(m, on_restart)})
+	btns.append({"text": _home_label(), "primary": str(gs.cfg.get("rankedKind", "")) == "weekly", "cb": _then(m, on_home)})
 	m.set_buttons(btns)
 	if on_village.is_valid() or on_next.is_valid():
 		# « repartir de zéro » / accueil ferment la fenêtre sans décision : la partie classée est déjà soumise à ce stade
@@ -76,7 +81,7 @@ static func defeat(host: Node, gs: GameState, on_restart: Callable, on_home: Cal
 	m.esc_closes = false
 	m.add_text(L.t("ui.dialogs.les_tenebres_ont_eu_raison"), UiTheme.PARCH, 16, true)
 	_stats_lines(m, gs)
-	var specs: Array = [{"text": L.t("ui.dialogs.nouvelle_partie"), "primary": true, "cb": _then(m, on_restart)}, {"text": L.t("ui.dialogs.retour_a_l_accueil"), "cb": _then(m, on_home)}]
+	var specs: Array = [{"text": L.t("ui.dialogs.nouvelle_partie"), "primary": true, "cb": _then(m, on_restart)}, {"text": _home_label(), "cb": _then(m, on_home)}]
 	for i in Saves.SLOTS:
 		if not Saves.summary(i).is_empty():
 			specs.push_front({"text": L.t("ui.dialogs.charger_une_sauvegarde"), "primary": false, "cb": func(): SlotsModal.open(host, Callable(), Data.launch_save)})

@@ -25,6 +25,9 @@ func _ready() -> void:
 	StaffBadges.refresh()
 	ServerFlags.refresh()
 	SuperAdmin.alert_popup(_modal_layer)
+	if Data.hub_open_pending:      # retour d'une partie lancée depuis le mode en ligne : on rouvre directement sa fenêtre
+		Data.hub_open_pending = false
+		_open_random.call_deferred()
 
 func _on_nav(name: String) -> void:
 	match name:
@@ -41,6 +44,7 @@ func _launch_original() -> void:
 
 func _launch_generated(cfg: Dictionary) -> void:
 	Data.launch(cfg, "random")
+	Data.hub_return = Cloud.is_configured()      # partie libre lancée depuis le mode en ligne : on y revient à la fin
 
 func _on_action(name: String) -> void:
 	match name:

@@ -83,7 +83,7 @@ static func all_modifiers() -> Array:
 ## Effets cumulés des modificateurs d'expédition choisis (ids).
 static func combine_mods(ids: Array) -> Dictionary:
 	var eff := {"attackSpeedMult": 1.0, "xpMult": 1.0, "goldMult": 1.0, "monsterCountMult": 1.0, "itemMult": 1.0, "staminaMult": 1.0,
-		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "allLegendary": false, "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
+		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "minRarity": "", "startWeaponRarity": "", "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
 	for id in ids:
 		for m in all_modifiers():
 			if m.id != id:
@@ -95,9 +95,12 @@ static func combine_mods(ids: Array) -> Dictionary:
 				eff["maxGroupSize"] = mini(int(eff["maxGroupSize"]), int(m.maxGroupSize))
 			if m.has("critChanceBonus"):
 				eff["critChanceBonus"] = float(eff["critChanceBonus"]) + float(m.critChanceBonus)
-			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells", "allLegendary"]:
+			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells"]:
 				if m.get(k, false):
 					eff[k] = true
+			for k in ["minRarity", "startWeaponRarity"]:      # palier le plus haut demandé par les modificateurs choisis
+				if str(m.get(k, "")) != "" and Rarity.index(str(m[k])) > Rarity.index(str(eff[k])) :
+					eff[k] = str(m[k])
 	return eff
 
 static func _key(x: int, y: int) -> String:
@@ -210,9 +213,15 @@ func flavor(list: Array, fallback: String) -> Dictionary:
 func roll_rarity(item: Dictionary, source: String) -> Dictionary:
 	if source == "":
 		return item
-	if mod.allLegendary:          # « Butin légendaire » : tout équipement généré est légendaire (ou mythique)
-		return apply_legendary(item)
-	var tier := Rarity.roll(Rarity.weights(source, lvl_i, run_bonus, difficulty), func(): return randf())
+	var w := Rarity.weights(source, lvl_i, run_bonus, difficulty)
+	var floor_tier := str(mod.minRarity)
+	if floor_tier != "":          # « Butin de choix » : aucun équipement sous ce palier ; les paliers supérieurs gardent leurs chances relatives
+		for k in w.keys():
+			if Rarity.index(k) < Rarity.index(floor_tier):
+				w.erase(k)
+		if w.is_empty():
+			w[floor_tier] = 1.0
+	var tier := Rarity.roll(w, func(): return randf())
 	return Rarity.apply(item, tier, func(): return randf())
 
 ## Chance qu'un objet légendaire soit mythique : croît avec le niveau, le numéro de partie et la difficulté.

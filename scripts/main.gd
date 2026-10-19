@@ -1014,6 +1014,7 @@ func _home() -> void:
 
 func _restart() -> void:
 	var cfg: Dictionary = Data.active()
+	var was_hub := Data.hub_return
 	if RunLog.ranked():
 		# la partie classée est terminée : « repartir de zéro » donne une partie libre (la graine et l'essai du serveur sont consommés)
 		_end_ranked_run()
@@ -1021,6 +1022,7 @@ func _restart() -> void:
 		for k in ["runSeed", "runId", "rankedKind", "rankedTest"]:
 			cfg.erase(k)
 	Data.launch(cfg, Data.play_origin, Data.ADMIN_KEEP)
+	Data.hub_return = was_hub
 
 static func _strip_tags(s: String) -> String:
 	var re := RegEx.new()
@@ -1161,7 +1163,8 @@ func _show_victory() -> void:
 	show_message(L.t("common.victoire"), 3.0)
 	await get_tree().create_timer(0.8).timeout
 	var maxed := gs.party.all(func(c): return int(c.level) >= Characters.MAX_LEVEL)
-	var random_run := Data.play_origin == "random" and not maxed
+	var weekly := str(gs.cfg.get("rankedKind", "")) == "weekly"       # défi de la semaine : ni village ni donjon plus difficile, retour au mode en ligne
+	var random_run := Data.play_origin == "random" and not maxed and not weekly
 	Dialogs.victory(_modals(), gs, _restart, _home,
 		_continue_next if random_run else Callable(), _enter_village if random_run else Callable())
 

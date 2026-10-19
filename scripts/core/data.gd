@@ -144,6 +144,7 @@ func launch(cfg: Dictionary, origin: String, admin_mode: int = ADMIN_AUTO) -> vo
 			admin_unlocked = false
 		ADMIN_UNLOCK:
 			admin_unlocked = true
+	hub_return = false
 	resume_game = {}
 	pending_save = {}
 	pending_transient = {}
@@ -536,7 +537,13 @@ func open_admin() -> void:
 	Loader.go("res://scenes/admin.tscn", "admin")
 
 ## Retour à l'accueil (`switchView('home')`) : verrouille l'administration et oublie la partie suspendue.
+## Vrai quand la partie en cours a été lancée depuis la fenêtre « Mode en ligne » : à la fin (ou en quittant), on y revient au lieu de l'accueil nu.
+var hub_return := false
+var hub_open_pending := false
+
 func go_home() -> void:
+	hub_open_pending = hub_return and Cloud.is_configured()
+	hub_return = false
 	if play_origin == "custom" and (MyDungeons.current_id != "" or MyDungeons._pending_new):
 		MyDungeons.autosave(admin_config())
 	MyDungeons.end_editing()

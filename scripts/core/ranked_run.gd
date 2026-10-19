@@ -128,6 +128,7 @@ static func launch(difficulty: String, kind: String = "difficulty", test: bool =
 	if test:
 		cfg["rankedTest"] = true
 	Data.launch(cfg, "random")
+	Data.hub_return = true
 	return r
 
 ## Partie de TEST d'une règle précise (super admins) : `format` "weekly" (réglages de la règle) ou "daily" (2 niveaux 13×11). Hors classements, sans essai consommé.
@@ -146,6 +147,7 @@ static func launch_rule(rule_id: String, format: String) -> Dictionary:
 	cfg["rankedKind"] = format
 	cfg["rankedTest"] = true
 	Data.launch(cfg, "random")
+	Data.hub_return = true
 	return {"ok": true}
 
 ## Envoie le journal de la partie classée en cours (une seule fois par partie). Sans compte ou partie souillée : ne fait rien.
