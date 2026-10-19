@@ -392,3 +392,6 @@ Les événements `popup` de `Combat` portent `on = "mon:<index>"` pour un membre
 
 ## Volet « Détails et sorts » : hauteur exacte
 `EquipDock._grow_drawer` fixe d'abord la hauteur d'après le contenu, mais les libellés à retour à la ligne n'ont pas encore leur largeur à ce moment (hauteur surestimée, grand vide en bas). `_settle_drawer` la recalcule sur trois images une fois la mise en page faite. Mesure : `tools/shot_drawer.tscn` (vide de 292 px avant, 4 px après pour le Prêtre).
+
+## Défi « Armes seules » : compensation
+`mod_nospells` porte `minRarity` = `rare` et `startWeaponRarity` = `epic`, lus par `combine_mods` comme pour `mod_legend` (palier le plus haut retenu si plusieurs modificateurs). `Characters.create` monte l'arme de départ de chaque héros, `DungeonGenerator.roll_rarity` et `Shop._rank_offers` retirent les paliers inférieurs du tirage. Migration de texte : `20261019000300_armes_seules_epique.sql`. Contrôle : `tools/check_nospells.tscn`.

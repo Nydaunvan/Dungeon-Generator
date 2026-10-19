@@ -280,9 +280,11 @@
    "icon": "🗡️",
    "labelFr": "Armes seules",
    "labelEn": "Steel Only",
-   "descFr": "Aucun sort ni capacité : seules les armes comptent.",
-   "descEn": "No spells or abilities: only weapons count.",
+   "descFr": "Aucun sort ni capacité : seules les armes comptent. En contrepartie, chaque héros part avec une arme épique et tout l'équipement trouvé ou vendu par les marchands est au moins rare (épique, légendaire et mythique restent possibles, aux chances habituelles).",
+   "descEn": "No spells or abilities: only weapons count. In return, every hero starts with an epic weapon and all gear found or sold by merchants is rare at the very least (epic, legendary and mythic are still possible, at the usual odds).",
    "noSpells": true,
+   "minRarity": "rare",
+   "startWeaponRarity": "epic",
    "weeklyOnly": true,
    "unlockBadge": "wk_r_nospells"
   }
