@@ -33,7 +33,17 @@ func _ready() -> void:
 					mon_ok = false
 		for lv in b.levels:
 			loot_base += (lv.items as Array).size()
+	var shop_below := 0
+	var shop_gear := 0
+	var cfg_s: Dictionary = DungeonGenerator.build_config(Data.original_config, 2, 15, 15, "normal", ["mod_solo", "mod_legend"], 1, 77)
+	for k in 12:
+		for o in Shop.random_offers(cfg_s, 1 + k % 4, cfg_s.party):
+			if ["weapon", "armor", "jewelry"].has(str(o.type)):
+				shop_gear += 1
+				if Rarity.index(Rarity.of(o)) < Rarity.index("rare"):
+					shop_below += 1
+	var xp_ok := absf(float(DungeonGenerator.combine_mods(["mod_solo", "mod_legend"]).xpMult) - 2.0) < 0.001
 	var dm := float(DungeonGenerator.combine_mods(["mod_solo", "mod_legend"]).dmgMult)
-	var ok := party_ok and mon_ok and weapon_ok and gear > 0 and below == 0 and loot_rule > loot_base and absf(dm - 1.3333) < 0.001
-	print("SOLO équipements=%d sous-rare=%d épique+=%d objets avec règle=%d sans=%d arme rare=%s monstres=%s héros seul=%s dégâts=%.3f -> %s" % [gear, below, high, loot_rule, loot_base, weapon_ok, mon_ok, party_ok, dm, "OK" if ok else "ECHEC"])
+	var ok := party_ok and mon_ok and weapon_ok and gear > 0 and below == 0 and loot_rule > loot_base and absf(dm - 1.3333) < 0.001 and shop_gear > 0 and shop_below == 0 and xp_ok
+	print("SOLO équipements=%d sous-rare=%d épique+=%d objets avec règle=%d sans=%d arme rare=%s monstres=%s héros seul=%s dégâts=%.3f marchands=%d sous-rare=%d xp×2=%s -> %s" % [gear, below, high, loot_rule, loot_base, weapon_ok, mon_ok, party_ok, dm, shop_gear, shop_below, xp_ok, "OK" if ok else "ECHEC"])
 	get_tree().quit(0 if ok else 1)
