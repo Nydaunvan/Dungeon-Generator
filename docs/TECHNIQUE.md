@@ -389,3 +389,6 @@ Le modificateur `mod_legend` (`weeklyOnly`, sans badge : jamais proposé en part
 
 ## Chiffres de dégâts d'un groupe
 Les événements `popup` de `Combat` portent `on = "mon:<index>"` pour un membre de groupe (un par membre touché ; le monstre seul garde `on = ""`). `DamagePopups` ancre la colonne sur `member_head` (rappel fourni par `main.gd` : `CombatStage.head_point` projeté sur la fenêtre) et empile les lignes vers le haut ; sans position connue, repli sur le centre de la vue. Interface seulement : aucun effet sur les replays. Capture : `tools/shot_group_popups.tscn`.
+
+## Volet « Détails et sorts » : hauteur exacte
+`EquipDock._grow_drawer` fixe d'abord la hauteur d'après le contenu, mais les libellés à retour à la ligne n'ont pas encore leur largeur à ce moment (hauteur surestimée, grand vide en bas). `_settle_drawer` la recalcule sur trois images une fois la mise en page faite. Mesure : `tools/shot_drawer.tscn` (vide de 292 px avant, 4 px après pour le Prêtre).

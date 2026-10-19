@@ -880,8 +880,21 @@ func _grow_drawer(animate: bool) -> void:
 			if is_instance_valid(_drawer_clip):
 				_drawer_clip.custom_minimum_size.y = h
 				_refit(), 0.0, target, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_callback(_settle_drawer)
 	else:
 		_drawer_clip.custom_minimum_size.y = target
+		_refit()
+		_settle_drawer()
+
+## Hauteur exacte du volet : à sa création les libellés à retour à la ligne n'ont pas encore leur largeur, donc leur hauteur minimale est surestimée
+## (grand vide en bas). Une fois la mise en page faite, on ramène le volet à la hauteur réelle de son contenu.
+func _settle_drawer() -> void:
+	for _i in 3:
+		await get_tree().process_frame
+		if _drawer_clip == null or not is_instance_valid(_drawer_clip) or not is_instance_valid(_drawer_inner):
+			return
+		_drawer_inner.reset_size()
+		_drawer_clip.custom_minimum_size.y = _drawer_inner.get_combined_minimum_size().y + 4.0
 		_refit()
 
 func _toggle_details() -> void:
