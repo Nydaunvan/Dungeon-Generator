@@ -383,3 +383,6 @@ Le modificateur `mod_legend` (`weeklyOnly`, sans badge : jamais proposé en part
 
 ## Infobulle d'un objet équipé
 `BagCommon.tooltip_for` détecte l'objet porté (`is_same` avec l'équipement du héros de `char_id`) : mêmes lignes de statistiques mais sans écart ni conséquence, pied `ui.bag.equipe_par`. Branchée par `EquipDock._slot_button` (survol des emplacements) et `ForgeModal` (icône + nom) via `BagCommon.show_item_tip` ; `PartyTip` ajoute une ligne de statistiques (`EquipDock.stat_rows`) sous chaque pièce. Test : `tools/check_equip_tip.tscn`.
+
+## Chiffres de dégâts d'un groupe
+Les événements `popup` de `Combat` portent `on = "mon:<index>"` pour un membre de groupe (un par membre touché ; le monstre seul garde `on = ""`). `DamagePopups` ancre la colonne sur `member_head` (rappel fourni par `main.gd` : `CombatStage.head_point` projeté sur la fenêtre) et empile les lignes vers le haut ; sans position connue, repli sur le centre de la vue. Interface seulement : aucun effet sur les replays. Capture : `tools/shot_group_popups.tscn`.

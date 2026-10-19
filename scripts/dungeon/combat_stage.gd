@@ -525,6 +525,22 @@ func pick(pos: Vector2) -> int:
 				best = int(e.idx)
 	return best
 
+## Haut visible du membre `idx` du groupe, en pixels de la vue 3D (Vector2(-1, -1) si absent) : ancre des chiffres de dégâts.
+func head_point(idx: int) -> Vector2:
+	if not active or camera == null:
+		return Vector2(-1, -1)
+	for k in _nodes:
+		var e: Dictionary = _nodes[k]
+		if int(e.idx) != idx or not is_instance_valid(e.node):
+			continue
+		var vc := _visual_center(e)
+		var up := camera.global_transform.basis.y
+		var top: Vector3 = vc.pos + up * (float(vc.h) * 0.5)
+		if camera.is_position_behind(top):
+			return Vector2(-1, -1)
+		return camera.unproject_position(top)
+	return Vector2(-1, -1)
+
 ## Point visé par les sorts : le CENTRE VISIBLE du combattant ciblé (ou du premier visible), quel que soit le monstre.
 ## {"pos": Vector3, "h": float (hauteur visible), "w": float (largeur visible)} ou {} sans cible.
 func target_point() -> Dictionary:

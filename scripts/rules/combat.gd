@@ -726,11 +726,18 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		gs.add_log(L.fa(L.t("rules.combat.frappe_pour_degats"), [attacker.name, who, dmg, note, " 💥 Coup critique !" if crit else ""]), true)
 	else:
 		gs.add_log(L.fa(L.t("rules.combat.pour_degats"), [attacker.name, verb, who, dmg, note, " 💥 Coup critique !" if crit else ""]), true)
-	events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("ff6a6a") if crit else Color("ffd88a")})
-	if elem >= 25:
-		events.append({"type": "popup", "text": L.t("rules.combat.popup_resiste"), "color": Color("8fc8e8")})
-	elif elem <= -25:
-		events.append({"type": "popup", "text": L.t("rules.combat.popup_faiblesse"), "color": Color("ffb347")})
+	# chaque membre touché d'un groupe affiche SES dégâts au-dessus de lui (cible « mon:<index> ») ; monstre seul : au centre de la vue
+	var pop_ons: Array = []
+	for h in holders:
+		pop_ons.append("mon:%d" % _member_idx(st, h) if is_group and _member_idx(st, h) >= 0 else "")
+	if pop_ons.is_empty():
+		pop_ons.append("")
+	for on in pop_ons:
+		events.append({"type": "popup", "text": "-%d" % dmg, "on": on, "color": Color("ff6a6a") if crit else Color("ffd88a")})
+		if elem >= 25:
+			events.append({"type": "popup", "text": L.t("rules.combat.popup_resiste"), "on": on, "color": Color("8fc8e8")})
+		elif elem <= -25:
+			events.append({"type": "popup", "text": L.t("rules.combat.popup_faiblesse"), "on": on, "color": Color("ffb347")})
 	events.append({"type": "mon_hit", "id": str(target.id), "crit": crit, "mi": (_member_idx(st, holders[0]) if is_group and not holders.is_empty() else -1)})
 
 	var lifesteal := int(attacker.get("talentLifestealPct", 0)) + int(spell.get("spellLifestealPct", 0)) + _perk_value(attacker, "lifesteal")
@@ -1172,7 +1179,8 @@ func tick_monster(def: Dictionary, st: Dictionary, holder: Dictionary = {}) -> b
 			var dmg := maxi(1, int(eff.get("power", 3)))
 			holder["hp"] = maxf(0.0, float(holder.hp) - dmg)
 			gs.add_log(L.fa(L.t("rules.combat.subit_degats_de"), [sdef.icon, _mname(def), dmg, sdef.label]))
-			events.append({"type": "popup", "text": "-%d" % dmg, "color": Color("c98bff")})
+			var dot_mi := _member_idx(st, holder) if is_member else -1
+			events.append({"type": "popup", "text": "-%d" % dmg, "on": ("mon:%d" % dot_mi) if dot_mi >= 0 else "", "color": Color("c98bff")})
 			if bool(sdef.get("heals", false)) and str(eff.get("casterId", "")) != "":
 				var caster := gs.char_by_id(str(eff.casterId))
 				if not caster.is_empty() and int(caster.hp) > 0:

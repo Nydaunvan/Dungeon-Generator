@@ -186,6 +186,7 @@ func _ready() -> void:
 	dmg_popups.gs = gs
 	dmg_popups.view = layout.sub_container
 	dmg_popups.hud = layout.hud
+	dmg_popups.member_head = _member_head_global
 	ui.add_child(dmg_popups)
 	instinct_ui = InstinctOverlay.new()
 	instinct_ui.ctrl = ctrl
@@ -1239,6 +1240,22 @@ func show_message(text: String, seconds: float = 1.8) -> void:
 	_message_tween = create_tween()
 	_message_tween.tween_interval(seconds)
 	_message_tween.tween_property(message_label, "modulate:a", 0.0, 0.6)
+
+## Haut du membre `idx` du groupe affronté, en pixels de la fenêtre ((-1, -1) si introuvable).
+func _member_head_global(idx: int) -> Vector2:
+	if level_node == null or level_node.stage == null or layout == null or layout.sub_container == null:
+		return Vector2(-1, -1)
+	var p: Vector2 = level_node.stage.head_point(idx)
+	if p.x < 0.0:
+		return p
+	var cont: Control = layout.sub_container
+	var vp_size := Vector2(cont.get_viewport_rect().size)
+	var sv := level_node.stage.camera.get_viewport()
+	if sv != null:
+		vp_size = sv.get_visible_rect().size
+	if vp_size.x <= 0.0 or vp_size.y <= 0.0:
+		return Vector2(-1, -1)
+	return cont.get_global_rect().position + p * (cont.size / vp_size)
 
 ## Chiffre de dégâts / soin : empilé en ligne sur le monstre, la carte du héros ou le bandeau d'équipe (voir DamagePopups).
 func _show_popup(text: String, color: Color, on: String) -> void:

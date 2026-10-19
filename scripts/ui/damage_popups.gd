@@ -12,6 +12,7 @@ const FADE := 0.5
 var gs: Object
 var view: Control                 ## vue 3D encadrée (ancre des popups du monstre)
 var hud: PartyHud                 ## bandeau d'équipe (ancre des popups de héros)
+var member_head: Callable          ## index de membre -> haut du monstre en pixels de la fenêtre ((-1, -1) si inconnu)
 var _cols: Dictionary = {}        ## clé de cible -> Array de {lbl, slot}
 
 func _init() -> void:
@@ -35,11 +36,12 @@ func show_popup(text: String, color: Color, on: String) -> void:
 	lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	lbl.add_theme_constant_override("outline_size", 8)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lh := HERO_LINE_H if on.begins_with("char:") else LINE_H
+	var up := on.begins_with("char:") or on.begins_with("mon:")
+	var lh := HERO_LINE_H if up else LINE_H
 	lbl.size = Vector2(anchor.size.x, lh)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(lbl)
-	if on.begins_with("char:"):
+	if up:
 		lbl.global_position = Vector2(anchor.position.x, anchor.position.y - (slot + 1) * lh)      # au-dessus du cadre, la plus ancienne ligne au plus près
 	else:
 		lbl.global_position = Vector2(anchor.position.x, anchor.position.y + slot * lh)
@@ -71,5 +73,9 @@ func _anchor(on: String) -> Rect2:
 			for r2 in rs2:
 				u = u.merge(r2)
 			return Rect2(u.position + Vector2(0, -LINE_H * 3.4), Vector2(u.size.x, LINE_H))
+	if on.begins_with("mon:") and member_head.is_valid():
+		var hp: Vector2 = member_head.call(int(on.substr(4)))
+		if hp.x >= 0.0:
+			return Rect2(hp - Vector2(70.0, 0.0), Vector2(140.0, LINE_H))      # centré sur la tête du membre, lignes empilées vers le haut
 	var v := view.get_global_rect() if view != null else get_viewport_rect()
 	return Rect2(v.position + Vector2(0, v.size.y * 0.30), Vector2(v.size.x, LINE_H))
