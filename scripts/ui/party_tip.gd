@@ -187,14 +187,6 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 		nl.clip_text = true
 		row.add_child(nl)
 		b.add_child(row)
-		var parts: Array = []
-		for sr in EquipDock.stat_rows(r[1], str(r[1].get("type", "")) == "weapon"):
-			parts.append("%s %s%d" % [sr.label, "+" if int(sr.value) > 0 else "", int(sr.value)])
-		if not parts.is_empty():
-			var sl2 := _lbl("   " + " · ".join(PackedStringArray(parts)), 11, DIM, UiTheme.F_BODY_ITALIC)
-			sl2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			sl2.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			b.add_child(sl2)
 	t.size = Vector2.ZERO
 	t.visible = true
 	await card.get_tree().process_frame
@@ -203,9 +195,16 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 	var rc := card.get_global_rect()
 	var vs := card.get_viewport().get_visible_rect().size
 	var x := clampf(rc.position.x + rc.size.x * 0.5 - t.size.x * 0.5, 6.0, maxf(6.0, vs.x - t.size.x - 6.0))
+	# Toujours au-dessus de la carte quand c'est possible ; sinon du côté qui a le plus de place, sans jamais sortir de l'écran
+	var above := rc.position.y - 12.0 - 6.0
+	var below := vs.y - rc.end.y - 12.0 - 6.0
 	var y := rc.position.y - t.size.y - 12.0
-	if y < 6.0:
-		y = rc.end.y + 12.0
+	if t.size.y > above:
+		if t.size.y <= below or below > above * 1.5:
+			y = rc.end.y + 12.0
+		else:
+			y = 6.0
+	y = clampf(y, 6.0, maxf(6.0, vs.y - t.size.y - 6.0))
 	t.position = Vector2(x, y)
 
 static func current_id() -> String:
