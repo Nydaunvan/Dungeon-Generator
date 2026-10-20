@@ -18,7 +18,12 @@ func _init() -> void:
 	var lv: Dictionary = m.gs.cfg.levels[0]
 	var tm: Dictionary = lv.travelingMerchant
 	print("marchand en ", tm.x, ",", tm.y, " forgeron ", lv.blacksmith.x, ",", lv.blacksmith.y, " talents ", lv.talentMaster.x, ",", lv.talentMaster.y)
-	var shots := [[0, 7, 22], [2, 7, 22], [0, 7, 40], [1, 7, 12], [3, 7, 33], [0, 7, 3]]
+	for h in m.level_node.get_children():
+		if str(h.name).begins_with("House_"):
+			var acc: Array = [null]
+			_bb(h, acc)
+			print("MAISON ", h.name, " ", acc[0])
+	var shots := [[0, 7, 22]]
 	if a.size() >= 4:
 		shots = []
 		var k := 1
@@ -32,3 +37,10 @@ func _init() -> void:
 		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_%d.png" % i))
 		i += 1
 	quit()
+
+func _bb(n: Node, acc: Array) -> void:
+	if n is MeshInstance3D:
+		var bb: AABB = (n as MeshInstance3D).global_transform * (n as MeshInstance3D).get_aabb()
+		acc[0] = bb if acc[0] == null else (acc[0] as AABB).merge(bb)
+	for c in n.get_children():
+		_bb(c, acc)
