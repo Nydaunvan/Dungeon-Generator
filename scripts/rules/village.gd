@@ -2,53 +2,83 @@ class_name Village
 extends RefCounted
 ## Village : place extérieure avec marchand, forgeron et Maître des Talents. Portage de buildVillageLevel.
 
+const W := 15                      # largeur (cases) ; le village est tout en longueur
+const H := 45
+const STREET_X := 7                # colonne de la rue centrale (3 cases de large : 6 à 8)
+const PLAZA := Rect2i(4, 18, 7, 9) # place pavée au milieu de la rue (x, y, largeur, hauteur)
+const HOUSE := 3                   # maison = 3 × 3 cases
+const HOUSE_ROWS := [2, 7, 12, 31, 36, 41]       # première ligne de chaque maison, de chaque côté de la rue
+
+## Village : une longue rue entre deux portes, une place au milieu, des maisons de chaque côté, des barrières et une lisière d'arbres.
+## Les maisons occupent des cases pleines ('#') : on les contourne. Tout le reste est jouable.
 static func build_level() -> Dictionary:
-	var rows := ["#####S#####", "#.........#", "#.........#", "#.........#", "#.........#", "#.........#", "#####S#####"]
-	var exclude := ["5,1", "4,1", "6,1", "5,2", "5,4", "5,5", "4,5", "6,5"]   # jamais d'arbre devant une arche
-	var sx := 5
-	var sy := 3
-	var row_pool := [1, 2, 3, 4, 5]
-	GameRng.shuffle("village", row_pool)
-	var spots: Array = []
-	for k in 3:
-		var y: int = row_pool[k]
-		var xs: Array = []
-		for x in range(1, 10):
-			if (x == sx and y == sy) or exclude.has("%d,%d" % [x, y]):
-				continue
-			xs.append(x)
-		spots.append(Vector2i(xs[GameRng.i("village") % xs.size()], y))
+	var grid: Array = []
+	for y in H:
+		var row := ""
+		for x in W:
+			row += "#" if (x == 0 or x == W - 1 or y == 0 or y == H - 1) else "."
+		grid.append(row)
+	var set_cell := func(x: int, y: int, c: String):
+		grid[y] = (grid[y] as String).substr(0, x) + c + (grid[y] as String).substr(x + 1)
+	set_cell.call(STREET_X, 0, "S")
+	set_cell.call(STREET_X, H - 1, "S")
+	var houses: Array = []
+	for side in [0, 1]:
+		var hx := 1 if side == 0 else W - 1 - HOUSE            # 1..3 à gauche, 11..13 à droite
+		for hy in HOUSE_ROWS:
+			var kind := "timber"
+			var r := GameRng.f("village")
+			if r < 0.38:
+				kind = "brick"
+			elif r > 0.93:
+				kind = "ruin"
+			houses.append({"x": hx, "y": hy, "w": HOUSE, "h": HOUSE, "face": "E" if side == 0 else "W", "kind": kind})
+			for yy in range(hy, hy + HOUSE):
+				for xx in range(hx, hx + HOUSE):
+					set_cell.call(xx, yy, "#")
 	var path := {}
-	for y in 7:
-		path["5,%d" % y] = true
-	for sp in spots:
-		var dir := 1 if sp.x > 5 else -1
-		var x := 5
-		while x != sp.x + dir:
-			path["%d,%d" % [x, sp.y]] = true
-			x += dir
+	for y in range(1, H - 1):
+		for x in range(STREET_X - 1, STREET_X + 2):
+			path["%d,%d" % [x, y]] = true
+	for hse in houses:                                        # allée de la porte de la maison jusqu'à la rue
+		var dy: int = int(hse.y) + 1
+		var xs: Array = range(4, 6) if hse.face == "E" else range(9, 11)
+		for xx in xs:
+			path["%d,%d" % [xx, dy]] = true
+	var plaza: Array = []
+	for yy in range(PLAZA.position.y, PLAZA.position.y + PLAZA.size.y):
+		for xx in range(PLAZA.position.x, PLAZA.position.x + PLAZA.size.x):
+			plaza.append("%d,%d" % [xx, yy])
+	var sx := STREET_X
+	var sy := PLAZA.position.y + PLAZA.size.y / 2
+	# trois PNJ sur le pourtour de la place, dans un ordre tiré au hasard
+	var spots_pool: Array = [Vector2i(5, 19), Vector2i(9, 19), Vector2i(5, 25), Vector2i(9, 25), Vector2i(4, 22), Vector2i(10, 22)]
+	GameRng.shuffle("village", spots_pool)
+	var spots: Array = spots_pool.slice(0, 3)
 	var npc := {}
 	for sp in spots:
 		npc["%d,%d" % [sp.x, sp.y]] = true
-	var chance := 0.28 + GameRng.f("village") * 0.22
 	var trees: Array = []
-	for y in range(1, 6):
-		for x in range(1, 10):
+	var chance := 0.16 + GameRng.f("village") * 0.1
+	for y in range(1, H - 1):
+		for x in range(1, W - 1):
 			var key := "%d,%d" % [x, y]
-			if (x == sx and y == sy) or exclude.has(key) or npc.has(key) or path.has(key):
+			if grid[y][x] != "." or path.has(key) or npc.has(key) or plaza.has(key):
+				continue
+			if y <= 3 or y >= H - 4:      # abords des portes dégagés
+				continue
+			if x == 1 or x == W - 2:      # le long des barrières : rangée d'arbres plus dense
+				if GameRng.f("village") < chance * 2.2:
+					trees.append(key)
 				continue
 			if GameRng.f("village") < chance:
 				trees.append(key)
-	var plaza: Array = []         # place pavée autour du point de départ (hors arbres) : décor seulement
-	for py in range(sy - 1, sy + 2):
-		for px in range(sx - 1, sx + 2):
-			if not trees.has("%d,%d" % [px, py]):
-				plaza.append("%d,%d" % [px, py])
-	return {"id": "village_%d" % GameRng.i("ids"), "name": "Village", "plazaCells": plaza, "theme": "stone", "mapRows": rows, "outdoor": true,
+	return {"id": "village_%d" % GameRng.i("ids"), "name": "Village", "plazaCells": plaza, "theme": "stone", "mapRows": grid, "outdoor": true,
+		"streetX": STREET_X, "houses": houses,
 		"startX": sx, "startY": sy, "startDir": 0, "doors": [], "monsters": [], "items": [],
-		"stairs": [{"id": "village_exit", "x": 5, "y": 0, "action": {"type": "villageExit"}},
-			{"id": "village_return", "x": 5, "y": 6, "action": {"type": "villageReturn"}}],
-		"treeExcludeCells": exclude, "treeCells": trees, "pathCells": path.keys(),
+		"stairs": [{"id": "village_exit", "x": STREET_X, "y": 0, "action": {"type": "villageExit"}},
+			{"id": "village_return", "x": STREET_X, "y": H - 1, "action": {"type": "villageReturn"}}],
+		"treeExcludeCells": [], "treeCells": trees, "pathCells": path.keys(),
 		"travelingMerchant": {"x": spots[0].x, "y": spots[0].y, "patrolRadius": 0},
 		"blacksmith": {"x": spots[1].x, "y": spots[1].y}, "talentMaster": {"x": spots[2].x, "y": spots[2].y}}
 

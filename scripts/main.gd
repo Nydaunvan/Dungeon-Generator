@@ -489,6 +489,7 @@ func _apply_outdoor(outdoor: bool) -> void:
 	env.ambient_light_color = Color("d8e4f0") if outdoor else Color("40342a")
 	env.ambient_light_energy = 1.0 if outdoor else 1.1
 	rig.torch.visible = not outdoor
+	rig.camera.far = 300.0 if outdoor else 100.0      # le village est long : on voit jusqu'à la porte du fond
 
 func _setup_environment() -> void:
 	env = WarmUp.make_environment()

@@ -35,9 +35,11 @@ const FOUNTAIN_SCALE := 0.8
 const FOUNTAIN_OFFSET := 1.0    # décalage en diagonale : le joueur (au centre de la case) ne se retrouve pas dans le bassin
 
 var _grid: DungeonGrid = null
+var _level: Dictionary = {}
 
 func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false) -> void:
 	_grid = grid
+	_level = level
 	if bool(level.get("outdoor", false)):
 		if level.get("blacksmith") is Dictionary:
 			add_npc("@icon:blacksmith", int(level.blacksmith.x), int(level.blacksmith.y))
@@ -323,7 +325,8 @@ func add_merchant(x: int, y: int, big: bool = false) -> void:
 			merchant_node = _make_stall(x, y, nd)
 			return
 	if big and ResourceLoader.exists(Merchant3D.WIZARD_GLB):
-		var away := Vector2i(1, 0) if x > 5 else (Vector2i(-1, 0) if x < 5 else Vector2i(0, -1))   # dos au côté opposé au chemin central
+		var sx := int(_level.get("streetX", 5))
+		var away := Vector2i(1, 0) if x > sx else (Vector2i(-1, 0) if x < sx else Vector2i(0, -1))   # dos au côté opposé au chemin central
 		merchant_node = _make_village_stall(x, y, away)
 		return
 	var icon := "@icon:merchant" if big else "@icon:merchant_dungeon"

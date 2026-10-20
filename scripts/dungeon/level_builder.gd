@@ -82,6 +82,8 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 				var nich: Dictionary = niches.get(Vector2i(x, y), {})
 				if n == "#" and not nich.is_empty() and nich.d == d:
 					_add_niche(parts, counts, torches, c, d, rot, theme_name, float(nich.w), float(nich.h), float(nich.get("t", 0.5)), float(nich.get("dp", NICHE_DEPTH)))
+				elif n == "#" and outdoor and not _gate_wall(grid, x, y):
+					pass      # village : ni mur ni plafond, les maisons, barrières et arbres sont posés par VillageKit
 				elif n == "#":
 					var hk := "%d,%d,%d,%d" % [x, y, d.x, d.y]
 					if holes.has(hk):
@@ -149,6 +151,10 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 
 ## Creux des murs du niveau : `niches` (case -> {d, w, h, ...}, pour les fontaines et le marchand) et `holes` ("x,y,dx,dy" -> intervalle évidé
 ## des murs voisins quand le creux dépasse la case). Sert à la construction du niveau et à la pose du piège mural.
+## Village : les cases de part et d'autre de l'arche d'une porte gardent un mur de pierre.
+static func _gate_wall(grid: DungeonGrid, x: int, y: int) -> bool:
+	return (y == 1 or y == grid.height - 2) and absi(x - grid.width / 2) <= 2
+
 static func niche_data(grid: DungeonGrid, level: Dictionary, outdoor: bool) -> Dictionary:
 	var half := CELL * 0.5
 	var niches := {}      # Vector2i(case) -> {d: direction du mur évidé, w: demi-largeur, h: hauteur}

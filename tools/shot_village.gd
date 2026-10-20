@@ -18,10 +18,13 @@ func _init() -> void:
 	var lv: Dictionary = m.gs.cfg.levels[0]
 	var tm: Dictionary = lv.travelingMerchant
 	print("marchand en ", tm.x, ",", tm.y, " forgeron ", lv.blacksmith.x, ",", lv.blacksmith.y, " talents ", lv.talentMaster.x, ",", lv.talentMaster.y)
-	var face := 1 if int(tm.x) > 5 else 3        # est (1) ou ouest (3) : de la rue vers le marchand
-	var shots := [[0, 5, 3], [0, 5, 5], [face, 5, int(tm.y)]]
+	var shots := [[0, 7, 22], [2, 7, 22], [0, 7, 40], [1, 7, 12], [3, 7, 33], [0, 7, 3]]
 	if a.size() >= 4:
-		shots = [[int(a[1]), int(a[2]), int(a[3])]]
+		shots = []
+		var k := 1
+		while k + 2 < a.size() + 0:
+			shots.append([int(a[k]), int(a[k + 1]), int(a[k + 2])])
+			k += 3
 	var i := 0
 	for s in shots:
 		m.rig.place(m.grid, s[1], s[2], s[0])

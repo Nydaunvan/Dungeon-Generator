@@ -99,14 +99,14 @@ static func cloud_texture() -> Texture2D:
 ## Ajoute arbres et nuages à la vue d'un niveau extérieur.
 static func decorate(view: Node3D, level: Dictionary) -> void:
 	if view is LevelView and (view as LevelView).grid != null:
-		VillageKit.buildings(view, (view as LevelView).grid)
+		VillageKit.decorate(view, level, (view as LevelView).grid)
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
 	sun.rotation_degrees = Vector3(-52, -35, 0)
 	sun.light_color = Color(1.0, 0.95, 0.85)
 	sun.light_energy = 0.9
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 60.0
+	sun.directional_shadow_max_distance = 70.0
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.0
 	view.add_child(sun)
@@ -124,7 +124,7 @@ static func decorate(view: Node3D, level: Dictionary) -> void:
 	var cz := float(level.get("startY", 0)) * LevelBuilder.CELL
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	for i in 6:
+	for i in 10:
 		var s := Sprite3D.new()
 		s.texture = cloud_texture()
 		s.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -132,7 +132,7 @@ static func decorate(view: Node3D, level: Dictionary) -> void:
 		s.transparent = true
 		s.modulate = Color(1, 1, 1, 0.85)
 		s.pixel_size = (3.0 + rng.randf() * 2.5) / 128.0 * 1.6
-		s.position = Vector3(cx + (rng.randf() - 0.5) * LevelBuilder.CELL * 20.0, LevelBuilder.CELL * 3.2 + rng.randf() * LevelBuilder.CELL * 1.2, cz + (rng.randf() - 0.5) * LevelBuilder.CELL * 20.0)
+		s.position = Vector3(cx + (rng.randf() - 0.5) * LevelBuilder.CELL * 20.0, LevelBuilder.CELL * 3.2 + rng.randf() * LevelBuilder.CELL * 1.2, cz + (rng.randf() - 0.5) * LevelBuilder.CELL * maxf(20.0, float(level.get("mapRows", []).size()) * 1.1))
 		s.set_meta("drift", 0.15 + rng.randf() * 0.15)
 		clouds.add_child(s)
 	view.add_child(clouds)
