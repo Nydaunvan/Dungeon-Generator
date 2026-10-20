@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bci5v81wi4y7g"
-path="res://.godot/imported/feuille_opacity.jpg-0c1351a5d1904e87231be41fad924677.ctex"
+uid="uid://bub1cyge4p4ym"
+path="res://.godot/imported/feuille_albedo_alpha.png-4b9f2167c59424baab78a40f40c01d6b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/themes/village_hd/feuille_opacity.jpg"
-dest_files=["res://.godot/imported/feuille_opacity.jpg-0c1351a5d1904e87231be41fad924677.ctex"]
+source_file="res://assets/themes/village_lite/feuille_albedo_alpha.png"
+dest_files=["res://.godot/imported/feuille_albedo_alpha.png-4b9f2167c59424baab78a40f40c01d6b.ctex"]
 
 [params]
 

@@ -25,10 +25,11 @@ static func mat(part: String, repeat: Vector2 = Vector2.ONE, cutout: bool = fals
 	if _cache.has(key):
 		return _cache[key]
 	var d := _dir()
-	if d == "" or not ResourceLoader.exists(d + part + "_albedo.jpg"):
+	if d == "" or not (ResourceLoader.exists(d + part + "_albedo.jpg") or ResourceLoader.exists(d + part + "_albedo_alpha.png")):
 		return null
 	var m := StandardMaterial3D.new()
-	m.albedo_texture = load(d + part + "_albedo.jpg")
+	if ResourceLoader.exists(d + part + "_albedo.jpg"):
+		m.albedo_texture = load(d + part + "_albedo.jpg")
 	m.normal_enabled = true
 	m.normal_texture = load(d + part + "_normal.png")
 	var orm: Texture2D = load(d + part + "_orm.jpg")   # G = rugosité
@@ -40,33 +41,13 @@ static func mat(part: String, repeat: Vector2 = Vector2.ONE, cutout: bool = fals
 	m.texture_repeat = true
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	m.uv1_scale = Vector3(repeat.x, repeat.y, 1)
-	if cutout and ResourceLoader.exists(d + part + "_opacity.jpg"):
+	if cutout and ResourceLoader.exists(d + part + "_albedo_alpha.png"):
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 		m.alpha_scissor_threshold = 0.5
 		m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_OFF
-		m.albedo_texture = _with_alpha(load(d + part + "_albedo.jpg"), load(d + part + "_opacity.jpg"))
+		m.albedo_texture = load(d + part + "_albedo_alpha.png")
 	_cache[key] = m
 	return m
-
-## Couleur + opacité réunies dans une seule image RGBA (le moteur ne lit pas une carte d'opacité à part).
-static func _with_alpha(color: Texture2D, opacity: Texture2D) -> Texture2D:
-	var a := color.get_image()
-	var o := opacity.get_image()
-	if a.is_compressed():
-		a.decompress()
-	if o.is_compressed():
-		o.decompress()
-	a.convert(Image.FORMAT_RGBA8)
-	o.convert(Image.FORMAT_L8)
-	if o.get_size() != a.get_size():
-		o.resize(a.get_width(), a.get_height())
-	for y in a.get_height():
-		for x in a.get_width():
-			var c := a.get_pixel(x, y)
-			c.a = o.get_pixel(x, y).r
-			a.set_pixel(x, y, c)
-	a.generate_mipmaps()
-	return ImageTexture.create_from_image(a)
 
 static func grass() -> Material:
 	return mat("herbe", Vector2(2, 2))
@@ -141,7 +122,7 @@ static func _glass() -> StandardMaterial3D:
 const MODEL_TIMBER := "res://assets/village_models/maison_beton.fbx"
 const MODEL_RUIN := "res://assets/village_models/maison_brique.fbx"
 ## Angle (rad) à ajouter pour que la façade du modèle regarde vers +X avant la rotation de la maison (réglé d'après les captures).
-const TIMBER_YAW := 0.0
+const TIMBER_YAW := PI * 0.5
 
 static func _tri(b: Batch, a: Vector3, bb: Vector3, c: Vector3, uva: Vector2, uvb: Vector2, uvc: Vector2) -> void:
 	var nrm := (bb - a).cross(c - a).normalized()

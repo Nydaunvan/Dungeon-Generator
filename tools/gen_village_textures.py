@@ -47,8 +47,10 @@ def main(src: pathlib.Path) -> None:
             zero = Image.new("L", rough.size, 0)
             Image.merge("RGB", (white, rough, zero)).save(out / f"{part}_orm.jpg", quality=92)
             op = pathlib.Path(f"{base}_Opacity.jpg")
-            if op.exists():
-                fit(Image.open(op).convert("L")).save(out / f"{part}_opacity.jpg", quality=92)
+            if op.exists():      # couleur + opacité réunies en un seul PNG (le moteur n'a pas à les fusionner au chargement)
+                rgba = fit(Image.open(f"{base}_Color.jpg").convert("RGB")).convert("RGBA")
+                rgba.putalpha(fit(Image.open(op).convert("L")))
+                rgba.save(out / f"{part}_albedo_alpha.png", optimize=True)
         house = src / "concrete_house_004" / "textures"
         if house.exists():
             def load_img(path, mode):
