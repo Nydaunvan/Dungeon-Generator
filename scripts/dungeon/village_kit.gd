@@ -153,21 +153,23 @@ static func _model(path: String, target: float, keep: Array, assign: Dictionary)
 		if c is Camera3D or c is Light3D or (not keep.is_empty() and not keep.has(str(c.name))):
 			c.queue_free()
 	var holder := Node3D.new()
-	holder.add_child(root)
+	var pivot := Node3D.new()                  # porte l'échelle et le recentrage (l'import FBX a déjà sa propre échelle sur la racine)
+	holder.add_child(pivot)
+	pivot.add_child(root)
 	for c in root.get_children():
 		if c.is_queued_for_deletion():
 			root.remove_child(c)
 			c.queue_free()
 	_assign(root, assign)
 	var acc: Array = [null]
-	_bounds(root, Transform3D.IDENTITY, acc)
+	_bounds(root, Transform3D.IDENTITY, acc)     # étendue dans le repère du pivot (transformation de la racine comprise)
 	if acc[0] == null:
 		holder.queue_free()
 		return null
 	var bb: AABB = acc[0]
 	var k := target / maxf(bb.size.x, bb.size.z)
-	root.scale = Vector3.ONE * k
-	root.position = Vector3(-(bb.position.x + bb.size.x * 0.5) * k, -bb.position.y * k, -(bb.position.z + bb.size.z * 0.5) * k)
+	pivot.scale = Vector3.ONE * k
+	pivot.position = Vector3(-(bb.position.x + bb.size.x * 0.5) * k, -bb.position.y * k, -(bb.position.z + bb.size.z * 0.5) * k)
 	holder.set_meta("size", bb.size * k)
 	return holder
 
