@@ -167,7 +167,7 @@ static func _model(path: String, target: float, keep: Array, assign: Dictionary)
 		holder.queue_free()
 		return null
 	var bb: AABB = acc[0]
-	var k := target / maxf(bb.size.x, bb.size.z)
+	var k := minf(target / maxf(bb.size.x, bb.size.z), 6.2 / bb.size.y)     # ni plus large que la parcelle, ni plus haut qu'une grande maison
 	pivot.scale = Vector3.ONE * k
 	pivot.position = Vector3(-(bb.position.x + bb.size.x * 0.5) * k, -bb.position.y * k, -(bb.position.z + bb.size.z * 0.5) * k)
 	holder.set_meta("size", bb.size * k)
