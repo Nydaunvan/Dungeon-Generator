@@ -11,7 +11,7 @@ PACKS = {
     "audio": ["assets/music", "assets/sounds"],
 }
 CORE_DIRS = ["scripts", "scenes", "data", "assets/fonts", "assets/ui", "assets/icons", "assets/home", "assets/splash.png"]
-BASE_EXCLUDE = ["_tmp/*", "tests/*", "tools/*", "assets/themes/stone_lite/*", "assets/themes/fountain_lite/*"]
+BASE_EXCLUDE = ["_tmp/*", "tests/*", "tools/*", "assets/themes/stone_lite/*", "assets/themes/fountain_lite/*", "assets/themes/village_lite/*"]
 
 def join(items): return ", ".join(items)
 

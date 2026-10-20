@@ -33,6 +33,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 
 	var outdoor := bool(level.get("outdoor", false))
 	var path_cells: Array = level.get("pathCells", [])
+	var plaza_cells: Array = level.get("plazaCells", [])
 	var chunks := {}      # Vector2i(bloc) -> {"parts": {...}, "counts": {...}}
 	var parts: Dictionary = {}
 	var counts: Dictionary = {}
@@ -55,14 +56,17 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 			var c := Vector3(x * CELL, 0.0, y * CELL)
 			var ck := Vector2i(x / CHUNK, y / CHUNK)
 			if not chunks.has(ck):
-				var np := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new()}
+				var np := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new(), "plaza": SurfaceTool.new()}
 				for kk in np:
 					np[kk].begin(Mesh.PRIMITIVE_TRIANGLES)
-				chunks[ck] = {"parts": np, "counts": {"wall": 0, "floor": 0, "ceil": 0, "path": 0}}
+				chunks[ck] = {"parts": np, "counts": {"wall": 0, "floor": 0, "ceil": 0, "path": 0, "plaza": 0}}
 			parts = chunks[ck].parts
 			counts = chunks[ck].counts
 			var pit := pits.has(Vector2i(x, y))     # fosse : le sol de la case est percé d'un trou (voir TrapPit)
-			if outdoor and path_cells.has("%d,%d" % [x, y]):
+			if outdoor and plaza_cells.has("%d,%d" % [x, y]):
+				_floor_cell(parts["plaza"], c, half, pit)
+				counts["plaza"] += 1
+			elif outdoor and path_cells.has("%d,%d" % [x, y]):
 				_floor_cell(parts["path"], c, half, pit)
 				counts["path"] += 1
 			else:
@@ -99,19 +103,23 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		var cparts: Dictionary = chunks[ck].parts
 		var ccounts: Dictionary = chunks[ck].counts
 		var mesh := ArrayMesh.new()
-		for k in ["wall", "floor", "ceil", "path"]:
+		for k in ["wall", "floor", "ceil", "path", "plaza"]:
 			if ccounts[k] == 0:
 				continue
 			if sliced:
 				await Loader.slice()
-			if k != "path":
-				cparts[k].generate_tangents()   # nécessaires aux cartes de normales (mur, sol, plafond)
-			cparts[k].commit(mesh)
 			var mat: Material = theme.get(k)
 			if outdoor and k == "floor":
 				mat = Outdoor.grass()
+			elif outdoor and k == "wall":
+				mat = VillageKit.wall() if VillageKit.wall() != null else mat
 			elif k == "path":
 				mat = Outdoor.path()
+			elif k == "plaza":
+				mat = VillageKit.plaza() if VillageKit.plaza() != null else Outdoor.path()
+			if k != "path" or mat is StandardMaterial3D and (mat as StandardMaterial3D).normal_enabled:
+				cparts[k].generate_tangents()   # nécessaires aux cartes de normales (mur, sol, plafond)
+			cparts[k].commit(mesh)
 			mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
 		if mesh.get_surface_count() == 0:
 			continue

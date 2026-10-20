@@ -39,7 +39,12 @@ static func build_level() -> Dictionary:
 				continue
 			if GameRng.f("village") < chance:
 				trees.append(key)
-	return {"id": "village_%d" % GameRng.i("ids"), "name": "Village", "theme": "stone", "mapRows": rows, "outdoor": true,
+	var plaza: Array = []         # place pavée autour du point de départ (hors arbres) : décor seulement
+	for py in range(sy - 1, sy + 2):
+		for px in range(sx - 1, sx + 2):
+			if not trees.has("%d,%d" % [px, py]):
+				plaza.append("%d,%d" % [px, py])
+	return {"id": "village_%d" % GameRng.i("ids"), "name": "Village", "plazaCells": plaza, "theme": "stone", "mapRows": rows, "outdoor": true,
 		"startX": sx, "startY": sy, "startDir": 0, "doors": [], "monsters": [], "items": [],
 		"stairs": [{"id": "village_exit", "x": 5, "y": 0, "action": {"type": "villageExit"}},
 			{"id": "village_return", "x": 5, "y": 6, "action": {"type": "villageReturn"}}],

@@ -27,18 +27,27 @@ static func _noise_material(base: String, dark: String, light: String, count: in
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return m
 
-static func grass() -> StandardMaterial3D:
+static func grass() -> Material:
+	var vg := VillageKit.grass()
+	if vg != null:
+		return vg
 	if not _cache.has("grass"):
 		_cache["grass"] = _noise_material("#4a8a3a", "#3d7830", "#5a9a48", 900, 2.0, 2.0)
 	return _cache["grass"]
 
-static func path() -> StandardMaterial3D:
+static func path() -> Material:
+	var vd := VillageKit.dirt()
+	if vd != null:
+		return vd
 	if not _cache.has("path"):
 		_cache["path"] = _noise_material("#9a7a4a", "#8a6a3a", "#ab8a56", 700, 2.0, 1.5)
 	return _cache["path"]
 
 ## Arbre unique (tronc + 3 massifs de feuillage), 4 surfaces colorées.
 static func tree_mesh() -> ArrayMesh:
+	var vt := VillageKit.tree_mesh()
+	if vt != null:
+		return vt
 	if _cache.has("tree"):
 		return _cache["tree"]
 	var mesh := ArrayMesh.new()
@@ -89,6 +98,18 @@ static func cloud_texture() -> Texture2D:
 
 ## Ajoute arbres et nuages à la vue d'un niveau extérieur.
 static func decorate(view: Node3D, level: Dictionary) -> void:
+	if view is LevelView and (view as LevelView).grid != null:
+		VillageKit.buildings(view, (view as LevelView).grid)
+	var sun := DirectionalLight3D.new()
+	sun.name = "Sun"
+	sun.rotation_degrees = Vector3(-52, -35, 0)
+	sun.light_color = Color(1.0, 0.95, 0.85)
+	sun.light_energy = 0.9
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 60.0
+	sun.shadow_bias = 0.06
+	sun.shadow_normal_bias = 1.0
+	view.add_child(sun)
 	for key in level.get("treeCells", []):
 		var p := str(key).split(",")
 		var mi := MeshInstance3D.new()

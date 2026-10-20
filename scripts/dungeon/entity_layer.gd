@@ -322,7 +322,11 @@ func add_merchant(x: int, y: int, big: bool = false) -> void:
 		if nd != Vector2i.ZERO:
 			merchant_node = _make_stall(x, y, nd)
 			return
-	var icon := "@icon:merchant" if big else "@icon:merchant_dungeon"   # le village garde son marchand d'origine
+	if big and ResourceLoader.exists(Merchant3D.WIZARD_GLB):
+		var away := Vector2i(1, 0) if x > 5 else (Vector2i(-1, 0) if x < 5 else Vector2i(0, -1))   # dos au côté opposé au chemin central
+		merchant_node = _make_village_stall(x, y, away)
+		return
+	var icon := "@icon:merchant" if big else "@icon:merchant_dungeon"
 	var n := _make_sprite(icon, big, false, 1.0 if big else 1.2)
 	if n == null:
 		return
@@ -341,6 +345,18 @@ func _make_stall(x: int, y: int, d: Vector2i) -> Node3D:
 	var c := Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL)
 	st.position = c + dv * (LevelBuilder.CELL * 0.5 + 1.22 * sc)
 	st.rotation.y = LevelBuilder._rot(d)
+	st.name = "MerchantStall"
+	add_child(st)
+	return st
+
+## Étal du marchand posé en plein air dans la case (x, y), le dos tourné vers `away` : même étal et même magicien qu'au donjon.
+func _make_village_stall(x: int, y: int, away: Vector2i) -> Node3D:
+	var st := Merchant3D.acquire()
+	var sc := 0.62
+	st.scale = Vector3.ONE * sc
+	var dv := Vector3(away.x, 0, away.y)
+	st.position = Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL) + dv * (1.22 * sc * 0.6)
+	st.rotation.y = LevelBuilder._rot(away)
 	st.name = "MerchantStall"
 	add_child(st)
 	return st
