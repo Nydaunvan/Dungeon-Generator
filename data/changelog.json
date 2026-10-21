@@ -1,5 +1,31 @@
 [
  {
+  "version": "1.36.2",
+  "date": "2026-10-21",
+  "changes": [
+   "## Village en 3D",
+   "Le village est entièrement refait en 3D, beaucoup plus grand et tout en longueur (15 × 45 cases) : rue centrale, place pavée au milieu, douze maisons de chaque côté (colombages, briques à toit d'ardoise, ruine), barrières et lisière d'arbres tout autour, deux portes d'arche aux extrémités.",
+   "Décor réaliste avec de vraies textures : briques, roche, terre, herbe, pavés, ardoise, bois et feuillage découpé. Texture standard (1024 px) ou haute (2048 px) selon le réglage « Textures ».",
+   "Végétation du sol : herbes basses très nombreuses dont la pointe ondule dans le vent, fleurs sauvages, buissons. Moins d'herbe sur les machines modestes (réglage « Particules »).",
+   "Le marchand ambulant tient son étal en 3D dans le village. Le forgeron et le maître des talents sont à l'échelle des maisons, les pieds posés sur l'herbe, et tout près du bord de leur case : le groupe s'arrête à côté d'eux et un pas de plus ouvre leur fenêtre.",
+   "Les yeux du groupe sont plus bas dans le village : le joueur ne paraît plus aussi grand que les maisons.",
+   "La carte du village garde des proportions raisonnables : la colonne de droite ne déborde plus de l'écran.",
+   "## Ciel, lumière et météo",
+   "Nouveau ciel : dégradé, soleil, lune, étoiles et nuages qui dérivent. Soleil avec ombres en cascades stabilisées, brume d'horizon, rendu cinéma et occlusion ambiante.",
+   "Cycle jour et nuit : aube, jour, crépuscule et nuit. La nuit, la lune éclaire, les fenêtres s'allument et la torche du groupe aussi. En automatique, une journée dure environ 20 minutes.",
+   "Pluie : le ciel se couvre entièrement, la brume s'épaissit, des gouttes tombent, le sol devient sombre et luisant, le vent se renforce. En automatique, la pluie va et vient.",
+   "Nouvelle section « Village » dans les réglages : heure (automatique, toujours l'aube, le jour, le crépuscule ou la nuit) et météo (automatique, toujours beau, toujours la pluie). Purement visuel : aucun effet sur la partie ni sur les rediffusions.",
+   "Les bords des feuilles sont lissés (avec l'anticrénelage MSAA) pour limiter le scintillement du feuillage.",
+   "## Défis",
+   "Défi « Héros solitaire » : arme rare au départ, équipement rare au minimum chez les marchands, butin légendaire ×2, dégâts +1/3, PV ×2, monstres un peu plus costauds, donjon de 15 × 15 ; le héros occupe la deuxième fente du bandeau d'équipe. La fin du défi ramène au mode en ligne (ni village, ni donjon plus difficile).",
+   "Défi « Armes seules » : arme de départ épique, équipement trouvé et vendu rare au minimum.",
+   "## Interface et combat",
+   "Contre un groupe de monstres, chaque chiffre de dégâts s'affiche au-dessus du monstre touché.",
+   "Les statistiques d'un objet équipé s'affichent au survol (emplacements de la fiche, forge, infobulle du groupe).",
+   "La fiche de survol d'un héros reste toujours au-dessus de la carte et ne sort plus de l'écran ; le volet des détails et sorts s'arrête à la hauteur réelle de son contenu."
+  ]
+ },
+ {
   "version": "1.36.1",
   "date": "2026-10-18",
   "changes": [
