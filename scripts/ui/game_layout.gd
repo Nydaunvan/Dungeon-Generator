@@ -14,6 +14,7 @@ signal card_pressed(char_id: String)
 signal chest_pressed(char_id: String)
 signal potion_quick(idx: int)
 signal scrolls_quick
+signal inventory_pressed
 
 const PORTRAIT_RATIO := 1.05   # largeur / hauteur en dessous : mode portrait
 
@@ -604,6 +605,7 @@ func _build_parts() -> void:
 	bag.setup(gs)
 	bag.item_pressed.connect(func(i): item_pressed.emit(i))
 	bag.item_quick.connect(func(i): item_quick.emit(i))
+	bag.inventory_pressed.connect(func(): inventory_pressed.emit())
 	panel_bag.body.add_child(bag)
 	panel_log = OrnatePanel.new(L.t("ui.game_layout.grimoire_des_evenements"))
 	panel_log.name = "Journal"

@@ -436,6 +436,8 @@ func _method_card(id: String, idx: int) -> Button:
 	var sub := L.t("ui.trap_method.stat_%s" % str(id))
 	if not who.is_empty():
 		sub += " · " + str(who.name)
+	if id == "exert":
+		sub = L.fa(L.t("ui.trap_method.stat_exert"), TrapRules.exert_total(_gs, _s))
 	if id == "sacrifice":
 		sub = L.fa(L.t("ui.trap_method.stat_sacrifice_n"), TrapRules.sacrifice_candidates(_gs).size())
 	var tip := L.t("ui.trap_method.risk_%s" % str(id))

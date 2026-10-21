@@ -70,6 +70,17 @@ func sync_position() -> void:
 	combat.pos = Vector2i(rig.gx, rig.gy)
 	combat.dir = rig.dir
 
+## Une action (attaque, sort, fuite) est en cours de présentation : toute commande demandée à cet instant est ignorée par `attack` / `cast`.
+func is_busy() -> bool:
+	return _busy
+
+## Le héros actif peut agir tout de suite : hors combat toujours, en combat c'est son tour et son tour est terminé de s'afficher.
+func hero_ready() -> bool:
+	if combat == null or _busy:
+		return false
+	var c := gs.char_by_id(gs.active_char_id)
+	return not c.is_empty() and combat.may_act(c)
+
 ## Le moteur de combat est-il engagé ? (logique, sans délai de présentation)
 func model_in_combat() -> bool:
 	return combat != null and combat.in_combat()
@@ -185,7 +196,7 @@ func cast(spell_id: String, ally_id: String = "") -> void:
 	else:
 		changed.emit()
 
-## Lit un parchemin de la besace (sort gratuit, usage unique). Le lecteur est aussi la cible des sorts alliés.
+## Lit un parchemin de la besace (sort gratuit : aucune endurance requise ni dépensée, usage unique). Le lecteur est aussi la cible des sorts alliés.
 func read_scroll(char_id: String, inv_idx: int) -> void:
 	if combat == null or _busy or gs.game_over:
 		return
@@ -207,10 +218,7 @@ func read_scroll(char_id: String, inv_idx: int) -> void:
 		gs.add_log(L.fa(L.t("game.combat_controller.est_illisible_son_contenu_est"), it.get("name", L.t("game.combat_controller.le_parchemin"))))
 		changed.emit()
 		return
-	if int(c.get("stamina", 0)) < int(spell.get("staminaCost", 15)):
-		gs.add_log(L.fa(L.t("game.combat_controller.n_a_plus_assez_endurance"), c.name))
-		changed.emit()
-		return
+	# un parchemin ne demande ni ne dépense aucune endurance (sort gratuit, usage unique)
 	RunLog.rec("scroll", char_id, inv_idx)
 	gs.active_char_id = char_id
 	gs.add_log(L.fa(L.t("game.combat_controller.lit_le_parchemin_et_invoque"), [c.name, spell.get("icon", ""), spell.name]), true)

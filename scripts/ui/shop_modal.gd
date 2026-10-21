@@ -702,7 +702,7 @@ static func _scroll_section(box: VBoxContainer, gs: GameState, sp: Dictionary) -
 		var sd := Statuses.def(se)
 		var extra := " · %d/tour" % int(sp.statusPower) if int(sp.get("statusPower", 0)) > 0 else ""
 		_wrap(box, L.fa(L.t("ui.spell_tip.effet_de_statut_tour"), [sd.get("icon", ""), L.c(str(sd.get("label", se))), int(sp.get("statusChance", 0)), dur, extra]), 12, UiTheme.PARCH)
-	_wrap(box, L.fa(L.t("ui.shop_modal.scr_conditions"), int(sp.get("staminaCost", 15))), 11, UiTheme.DIM)
+	_wrap(box, L.t("ui.shop_modal.scr_conditions"), 11, UiTheme.DIM)
 
 static func _fill_detail(box: VBoxContainer, gs: GameState, offers: Array, st: Dictionary, g: Dictionary, buy: bool, village: bool, done: Callable, refresh: Callable) -> void:
 	var multi_on: bool = (not buy) and bool(st.get("multi", false))

@@ -45,9 +45,9 @@ static func _stats_lines(m: Modal, gs: GameState) -> void:
 	for c in gs.party:
 		m.add_text(L.fa(L.t("ui.dialogs.niveau"), [c.name, int(c.level), L.t("ui.dialogs.tombe") if int(c.hp) <= 0 else ""]), UiTheme.PARCH, 14)
 
-## Libellé du bouton de sortie : retour au mode en ligne si la partie en vient, sinon à l'accueil.
+## Libellé du bouton de sortie d'une fin de partie : toujours « Retour à l'accueil » (même quand la partie vient du mode en ligne).
 static func _home_label() -> String:
-	return L.t("ui.dialogs.retour_mode_en_ligne") if Data.hub_return and Cloud.is_configured() else L.t("ui.dialogs.retour_a_l_accueil")
+	return L.t("ui.dialogs.retour_a_l_accueil")
 
 static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Callable, on_next: Callable = Callable(), on_village: Callable = Callable()) -> Modal:
 	var m := Modal.open(host, L.t("common.victoire"), 480.0)
@@ -63,10 +63,11 @@ static func victory(host: Node, gs: GameState, on_restart: Callable, on_home: Ca
 		btns.append({"text": L.t("ui.dialogs.aller_au_village"), "cb": func(): Flows.choose("victoire", "village")})
 	if on_next.is_valid():
 		btns.append({"text": L.t("ui.dialogs.continuer_dans_un_donjon_plus"), "primary": true, "cb": func(): Flows.choose("victoire", "next")})
-	if str(gs.cfg.get("rankedKind", "")) != "weekly":      # défi de la semaine : seul le retour au mode en ligne est proposé
+	var challenge := RankedRun.is_challenge(gs.cfg)
+	if not challenge:      # défi (de la semaine, du jour) : seul le retour à l'accueil est proposé, un défi n'est pas une partie complète
 		btns.append({"text": L.t("ui.dialogs.repartir_de_zero"), "cb": _then(m, on_restart)})
-	btns.append({"text": _home_label(), "primary": str(gs.cfg.get("rankedKind", "")) == "weekly", "cb": _then(m, on_home)})
-	m.set_buttons(btns)
+	btns.append({"text": _home_label(), "primary": challenge, "cb": _then(m, on_home)})
+	m.set_buttons(btns, false, true)         # boutons empilés les uns sous les autres
 	if on_village.is_valid() or on_next.is_valid():
 		# « repartir de zéro » / accueil ferment la fenêtre sans décision : la partie classée est déjà soumise à ce stade
 		Flows.open("victoire", m, func(c: Variant):
@@ -86,5 +87,5 @@ static func defeat(host: Node, gs: GameState, on_restart: Callable, on_home: Cal
 		if not Saves.summary(i).is_empty():
 			specs.push_front({"text": L.t("ui.dialogs.charger_une_sauvegarde"), "primary": false, "cb": func(): SlotsModal.open(host, Callable(), Data.launch_save)})
 			break
-	m.set_buttons(specs)
+	m.set_buttons(specs, false, true)        # boutons empilés les uns sous les autres
 	return m

@@ -110,6 +110,7 @@ func _refresh() -> void:
 			icon = "" if t != null else "✨"
 		b.disabled = dead or waiting
 		var dimmed := base
-		if left > 0.0 or int(c.get("stamina", 0)) < int(sp.get("staminaCost", 0)):
+		var no_stamina := int(c.get("stamina", 0)) < int(sp.get("staminaCost", 0))     # plus assez d'endurance : le sort est grisé
+		if left > 0.0 or no_stamina:
 			dimmed *= 0.65
-		b.set_state(icon, t, ("%d" % ceili(left)) if left > 0.0 else "", dimmed, ctrl.pending_spell == sid)
+		b.set_state(icon, t, ("%d" % ceili(left)) if left > 0.0 else "", dimmed, ctrl.pending_spell == sid, no_stamina and not dead)

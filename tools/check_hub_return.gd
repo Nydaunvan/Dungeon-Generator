@@ -14,7 +14,7 @@ func _ready() -> void:
 	var texts: Array = []
 	_buttons(m.get_parent() if m.get_parent() != null else m, texts)
 	print("BOUTONS ", texts, " configuré=", was)
-	var ok: bool = texts.size() == 1 and (not was or str(texts[0]).contains("mode en ligne") or str(texts[0]).contains("online"))
+	var ok: bool = texts.size() == 1 and (str(texts[0]).contains("accueil") or str(texts[0]).contains("home"))
 	print("RESULTAT retour en ligne -> %s" % ("OK" if ok else "ECHEC"))
 	get_tree().quit()
 func _buttons(n: Node, out: Array) -> void:

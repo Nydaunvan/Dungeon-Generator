@@ -91,23 +91,11 @@ static func build(c: Dictionary, cfg: Dictionary) -> Array:
 	# 6. statuts actifs
 	var g6: Array = []
 	for e in Statuses.active(c):
-		var sd := Statuses.def(str(e.type))
-		var desc: Array = []
-		if int(sd.get("speedBonus", 0)) != 0:
-			desc.append("%s %s" % [L.t("common.vitesse"), StatExplain._sg(int(sd.speedBonus))])
-		if int(sd.get("dmgReductionPct", 0)) != 0:
-			desc.append(L.fa(L.t("ui.bonus.st_dmg"), int(sd.dmgReductionPct)))
-		if int(sd.get("bonusDmgFlat", 0)) != 0:
-			desc.append(L.fa(L.t("ui.bonus.st_flat"), int(sd.bonusDmgFlat)))
-		if int(sd.get("statusDurationCutPct", 0)) != 0:
-			desc.append(L.fa(L.t("ui.bonus.st_cut"), int(sd.statusDurationCutPct)))
-		if bool(sd.get("dot", false)):
-			desc.append(L.t("ui.bonus.st_dot"))
-		if bool(sd.get("disables", false)):
-			desc.append(L.t("ui.bonus.st_disables"))
-		var bad: bool = bool(sd.get("dot", false)) or bool(sd.get("disables", false)) or int(sd.get("speedBonus", 0)) < 0 or int(sd.get("dmgReductionPct", 0)) > 0
-		g6.append({"icon": str(sd.get("icon", "")), "label": L.c(str(sd.get("label", e.type))), "value": L.fa(L.t("ui.party_tip.tours"), int(e.remaining)), "tone": "neg" if bad else "pos",
-			"subs": [{"text": " · ".join(desc), "tone": "dim"}] if not desc.is_empty() else []})
+		var subs: Array = []
+		for line in Statuses.effect_lines(e):
+			subs.append({"text": "• " + str(line), "tone": "dim"})
+		g6.append({"icon": Statuses.icon_of(e), "label": L.c(Statuses.label_of(e)), "value": L.fa(L.t("ui.party_tip.tours"), int(e.remaining)), "tone": "neg" if Statuses.is_harmful(e) else "pos",
+			"subs": subs})
 	groups.append({"title": L.t("ui.bonus.g_status"), "entries": g6, "inactive": []})
 	# 7. classe, Constitution et partie en cours
 	var g7: Array = []

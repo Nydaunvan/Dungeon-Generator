@@ -34,6 +34,11 @@ func _process(delta: float) -> void:
 		if _choice_poll <= 0.0:
 			_choice_poll = 0.25
 			_check_choices()
+	if _pending_slot >= 0:
+		if Time.get_ticks_msec() > _pending_slot_until or gs == null or gs.game_over or RunLog.replaying:
+			_pending_slot = -1
+		elif get_tree().get_nodes_in_group("modal").is_empty() and _try_slot(_pending_slot):
+			_pending_slot = -1
 	if _pending_cmd != "":
 		if Time.get_ticks_msec() > _pending_until or gs == null or gs.game_over:
 			_pending_cmd = ""
@@ -236,6 +241,7 @@ func _ready() -> void:
 	inter.bag_changed.connect(layout.bag.refresh)
 	layout.item_pressed.connect(_on_bag_item)
 	layout.item_quick.connect(_on_bag_quick)
+	layout.inventory_pressed.connect(_toggle_inventory)
 	ctrl.changed.connect(layout.bag.refresh)     # ▲ / ▼ : suivent le personnage actif et son équipement
 	layout.potion_quick.connect(func(i): inter.use_potion_at(gs.active_char_id, i))
 	layout.scrolls_quick.connect(func(): inter.open_scroll_picker(gs.active_char_id))
@@ -538,26 +544,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if act == "inventory":
-		if get_tree().get_nodes_in_group("modal").is_empty():
-			var who := gs.active_char_id
-			if ctrl.in_combat():
-				inter.open_sheet(who)
-			else:
-				dock.toggle_for(who)
+		_toggle_inventory()
 		get_viewport().set_input_as_handled()
 		return
 	if act.begins_with("slot_"):
 		# en combat : 1 = attaque, 2… = sorts ; en exploration : 2… lancent les sorts du personnage sélectionné (soins, protections…), comme un clic sur la barre
 		if get_tree().get_nodes_in_group("modal").is_empty() and not gs.game_over:
 			var slot := int(act.substr(5)) - 1
-			if slot == 0:
-				if ctrl.in_combat():
-					ctrl.attack()
-			else:
-				var c := gs.char_by_id(gs.active_char_id)
-				var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
-				if slot - 1 < known.size():
-					ctrl.cast(str(known[slot - 1]))
+			if not _try_slot(slot):
+				# le jeu n'était pas prêt (effet du coup précédent encore en cours, tour qui vient de passer au héros) : l'appui n'est pas perdu,
+				# il est gardé un instant et exécuté dès que le héros peut agir (avant : il fallait appuyer une seconde fois)
+				_pending_slot = slot
+				_pending_slot_until = Time.get_ticks_msec() + PENDING_SLOT_MS
 		get_viewport().set_input_as_handled()
 		return
 	if not get_tree().get_nodes_in_group("modal").is_empty():
@@ -576,6 +574,43 @@ func _unhandled_input(event: InputEvent) -> void:
 	if cmd != "":
 		_on_command(cmd)
 		get_viewport().set_input_as_handled()
+
+var _pending_slot := -1
+var _pending_slot_until := 0
+const PENDING_SLOT_MS := 1500
+
+## Exécute la touche de barre d'action `slot` (0 = attaque, 1… = sorts du héros actif). Renvoie faux si le jeu n'est pas encore prêt
+## (la touche doit alors être gardée en attente), vrai si elle a été exécutée ou n'a rien à faire.
+func _try_slot(slot: int) -> bool:
+	if gs.game_over:
+		return true
+	if RunLog.ranked() and not settled():
+		return false                        # partie classée : une commande n'est acceptée qu'au repos du jeu
+	if ctrl.in_combat():
+		if not ctrl.hero_ready():
+			return false                    # effet du coup précédent en cours, ou tour d'un autre : on attend son tour
+		if slot == 0:
+			ctrl.attack()
+			return true
+	elif slot == 0:
+		return true                         # hors combat, 1 n'attaque rien
+	elif ctrl.is_busy():
+		return false
+	var c := gs.char_by_id(gs.active_char_id)
+	var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
+	if slot - 1 < known.size():
+		ctrl.cast(str(known[slot - 1]))
+	return true
+
+## Touche « inventaire » et bouton « Inventaire » de la besace : volet d'inventaire du personnage actif (en combat : sa fiche).
+func _toggle_inventory() -> void:
+	if not get_tree().get_nodes_in_group("modal").is_empty() or gs.game_over:
+		return
+	var who := gs.active_char_id
+	if ctrl.in_combat():
+		inter.open_sheet(who)
+	else:
+		dock.toggle_for(who)
 
 ## Équivalent de isGamePaused() de l'original : volet d'inventaire déployé ou fenêtre bloquante ouverte
 ## (piège, fontaine, marchand, sauvegarde, évolution, fiche…). Plus rien n'avance pendant ce temps.
@@ -1022,8 +1057,10 @@ func snapshot() -> Dictionary:
 func _modals() -> Node:
 	return _modal_layer
 
+## Bouton « Retour à l'accueil » d'une fin de partie : l'accueil lui-même, sans rouvrir la fenêtre du mode en ligne.
 func _home() -> void:
 	_end_ranked_run()
+	Data.hub_return = false
 	Data.go_home()
 
 func _restart() -> void:
@@ -1177,8 +1214,8 @@ func _show_victory() -> void:
 	show_message(L.t("common.victoire"), 3.0)
 	await get_tree().create_timer(0.8).timeout
 	var maxed := gs.party.all(func(c): return int(c.level) >= Characters.MAX_LEVEL)
-	var weekly := str(gs.cfg.get("rankedKind", "")) == "weekly"       # défi de la semaine : ni village ni donjon plus difficile, retour au mode en ligne
-	var random_run := Data.play_origin == "random" and not maxed and not weekly
+	var challenge := RankedRun.is_challenge(gs.cfg)       # défi (semaine, jour) : ni village ni donjon plus difficile, retour à l'accueil seulement
+	var random_run := Data.play_origin == "random" and not maxed and not challenge
 	Dialogs.victory(_modals(), gs, _restart, _home,
 		_continue_next if random_run else Callable(), _enter_village if random_run else Callable())
 

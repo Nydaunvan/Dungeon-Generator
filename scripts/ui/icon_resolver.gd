@@ -81,6 +81,18 @@ static func texture(icon: String) -> Texture2D:
 	_cache[icon] = tex
 	return tex
 
+## Image d'un monstre telle qu'on la voit dans le donjon (même choix que les sprites 3D : vignette HD individuelle quand elle existe,
+## sinon planche / icône). `is_boss` : un boss n'utilise jamais la case « remake » de la planche.
+static func monster_texture(icon: String, is_boss: bool = false) -> Texture2D:
+	var id := icon.substr(6) if icon.begins_with("@icon:") else icon
+	var remake: Dictionary = Data.constants.get("REMAKE_MAP", {})
+	if NEW_MONSTER_IDS.has(id) or (remake.has(id) and not is_boss):
+		return texture(icon)
+	var hd := "res://assets/monsters/%s.webp" % id
+	if ResourceLoader.exists(hd):
+		return load(hd)
+	return texture(icon)
+
 ## Vignette d'un monstre de la planche : le fichier individuel agrandi ×2 (assets/monsters/mNN.webp, comme dans la vue 3D) s'il existe, sinon la case de la planche.
 static func _monster_tex(index: int) -> Texture2D:
 	var path := "res://assets/monsters/m%02d.webp" % index

@@ -157,14 +157,22 @@ static func show_for(card: Control, gs: GameState, c: Dictionary) -> void:
 	var effs: Array = Statuses.active(c) if int(c.hp) > 0 else []
 	if not effs.is_empty():
 		b.add_child(_rule())
-		var fl := HFlowContainer.new()
-		fl.add_theme_constant_override("h_separation", 6)
-		fl.add_theme_constant_override("v_separation", 4)
-		fl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		for e in effs:
+			# pastille du statut (icône, nom, tours restants) puis, dessous, le détail chiffré de ses effets
 			var col := Color(str(PartyHud.STATUS_COLORS.get(str(e.type), "ffd88a")))
-			fl.add_child(_chip("%s %s · %s" % [Statuses.def(str(e.type)).get("icon", ""), L.c(str(Statuses.def(str(e.type)).get("label", e.type))), L.fa(L.t("ui.party_tip.tours"), int(e.remaining))], col))
-		b.add_child(fl)
+			var one := VBoxContainer.new()
+			one.add_theme_constant_override("separation", 2)
+			one.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var chip_row := HBoxContainer.new()
+			chip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			chip_row.add_child(_chip("%s %s · %s" % [Statuses.icon_of(e), L.c(Statuses.label_of(e)), L.fa(L.t("ui.party_tip.tours"), int(e.remaining))], col))
+			one.add_child(chip_row)
+			for line in Statuses.effect_lines(e):
+				var ll := _lbl("• " + str(line), 12, DIM)
+				ll.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				ll.custom_minimum_size = Vector2(262, 0)
+				one.add_child(ll)
+			b.add_child(one)
 	# --- équipement
 	var eq_rows: Array = []
 	for slot in Characters.SLOTS:

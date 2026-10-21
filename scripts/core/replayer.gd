@@ -138,12 +138,84 @@ static func step(tree: SceneTree, m: Node, e: Array, applied: int) -> String:
 			return "jeu_jamais_au_repos@%d(%s)" % [applied, cmd]
 	if wm.get_ref() == null:
 		return "scene_perdue"
+	var shown := false
+	if _on_screen():
+		shown = await _show_before(tree, m, e)
+		if wm.get_ref() == null:
+			return "scene_perdue"
 	GameClock.set_ms(ms)
 	var why := apply(m, e)
 	if why != "":
 		return why
+	if shown:
+		await _show_after(tree, m, e)
 	await tree.process_frame
 	return ""
+
+# ------------------------------------------------------------------ rejeu à l'écran (ReplayLive)
+# Le vérificateur (sans affichage) ne passe jamais ici : `_on_screen()` n'est vrai que pendant un rejeu regardé par une personne.
+# Rien de ce qui suit ne modifie la partie : on ne fait que MONTRER ce que le joueur faisait (volet d'inventaire ouvert sur le bon
+# personnage, objet ou emplacement mis en évidence, fenêtres de décision laissées visibles un instant).
+
+const DOCK_CMDS := ["eq", "un", "drop", "sort", "drink", "forge"]     ## commandes montrées dans le volet d'inventaire
+const KEEP_DOCK_CMDS := ["sel"]                                        ## n'interrompent pas l'inventaire ouvert
+const BEAT_BEFORE := 0.55                                              ## secondes (à vitesse ×1) pour voir la sélection avant l'action
+const BEAT_AFTER := 0.45                                               ## … pour voir le résultat
+const BEAT_FLOW := 0.7                                                 ## … pour voir une fenêtre de décision avant la réponse
+
+static func _on_screen() -> bool:
+	return ReplayLive.active != null and is_instance_valid(ReplayLive.active)
+
+## Pause de `secs` secondes de lecture (divisée par la vitesse), sauf pendant une avance rapide.
+static func _beat(tree: SceneTree, secs: float) -> void:
+	var rl := ReplayLive.active
+	if rl == null or not is_instance_valid(rl) or rl.is_seeking():
+		return
+	await tree.create_timer(secs / maxf(rl.speed, 1.0), true, false, true).timeout
+
+static func _dock_of(m: Node) -> EquipDock:
+	var d: Variant = m.get("dock")
+	return d as EquipDock if d is EquipDock else null
+
+## Avant l'action : ouvre l'inventaire sur le bon personnage (objet / emplacement choisi en évidence), le ferme quand le joueur est
+## passé à autre chose, laisse voir les fenêtres de décision. Renvoie vrai si l'inventaire a été montré pour cette action.
+static func _show_before(tree: SceneTree, m: Node, e: Array) -> bool:
+	var cmd := str(e[1])
+	var dock := _dock_of(m)
+	if dock != null and dock.is_open and not DOCK_CMDS.has(cmd) and not KEEP_DOCK_CMDS.has(cmd):
+		dock.close()                       # le joueur a refermé l'inventaire : il ne bouge plus tant qu'il est ouvert
+	if cmd == "ui":
+		await _beat(tree, BEAT_FLOW)
+		return false
+	if dock == null or not DOCK_CMDS.has(cmd) or m.ctrl.in_combat():
+		return false
+	var gs: GameState = m.gs
+	var who := gs.active_char_id
+	match cmd:
+		"eq":
+			dock.replay_show(str(e[2]), int(_norm(e[3])))
+		"un":
+			dock.replay_show(str(e[2]), -1, str(e[3]))
+		"drop":
+			dock.replay_show(who, int(_norm(e[2])))
+		"sort":
+			dock.replay_show(who, -1, "", str(e[2]))
+		"drink":
+			dock.replay_show(str(e[2]), int(_norm(e[3])))
+		"forge":
+			if str(e[2]) == "":
+				dock.replay_show(who, int(_norm(e[3])))
+			else:
+				dock.replay_show(str(e[2]), -1, str(e[3]))
+	await _beat(tree, BEAT_BEFORE)
+	return true
+
+## Après l'action : le volet est redessiné (le résultat reste visible un instant).
+static func _show_after(tree: SceneTree, m: Node, e: Array) -> void:
+	var dock := _dock_of(m)
+	if dock != null:
+		dock.replay_refresh(str(e[3]) if str(e[1]) == "sort" else "")
+	await _beat(tree, BEAT_AFTER)
 
 ## Rejoue `log` sur une nouvelle partie. Options : time_scale (accélération, 1 = temps réel).
 ## Résultat : {ok, reason, applied, clock_ms, fingerprint, summary}

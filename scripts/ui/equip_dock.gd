@@ -110,6 +110,11 @@ func open_for(id: String, select_item: Dictionary = {}) -> void:
 		tab = Inventory.tab_of(select_item)
 		sel = {"src": "bag", "key": _key_of(select_item)}
 	Crumbs.mark("inventaire ouvert %s" % id)
+	_slide_in()
+	ctrl.changed.emit()
+
+## Rend le volet visible et le fait glisser en place (commun à l'ouverture normale et à celle du rejeu).
+func _slide_in() -> void:
 	var was_open := is_open
 	is_open = true
 	visible = true
@@ -122,6 +127,35 @@ func open_for(id: String, select_item: Dictionary = {}) -> void:
 		_tween.kill()
 	_tween = create_tween()
 	_tween.tween_property(_panel, "position", r.position, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+## Rejeu : ouvre le volet sur ce personnage pour MONTRER une action d'inventaire. Ne touche pas à la partie (pas de changement de
+## personnage actif, rien n'est journalisé). `bag_idx` >= 0 : objet de la besace mis en évidence ; `slot` : emplacement équipé
+## mis en évidence ; `on_tab` : onglet à afficher (tri).
+func replay_show(id: String, bag_idx: int = -1, slot: String = "", on_tab: String = "") -> void:
+	if gs.char_by_id(id).is_empty() or ctrl.in_combat():
+		return
+	char_id = id
+	sel = {}
+	if on_tab != "" and ["items", "potions", "keys"].has(on_tab):
+		tab = on_tab
+	if bag_idx >= 0 and bag_idx < gs.inventory.size():
+		var it: Dictionary = gs.inventory[bag_idx]
+		tab = Inventory.tab_of(it)
+		sel = {"src": "bag", "key": _key_of(it)}
+	elif slot != "":
+		sel = {"src": "slot", "slot": slot}
+	_slide_in()
+
+## Rejeu : redessine le volet après une action appliquée (la sélection est levée, comme après une action du joueur).
+func replay_refresh(sorted_mode: String = "") -> void:
+	if not is_open:
+		return
+	if sorted_mode != "":
+		var i := Inventory.SORT_MODES.find(sorted_mode)
+		if i >= 0:
+			sort_mode = i
+	sel = {}
+	bag_changed.emit()
 	ctrl.changed.emit()
 
 func close() -> void:

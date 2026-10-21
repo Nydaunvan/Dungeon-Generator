@@ -89,5 +89,8 @@ static func open(host: Node, def: Dictionary, st: Dictionary) -> Modal:
 		badges.append("%s %s (%d)" % [Statuses.icon_of(e), Statuses.label_of(e), int(e.remaining)])
 	if not badges.is_empty():
 		m.add_text("  ".join(badges), Color("ffd88a"), 14)
+		for e in Statuses.active(st):                    # détail chiffré des effets de chaque statut
+			for line in Statuses.effect_lines(e):
+				m.add_text("   %s %s : %s" % [Statuses.icon_of(e), L.c(Statuses.label_of(e)), line], UiTheme.DIM, 12)
 	m.set_buttons([{"text": L.t("common.fermer"), "cb": func(): m.close()}])
 	return m

@@ -72,6 +72,41 @@ static func resist_reduction_pct(holder: Dictionary) -> int:
 			return p
 	return 0
 
+## Effets DÉTAILLÉS d'un statut actif `e` ({type, remaining, power}), une phrase courte par effet, chiffrée : affichés dans la fiche
+## de survol d'un personnage, les détails de caractéristiques de l'inventaire et la fiche du monstre.
+static func effect_lines(e: Dictionary) -> Array:
+	var sd := def(str(e.get("type", "")))
+	var lines: Array = []
+	if sd.is_empty():
+		return lines
+	var turns := int(e.get("remaining", 0))
+	if bool(sd.get("dot", false)):
+		var power := maxi(1, int(e.get("power", 3)))
+		lines.append(L.fa(L.t("ui.status.fx_dot"), [power, power * turns]))
+	if bool(sd.get("heals", false)):
+		lines.append(L.t("ui.status.fx_heals"))
+	if bool(sd.get("disables", false)):
+		lines.append(L.t("ui.status.fx_disables"))
+	var sp := int(sd.get("speedBonus", 0))
+	if sp != 0:
+		lines.append(L.fa(L.t("ui.status.fx_speed"), ("+%d" % sp) if sp > 0 else str(sp)))
+	if int(sd.get("dmgReductionPct", 0)) > 0:
+		lines.append(L.fa(L.t("ui.status.fx_dmg"), int(sd.dmgReductionPct)))
+	if int(sd.get("resistReductionPct", 0)) > 0:
+		lines.append(L.fa(L.t("ui.status.fx_resist"), int(sd.resistReductionPct)))
+	if int(sd.get("statusDurationCutPct", 0)) > 0:
+		lines.append(L.fa(L.t("ui.status.fx_cut"), int(sd.statusDurationCutPct)))
+	if int(sd.get("bonusDmgFlat", 0)) > 0:
+		lines.append(L.fa(L.t("ui.status.fx_flat"), int(sd.bonusDmgFlat)))
+	if turns > 0:
+		lines.append(L.fa(L.t("ui.status.fx_left"), turns))
+	return lines
+
+## Statut « mauvais » pour celui qui le porte (dégâts sur la durée, incapacité, ralentissement, affaiblissement).
+static func is_harmful(e: Dictionary) -> bool:
+	var sd := def(str(e.get("type", "")))
+	return bool(sd.get("dot", false)) or bool(sd.get("disables", false)) or int(sd.get("speedBonus", 0)) < 0 or int(sd.get("dmgReductionPct", 0)) > 0
+
 ## Libellé de la pastille de portrait (gel, brûlure, poison) ou "".
 static func badge_type(c: Dictionary) -> String:
 	for t in ["freeze", "burn", "poison"]:

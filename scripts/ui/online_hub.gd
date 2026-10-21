@@ -102,6 +102,11 @@ func _build() -> void:
 		b.tooltip_text = L.t(t[1])
 		tabs.add_child(b)
 		_tab_buttons[id] = b
+		if id == "friends":
+			_friend_dot = NotifDot.attach(b, func(): return _friend_requests, true)
+			var blink := _friend_dot.create_tween().set_loops()
+			blink.tween_property(_friend_dot, "modulate:a", 0.15, 0.55)
+			blink.tween_property(_friend_dot, "modulate:a", 1.0, 0.55)
 	_body = HubKit.vbox(8)
 	c.add_child(_body)
 	_modal.set_buttons([{"text": L.t("ui.hub.back"), "cb": func(): _modal.close()}])
@@ -146,12 +151,15 @@ func _show_friends() -> void:
 ## Texte du bouton de l'onglet Amis : « 👥 Amis (2) » quand des demandes attendent.
 func _set_friend_badge(n: int) -> void:
 	_friend_requests = n
+	if _friend_dot != null and is_instance_valid(_friend_dot):
+		_friend_dot._update()
 	if _tab_buttons.has("friends"):
 		var b: Button = _tab_buttons["friends"]
 		var base := L.t("ui.hub.tab_friends")
 		b.text = ("👥 %s" % base if not _narrow() else "👥") + (" (%d)" % n if n > 0 else "")
 
 var _friend_requests := 0
+var _friend_dot: NotifDot = null   ## point rouge clignotant sur l'onglet Amis tant que des demandes attendent
 
 func _load_friend_badge() -> void:
 	if not _signed():

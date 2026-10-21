@@ -172,18 +172,48 @@ static func _bestiary(p: Control, gs: GameState) -> void:
 	entries.sort_custom(func(a, b): return int(a.killCount) > int(b.killCount))
 	_title(p, "📖 Bestiaire — %d %s" % [entries.size(), L.t("ui.stats_modal.especes_decouvertes") if entries.size() > 1 else L.t("ui.stats_modal.espece_decouverte")])
 	for e in entries:
-		var head := HBoxContainer.new()
-		head.add_theme_constant_override("separation", 8)
-		head.add_child(IconPicker.icon_control(str(e.get("icon", "")), 40.0))
-		head.add_child(AdminUtil.label(L.fa(L.t("ui.stats_modal.vaincu"), [e.name, "  [BOSS]" if e.get("isBoss", false) else "", int(e.killCount)]), 15, UiTheme.GOLD if e.get("isBoss", false) else UiTheme.PARCH))
-		p.add_child(head)
+		var boss: bool = bool(e.get("isBoss", false))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row.add_child(_monster_frame(e, boss))
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 4)
+		row.add_child(col)
+		p.add_child(row)
+		col.add_child(AdminUtil.label(L.fa(L.t("ui.stats_modal.vaincu"), [e.name, "  [BOSS]" if boss else "", int(e.killCount)]), 15, UiTheme.GOLD if boss else UiTheme.PARCH))
 		var cells: Array = [["💪", L.t("common.for"), int(e.force)], ["🎯", "Dex", int(e.dex)], ["🛡️", "Con", int(e.con)], ["❤️", L.t("common.pv"), int(round(float(e.maxHp)))],
 			["⚔️", L.t("common.degats"), "%d – %d" % [int(e.atkMin), int(e.atkMax)]], ["🛡️", L.t("ui.stats_modal.res_phys"), "%d%%" % int(e.resistPhys)], ["✨", L.t("ui.stats_modal.res_mag"), "%d%%" % int(e.resistMagic)],
 			["⚡", L.t("common.vitesse"), int(e.get("speed", 8))], ["🚶", "Zone", int(e.patrolRadius)], ["⭐", "XP", int(e.xpReward)], ["💰", L.t("common.or"), int(e.goldReward)]]
 		if int(e.get("enrageThreshold", 0)) > 0:
 			cells.append(["😡", L.t("ui.stats_modal.seuil_rage"), "%d%%" % int(e.enrageThreshold)])
-		_grid(p, cells)
+		_grid(col, cells)
 		if str(e.get("abilitySpellId", "")) != "":
 			var sp := Data.spell_by_id(str(e.abilitySpellId))
 			if not sp.is_empty():
-				p.add_child(AdminUtil.label(L.fa(L.t("ui.stats_modal.capacite"), [sp.get("icon", ""), sp.get("name", ""), int(e.abilityChance)]), 13, UiTheme.DIM))
+				col.add_child(AdminUtil.label(L.fa(L.t("ui.stats_modal.capacite"), [sp.get("icon", ""), sp.get("name", ""), int(e.abilityChance)]), 13, UiTheme.DIM))
+
+## Mini image du monstre (celle du donjon) dans un cadre de bronze, or pour un boss.
+static func _monster_frame(e: Dictionary, boss: bool) -> Control:
+	var frame := PanelContainer.new()
+	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("120d09")
+	sb.border_color = Color("e8b45c") if boss else Color("5a4630")
+	sb.set_border_width_all(2 if boss else 1)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(4)
+	frame.add_theme_stylebox_override("panel", sb)
+	var tex: Texture2D = IconResolver.monster_texture(str(e.get("icon", "")), boss)
+	if tex != null:
+		var t := TextureRect.new()
+		t.texture = tex
+		t.custom_minimum_size = Vector2(88, 88)
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.add_child(t)
+	else:
+		frame.add_child(IconPicker.icon_control(str(e.get("icon", "")), 88.0))
+	return frame

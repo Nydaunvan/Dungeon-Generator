@@ -91,6 +91,11 @@ static func my_streak() -> Dictionary:
 static func hall() -> Dictionary:
 	return await Cloud.request(HTTPClient.METHOD_GET, "/rest/v1/hall_legendes?order=closed_at.desc&limit=60&select=kind,period,score,seconds,pseudo,rule_id,rule_icon,rule_fr,rule_en,frame,color")
 
+## Vrai pour un DÉFI du mode en ligne (Défi de la semaine, Défi du jour, Hardcore du mois) : un défi n'est pas une partie complète,
+## donc ni village ni donjon plus puissant à la fin, ni « repartir de zéro » ; seul le retour à l'accueil est proposé.
+static func is_challenge(cfg: Dictionary) -> bool:
+	return ["weekly", "daily", "hardcore_month"].has(str(cfg.get("rankedKind", "")))
+
 ## Nom du mode d'un donjon aléatoire d'après sa configuration : partie libre, partie classée, défi de la semaine ou hardcore du mois.
 static func mode_label(cfg: Dictionary) -> String:
 	var kind := str(cfg.get("rankedKind", ""))

@@ -4,6 +4,7 @@ extends VBoxContainer
 
 signal item_pressed(index: int)
 signal item_quick(index: int)      # clic droit : boire la potion / équiper l'objet (personnage actif)
+signal inventory_pressed           # bouton « Inventaire » : ouvre l'inventaire du personnage actif
 
 const CAPACITY := Inventory.MAX_PER_TAB
 const COLS := 4
@@ -41,6 +42,18 @@ func setup(state: GameState) -> void:
 	_total.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
 	_total.add_theme_color_override("font_color", UiTheme.DIM)
 	head.add_child(_total)
+	var inv_btn := Button.new()
+	inv_btn.text = L.t("ui.bag.open_inventory")
+	inv_btn.tooltip_text = L.t("ui.bag.open_inventory_tip")
+	inv_btn.focus_mode = Control.FOCUS_NONE
+	inv_btn.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	inv_btn.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.78)))
+	inv_btn.add_theme_color_override("font_color", Color("e2d2b0"))
+	var ist := IronBox.button_styles()
+	for k in ist:
+		inv_btn.add_theme_stylebox_override(k, ist[k])
+	inv_btn.pressed.connect(func(): inventory_pressed.emit())
+	head.add_child(inv_btn)
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))

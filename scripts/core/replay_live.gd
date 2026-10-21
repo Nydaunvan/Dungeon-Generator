@@ -244,6 +244,10 @@ func seek(ms: int) -> void:
 	else:
 		_play(ms)                                  # en arrière (ou après la fin) : on relance la partie
 
+## Vrai pendant une avance rapide (recherche d'un instant) : on n'y montre pas les détails des actions.
+func is_seeking() -> bool:
+	return _seek_target >= 0
+
 func toggle_pause() -> void:
 	if _ended or _bad:
 		_seek_resume = true

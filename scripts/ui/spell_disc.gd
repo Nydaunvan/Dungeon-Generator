@@ -9,6 +9,17 @@ signal tip_hide
 
 const LONG_PRESS := 0.45
 
+## Rendu « grisé » (sort indisponible faute d'endurance) : toutes les couleurs du disque passent en niveaux de gris.
+static var _gray_mat: ShaderMaterial = null
+
+static func _gray_material() -> ShaderMaterial:
+	if _gray_mat == null:
+		var sh := Shader.new()
+		sh.code = "shader_type canvas_item;\nvoid fragment() {\n\tfloat g = dot(COLOR.rgb, vec3(0.299, 0.587, 0.114));\n\tCOLOR.rgb = vec3(g * 0.85);\n}\n"
+		_gray_mat = ShaderMaterial.new()
+		_gray_mat.shader = sh
+	return _gray_mat
+
 var tone: String = "spell"      # "spell", "attack", "empty"
 var glyph: String = ""
 var tex: Texture2D = null
@@ -16,6 +27,7 @@ var cd_text: String = ""
 var dim: float = 1.0
 var highlight: bool = false
 var disabled: bool = false
+var gray: bool = false
 var _hover: bool = false
 var _down: bool = false
 var _long: bool = false
@@ -44,9 +56,11 @@ func _init() -> void:
 		tip_hide.emit())
 	resized.connect(func(): pivot_offset = size * 0.5)
 
-func set_state(g: String, t: Texture2D, cd: String, dimmed: float, hl: bool = false) -> void:
-	if g == glyph and t == tex and cd == cd_text and is_equal_approx(dimmed, dim) and hl == highlight:
+func set_state(g: String, t: Texture2D, cd: String, dimmed: float, hl: bool = false, grayed: bool = false) -> void:
+	if g == glyph and t == tex and cd == cd_text and is_equal_approx(dimmed, dim) and hl == highlight and grayed == gray:
 		return
+	gray = grayed
+	material = _gray_material() if grayed else null
 	glyph = g
 	tex = t
 	cd_text = cd
