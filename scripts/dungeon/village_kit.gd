@@ -476,6 +476,175 @@ static func forest(view: Node3D, grid: DungeonGrid) -> void:
 		mmi.visibility_range_end = 120.0
 		view.add_child(mmi)
 
+# ------------------------------------------------------------------ sous-bois : herbes, fleurs, buissons
+
+## Touffe d'herbe : quelques brins courbes croisés, sombres au pied et clairs à la pointe (couleurs de sommet).
+static func tuft_mesh() -> ArrayMesh:
+	if _cache.has("tuft"):
+		return _cache["tuft"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 777
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 9:
+		var ang := rng.randf() * TAU
+		var dirv := Vector3(cos(ang), 0, sin(ang))
+		var side := dirv.cross(Vector3.UP)
+		var base := dirv * rng.randf_range(0.02, 0.16)
+		var h := rng.randf_range(0.30, 0.62)
+		var lean := dirv * rng.randf_range(0.04, 0.2)
+		var w := rng.randf_range(0.022, 0.04)
+		var tint := rng.randf_range(0.85, 1.15)
+		var c0 := Color(0.16, 0.26, 0.08) * tint
+		var c1 := Color(0.36, 0.52, 0.17) * tint
+		var c2 := Color(0.62, 0.74, 0.30) * tint
+		var p0 := base
+		var p1 := base + lean * 0.35 + Vector3(0, h * 0.55, 0)
+		var p2 := base + lean + Vector3(0, h, 0)
+		var n := Vector3(dirv.x * 0.35, 0.9, dirv.z * 0.35).normalized()
+		var verts := [[p0 - side * w, c0], [p0 + side * w, c0], [p1 - side * w * 0.6, c1], [p1 + side * w * 0.6, c1], [p2, c2]]
+		for tri in [[0, 1, 3], [0, 3, 2], [2, 3, 4]]:
+			for idx in tri:
+				st.set_color(verts[idx][1])
+				st.set_normal(n)
+				st.add_vertex(verts[idx][0])
+	var mesh := st.commit()
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = Color(1.05, 1.1, 0.95)
+	m.roughness = 0.85
+	m.metallic_specular = 0.15
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.backlight_enabled = true
+	m.backlight = Color(0.25, 0.35, 0.1)
+	mesh.surface_set_material(0, m)
+	_cache["tuft"] = mesh
+	return mesh
+
+## Fleur sauvage : tige verte, corolle de six pétales de la couleur donnée, cœur jaune.
+static func flower_mesh(petal: Color, key: String) -> ArrayMesh:
+	if _cache.has(key):
+		return _cache[key]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var top := Vector3(0, 0.34, 0)
+	var stem_c := Color(0.2, 0.36, 0.1)
+	for sgn in [-1.0, 1.0]:
+		for tri in [[Vector3(-0.012 * sgn, 0, 0), stem_c], [Vector3(0.012 * sgn, 0, 0), stem_c], [top, stem_c]]:
+			st.set_color(tri[1])
+			st.set_normal(Vector3(0, 0, 1))
+			st.add_vertex(tri[0])
+	for k in 6:
+		var a0 := TAU * k / 6.0
+		var a1 := TAU * (k + 1) / 6.0
+		var r := 0.085
+		for v in [top + Vector3(0, 0.025, 0), top + Vector3(cos(a0), -0.18, sin(a0)) * r, top + Vector3(cos(a1), -0.18, sin(a1)) * r]:
+			st.set_color(petal)
+			st.set_normal(Vector3(0, 1, 0))
+			st.add_vertex(v)
+	var core := Color(0.95, 0.78, 0.15)
+	for k in 4:
+		var a0 := TAU * k / 4.0
+		var a1 := TAU * (k + 1) / 4.0
+		for v in [top + Vector3(0, 0.045, 0), top + Vector3(cos(a0), 0.0, sin(a0)) * 0.03, top + Vector3(cos(a1), 0.0, sin(a1)) * 0.03]:
+			st.set_color(core)
+			st.set_normal(Vector3(0, 1, 0))
+			st.add_vertex(v)
+	var mesh := st.commit()
+	var m := StandardMaterial3D.new()
+	m.vertex_color_use_as_albedo = true
+	m.roughness = 0.7
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.surface_set_material(0, m)
+	_cache[key] = mesh
+	return mesh
+
+## Buisson : un massif bas de cartes de feuilles.
+static func bush_mesh() -> ArrayMesh:
+	if _cache.has("bush"):
+		return _cache["bush"]
+	var lm := leaf_mat()
+	if lm == null:
+		return null
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31337
+	var fs := SurfaceTool.new()
+	fs.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for blob in [[Vector3(0, 0.42, 0), 0.5], [Vector3(0.42, 0.32, 0.12), 0.36], [Vector3(-0.38, 0.3, -0.14), 0.4], [Vector3(0.05, 0.3, 0.4), 0.3]]:
+		_foliage(fs, blob[0], blob[1], 16, 0.24, rng)
+	var mesh := fs.commit()
+	mesh.surface_set_material(0, lm)
+	_cache["bush"] = mesh
+	return mesh
+
+static func _scatter(view: Node3D, mesh: Mesh, name_prefix: String, items: Dictionary, range_end: float, shadows: bool = false) -> void:
+	if mesh == null:
+		return
+	for key in items:
+		var list: Array = items[key]
+		if list.is_empty():
+			continue
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i, list[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.name = "%s_%d_%d" % [name_prefix, key.x, key.y]
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mmi.visibility_range_end = range_end
+		view.add_child(mmi)
+
+## Herbes hautes, fleurs et buissons semés sur les cases d'herbe (ni rue, ni place, ni maison, ni arbre). Aléa local : sans effet sur la partie.
+static func undergrowth(view: Node3D, level: Dictionary) -> void:
+	var rows: Array = level.get("mapRows", [])
+	if rows.is_empty():
+		return
+	var skip := {}
+	for k in ["pathCells", "plazaCells", "treeCells"]:
+		for key in level.get(k, []):
+			skip[str(key)] = true
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5150
+	var tufts := {}
+	var bushes := {}
+	var flowers := [{}, {}, {}, {}]
+	var h := rows.size()
+	for y in range(1, h - 1):
+		var row := str(rows[y])
+		for x in range(1, row.length() - 1):
+			if row[x] == "#" or skip.has("%d,%d" % [x, y]):
+				continue
+			var ck := Vector2i(x / 6, y / 6)
+			var edge := x <= 2 or x >= row.length() - 3          # le long des barrières, la végétation est plus fournie
+			var n_t := rng.randi_range(8, 14) if edge else rng.randi_range(4, 9)
+			for i in n_t:
+				var p := Vector3((x + rng.randf() - 0.5) * CELL, 0.0, (y + rng.randf() - 0.5) * CELL)
+				var sc := rng.randf_range(0.9, 1.7)
+				if not tufts.has(ck):
+					tufts[ck] = []
+				tufts[ck].append(Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU).scaled(Vector3(sc, sc * rng.randf_range(0.85, 1.3), sc)), p))
+			if rng.randf() < 0.32:
+				var kind := rng.randi() % flowers.size()
+				for i in rng.randi_range(2, 6):
+					var p2 := Vector3((x + rng.randf() - 0.5) * CELL, 0.0, (y + rng.randf() - 0.5) * CELL)
+					if not flowers[kind].has(ck):
+						flowers[kind][ck] = []
+					flowers[kind][ck].append(Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.8, 1.35)), p2))
+			if (edge and rng.randf() < 0.30) or rng.randf() < 0.05:
+				var p3 := Vector3((x + rng.randf() - 0.5) * CELL * 0.9, 0.0, (y + rng.randf() - 0.5) * CELL * 0.9)
+				var sc3 := rng.randf_range(1.0, 1.7)
+				if not bushes.has(ck):
+					bushes[ck] = []
+				bushes[ck].append(Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc3), p3))
+	_scatter(view, tuft_mesh(), "Tufts", tufts, 45.0)
+	_scatter(view, bush_mesh(), "Bushes", bushes, 90.0, true)
+	var petals := [Color(0.97, 0.97, 0.93), Color(0.98, 0.82, 0.18), Color(0.55, 0.38, 0.85), Color(0.9, 0.25, 0.28)]
+	for k in flowers.size():
+		_scatter(view, flower_mesh(petals[k], "flower_%d" % k), "Flowers%d" % k, flowers[k], 38.0)
+
 static func decorate(view: Node3D, level: Dictionary, grid: DungeonGrid) -> void:
 	if mat("brique") == null or grid == null:
 		return
@@ -483,3 +652,4 @@ static func decorate(view: Node3D, level: Dictionary, grid: DungeonGrid) -> void
 	houses(view, level)
 	fences(view, grid)
 	forest(view, grid)
+	undergrowth(view, level)
