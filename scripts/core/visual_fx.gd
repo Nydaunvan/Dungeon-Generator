@@ -36,8 +36,13 @@ static func apply_environment(env: Environment, theme: String, outdoor: bool) ->
 	var g: Dictionary = NEUTRAL
 	if Settings.opt("fx_grade") and not outdoor:
 		g = GRADES.get(theme, GRADES["stone"])
-	env.adjustment_enabled = g != NEUTRAL
-	if env.adjustment_enabled:
+	env.adjustment_enabled = g != NEUTRAL or outdoor
+	if outdoor:      # village : couleurs plus franches et contraste un peu plus marqué, sans table de couleurs
+		env.adjustment_saturation = 1.22
+		env.adjustment_contrast = 1.1
+		env.adjustment_brightness = 1.0
+		env.adjustment_color_correction = null
+	elif env.adjustment_enabled:
 		env.adjustment_saturation = float(g.sat)
 		env.adjustment_contrast = float(g.contrast)
 		env.adjustment_brightness = float(g.bright)
@@ -51,8 +56,14 @@ static func apply_environment(env: Environment, theme: String, outdoor: bool) ->
 		env.glow_hdr_threshold = 0.8
 		env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	var fwd := is_forward()
-	env.ssao_enabled = fwd and bool(Settings.opt("fx_ssao")) and not outdoor
-	if env.ssao_enabled:
+	env.ssao_enabled = fwd and bool(Settings.opt("fx_ssao"))
+	if env.ssao_enabled and outdoor:
+		env.ssao_radius = 2.2
+		env.ssao_intensity = 1.6
+		env.ssao_power = 1.5
+		env.ssao_detail = 0.5
+		env.ssao_light_affect = 0.15
+	elif env.ssao_enabled:
 		env.ssao_radius = 1.6
 		env.ssao_intensity = 2.2
 		env.ssao_power = 1.6

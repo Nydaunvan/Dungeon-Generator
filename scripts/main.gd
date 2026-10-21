@@ -483,11 +483,12 @@ func _on_stage_input(ev: InputEvent) -> void:
 
 ## Ciel, brouillard clair et pas de torche dans le village ; ténèbres dans les donjons.
 func _apply_outdoor(outdoor: bool) -> void:
-	env.background_color = Outdoor.SKY if outdoor else Color("030201")
-	env.fog_light_color = Outdoor.SKY if outdoor else Color("030201")
-	env.fog_density = 0.012 if outdoor else 0.035
-	env.ambient_light_color = Color("d8e4f0") if outdoor else Color("40342a")
-	env.ambient_light_energy = 1.0 if outdoor else 1.1
+	env.background_color = Color("030201")
+	env.fog_light_color = Color("030201")
+	env.fog_density = 0.035
+	env.ambient_light_color = Color("40342a")
+	env.ambient_light_energy = 1.1
+	Outdoor.apply_environment(env, outdoor)      # village : ciel procédural, ambiance du ciel, brume d'horizon (écrase les réglages ci-dessus)
 	rig.torch.visible = not outdoor
 	rig.camera.far = 300.0 if outdoor else 100.0      # le village est long : on voit jusqu'à la porte du fond
 

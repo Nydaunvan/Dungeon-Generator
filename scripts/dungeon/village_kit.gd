@@ -348,41 +348,88 @@ static func ground(view: Node3D, grid: DungeonGrid) -> void:
 	mi.name = "FarGround"
 	view.add_child(mi)
 
-## Arbre léger de la lisière (peu de triangles : on en pose des centaines).
-static func forest_tree() -> ArrayMesh:
-	if _cache.has("forest_tree"):
-		return _cache["forest_tree"]
+## Matériau des feuilles (cartes découpées) : teinte plus profonde que l'image d'origine, variation de teinte par sommet.
+static func leaf_mat() -> StandardMaterial3D:
+	if _cache.has("leaf_mat"):
+		return _cache["leaf_mat"]
+	var base := mat("feuille", Vector2.ONE, true)
+	if base == null:
+		return null
+	var m := base.duplicate() as StandardMaterial3D
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = Color(0.62, 0.86, 0.45)
+	m.roughness = 0.75
+	m.metallic_specular = 0.2
+	m.backlight_enabled = true                 # la lumière traverse un peu les feuilles
+	m.backlight = Color(0.35, 0.5, 0.2)
+	_cache["leaf_mat"] = m
+	return m
+
+## Masse de feuillage : `cards` petites cartes de feuille (une des six feuilles de l'image) orientées au hasard dans une sphère aplatie.
+## Les normales pointent hors du centre : l'ombrage est celui d'une boule, pas de cartes plates.
+static func _foliage(st: SurfaceTool, center: Vector3, radius: float, cards: int, size: float, rng: RandomNumberGenerator) -> void:
+	var cells := [Rect2(0.07, 0.03, 0.36, 0.33), Rect2(0.56, 0.04, 0.34, 0.33), Rect2(0.07, 0.37, 0.38, 0.31), Rect2(0.55, 0.36, 0.36, 0.3), Rect2(0.06, 0.68, 0.38, 0.29), Rect2(0.55, 0.68, 0.36, 0.29)]
+	for i in cards:
+		var dir := Vector3(rng.randf_range(-1, 1), rng.randf_range(-0.55, 1), rng.randf_range(-1, 1))
+		if dir.length() < 0.2:
+			continue
+		dir = dir.normalized()
+		var p := center + dir * radius * pow(rng.randf(), 0.45) * Vector3(1.0, 0.85, 1.0)
+		var nrm := (p - center).normalized()
+		var t := nrm.cross(Vector3.UP)
+		if t.length() < 0.05:
+			t = Vector3.RIGHT
+		t = t.normalized().rotated(nrm, rng.randf() * TAU)
+		var u := nrm.cross(t).normalized()
+		var sz := size * rng.randf_range(0.8, 1.25)
+		var cell: Rect2 = cells[rng.randi() % cells.size()]
+		var shade := rng.randf_range(0.72, 1.12) * clampf(0.78 + nrm.y * 0.3, 0.6, 1.1)
+		var hue := Color(shade * rng.randf_range(0.92, 1.05), shade, shade * rng.randf_range(0.8, 1.0))
+		var corners := [p - t * sz - u * sz, p + t * sz - u * sz, p + t * sz + u * sz, p - t * sz + u * sz]
+		var uvs := [Vector2(cell.position.x, cell.end.y), Vector2(cell.end.x, cell.end.y), Vector2(cell.end.x, cell.position.y), Vector2(cell.position.x, cell.position.y)]
+		for idx in [0, 2, 1, 0, 3, 2]:
+			st.set_color(hue)
+			st.set_normal(nrm)
+			st.set_uv(uvs[idx])
+			st.add_vertex(corners[idx])
+
+static func _tree_with(blobs: Array, cards_per_blob: int, size: float, trunk_seg: int, key: String) -> ArrayMesh:
+	if _cache.has(key):
+		return _cache[key]
 	var trunk_mat := mat("tronc", Vector2(1, 2))
-	var leaf_mat := mat("feuille", Vector2(5, 5), true)
-	if trunk_mat == null or leaf_mat == null:
+	var lm := leaf_mat()
+	if trunk_mat == null or lm == null:
 		return null
 	var mesh := ArrayMesh.new()
 	var tr := CylinderMesh.new()
 	tr.top_radius = 0.07
 	tr.bottom_radius = 0.15
 	tr.height = 1.9
-	tr.radial_segments = 6
-	tr.rings = 1
+	tr.radial_segments = trunk_seg
+	tr.rings = 2
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.append_from(tr, 0, Transform3D(Basis(), Vector3(0, 0.95, 0)))
 	st.generate_tangents()
 	st.commit(mesh)
 	mesh.surface_set_material(0, trunk_mat)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
 	var fs := SurfaceTool.new()
 	fs.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for blob in [[Vector3(0, 2.4, 0), 1.05], [Vector3(0.6, 2.0, 0.2), 0.75], [Vector3(-0.55, 2.1, -0.3), 0.78], [Vector3(0.05, 3.0, -0.1), 0.66]]:
-		var sp := SphereMesh.new()
-		sp.radius = blob[1]
-		sp.height = blob[1] * 1.7
-		sp.radial_segments = 8
-		sp.rings = 5
-		fs.append_from(sp, 0, Transform3D(Basis(), blob[0]))
-	fs.generate_tangents()
+	for blob in blobs:
+		_foliage(fs, blob[0], blob[1], cards_per_blob, size, rng)
 	fs.commit(mesh)
-	mesh.surface_set_material(1, leaf_mat)
-	_cache["forest_tree"] = mesh
+	mesh.surface_set_material(1, lm)
+	_cache[key] = mesh
 	return mesh
+
+static func tree_mesh() -> ArrayMesh:
+	return _tree_with([[Vector3(0, 2.3, 0), 1.15], [Vector3(0.6, 1.95, 0.25), 0.8], [Vector3(-0.6, 2.05, -0.3), 0.85], [Vector3(0.05, 2.95, -0.1), 0.75], [Vector3(-0.2, 1.7, 0.55), 0.6]], 70, 0.34, 10, "tree")
+
+## Arbre léger de la lisière (moins de cartes : on en pose des centaines).
+static func forest_tree() -> ArrayMesh:
+	return _tree_with([[Vector3(0, 2.4, 0), 1.2], [Vector3(0.6, 2.0, 0.2), 0.8], [Vector3(-0.55, 2.1, -0.3), 0.85], [Vector3(0.05, 3.0, -0.1), 0.7]], 26, 0.46, 6, "forest_tree")
 
 ## Lisière : arbres serrés autour de l'enceinte (et dans la bande de cases pleines), en blocs par tronçon de rue pour ne dessiner que les proches.
 static func forest(view: Node3D, grid: DungeonGrid) -> void:
@@ -431,42 +478,3 @@ static func decorate(view: Node3D, level: Dictionary, grid: DungeonGrid) -> void
 	houses(view, level)
 	fences(view, grid)
 	forest(view, grid)
-
-# ------------------------------------------------------------------ arbres
-
-static func tree_mesh() -> ArrayMesh:
-	if _cache.has("tree"):
-		return _cache["tree"]
-	var trunk_mat := mat("tronc", Vector2(1, 2))
-	var leaf_mat := mat("feuille", Vector2(2, 2))
-	if trunk_mat == null or leaf_mat == null:
-		return null
-	var mesh := ArrayMesh.new()
-	var tr := CylinderMesh.new()
-	tr.top_radius = 0.07
-	tr.bottom_radius = 0.14
-	tr.height = 1.7
-	tr.radial_segments = 10
-	tr.rings = 3
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	st.append_from(tr, 0, Transform3D(Basis(), Vector3(0, 0.85, 0)))
-	st.generate_tangents()
-	st.commit(mesh)
-	mesh.surface_set_material(0, trunk_mat)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 77
-	var fs := SurfaceTool.new()
-	fs.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for blob in [[Vector3(0, 2.2, 0), 0.95], [Vector3(0.55, 1.9, 0.2), 0.7], [Vector3(-0.5, 2.0, -0.3), 0.72], [Vector3(0.1, 2.75, -0.1), 0.62], [Vector3(-0.2, 1.75, 0.5), 0.55]]:
-		var sp := SphereMesh.new()
-		sp.radius = blob[1]
-		sp.height = blob[1] * 1.7
-		sp.radial_segments = 14
-		sp.rings = 8
-		fs.append_from(sp, 0, Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU), blob[0]))
-	fs.generate_tangents()
-	fs.commit(mesh)
-	mesh.surface_set_material(1, leaf_mat)
-	_cache["tree"] = mesh
-	return mesh

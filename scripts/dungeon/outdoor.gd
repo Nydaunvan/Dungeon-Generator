@@ -96,15 +96,59 @@ static func cloud_texture() -> Texture2D:
 	_cache["cloud"] = t
 	return t
 
-## Ajoute arbres et nuages à la vue d'un niveau extérieur.
+## Ciel et lumière du village : ciel procédural (dégradé, soleil, nuages), ambiance tirée du ciel, brume d'horizon légère, rendu « filmique ».
+## `on` = false remet l'environnement du donjon (fond uni, lumière ambiante unie, rendu linéaire).
+static func apply_environment(env: Environment, on: bool) -> void:
+	if not on:
+		env.background_mode = Environment.BG_COLOR
+		env.sky = null
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
+		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+		env.tonemap_exposure = 1.0
+		env.fog_sky_affect = 1.0
+		env.fog_aerial_perspective = 0.0
+		env.fog_sun_scatter = 0.0
+		return
+	if not _cache.has("sky"):
+		var fn := FastNoiseLite.new()
+		fn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		fn.frequency = 0.012
+		fn.fractal_octaves = 3
+		var img := fn.get_seamless_image(512, 512)
+		var sm := ShaderMaterial.new()
+		sm.shader = load("res://scripts/dungeon/village_sky.gdshader")
+		sm.set_shader_parameter("noise_tex", ImageTexture.create_from_image(img))
+		var sky := Sky.new()
+		sky.sky_material = sm
+		sky.radiance_size = Sky.RADIANCE_SIZE_128
+		sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
+		_cache["sky"] = sky
+	env.background_mode = Environment.BG_SKY
+	env.sky = _cache["sky"]
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_energy = 0.75
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.0
+	env.tonemap_white = 5.0
+	env.fog_light_color = Color(0.70, 0.80, 0.92)
+	env.fog_density = 0.0035
+	env.fog_sky_affect = 0.0
+	env.fog_aerial_perspective = 0.35
+	env.fog_sun_scatter = 0.25
+
+## Ajoute arbres et soleil à la vue d'un niveau extérieur.
 static func decorate(view: Node3D, level: Dictionary) -> void:
 	if view is LevelView and (view as LevelView).grid != null:
 		VillageKit.decorate(view, level, (view as LevelView).grid)
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-52, -35, 0)
-	sun.light_color = Color(1.0, 0.95, 0.85)
-	sun.light_energy = 0.9
+	sun.rotation_degrees = Vector3(-38, -32, 0)
+	sun.light_color = Color(1.0, 0.94, 0.82)
+	sun.light_energy = 1.9
+	sun.light_angular_distance = 0.6
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 70.0
 	sun.shadow_bias = 0.06
@@ -118,27 +162,5 @@ static func decorate(view: Node3D, level: Dictionary) -> void:
 		mi.rotation.y = float((int(p[0]) * 7 + int(p[1]) * 13) % 6)
 		mi.scale = Vector3.ONE * (1.41 + float((int(p[0]) * 31 + int(p[1]) * 17) % 10) / 10.0 * 0.56)
 		view.add_child(mi)
-	var clouds := Outdoor.new()
-	clouds.name = "Clouds"
-	var cx := float(level.get("startX", 0)) * LevelBuilder.CELL
-	var cz := float(level.get("startY", 0)) * LevelBuilder.CELL
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	for i in 10:
-		var s := Sprite3D.new()
-		s.texture = cloud_texture()
-		s.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		s.shaded = false
-		s.transparent = true
-		s.modulate = Color(1, 1, 1, 0.85)
-		s.pixel_size = (3.0 + rng.randf() * 2.5) / 128.0 * 1.6
-		s.position = Vector3(cx + (rng.randf() - 0.5) * LevelBuilder.CELL * 20.0, LevelBuilder.CELL * 3.2 + rng.randf() * LevelBuilder.CELL * 1.2, cz + (rng.randf() - 0.5) * LevelBuilder.CELL * maxf(20.0, float(level.get("mapRows", []).size()) * 1.1))
-		s.set_meta("drift", 0.15 + rng.randf() * 0.15)
-		clouds.add_child(s)
-	view.add_child(clouds)
 
-func _process(delta: float) -> void:
-	for s in get_children():
-		s.position.x += float(s.get_meta("drift", 0.2)) * delta
-		if s.position.x > 10.0 * LevelBuilder.CELL + 60.0:
-			s.position.x -= 120.0
+
