@@ -319,7 +319,7 @@ func add_npc(icon: String, x: int, y: int) -> void:
 		n.position.y -= float(NPC_FEET_GAP.get(_icon_id(icon), 0.0)) * float(n.get_meta("h"))
 		var sx := int(_level.get("streetX", 5))
 		var away := Vector3(1, 0, 0) if x > sx else (Vector3(-1, 0, 0) if x < sx else Vector3(0, 0, -1))
-		n.position += away * 1.3          # le PNJ se tient au fond de sa case : le groupe entre dans la case pour lui parler
+		n.position -= away * 1.4          # le PNJ se tient au bord de sa case, côté rue : le groupe s'arrête tout près (la case reste bloquante)
 	add_child(n)
 
 ## Marchand itinérant (sprite unique, déplaçable). `big` : grand format des PNJ du village.
@@ -367,7 +367,7 @@ func _make_village_stall(x: int, y: int, away: Vector2i) -> Node3D:
 	var sc := 0.62
 	st.scale = Vector3.ONE * sc
 	var dv := Vector3(away.x, 0, away.y)
-	st.position = Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL) + dv * 1.25      # contre le bord arrière de la case : on peut entrer dans la case sans traverser l'étal
+	st.position = Vector3(x * LevelBuilder.CELL, 0.0, y * LevelBuilder.CELL) - dv * 0.9      # avancé vers la rue, au bord de sa case : le groupe s'arrête tout près, la case reste bloquante
 	st.rotation.y = LevelBuilder._rot(away)
 	st.name = "MerchantStall"
 	add_child(st)
