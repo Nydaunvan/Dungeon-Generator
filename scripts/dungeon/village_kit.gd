@@ -635,7 +635,7 @@ static func undergrowth(view: Node3D, level: Dictionary) -> void:
 					flowers[kind][ck].append(Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.8, 1.35)), p2))
 			if (edge and rng.randf() < 0.30) or rng.randf() < 0.05:
 				var p3 := Vector3((x + rng.randf() - 0.5) * CELL * 0.9, 0.0, (y + rng.randf() - 0.5) * CELL * 0.9)
-				var sc3 := rng.randf_range(1.0, 1.7)
+				var sc3 := rng.randf_range(0.65, 1.15)
 				if not bushes.has(ck):
 					bushes[ck] = []
 				bushes[ck].append(Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc3), p3))

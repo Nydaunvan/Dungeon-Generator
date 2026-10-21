@@ -49,7 +49,7 @@ void sky() {
 		col += vec3(0.9, 0.93, 1.0) * step(0.9965, r) * star_amount * tw * smoothstep(0.0, 0.15, h) * (AT_CUBEMAP_PASS ? 0.0 : 1.0);
 	}
 	if (h > 0.0) {
-		vec2 uv = dir.xz / (h + 0.28) * 0.85;
+		vec2 uv = dir.xz / (h + 0.28) * 0.5;
 		if (!AT_CUBEMAP_PASS) {
 			uv += vec2(TIME * 0.0035, TIME * 0.0012);
 		}
