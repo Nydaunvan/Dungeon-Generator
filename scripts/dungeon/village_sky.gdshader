@@ -13,6 +13,7 @@ uniform vec3 sun_color : source_color = vec3(1.0, 0.94, 0.82);
 uniform float sun_amount = 1.0;
 uniform float moon_amount = 0.0;
 uniform float star_amount = 0.0;
+uniform float overcast = 0.0;      // 0 = ciel dégagé, 1 = couvert d'un bord à l'autre (pluie)
 uniform vec3 cloud_light : source_color = vec3(1.0, 0.98, 0.95);
 uniform vec3 cloud_shade : source_color = vec3(0.60, 0.65, 0.74);
 
@@ -47,18 +48,18 @@ void sky() {
 		float tw = 0.75 + 0.25 * sin(TIME * 2.0 + r * 40.0);
 		col += vec3(0.9, 0.93, 1.0) * step(0.9965, r) * star_amount * tw * smoothstep(0.0, 0.15, h) * (AT_CUBEMAP_PASS ? 0.0 : 1.0);
 	}
-	if (h > 0.015) {
+	if (h > 0.0) {
 		vec2 uv = dir.xz / (h + 0.28) * 0.85;
 		if (!AT_CUBEMAP_PASS) {
 			uv += vec2(TIME * 0.0035, TIME * 0.0012);
 		}
 		float n = fbm(uv);
 		float c = smoothstep(1.0 - cloud_cover, 1.0 - cloud_cover + 0.22, n);
-		c *= smoothstep(0.015, 0.22, h);
+		c = mix(c * smoothstep(0.015, 0.22, h), smoothstep(0.0, 0.03, h), overcast);
 		// face éclairée vers le soleil, dessous plus gris
-		float lit = clamp(n * 1.6 - 0.55 + sd * 0.35, 0.0, 1.0);
+		float lit = mix(clamp(n * 1.6 - 0.55 + sd * 0.35, 0.0, 1.0), clamp(n * 1.1 - 0.15, 0.0, 0.6), overcast);
 		vec3 ccol = mix(cloud_shade, cloud_light, lit);
-		col = mix(col, ccol, c * 0.92);
+		col = mix(col, ccol, c * mix(0.92, 1.0, overcast));
 	}
 	COLOR = col;
 }

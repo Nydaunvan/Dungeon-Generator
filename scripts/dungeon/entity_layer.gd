@@ -305,12 +305,18 @@ func _pose(n: Node3D, delta: float, fighting: bool, charge: float, idle: bool, c
 	n.position.z += off.z - prev.z
 	n.set_meta("off", off)
 
+const VILLAGE_NPC_SCALE := 0.68                          ## taille des PNJ du village (proportionnée aux maisons)
+const NPC_FEET_GAP := {"blacksmith": 0.117, "talentmaster": 0.075}   ## marge transparente sous les pieds (part de la hauteur de l'image)
+
 ## PNJ fixe (forgeron, maître des talents) : grand sprite posé au sol.
 func add_npc(icon: String, x: int, y: int) -> void:
-	var n := _make_sprite(icon, true, false)
+	var village := _level != null and bool(_level.get("outdoor", false))
+	var n := _make_sprite(icon, true, false, VILLAGE_NPC_SCALE if village else 1.0)
 	if n == null:
 		return
 	_place_on_floor(n, Vector2i(x, y), icon)
+	if village:       # dehors, les pieds touchent l'herbe : on retire la marge transparente sous le personnage
+		n.position.y -= float(NPC_FEET_GAP.get(_icon_id(icon), 0.0)) * float(n.get_meta("h"))
 	add_child(n)
 
 ## Marchand itinérant (sprite unique, déplaçable). `big` : grand format des PNJ du village.

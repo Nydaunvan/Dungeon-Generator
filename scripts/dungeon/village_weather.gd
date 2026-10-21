@@ -151,6 +151,7 @@ func _apply() -> void:
 		_sky.set_shader_parameter("horizon_color", hor)
 		_sky.set_shader_parameter("ground_color", hor.darkened(0.45))
 		_sky.set_shader_parameter("cloud_cover", lerpf(0.5, 0.92, w))
+		_sky.set_shader_parameter("overcast", smoothstep(0.1, 0.7, w))
 		var yaw := deg_to_rad(SUN_YAW + (clock - 0.5) * 140.0)
 		var el := deg_to_rad(elev)
 		_sky.set_shader_parameter("sun_dir", Vector3(sin(yaw) * cos(el), sin(el), cos(yaw) * cos(el)))
