@@ -490,6 +490,7 @@ func _apply_outdoor(outdoor: bool) -> void:
 	env.ambient_light_energy = 1.1
 	Outdoor.apply_environment(env, outdoor)      # village : ciel procédural, ambiance du ciel, brume d'horizon (écrase les réglages ci-dessus)
 	rig.torch.visible = not outdoor
+	rig.camera.position.y = -0.55 if outdoor else 0.0      # village : yeux à ~1,45 u (au lieu de 2) pour que le joueur ne dépasse pas les maisons
 	rig.camera.far = 300.0 if outdoor else 100.0      # le village est long : on voit jusqu'à la porte du fond
 	if outdoor and level_node != null:
 		_add_village_weather()
