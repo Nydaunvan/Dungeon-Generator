@@ -144,8 +144,9 @@ func _draw() -> void:
 	var cpx := mini(28, base_px * z)
 	var fog := (gs.cfg.get("runModifierIds", []) as Array).has("mod_fog")
 	var budget := 130 if fog else 300
-	var vw := maxi(4, mini(W, int(floor(budget / float(cpx)))))
-	var vh := maxi(4, mini(H, int(floor(budget / float(cpx)))))
+	var dims := _window(W, H, budget, cpx)
+	var vw := dims.x
+	var vh := dims.y
 	if full:
 		vw = W
 		vh = H
@@ -260,8 +261,18 @@ func view_aspect() -> float:
 	var cpx := mini(28, base_px * z)
 	var fog := gs != null and (gs.cfg.get("runModifierIds", []) as Array).has("mod_fog")
 	var budget := 130 if fog else 300
-	var vw := maxi(4, mini(grid.width, int(floor(budget / float(cpx)))))
-	var vh := maxi(4, mini(grid.height, int(floor(budget / float(cpx)))))
+	var dims := _window(grid.width, grid.height, budget, cpx)
 	if full:
 		return float(grid.width) / float(grid.height)
-	return float(vw) / float(vh)
+	return float(dims.x) / float(dims.y)
+
+## Cases affichées (largeur, hauteur) autour du groupe. Sur une carte très allongée (le village, 15 × 45) la fenêtre garde des proportions
+## raisonnables au lieu de suivre celles de la carte : sinon le cadre devient une colonne qui repousse les autres panneaux hors de l'écran.
+static func _window(w: int, h: int, budget: int, cpx: int) -> Vector2i:
+	var vw := maxi(4, mini(w, int(floor(budget / float(cpx)))))
+	var vh := maxi(4, mini(h, int(floor(budget / float(cpx)))))
+	if float(vw) / float(vh) < 0.8:
+		vh = maxi(4, mini(vh, int(ceil(vw / 0.8))))
+	elif float(vw) / float(vh) > 1.25:
+		vw = maxi(4, mini(vw, int(ceil(vh * 1.25))))
+	return Vector2i(vw, vh)

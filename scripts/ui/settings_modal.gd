@@ -245,6 +245,13 @@ func _graphics() -> void:
 	_hint(L.t("ui.settings.monster_anim_hint"))
 	_check(L.t("ui.settings.card_fx"), Settings.card_fx, func(v: bool): Settings.set_card_fx(v))
 	_hint(L.t("ui.settings.card_fx_hint"))
+	_section(L.t("ui.settings.village_title"))
+	_row(L.t("ui.settings.village_time"), _drop([["auto", L.t("ui.settings.village_time_auto")], ["dawn", L.t("ui.settings.village_time_dawn")],
+			["day", L.t("ui.settings.village_time_day")], ["dusk", L.t("ui.settings.village_time_dusk")], ["night", L.t("ui.settings.village_time_night")]],
+			Settings.village_time, func(v): Settings.set_village_time(str(v))))
+	_row(L.t("ui.settings.village_weather"), _drop([["auto", L.t("ui.settings.village_weather_auto")], ["clear", L.t("ui.settings.village_weather_clear")],
+			["rain", L.t("ui.settings.village_weather_rain")]], Settings.village_weather, func(v): Settings.set_village_weather(str(v))))
+	_hint(L.t("ui.settings.village_hint"))
 	_section(L.t("ui.settings.instinct_title"))
 	_row(L.t("ui.settings.instinct_mode"), _drop([["on", L.t("ui.settings.instinct_mode_on")], ["auto", L.t("ui.settings.instinct_mode_auto")],
 			["off", L.t("ui.settings.instinct_mode_off")]], Settings.instinct_mode, func(v): Settings.set_instinct_mode(str(v))))

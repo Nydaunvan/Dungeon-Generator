@@ -102,6 +102,10 @@ static func _mesh(b: Batch, material: Material) -> MeshInstance3D:
 	mi.material_override = material
 	return mi
 
+## Matériau des vitres (partagé) : VillageWeather en règle l'éclat selon l'heure.
+static func glass_material() -> StandardMaterial3D:
+	return _cache.get("glass")
+
 static func _glass() -> StandardMaterial3D:
 	if _cache.has("glass"):
 		return _cache["glass"]
@@ -362,6 +366,7 @@ static func leaf_mat() -> StandardMaterial3D:
 	m.metallic_specular = 0.2
 	m.backlight_enabled = true                 # la lumière traverse un peu les feuilles
 	m.backlight = Color(0.35, 0.5, 0.2)
+	m.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE      # bords de feuilles lissés (avec MSAA) : moins de scintillement
 	_cache["leaf_mat"] = m
 	return m
 

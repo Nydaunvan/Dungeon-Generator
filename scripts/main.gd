@@ -491,6 +491,17 @@ func _apply_outdoor(outdoor: bool) -> void:
 	Outdoor.apply_environment(env, outdoor)      # village : ciel procédural, ambiance du ciel, brume d'horizon (écrase les réglages ci-dessus)
 	rig.torch.visible = not outdoor
 	rig.camera.far = 300.0 if outdoor else 100.0      # le village est long : on voit jusqu'à la porte du fond
+	if outdoor and level_node != null:
+		_add_village_weather()
+
+## Heure et météo du village (cycle jour/nuit, pluie) : purement visuel.
+func _add_village_weather() -> void:
+	var sun := level_node.get_node_or_null("Sun") as DirectionalLight3D
+	if sun == null:
+		return
+	var vw := VillageWeather.new()
+	level_node.add_child(vw)
+	vw.setup(env, sun, rig.camera, rig.torch)
 
 func _setup_environment() -> void:
 	env = WarmUp.make_environment()
