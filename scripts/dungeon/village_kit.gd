@@ -490,10 +490,10 @@ static func tuft_mesh() -> ArrayMesh:
 		var ang := rng.randf() * TAU
 		var dirv := Vector3(cos(ang), 0, sin(ang))
 		var side := dirv.cross(Vector3.UP)
-		var base := dirv * rng.randf_range(0.02, 0.16)
-		var h := rng.randf_range(0.30, 0.62)
-		var lean := dirv * rng.randf_range(0.04, 0.2)
-		var w := rng.randf_range(0.022, 0.04)
+		var base := dirv * rng.randf_range(0.02, 0.2)
+		var h := rng.randf_range(0.14, 0.30)
+		var lean := dirv * rng.randf_range(0.02, 0.09)
+		var w := rng.randf_range(0.016, 0.03)
 		var tint := rng.randf_range(0.85, 1.15)
 		var c0 := Color(0.16, 0.26, 0.08) * tint
 		var c1 := Color(0.36, 0.52, 0.17) * tint
@@ -509,17 +509,41 @@ static func tuft_mesh() -> ArrayMesh:
 				st.set_normal(n)
 				st.add_vertex(verts[idx][0])
 	var mesh := st.commit()
-	var m := StandardMaterial3D.new()
-	m.vertex_color_use_as_albedo = true
-	m.albedo_color = Color(1.05, 1.1, 0.95)
-	m.roughness = 0.85
-	m.metallic_specular = 0.15
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.backlight_enabled = true
-	m.backlight = Color(0.25, 0.35, 0.1)
+	var m := tuft_material()
 	mesh.surface_set_material(0, m)
 	_cache["tuft"] = mesh
 	return mesh
+
+## Matériau des herbes : le vent n'agite que le haut des brins (la base reste plantée). `wind` : 0 = calme, 1 = brise, > 1 = rafales (VillageWeather).
+static func tuft_material() -> ShaderMaterial:
+	if _cache.has("tuft_mat"):
+		return _cache["tuft_mat"]
+	var sh := Shader.new()
+	sh.code = """shader_type spatial;
+render_mode cull_disabled;
+uniform float wind = 0.6;
+uniform vec3 tint : source_color = vec3(1.05, 1.1, 0.95);
+void vertex() {
+	vec3 wp = MODEL_MATRIX[3].xyz;
+	float top = smoothstep(0.35, 1.0, VERTEX.y / 0.24);     // seul le haut du brin bouge
+	float ph = wp.x * 0.7 + wp.z * 0.55 + VERTEX.x * 6.0;
+	float gust = sin(TIME * 0.45 + wp.x * 0.06 + wp.z * 0.04) * 0.5 + 0.5;
+	float sway = sin(TIME * 1.9 + ph) * 0.6 + sin(TIME * 3.1 + ph * 1.7) * 0.4;
+	float amp = top * top * 0.035 * wind * (0.4 + gust);
+	VERTEX.x += sway * amp;
+	VERTEX.z += sway * amp * 0.6;
+}
+void fragment() {
+	ALBEDO = COLOR.rgb * tint;
+	ROUGHNESS = 0.85;
+	SPECULAR = 0.15;
+	BACKLIGHT = vec3(0.22, 0.32, 0.08);
+}
+"""
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	_cache["tuft_mat"] = m
+	return m
 
 ## Fleur sauvage : tige verte, corolle de six pétales de la couleur donnée, cœur jaune.
 static func flower_mesh(petal: Color, key: String) -> ArrayMesh:
@@ -611,6 +635,7 @@ static func undergrowth(view: Node3D, level: Dictionary) -> void:
 	var tufts := {}
 	var bushes := {}
 	var flowers := [{}, {}, {}, {}]
+	var density := clampf(float(Settings.opt("particles")), 0.45, 1.0)      # réglage « particules » : moins d'herbe sur les machines modestes
 	var h := rows.size()
 	for y in range(1, h - 1):
 		var row := str(rows[y])
@@ -619,10 +644,10 @@ static func undergrowth(view: Node3D, level: Dictionary) -> void:
 				continue
 			var ck := Vector2i(x / 6, y / 6)
 			var edge := x <= 2 or x >= row.length() - 3          # le long des barrières, la végétation est plus fournie
-			var n_t := rng.randi_range(8, 14) if edge else rng.randi_range(4, 9)
+			var n_t := int(round((rng.randi_range(30, 46) if edge else rng.randi_range(20, 34)) * density))
 			for i in n_t:
 				var p := Vector3((x + rng.randf() - 0.5) * CELL, 0.0, (y + rng.randf() - 0.5) * CELL)
-				var sc := rng.randf_range(0.9, 1.7)
+				var sc := rng.randf_range(0.85, 1.5)
 				if not tufts.has(ck):
 					tufts[ck] = []
 				tufts[ck].append(Transform3D(Basis().rotated(Vector3.UP, rng.randf() * TAU).scaled(Vector3(sc, sc * rng.randf_range(0.85, 1.3), sc)), p))

@@ -178,6 +178,10 @@ func _apply() -> void:
 		env.fog_density = lerpf(0.0035, 0.0125, w) * lerpf(1.0, 1.4, night)
 		env.fog_sun_scatter = 0.25 * (1.0 - w) * day_w
 		env.tonemap_exposure = lerpf(1.0, 1.25, night)
+	# vent : brise légère par beau temps, plus soutenu sous la pluie (agite le haut des herbes)
+	var tm := VillageKit.tuft_material()
+	if tm != null:
+		tm.set_shader_parameter("wind", 0.55 + 0.9 * w)
 	# sol mouillé : plus lisse et plus sombre sous la pluie
 	for m in _ground:
 		m.roughness = lerpf(float(m.get_meta("dry_roughness", 1.0)), 0.55, w)
