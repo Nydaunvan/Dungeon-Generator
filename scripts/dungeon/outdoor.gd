@@ -147,10 +147,15 @@ static func decorate(view: Node3D, level: Dictionary) -> void:
 	sun.rotation_degrees = Vector3(-38, -32, 0)
 	sun.light_color = Color(1.0, 0.94, 0.82)
 	sun.light_energy = 1.9
-	sun.light_angular_distance = 0.6
+	sun.light_angular_distance = 0.0           # 0 : pas de pénombre variable (elle fait trembler les bords d'ombre)
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 70.0
+	sun.directional_shadow_max_distance = 56.0
+	sun.directional_shadow_blend_splits = true       # fondu entre cascades : plus de bande qui saute en marchant
+	sun.directional_shadow_split_1 = 0.1
+	sun.directional_shadow_split_2 = 0.25
+	sun.directional_shadow_split_3 = 0.55
+	sun.directional_shadow_pancake_size = 40.0
 	sun.shadow_bias = 0.06
 	sun.shadow_normal_bias = 1.0
 	view.add_child(sun)

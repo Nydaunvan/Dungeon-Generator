@@ -136,11 +136,15 @@ func _apply() -> void:
 	# lumière directionnelle : soleil le jour, lune la nuit (jamais les deux : l'énergie s'annule au changement)
 	if sun != null and is_instance_valid(sun):
 		if elev > -3.0:
-			sun.rotation_degrees = Vector3(-maxf(elev, 1.0), SUN_YAW + (clock - 0.5) * 140.0, 0)
+			# l'orientation n'est mise à jour que par paliers : une rotation continue ferait ramper les ombres (texels de la carte d'ombres)
+			var want := Vector3(-snappedf(maxf(elev, 1.0), 0.5), snappedf(SUN_YAW + (clock - 0.5) * 140.0, 0.5), 0)
+			if want.distance_to(sun.rotation_degrees) > 0.01:
+				sun.rotation_degrees = want
 			sun.light_color = sun_col
 			sun.light_energy = 1.9 * day_w * (1.0 - 0.82 * w)
 		else:
-			sun.rotation_degrees = Vector3(-42.0, 150.0, 0)
+			if sun.rotation_degrees.distance_to(Vector3(-42.0, 150.0, 0)) > 0.01:
+				sun.rotation_degrees = Vector3(-42.0, 150.0, 0)
 			sun.light_color = Color(0.55, 0.68, 1.0)
 			sun.light_energy = 0.32 * moon_w * (1.0 - 0.6 * w)
 		sun.shadow_opacity = 1.0 - 0.7 * w
