@@ -82,6 +82,9 @@ func step_stamina() -> void:
 
 ## Ordre de l'original : déplacement, endurance, statuts (step_tick), puis objet de la case et marchand.
 func step_items() -> void:
+	if bool(level.get("outdoor", false)) and npc_at(rig.gx, rig.gy) != "":
+		bump_village(rig.gx, rig.gy)        # village : le PNJ s'adresse au groupe dès qu'il entre dans sa case (un carré plus près qu'avant)
+		return
 	# un seul objet par pas (le premier de la case), puis le marchand ambulant s'il est là (hors village)
 	for it in level.get("items", []):
 		if int(it.x) != rig.gx or int(it.y) != rig.gy:
@@ -110,7 +113,7 @@ var _pass_merchant := false
 func blocks_cell(x: int, y: int) -> bool:
 	if not bool(level.get("outdoor", false)):
 		return npc_at(x, y) == "merchant" and not _pass_merchant and merchant_niche_dir() == Vector2i.ZERO   # marchand ambulant : fixe contre un mur, on le heurte au lieu de marcher dessus
-	return (level.get("treeCells", []) as Array).has("%d,%d" % [x, y]) or npc_at(x, y) != ""
+	return (level.get("treeCells", []) as Array).has("%d,%d" % [x, y])      # les PNJ ne bloquent plus : on entre dans leur case (step_items) pour leur parler
 
 func npc_at(x: int, y: int) -> String:
 	var mm: Dictionary = wand.merchant() if wand != null else {}
