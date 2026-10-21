@@ -77,7 +77,7 @@ func _update(delta: float) -> void:
 	if mode == "auto" or not TIME_FIXED.has(mode):
 		clock = fposmod(clock + delta / DAY_SECONDS, 1.0)
 	else:
-		var d := TIME_FIXED[mode] - clock
+		var d: float = float(TIME_FIXED[mode]) - clock
 		d = fposmod(d + 0.5, 1.0) - 0.5      # chemin le plus court sur le cercle
 		clock = fposmod(clock + clampf(d, -delta * 0.12, delta * 0.12), 1.0)
 	# météo

@@ -12,11 +12,9 @@ func _init() -> void:
 	for mo in get_nodes_in_group("modal"):
 		mo.queue_free()
 	if OS.get_environment("SHOT_TIME") != "":
-		Settings.set_village_time(OS.get_environment("SHOT_TIME"))
-		VillageWeather.clock = float(VillageWeather.TIME_FIXED.get(OS.get_environment("SHOT_TIME"), 0.5))
+		root.get_node("Settings").set_village_time(OS.get_environment("SHOT_TIME"))
 	if OS.get_environment("SHOT_WEATHER") != "":
-		Settings.set_village_weather(OS.get_environment("SHOT_WEATHER"))
-		VillageWeather.rain = 1.0 if OS.get_environment("SHOT_WEATHER") == "rain" else 0.0
+		root.get_node("Settings").set_village_weather(OS.get_environment("SHOT_WEATHER"))
 	m._enter_village()
 	await create_timer(4.0).timeout
 	var views: Array = a.slice(1)
