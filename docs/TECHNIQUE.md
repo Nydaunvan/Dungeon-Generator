@@ -409,3 +409,6 @@ Les événements `popup` de `Combat` portent `on = "mon:<index>"` pour un membre
 
 ## Rejeu visible, touches mises en tampon, statuts détaillés
 Le `Replayer` (si `ReplayLive` est à l'écran) montre l'inventaire avant les commandes d'objets (`DOCK_CMDS`) via `EquipDock.replay_show/replay_refresh` (rien n'est journalisé), avec de courtes pauses (`_beat`, ignorées en avance rapide). `Main._try_slot` mémorise une touche de sort/attaque refusée (`_pending_slot`, 1,5 s) et la rejoue dans `_process` dès que le contrôleur est prêt. `Statuses.effect_lines` fournit le détail des effets pour la bulle (`PartyTip`), la fiche monstre et `BonusOverview`. `RankedRun.is_challenge` (semaine, jour, mois hardcore) masque village et donjon suivant ; le bouton de fin de partie ramène à l'accueil (`hub_return = false`). Les parchemins ne coûtent ni n'exigent d'endurance. Aucun changement de schéma de sauvegarde.
+
+## Fermeture du volet d'inventaire par clic extérieur
+`EquipDock._input` referme le volet (même glissement que la touche Échap) sur un clic gauche hors de `_panel`, et absorbe ce clic. Inactif pendant un rejeu, avec une fenêtre du groupe `modal` ouverte ou pendant un glisser d'objet.

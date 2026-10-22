@@ -182,6 +182,20 @@ func _notification(what: int) -> void:
 	elif what == NOTIFICATION_DRAG_END and _catcher != null:
 		_catcher.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+## Clic en dehors du volet : il se referme en glissant (l'inverse de l'ouverture). Le clic est absorbé (il ne déclenche rien d'autre) ;
+## inactif pendant un rejeu, une fenêtre bloquante (groupe « modal ») ou un glisser d'objet.
+func _input(event: InputEvent) -> void:
+	if not is_open or _panel == null or RunLog.replaying:
+		return
+	if not (event is InputEventMouseButton) or not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if not get_tree().get_nodes_in_group("modal").is_empty() or get_viewport().gui_is_dragging():
+		return
+	if Rect2(_panel.global_position, _panel.size).has_point(event.position):
+		return
+	close()
+	get_viewport().set_input_as_handled()
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not is_open:
 		return
