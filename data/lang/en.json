@@ -3330,7 +3330,14 @@
   "game.interactions.le_groupe_ouvre_un_coffre": "The party opens a chest.",
   "game.interactions.coffre_ouvert": "Chest opened",
   "game.interactions.coffre_or": "The chest holds %d gold.",
-  "rules.dungeon_generator.coffre": "Chest"
+  "rules.dungeon_generator.coffre": "Chest",
+  "common.coffre": "Chest",
+  "admin.levels.coffre_mur": "Wall",
+  "admin.levels.coffre_mur_auto": "Auto",
+  "admin.levels.coffre_est": "East",
+  "admin.levels.coffre_sud": "South",
+  "admin.levels.coffre_or": "Gold inside the chest",
+  "admin.levels.coffre_contenu": "Contents:"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

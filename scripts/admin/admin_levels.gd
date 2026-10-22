@@ -7,7 +7,7 @@ extends RefCounted
 const THEMES := [["stone", "admin.levels.pierre_classique"], ["dirt", "admin.levels.pyramide"], ["damp", "admin.levels.cachot_humide"], ["ruins", "admin.levels.ruines_effondrees"], ["ice", "admin.levels.glace"], ["lava", "admin.levels.lave"], ["temple", "admin.levels.temple_ancien"]]
 const DIRS := [[0, "admin.levels.nord"], [1, "admin.levels.est"], [2, "admin.levels.sud"], [3, "admin.levels.ouest"]]
 const MAX_LEVELS := 8
-const ITEM_TYPES := [["potion", "common.potion"], ["weapon", "common.arme"], ["armor", "common.armure"], ["jewelry", "common.bijou"], ["key", "common.cle"], ["scroll", "common.parchemin"], ["trap", "common.piege"], ["switch", "admin.levels.interrupt"], ["fountain", "common.fontaine"]]
+const ITEM_TYPES := [["potion", "common.potion"], ["weapon", "common.arme"], ["armor", "common.armure"], ["jewelry", "common.bijou"], ["key", "common.cle"], ["scroll", "common.parchemin"], ["trap", "common.piege"], ["switch", "admin.levels.interrupt"], ["fountain", "common.fontaine"], ["chest", "common.coffre"]]
 const PERKS := [["lifesteal", "common.vol_de_vie"], ["crit", "common.critique"], ["thorns", "common.renvoi"]]
 const BORDER := Color("5a4526")
 const GOLD_DIM := Color("a9793a")
@@ -842,6 +842,8 @@ static func _place(lvl: Dictionary, x: int, y: int) -> void:
 			if not it.is_empty():
 				it["x"] = x
 				it["y"] = y
+				if str(it.get("type", "")) == "chest" and bool(it.get("wallAuto", true)):
+					it["wall"] = _chest_auto_wall(lvl, x, y)
 		"merchant":
 			if not (lvl.get("travelingMerchant") is Dictionary):
 				lvl["travelingMerchant"] = {"x": x, "y": y, "patrolRadius": 4, "lootSlotCount": 6, "lootItemIds": []}
@@ -1205,6 +1207,8 @@ static func _item_details(it: Dictionary, lvl: Dictionary) -> Control:
 			row.add_child(_dd(mons, it.get("switchRevealMonsterId", ""), func(v): it["switchRevealMonsterId"] = v, 0.74))
 			row.add_child(_dd(its, it.get("switchRevealItemId", ""), func(v): it["switchRevealItemId"] = v, 0.74))
 			row.add_child(_text(it, "message", 180, 0.74, Vector2(5, 5), L.t("common.message_affiche")))
+		"chest":
+			_chest_details(row, root, it, lvl)
 		"fountain":
 			var h := _lbl(L.t("admin.levels.restaure_pv_endurance_du_groupe"), 0.74, PARCH_DIM, true)
 			row.add_child(h)
@@ -1230,6 +1234,47 @@ static func _item_details(it: Dictionary, lvl: Dictionary) -> Control:
 		_:
 			row.add_child(_lbl("—", 0.7))
 	return root
+
+const CHEST_SLOTS := 4
+
+## Premier côté muré de la case (N, E, S, O) : un coffre se pose toujours contre un mur.
+static func _chest_auto_wall(lvl: Dictionary, x: int, y: int) -> String:
+	var rows: Array = lvl.mapRows
+	for w in [["N", 0, -1], ["E", 1, 0], ["S", 0, 1], ["O", -1, 0]]:
+		var nx: int = x + int(w[1])
+		var ny: int = y + int(w[2])
+		if ny < 0 or ny >= rows.size() or nx < 0 or nx >= str(rows[ny]).length() or str(rows[ny])[nx] == "#":
+			return str(w[0])
+	return "N"
+
+## Détails d'un coffre posé à la main : côté du mur, or, et jusqu'à quatre objets pris dans la bibliothèque.
+static func _chest_details(row: HBoxContainer, root: VBoxContainer, it: Dictionary, lvl: Dictionary) -> void:
+	if not it.has("wall"):
+		it["wall"] = _chest_auto_wall(lvl, int(it.x), int(it.y))
+	var walls := [["auto", L.t("admin.levels.coffre_mur_auto")], ["N", L.t("admin.levels.nord")], ["E", L.t("admin.levels.coffre_est")], ["S", L.t("admin.levels.coffre_sud")], ["O", L.t("admin.levels.ouest")]]
+	row.add_child(_stat_label(L.t("admin.levels.coffre_mur")))
+	row.add_child(_dd(walls, "auto" if bool(it.get("wallAuto", true)) else str(it.get("wall", "N")), func(v):
+		it["wallAuto"] = (v == "auto")
+		it["wall"] = _chest_auto_wall(lvl, int(it.x), int(it.y)) if v == "auto" else v, 0.74, 70))
+	row.add_child(_item_stat(it, "gold", _or(it.get("gold"), 0.0), 40, L.t("admin.levels.coffre_or")))
+	row.add_child(_stat_label(L.t("common.or")))
+	var lib: Array = [["", L.t("admin.levels.vide")]]
+	for d in _cfg().get("itemLibrary", []):
+		lib.append([d.id, str(d.get("name", ""))])
+	if not (it.get("contentIds") is Array):
+		it["contentIds"] = []
+	var ids: Array = it.contentIds
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 6)
+	root.add_child(line)
+	line.add_child(_stat_label(L.t("admin.levels.coffre_contenu")))
+	for i in CHEST_SLOTS:
+		var slot := i
+		var cur := str(ids[slot]) if slot < ids.size() and ids[slot] != null else ""
+		line.add_child(_dd(lib, cur, func(v):
+			while ids.size() <= slot:
+				ids.append("")
+			ids[slot] = v, 0.74, 110))
 
 static func _items_sub(host: VBoxContainer, lvl: Dictionary) -> void:
 	var headers := [L.t("common.icone"), L.t("common.nom"), L.t("common.type"), L.t("admin.levels.position"), L.t("common.details"), L.t("admin.levels.cache"), "", ""]

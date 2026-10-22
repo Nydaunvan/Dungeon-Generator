@@ -283,6 +283,22 @@ func _pickup(it: Dictionary) -> void:
 
 ## Le groupe arrive sur la case d'un coffre : il s'ouvre (couvercle animé) et livre son or puis ses objets. Un objet qui ne tient plus dans
 ## le sac reste dans le coffre : on peut revenir le prendre plus tard (le coffre reste ouvert). État : opened, goldTaken, took{}, emptied.
+## Contenu d'un coffre : objets embarqués (coffres générés) ou, pour un coffre posé dans l'éditeur, objets de la bibliothèque (`contentIds`).
+func _chest_contents(it: Dictionary) -> Array:
+	var out: Array = it.get("contents", []).duplicate()
+	var slot := 0
+	for id in it.get("contentIds", []):
+		slot += 1
+		if str(id) == "":
+			continue
+		for def in gs.cfg.get("itemLibrary", []):
+			if def.get("id") == id:
+				var c: Dictionary = def.duplicate(true)
+				c["id"] = "chestlib_%s_%d" % [str(it.id), slot]
+				out.append(c)
+				break
+	return out
+
 func _open_chest(it: Dictionary) -> void:
 	var st := gs.item_state(_lid(), str(it.id))
 	if st.get("emptied", false):
@@ -303,7 +319,7 @@ func _open_chest(it: Dictionary) -> void:
 		ctrl.popup.emit("+%d 💰" % gold, Color("ffd76a"), "")
 	var took: Dictionary = st.get_or_add("took", {})
 	var left := 0
-	for c in it.get("contents", []):
+	for c in _chest_contents(it):
 		if took.has(str(c.id)):
 			continue
 		var inst := Inventory.make_instance(c)
