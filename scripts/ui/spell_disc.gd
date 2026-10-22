@@ -28,6 +28,8 @@ var dim: float = 1.0
 var highlight: bool = false
 var disabled: bool = false
 var gray: bool = false
+var badge: String = ""          ## pastille discrète : icône du statut que le sort inflige (vide = aucun)
+var badge_bad: bool = true      ## statut nuisible (anneau rouge) ou bénéfique (anneau vert)
 var _hover: bool = false
 var _down: bool = false
 var _long: bool = false
@@ -66,6 +68,13 @@ func set_state(g: String, t: Texture2D, cd: String, dimmed: float, hl: bool = fa
 	cd_text = cd
 	dim = dimmed
 	highlight = hl
+	queue_redraw()
+
+func set_badge(glyph: String, harmful: bool = true) -> void:
+	if glyph == badge and harmful == badge_bad:
+		return
+	badge = glyph
+	badge_bad = harmful
 	queue_redraw()
 
 func _gui_input(e: InputEvent) -> void:
@@ -147,3 +156,14 @@ func _draw() -> void:
 		var fs2 := int(r * 0.9)
 		var ts2 := f2.get_string_size(cd_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2)
 		draw_string(f2, Vector2(c.x - ts2.x * 0.5, c.y + (f2.get_ascent(fs2) - f2.get_descent(fs2)) * 0.5), cd_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color("e8b45c", dim))
+	# pastille de statut (coin bas droit) : le sort applique un statut
+	if badge != "" and tone == "spell":
+		var bp := c + Vector2(0.72, 0.72) * r
+		var br := maxf(7.0, r * 0.38)
+		draw_circle(bp, br + 1.5, Color("070504", 0.95 * dim), true, -1.0, true)
+		draw_circle(bp, br, (Color("5a1a14") if badge_bad else Color("1f4a22")) * Color(1, 1, 1, dim), true, -1.0, true)
+		draw_arc(bp, br, 0.0, TAU, 20, (Color("e5624f") if badge_bad else Color("7ad07a")) * Color(1, 1, 1, dim), 1.2, true)
+		var bf := ThemeDB.fallback_font
+		var bfs := int(br * 1.25)
+		var bts := bf.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs)
+		draw_string(bf, Vector2(bp.x - bts.x * 0.5, bp.y + bfs * 0.34), badge, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs, Color(1, 1, 1, dim))

@@ -72,6 +72,7 @@ Le détail des sous-dossiers est dans la [documentation technique](docs/TECHNIQU
 - Statuts détaillés (dégâts par tour, soin, vitesse, protection, durée restante) dans la bulle de survol d'un personnage, la fiche d'un monstre et le calcul des caractéristiques de l'inventaire.
 - Bouton « 🎒 Inventaire » sur la besace ; bestiaire avec l'image du monstre ; sort grisé faute d'endurance ; touche de sort trop tôt mémorisée 1,5 s (plus de double appui) ; l'« Effort collectif » affiche l'endurance totale dépensée ; les parchemins ne demandent ni ne dépensent d'endurance ; point rouge clignotant sur l'onglet Amis et sur le sceau « Expédition en ligne » de l'accueil quand des demandes d'amis attendent.
 - Inventaire : un clic en dehors du volet le referme en glissant, comme à l'ouverture.
+- Barre de sorts : un sort qui peut infliger un statut porte une petite pastille (icône du statut, anneau rouge nuisible / vert bénéfique).
 - Les pièges générés sont toujours sur le passage obligé vers la sortie, jamais dans une impasse ; faute de place, un objet à ramasser les remplace.
 - Guide : un tableau qui ne tient pas dans la fin d’une page est coupé par lignes (en-tête répété) au lieu de laisser un grand vide ; un intitulé reste avec son paragraphe.
 - Fiche du personnage : les capacités des objets rares (critique, esquive, vol de vie, dégâts de sort, exécution, poison, dégâts critiques, renvoi, or gagné, dernier souffle) sont maintenant comptées dans les valeurs affichées et détaillées dans l'infobulle (ligne « Raretés de l'équipement »).

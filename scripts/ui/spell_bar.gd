@@ -114,3 +114,8 @@ func _refresh() -> void:
 		if left > 0.0 or no_stamina:
 			dimmed *= 0.65
 		b.set_state(icon, t, ("%d" % ceili(left)) if left > 0.0 else "", dimmed, ctrl.pending_spell == sid, no_stamina and not dead)
+		var se := str(sp.get("statusEffect", ""))
+		if se != "" and int(sp.get("statusChance", 0)) > 0:
+			b.set_badge(Statuses.icon_of({"type": se}), Statuses.is_harmful({"type": se}))
+		else:
+			b.set_badge("")

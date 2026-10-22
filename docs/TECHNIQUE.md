@@ -415,3 +415,6 @@ Le `Replayer` (si `ReplayLive` est à l'écran) montre l'inventaire avant les co
 
 ## Point rouge des demandes d'amis à l'accueil
 `HomeScreen._make_friend_dot` pose un `NotifDot` clignotant sur le bord du sceau (alimenté par `Friends.pending_count`, relu à chaque changement de session `Cloud.session_changed`) ; l'onglet Amis de `OnlineHub` a le même point. Aucun changement de sauvegarde.
+
+## Pastille de statut sur les sorts
+`SpellDisc.set_badge(glyph, harmful)` dessine l'icône du statut du sort (`statusEffect`, si `statusChance` > 0) dans le coin bas droit du disque ; `SpellBar` la renseigne avec `Statuses.icon_of` / `is_harmful`. Aucun changement de sauvegarde.
