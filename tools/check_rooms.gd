@@ -10,6 +10,8 @@ func _ready() -> void:
 	var worst_share := 0.0
 	var worst_dim := 0
 	var rooms_total := 0
+	var chests_total := 0
+	var chests_in_rooms := 0
 	var shares: Array = []
 	for seed_i in 10:
 		for dims in [[13, 11], [19, 15], [9, 9]]:
@@ -55,9 +57,30 @@ func _ready() -> void:
 				for d in lv.doors:
 					if idx.has(Vector2i(int(d.x), int(d.y))):
 						fails.append("porte dans une salle")
+				# coffres : sur une case de sol libre, contre un vrai mur, contenu non vide, jamais avec un autre objet, un escalier ou une porte
+				var taken := {}
 				for it in lv.items:
-					if str(it.get("type", "")) == "key":
-						pass
+					if str(it.get("type", "")) != "chest":
+						taken[Vector2i(int(it.x), int(it.y))] = taken.get(Vector2i(int(it.x), int(it.y)), 0) + 1
+				for it in lv.items:
+					if str(it.get("type", "")) != "chest":
+						continue
+					chests_total += 1
+					var cp := Vector2i(int(it.x), int(it.y))
+					if str(rows[cp.y])[cp.x] != ".":
+						fails.append("coffre hors d'une case de sol")
+					if taken.has(cp):
+						fails.append("coffre sur la case d'un autre objet")
+					var dv: Vector2i = {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S": Vector2i(0, 1), "O": Vector2i(-1, 0)}.get(str(it.get("wall", "")), Vector2i.ZERO)
+					if dv == Vector2i.ZERO or str(rows[cp.y + dv.y])[cp.x + dv.x] != "#":
+						fails.append("coffre sans mur à son dos")
+					if (it.get("contents", []) as Array).is_empty() or int(it.get("gold", 0)) <= 0:
+						fails.append("coffre vide")
+					if idx.has(cp):
+						chests_in_rooms += 1
+	print("coffres ", chests_total, " dont en salle ", chests_in_rooms)
+	if chests_total == 0:
+		fails.append("aucun coffre généré")
 	print("niveaux ", total_levels, " dont avec salles ", with_rooms, " ; salles ", rooms_total, " ; plus grande dimension ", worst_dim, " ; part max ", int(worst_share * 100), " %")
 	# ancien labyrinthe : aucune salle
 	DG.legacy_layout = true
@@ -66,6 +89,9 @@ func _ready() -> void:
 		var cfg2: Dictionary = DG.build_config(Data.original_config, 3, 19, 15, "normal", [], 1, 500 + seed_i)
 		for lv in cfg2.levels:
 			legacy_rooms += RoomMap.detect(lv.mapRows).size()
+			for it in lv.items:
+				if str(it.get("type", "")) == "chest":
+					fails.append("coffre dans l'ancien labyrinthe")
 	DG.legacy_layout = false
 	print("ancien labyrinthe : salles ", legacy_rooms)
 	if legacy_rooms != 0:

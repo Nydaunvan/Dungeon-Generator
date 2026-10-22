@@ -95,6 +95,7 @@ func step_items() -> void:
 				# fontaine logée dans un décroché : on l'utilise en avançant vers elle (comme une porte), pas en passant dessus
 				if LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id)) == Vector2i.ZERO or bool(level.get("outdoor", false)):
 					_prompt_fountain(it)
+			"chest": _open_chest(it)
 			"switch": _trigger_switch(it)
 			"decor": _activate_decor(it)
 			_:
@@ -277,6 +278,49 @@ func _pickup(it: Dictionary) -> void:
 	_log(L.fa(L.t("game.interactions.le_groupe_ramasse"), it.get("name", L.t("game.interactions.un_objet"))))
 	message.emit(L.fa(L.t("game.interactions.ramasse"), it.get("name", L.t("game.interactions.objet"))))
 	bag_changed.emit()
+
+# ------------------------------------------------------------------ coffres
+
+## Le groupe arrive sur la case d'un coffre : il s'ouvre (couvercle animé) et livre son or puis ses objets. Un objet qui ne tient plus dans
+## le sac reste dans le coffre : on peut revenir le prendre plus tard (le coffre reste ouvert). État : opened, goldTaken, took{}, emptied.
+func _open_chest(it: Dictionary) -> void:
+	var st := gs.item_state(_lid(), str(it.id))
+	if st.get("emptied", false):
+		return
+	if not st.get("opened", false):
+		st["opened"] = true
+		Sound.sfx("wood_thud")
+		view.entities.open_chest(str(it.id), true)
+		_log(L.t("game.interactions.le_groupe_ouvre_un_coffre"))
+		message.emit(L.t("game.interactions.coffre_ouvert"))
+	var gold := int(it.get("gold", 0))
+	if gold > 0 and not st.get("goldTaken", false):
+		st["goldTaken"] = true
+		gs.gold += gold
+		gs.stats["goldEarnedTotal"] = int(gs.stats.get("goldEarnedTotal", 0)) + gold
+		Sound.sfx("coins")
+		_log(L.fa(L.t("game.interactions.coffre_or"), gold))
+		ctrl.popup.emit("+%d 💰" % gold, Color("ffd76a"), "")
+	var took: Dictionary = st.get_or_add("took", {})
+	var left := 0
+	for c in it.get("contents", []):
+		if took.has(str(c.id)):
+			continue
+		var inst := Inventory.make_instance(c)
+		if not Inventory.has_space(gs, inst):
+			left += 1
+			_log(L.fa(L.t("game.interactions.l_onglet_est_plein_equipez"), [
+				Inventory.TAB_LABELS[Inventory.tab_of(inst)], Inventory.MAX_PER_TAB, Inventory.MAX_PER_TAB, c.get("name", "l'objet")]))
+			continue
+		Inventory.add(gs, inst)
+		took[str(c.id)] = true
+		Sound.sfx("pickup")
+		gs.stats["itemsFound"] = int(gs.stats.get("itemsFound", 0)) + 1
+		_log(L.fa(L.t("game.interactions.le_groupe_ramasse"), c.get("name", L.t("game.interactions.un_objet"))))
+	if left == 0:
+		st["emptied"] = true
+	bag_changed.emit()
+	ctrl.changed.emit()
 
 # ------------------------------------------------------------------ portes et escaliers
 

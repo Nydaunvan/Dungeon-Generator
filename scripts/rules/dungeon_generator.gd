@@ -790,6 +790,24 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			fountain_here = true
 	since_fountain = 0 if fountain_here else since_fountain + 1
 
+	# coffres : posés contre un mur, le plus souvent dans une salle, parfois dans un couloir (ils ne gênent jamais le passage) ; seulement
+	# avec les salles (l'ancien labyrinthe, rejoué à l'identique, n'en a pas)
+	if not legacy_layout:
+		var chest_want := clampi(int(round(float(rects.size()) * 0.7 + randf())), 1 if not rects.is_empty() else 0, 4)
+		if rects.is_empty() and randf() < 0.5:
+			chest_want = 1
+		for ci in chest_want:
+			var spots := item_pool.filter(func(r): return _has_wall_side(grid, r.x, r.y) and not _near_stairs(grid, r.x, r.y, 3) and not _near_door(doors, r.x, r.y))
+			if spots.is_empty():
+				break
+			var in_room := spots.filter(func(r): return _room_mask.has(_key(int(r.x), int(r.y))))
+			var in_corr := spots.filter(func(r): return not _room_mask.has(_key(int(r.x), int(r.y))))
+			var from: Array = in_room if (not in_room.is_empty() and (in_corr.is_empty() or randf() < 0.7)) else in_corr
+			var spot: Dictionary = from[randi_range(0, from.size() - 1)]
+			item_pool.erase(spot)
+			used[_key(spot.x, spot.y)] = true
+			items.append(_make_chest(i, ci, grid, int(spot.x), int(spot.y), run_bonus, heal_tier, sta_tier))
+
 	# butin porté par les monstres (caché jusqu'à leur mort)
 	var lootable := monsters.filter(func(m): return not m.get("isBoss", false))
 	var loot_count := int(round(lootable.size() * 0.45 * diff_mult))
@@ -853,6 +871,36 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	return {"id": ids[i], "name": L.fa(L.t("common.niveau"), (i + 1)), "theme": theme, "mapRows": rows, "startX": sx, "startY": sy, "startDir": start_dir,
 		"stairs": stairs, "doors": doors, "monsters": monsters, "items": items,
 		"_fwdX": far.x, "_fwdY": far.y, "_since_fountain": since_fountain}
+
+## Coffre posé contre un mur de la case (x, y) : or et 1 à 3 objets (équipement un cran au-dessus du sol, potions).
+func _make_chest(i: int, ci: int, grid: Array, x: int, y: int, run_bonus: int, heal_tier: int, sta_tier: int) -> Dictionary:
+	var walls: Array = []
+	var names := ["N", "E", "S", "O"]
+	for di in 4:
+		var v: Vector2i = DungeonGrid.DIRS[di]
+		var nx := x + v.x
+		var ny := y + v.y
+		if ny < 0 or ny >= grid.size() or nx < 0 or nx >= grid[0].size() or grid[ny][nx] == "#":
+			walls.append(names[di])
+	var wall: String = walls[randi_range(0, walls.size() - 1)] if not walls.is_empty() else "N"
+	var contents: Array = []
+	var n := 1 + (1 if randf() < 0.45 else 0) + (1 if randf() < 0.15 else 0)
+	for k in n:
+		var cid := "chest_%d_%d_%d" % [i, ci, k]
+		var roll := randf()
+		if roll < 0.25:
+			contents.append(make_weapon(cid, L.t("rules.dungeon_generator.arme_trouvee"), x, y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2, 1.1, "chest"))
+		elif roll < 0.5:
+			contents.append(make_armor(cid, L.t("rules.dungeon_generator.equipement_trouve"), x, y, 1.1, "chest"))
+		elif roll < 0.7:
+			contents.append(make_jewelry(cid, L.t("rules.dungeon_generator.bijou_trouve"), x, y, 1.1, "chest"))
+		elif roll < 0.9:
+			contents.append({"id": cid, "name": L.t("common.potion_de_soin"), "icon": "@icon:potion_heal", "x": x, "y": y, "type": "potion", "heal": 12 + heal_tier * 8 + run_bonus * 2})
+		else:
+			contents.append({"id": cid, "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": x, "y": y, "type": "potion", "staminaRestore": 18 + sta_tier * 9 + run_bonus * 3})
+	var gold := int(round((randi_range(8, 14) + i * 6 + run_bonus * 3) * float(mod.goldMult)))
+	return {"id": "chest_gen_%d_%d" % [i, ci], "name": L.t("rules.dungeon_generator.coffre"), "icon": "@icon:chest", "x": x, "y": y, "type": "chest",
+		"wall": wall, "gold": maxi(1, gold), "contents": contents}
 
 func _boss_spot_ok(r: Dictionary, sx: int, sy: int, used: Dictionary, monsters: Array, grid: Array, doors: Array, check_door: bool) -> bool:
 	if absi(int(r.x) - sx) + absi(int(r.y) - sy) < START_CLEAR - 2:

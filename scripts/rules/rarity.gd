@@ -131,6 +131,7 @@ static func weights(source: String, depth: int, run_bonus: int, difficulty: Stri
 		"monster": w = {"common": 56.0, "uncommon": 28.0, "rare": 14.0, "epic": 2.0}
 		"boss": w = {"rare": 60.0, "epic": 40.0}
 		"reward": w = {"rare": 50.0, "epic": 50.0}
+		"chest": w = {"common": 38.0, "uncommon": 36.0, "rare": 21.0, "epic": 5.0}      # coffre : un cran au-dessus du sol
 		"deal": w = {"rare": 75.0, "epic": 25.0}     # belle affaire chez le marchand
 		"shop": w = {"common": 55.0, "uncommon": 33.0, "rare": 11.0, "epic": 1.0}
 		"village": w = {"common": 45.0, "uncommon": 35.0, "rare": 16.0, "epic": 4.0}

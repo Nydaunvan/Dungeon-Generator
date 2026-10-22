@@ -416,6 +416,11 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		var cd := maxf(5.0, float(gs.cfg.get("fountainCooldownMinutes", 10))) * 60000.0
 		return float(GameClock.ms) >= float(fst.usedAt) + cd
 	level_node.entities.refresh_fountains(true)
+	for it in level.get("items", []):          # coffres déjà ouverts : on les montre ouverts d'emblée
+		if str(it.get("type", "")) == "chest":
+			var cst: Dictionary = ((gs.level_states.get(lvl_id, {}) as Dictionary).get("items_state", {}) as Dictionary).get(str(it.id), {})
+			if bool(cst.get("opened", false)):
+				level_node.entities.open_chest(str(it.id), false)
 	for m in level.get("monsters", []):
 		var mst: Dictionary = ls.monsters.get(str(m.id), {})
 		if bool(m.get("startHidden", false)) and not mst.is_empty() and not mst.get("hidden", true):

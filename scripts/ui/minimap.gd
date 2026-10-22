@@ -183,13 +183,19 @@ func _draw() -> void:
 			elif ch == "D" and cs >= 5.0:
 				draw_rect(Rect2(pos + Vector2(cs, cs) * 0.3, Vector2(cs, cs) * 0.4), Color("e8b45c"))
 	for it in grid.level.get("items", []):
-		if str(it.get("type", "")) != "fountain":
+		var ity := str(it.get("type", ""))
+		if ity != "fountain" and ity != "chest":
 			continue
 		var fk := _k(int(it.x), int(it.y))
 		if not (seen.has(fk) or visited.has(fk)) or int(it.x) < ox or int(it.x) >= ox + vw or int(it.y) < oy or int(it.y) >= oy + vh:
 			continue
 		var fc := origin + (Vector2(int(it.x) - ox, int(it.y) - oy) + Vector2(0.5, 0.5)) * cs
-		draw_circle(fc, maxf(cs * 0.32, 2.5), Color("6fd0e8"))
+		if ity == "chest":      # coffre : petit carré doré
+			var half := maxf(cs * 0.28, 2.2)
+			draw_rect(Rect2(fc - Vector2(half, half), Vector2(half, half) * 2.0), Color("e0a93a"))
+			draw_rect(Rect2(fc - Vector2(half, half), Vector2(half, half) * 2.0), Color("5a3a12"), false, 1.0)
+		else:
+			draw_circle(fc, maxf(cs * 0.32, 2.5), Color("6fd0e8"))
 	if merchant_cell.is_valid():
 		var mc: Vector2i = merchant_cell.call()
 		if mc.x >= ox and mc.x < ox + vw and mc.y >= oy and mc.y < oy + vh:

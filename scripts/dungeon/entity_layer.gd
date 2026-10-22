@@ -27,6 +27,7 @@ var monsters: Dictionary = {}   # Vector2i -> Array[{node, def}]
 var items: Dictionary = {}      # Vector2i -> Array[{node, def}]
 var merchant_node: Node3D = null
 var fountains: Dictionary = {}  # id -> Fountain3D
+var chests: Dictionary = {}     # id -> Chest3D
 ## Renvoie true si la fontaine `id` est utilisable (délai de recharge écoulé). Fournie par main.gd.
 var fountain_ready: Callable = Callable()
 var combat_info: Callable = Callable()   ## () -> {id, gauge 0..1} du monstre engagé au combat, ou {} (animations de combat)
@@ -111,6 +112,18 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			fountains[str(it.id)] = f
 			_register(items, Vector2i(int(it.x), int(it.y)), f, it)
 			continue
+		if type == "chest":
+			var ch := Chest3D.new()
+			ch.name = "Chest_" + str(it.id)
+			var wd: Vector2i = WALL_SIDES.get(str(it.get("wall", "N")), WALL_SIDES["N"])["d"]
+			# posé contre son mur, face au centre de la case : il ne gêne jamais le passage
+			ch.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL - wd.x * 0.55, 0.0, (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL - wd.y * 0.55)
+			ch.rotation.y = atan2(float(-wd.x), float(-wd.y))
+			ch.visible = not bool(it.get("startHidden", false))
+			add_child(ch)
+			chests[str(it.id)] = ch
+			_register(items, Vector2i(int(it.x), int(it.y)), ch, it)
+			continue
 		var n := _make_sprite(str(it.get("icon", "")), false, true)
 		if n == null:
 			continue
@@ -123,6 +136,12 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 		add_child(n)
 		if type != "decor" or str(it.get("wall", "")) == "":
 			_register(items, p, n, it)
+
+## Ouvre (avec animation) ou montre ouvert (sans) le coffre `id`.
+func open_chest(id: String, animate: bool = true) -> void:
+	var c = chests.get(id)
+	if c != null and is_instance_valid(c):
+		c.set_open(true, animate)
 
 ## Met à jour l'eau des fontaines (active / tarie) ; `instant` : sans transition (chargement du niveau).
 func refresh_fountains(instant: bool = false) -> void:
