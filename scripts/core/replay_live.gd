@@ -76,6 +76,8 @@ static func open(m: Dictionary) -> String:
 			return L.t("ui.replay.bad_log")
 		last = int(e[0])
 	var params: Dictionary = m.get("params", {}) if m.get("params") is Dictionary else {}
+	# partie enregistrée avant l'arrivée des salles (1.37.0) : même graine, mais l'ancien labyrinthe sans salles
+	DungeonGenerator.legacy_layout = AppVersion.is_before(str(m.get("game_version", "")), "1.37.0")
 	var cfg_v: Dictionary = RankedRun.config_for(Data.original_config, str(m.get("seed", "")), params)
 	if cfg_v.is_empty():
 		return L.t("ui.replay.bad_settings")
@@ -273,6 +275,7 @@ func close() -> void:
 	RunLog.replaying = false
 	GameClock.manual = false
 	Combat.legacy_initiative = false
+	DungeonGenerator.legacy_layout = false
 	if is_instance_valid(_blocker_layer):
 		_blocker_layer.queue_free()
 	if is_instance_valid(_bar_layer):

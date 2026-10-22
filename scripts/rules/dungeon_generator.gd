@@ -173,6 +173,150 @@ static func carve_maze(mw: int, mh: int) -> Array:
 				grid[2 * ry + 2][2 * rx + 1] = "."
 	return grid
 
+# ------------------------------------------------------------------ salles
+
+## Parties enregistrées avant l'arrivée des salles (1.37.0) : on rejoue avec l'ancien labyrinthe, sans aucune salle.
+static var legacy_layout := false
+
+const ROOM_MIN_NODES := 16        ## en dessous (nombre de cases du labyrinthe), un niveau reste un pur labyrinthe
+const ROOM_BUDGET := 0.30         ## part maximale des cases du labyrinthe qui peuvent appartenir à une salle
+const ROOM_MAX_DIM := 3           ## côté maximal d'une salle, en cases du labyrinthe (3 -> 5 cases de sol) : jamais un niveau d'une seule salle
+const ROOM_PER_NODES := 20.0      ## une salle prévue pour 20 cases du labyrinthe (plafonné à 8)
+
+## Taille (largeur, hauteur) tirée pour une salle, en cases du labyrinthe : surtout de petites salles, rarement une grande.
+static func _room_dims(max_dim: int) -> Vector2i:
+	var r := randf()
+	if r < 0.5 or max_dim < 3:
+		return Vector2i(2, 2)
+	if r < 0.85:
+		return Vector2i(3, 2) if randf() < 0.5 else Vector2i(2, 3)
+	return Vector2i(3, 3)
+
+## Plan des salles d'un niveau de `mw` x `mh` cases de labyrinthe : rectangles {x, y, w, h} (en cases du labyrinthe).
+## Elles sont réparties régulièrement (chaque nouvelle salle prend, parmi quelques essais, l'emplacement le plus éloigné des autres),
+## séparées par au moins une case de couloir, jamais sur le départ, et leur total reste sous ROOM_BUDGET.
+static func plan_rooms(mw: int, mh: int) -> Array:
+	var rects: Array = []
+	var n := mw * mh
+	if n < ROOM_MIN_NODES:
+		return rects
+	var max_dim := mini(ROOM_MAX_DIM, maxi(2, (mini(mw, mh) + 1) / 2))
+	var budget := int(n * ROOM_BUDGET)
+	var want := clampi(int(round(n / ROOM_PER_NODES)), 1, 8)
+	var used_nodes := 0
+	for k in want:
+		var dims := _room_dims(max_dim)
+		if used_nodes + dims.x * dims.y > budget:
+			dims = Vector2i(2, 2)
+			if used_nodes + 4 > budget:
+				break
+		var best := {}
+		var best_score := -1.0
+		for t in 14:
+			var rx := randi_range(0, mw - dims.x)
+			var ry := randi_range(0, mh - dims.y)
+			if rx <= 1 and ry <= 1:
+				continue          # ni sur le départ, ni collée à lui
+			var ok := true
+			var near := 99.0
+			for r in rects:
+				if not (rx >= r.x + r.w + 1 or r.x >= rx + dims.x + 1 or ry >= r.y + r.h + 1 or r.y >= ry + dims.y + 1):
+					ok = false
+					break
+				var dx := absf((rx + dims.x * 0.5) - (r.x + r.w * 0.5))
+				var dy := absf((ry + dims.y * 0.5) - (r.y + r.h * 0.5))
+				near = minf(near, maxf(dx, dy))
+			if not ok:
+				continue
+			var score := near + randf() * 0.5
+			if score > best_score:
+				best_score = score
+				best = {"x": rx, "y": ry, "w": dims.x, "h": dims.y}
+		if best.is_empty():
+			continue
+		rects.append(best)
+		used_nodes += dims.x * dims.y
+	return rects
+
+## Cases de sol (x, y de la grille) à l'intérieur des salles du plan : clés « x,y » -> true. Contient les cases du labyrinthe
+## de la salle ET celles qui les relient.
+static func room_mask(rects: Array) -> Dictionary:
+	var out := {}
+	for r in rects:
+		for cy in range(2 * int(r.y) + 1, 2 * (int(r.y) + int(r.h) - 1) + 2):
+			for cx in range(2 * int(r.x) + 1, 2 * (int(r.x) + int(r.w) - 1) + 2):
+				out[_key(cx, cy)] = true
+	return out
+
+## Labyrinthe avec salles : chaque salle est ouverte en entier (rectangle de sol) et compte comme UNE seule case pour le tracé
+## des couloirs, qui la relient au reste (tout le niveau reste donc connecté). Mêmes boucles supplémentaires (12 %) que `carve_maze`.
+static func carve_maze_rooms(mw: int, mh: int, rects: Array) -> Array:
+	var gw := 2 * mw + 1
+	var gh := 2 * mh + 1
+	var grid: Array = []
+	for y in gh:
+		var row: Array = []
+		for x in gw:
+			row.append("#")
+		grid.append(row)
+	var unit: Array = []                      # [y][x] -> numéro d'unité (une salle = une unité)
+	var members: Array = []                   # unité -> cases du labyrinthe
+	for ry in mh:
+		var ur: Array = []
+		for rx in mw:
+			ur.append(-1)
+			grid[2 * ry + 1][2 * rx + 1] = "."
+		unit.append(ur)
+	for r in rects:
+		var id := members.size()
+		var nodes: Array = []
+		for ry in range(int(r.y), int(r.y) + int(r.h)):
+			for rx in range(int(r.x), int(r.x) + int(r.w)):
+				unit[ry][rx] = id
+				nodes.append(Vector2i(rx, ry))
+		members.append(nodes)
+		for cy in range(2 * int(r.y) + 1, 2 * (int(r.y) + int(r.h) - 1) + 2):
+			for cx in range(2 * int(r.x) + 1, 2 * (int(r.x) + int(r.w) - 1) + 2):
+				grid[cy][cx] = "."
+	for ry in mh:
+		for rx in mw:
+			if int(unit[ry][rx]) < 0:
+				unit[ry][rx] = members.size()
+				members.append([Vector2i(rx, ry)])
+	var visited: Array = []
+	for u in members.size():
+		visited.append(false)
+	var first: int = unit[0][0]
+	visited[first] = true
+	var stack: Array = [first]
+	while not stack.is_empty():
+		var u: int = stack[stack.size() - 1]
+		var cands: Array = []
+		for a in members[u]:
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var b: Vector2i = a + d
+				if b.x < 0 or b.y < 0 or b.x >= mw or b.y >= mh:
+					continue
+				var vb: int = unit[b.y][b.x]
+				if vb != u and not visited[vb]:
+					cands.append({"a": a, "b": b, "v": vb})
+		if cands.is_empty():
+			stack.pop_back()
+			continue
+		var c: Dictionary = choice(cands)
+		var ca: Vector2i = c.a
+		var cb: Vector2i = c.b
+		grid[2 * ca.y + 1 + (cb.y - ca.y)][2 * ca.x + 1 + (cb.x - ca.x)] = "."
+		visited[c.v] = true
+		stack.append(c.v)
+	for ry in mh:
+		for rx in mw:
+			if rx < mw - 1 and int(unit[ry][rx]) != int(unit[ry][rx + 1]) and randf() < 0.12:
+				grid[2 * ry + 1][2 * rx + 2] = "."
+			if ry < mh - 1 and int(unit[ry][rx]) != int(unit[ry + 1][rx]) and randf() < 0.12:
+				grid[2 * ry + 2][2 * rx + 1] = "."
+	return grid
+
 ## Distances (nombre de pas) depuis (sx, sy) ; -1 = inaccessible. `block` : case infranchissable facultative.
 static func bfs(grid: Array, sx: int, sy: int, block: Vector2i = Vector2i(-1, -1)) -> Array:
 	var h := grid.size()
@@ -333,7 +477,9 @@ func levels(num_levels: int, width: int, height: int, party_pow: float = 1.0) ->
 
 func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_levels: Array, party_pow: float,
 		count_mult: float, run_escalation: float, since_fountain: int) -> Dictionary:
-	var grid := carve_maze(mw, mh)
+	var rects: Array = [] if legacy_layout else plan_rooms(mw, mh)
+	_room_mask = room_mask(rects)
+	var grid := carve_maze(mw, mh) if rects.is_empty() else carve_maze_rooms(mw, mh, rects)
 	var sx := 1
 	var sy := 1
 	var dist := bfs(grid, sx, sy)
@@ -345,7 +491,8 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			if dist[gy][gx] >= 0:
 				rooms.append({"x": gx, "y": gy, "d": dist[gy][gx]})
 	rooms.sort_custom(func(a, b): return a.d > b.d)
-	var far: Dictionary = rooms[0]
+	# la sortie est toujours dans un couloir (une arche dans le mur du fond), jamais au milieu d'une salle
+	var far: Dictionary = rooms.filter(func(r): return not _room_mask.has(_key(int(r.x), int(r.y))))[0]
 	var used := {_key(sx, sy): true, _key(far.x, far.y): true}
 
 	var stairs: Array = []
@@ -723,6 +870,8 @@ func _resist() -> Dictionary:
 	return {"resistPhys": 0, "resistMagic": randi_range(10, 35)}
 
 ## Écarts (en cases, à vol d'oiseau : le chemin réel est au moins aussi long) entre un nouveau monstre et ceux déjà placés, du plus souhaitable au minimum toléré.
+var _room_mask: Dictionary = {}     ## cases de sol des salles du niveau en cours de génération (clés « x,y »)
+
 const MONSTER_GAPS := [8, 7, 6, 5, 4, 3]
 const BOSS_GAP := 5
 
@@ -799,6 +948,8 @@ func _try_locking_door(grid: Array, dist: Array, rooms: Array, candidates: Array
 			var n: Vector2i = Vector2i(int(room.x), int(room.y)) + d
 			if n.y < 0 or n.y >= grid.size() or n.x < 0 or n.x >= grid[0].size():
 				continue
+			if _room_mask.has(_key(n.x, n.y)):
+				continue          # jamais de porte au milieu d'une salle : seulement dans un couloir ou à l'entrée
 			if grid[n.y][n.x] != "#" and dist[n.y][n.x] == room.d - 1:
 				var dl := bfs(grid, sx, sy, n)
 				var stairs_ok: bool = dl[far.y][far.x] != -1

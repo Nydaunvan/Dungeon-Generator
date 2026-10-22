@@ -147,6 +147,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		Outdoor.decorate(view, level)
 	else:
 		_add_columns(view, grid, theme.get("wall"))
+		RoomDecor.add(view, level, theme_name, theme.get("wall"))
 	return view
 
 ## Creux des murs du niveau : `niches` (case -> {d, w, h, ...}, pour les fontaines et le marchand) et `holes` ("x,y,dx,dy" -> intervalle évidé

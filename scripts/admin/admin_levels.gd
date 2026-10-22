@@ -17,7 +17,6 @@ const PARCH_DIM := Color("b8a781")
 static var _sel := ""
 static var _tab := "map"
 static var _brush := "."
-static var _allow_rooms := false
 ## Cible de placement en cours : {kind: monster|item|merchant|start|teleport, id: String} ou vide.
 static var _placement: Dictionary = {}
 static var _admin: Node = null
@@ -115,22 +114,6 @@ static func _too_close_to_stairs(lvl: Dictionary, x: int, y: int, min_dist: int 
 		var row := str(rows[sy])
 		for sx in row.length():
 			if row[sx] == "S" and maxi(absi(sx - x), absi(sy - y)) < min_dist:
-				return true
-	return false
-
-static func _would_make_room(lvl: Dictionary, x: int, y: int) -> bool:
-	var rows: Array = lvl.mapRows
-	var is_open := func(cx: int, cy: int) -> bool:
-		if cx == x and cy == y:
-			return true
-		if cy < 0 or cy >= rows.size() or cx < 0 or cx >= str(rows[0]).length():
-			return false
-		return str(rows[cy])[cx] != "#"
-	for dx in [-1, 0]:
-		for dy in [-1, 0]:
-			var bx: int = x + dx
-			var by: int = y + dy
-			if is_open.call(bx, by) and is_open.call(bx + 1, by) and is_open.call(bx, by + 1) and is_open.call(bx + 1, by + 1):
 				return true
 	return false
 
@@ -781,18 +764,6 @@ static func _map_sub(ep: VBoxContainer, lvl: Dictionary) -> void:
 	bm.add_theme_constant_override("margin_bottom", 6)
 	bm.add_child(bl)
 	ep.add_child(bm)
-	var rl := HFlowContainer.new()
-	var rm := MarginContainer.new()
-	rm.add_theme_constant_override("margin_bottom", 6)
-	rm.add_child(rl)
-	ep.add_child(rm)
-	var rooms := CheckBox.new()
-	rooms.text = L.t("admin.levels.autoriser_les_salles_test_desactive")
-	rooms.focus_mode = Control.FOCUS_NONE
-	rooms.button_pressed = _allow_rooms
-	rooms.add_theme_font_size_override("font_size", _fs(0.78))
-	rooms.toggled.connect(func(on: bool): _allow_rooms = on)
-	rl.add_child(rooms)
 	# grille
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -895,9 +866,6 @@ static func _place(lvl: Dictionary, x: int, y: int) -> void:
 
 static func _paint(lvl: Dictionary, x: int, y: int) -> void:
 	var rows: Array = lvl.mapRows
-	if _brush == "." and not _allow_rooms and _would_make_room(lvl, x, y):
-		_alert(L.t("admin.levels.impossible_cela_creerait_une"))
-		return
 	var row := str(rows[y])
 	rows[y] = row.substr(0, x) + _brush + row.substr(x + 1)
 	var doors: Array = lvl.doors

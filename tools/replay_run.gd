@@ -18,6 +18,10 @@ func _replay(inp: Variant) -> Dictionary:
 	var Rep: GDScript = load("res://scripts/core/replayer.gd")
 	var RR: GDScript = load("res://scripts/core/ranked_run.gd")
 	var base: Dictionary = root.get_node("Data").original_config
+	# partie enregistrée avant l'arrivée des salles (1.37.0) : l'ancien labyrinthe sans salles (entrée facultative « game_version »)
+	var DG: GDScript = load("res://scripts/rules/dungeon_generator.gd")
+	var AV: GDScript = load("res://scripts/core/app_version.gd")
+	DG.legacy_layout = inp.has("game_version") and AV.is_before(str(inp.game_version), "1.37.0")
 	var cfg: Dictionary = RR.config_for(base, str(inp.get("seed", "")), inp.params)
 	if cfg.is_empty():
 		return {"ok": false, "reason": "reglages_invalides"}
