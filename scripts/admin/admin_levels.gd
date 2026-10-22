@@ -1354,11 +1354,55 @@ static func _cfg_sub(ep: VBoxContainer, lvl: Dictionary) -> void:
 	ep.add_child(_stairs_box)
 	_render_stairs(lvl)
 	var h := Form.hint(ep, L.t("admin.levels.peignez_sur_la_carte_onglet"), _fs(0.74))
+	_room_styles_section(ep, lvl)
 	ep.add_child(_lbl(L.t("common.marchand_ambulant"), 1.0, UiTheme.PARCH))
 	_merchant_box = VBoxContainer.new()
 	_merchant_box.add_theme_constant_override("separation", 4)
 	ep.add_child(_merchant_box)
 	_render_merchant(lvl)
+
+## Style de décoration de chaque salle repérée sur la carte (Auto : selon le contenu et le thème, voir RoomStyles).
+static func _room_styles_section(ep: VBoxContainer, lvl: Dictionary) -> void:
+	var rooms := RoomMap.detect(lvl.mapRows)
+	ep.add_child(_lbl(L.t("admin.levels.styles_des_salles"), 1.0, UiTheme.PARCH))
+	if rooms.is_empty():
+		Form.hint(ep, L.t("admin.levels.aucune_salle_sur_ce_niveau"), _fs(0.74))
+		return
+	Form.hint(ep, L.t("admin.levels.salles_aide"), _fs(0.74))
+	var opts: Array = [["", L.t("admin.levels.style_auto")]]
+	for id in RoomStyles.ALL:
+		opts.append([id, _style_label(id)])
+	var auto := RoomStyles.assign(lvl, rooms, str(lvl.get("theme", "stone")))
+	if not (lvl.get("roomStyles") is Dictionary):
+		lvl["roomStyles"] = {}
+	var chosen: Dictionary = lvl.roomStyles
+	var order: Array = rooms.duplicate()
+	order.sort_custom(func(a, b): return a.rect.position.y < b.rect.position.y or (a.rect.position.y == b.rect.position.y and a.rect.position.x < b.rect.position.x))
+	for r in order:
+		var rect: Rect2i = r.rect
+		var key := RoomStyles.key_of(rect)
+		var row := _frow(ep, L.fa(L.t("admin.levels.salle_n"), [int(r.id) + 1, rect.position.x, rect.position.y, rect.size.x, rect.size.y]))
+		var cur := str(chosen.get(key, ""))
+		row.add_child(_dd(opts, cur, func(v):
+			if str(v) == "":
+				chosen.erase(key)
+			else:
+				chosen[key] = str(v), 0.85, 150))
+		row.add_child(_lbl(L.fa(L.t("admin.levels.salle_auto_donne"), _style_label(str(auto.get(int(r.id), "commune")))), 0.7, PARCH_DIM, true))
+
+static func _style_label(id: String) -> String:
+	match id:
+		"bibliotheque": return L.t("admin.levels.style_bibliotheque")
+		"armes": return L.t("admin.levels.style_armes")
+		"cellier": return L.t("admin.levels.style_cellier")
+		"autel": return L.t("admin.levels.style_autel")
+		"ruine": return L.t("admin.levels.style_ruine")
+		"commune": return L.t("admin.levels.style_commune")
+		"humide": return L.t("admin.levels.style_humide")
+		"tresor": return L.t("admin.levels.style_tresor")
+		"repaire": return L.t("admin.levels.style_repaire")
+		"marche": return L.t("admin.levels.style_marche")
+	return id
 
 static func _pick_teleport() -> void:
 	if not _has_run():

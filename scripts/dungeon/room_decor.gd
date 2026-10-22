@@ -18,6 +18,12 @@ const PALETTES := {
 	"temple": [0x4a2a6a, 0xd8b84a, 0x24133a],
 }
 
+## Palettes propres à certains styles (le trésor est doré, le repaire sanglant) ; les autres suivent le thème du niveau.
+const STYLE_PAL := {
+	"tresor": [0x6a5010, 0xffd76a, 0x3a2a05],
+	"repaire": [0x4a0f0f, 0x9a2a1a, 0x1c0606],
+}
+
 static var _tex: Dictionary = {}
 
 static func _h(a: int, b: int, c: int) -> int:
@@ -26,10 +32,17 @@ static func _h(a: int, b: int, c: int) -> int:
 static func _col(v: int) -> Color:
 	return Color((v >> 16) / 255.0, ((v >> 8) & 255) / 255.0, (v & 255) / 255.0)
 
-static func _pal(theme: String) -> Array:
-	return PALETTES.get(theme, PALETTES["stone"])
+## `key` : un thème, ou « style:<id> » pour la palette propre à un style.
+static func _pal(key: String) -> Array:
+	if key.begins_with("style:"):
+		return STYLE_PAL.get(key.substr(6), PALETTES["stone"])
+	return PALETTES.get(key, PALETTES["stone"])
+
+static func _pal_key(theme: String, style: String) -> String:
+	return "style:" + style if STYLE_PAL.has(style) else theme
 
 ## Ajoute les décors des salles du niveau à `view`. `wall_mat` : matériau des murs (piliers de même pierre).
+## Chaque salle reçoit un style (RoomStyles) : accessoires contre les murs (RoomProps), sol, piliers, tapis, lustre, bannières et ambiance.
 static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Material) -> void:
 	var rows: Array = level.get("mapRows", [])
 	var rooms := RoomMap.detect(rows)
@@ -39,20 +52,56 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 	var root := Node3D.new()
 	root.name = "RoomDecor"
 	view.add_child(root)
+	var styles := RoomStyles.assign(level, rooms, theme)
+	var vedette := RoomStyles.vedette(rooms)
+	var blocked := _blocked_cells(level)
+	var mats := {}
+	var prims := {}                       # matériau -> forme -> [Transform3D]
 	var shafts: Array = []
 	var bases: Array = []
 	var caps: Array = []
-	var banners := {0: [], 1: []}
+	var banners := {}
 	for r in rooms:
 		var rect: Rect2i = r.rect
 		var inside := {}
 		for c in r.cells:
 			inside[c] = true
+		var style := str(styles.get(int(r.id), "commune"))
+		var def: Dictionary = RoomProps.DEF.get(style, RoomProps.DEF["commune"])
+		var pk := _pal_key(theme, style)
 		var hs := _h(rect.position.x, rect.position.y, seed)
-		_pillars(rect, inside, theme, hs, shafts, bases, caps)
-		_rug(root, rect, inside, theme)
-		_chandelier(root, rect, inside, theme)
-		_banners(rows, r.cells, inside, hs, banners)
+		var plan := RoomProps.plan({"rows": rows, "inside": inside, "cells": r.cells, "rect": rect, "blocked": blocked,
+			"seed": hs, "vedette": int(r.id) == vedette, "style": style})
+		_floor(root, r.cells, str(def.floor))
+		var skip = plan.vertex
+		var pil = def.pillars
+		if pil:
+			_pillars(rect, inside, theme, hs, shafts, bases, caps, skip, pil is String or style == "ruine")
+		if def.rug:
+			_rug(root, rect, inside, pk)
+		if str(def.chand) != "":
+			_chandelier(root, rect, inside, pk)
+		if def.banners:
+			if not banners.has(pk):
+				banners[pk] = {0: [], 1: []}
+			_banners(rows, r.cells, inside, hs, banners[pk], plan.used)
+		for pr in plan.prims:
+			var key := str(pr.m) if not str(pr.m).begins_with("cloth") else "%s@%s" % [pr.m, pk]     # les tissus suivent la palette de la salle
+			if not mats.has(key):
+				mats[key] = _material(key, wall_mat)
+			var b := Basis(Vector3.UP, float(pr.y)) * Basis(Vector3.RIGHT, float(pr.pit)) * Basis(Vector3.BACK, float(pr.rol))
+			var t := Transform3D(b * Basis.from_scale(pr.z), pr.p)
+			if not prims.has(key):
+				prims[key] = {}
+			var by_shape: Dictionary = prims[key]
+			if not by_shape.has(pr.s):
+				by_shape[pr.s] = []
+			(by_shape[pr.s] as Array).append(t)
+		for f in plan.flames:
+			_flame(root, f.p, float(f.size), str(f.kind), pk)
+		for w in plan.webs:
+			_web(root, w.p, float(w.yaw))
+		_ambiance(root, r.cells, rect, str(def.fx))
 	if not shafts.is_empty():
 		var shaft := CylinderMesh.new()
 		shaft.top_radius = 0.3
@@ -70,13 +119,30 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 		cap.size = Vector3(0.95, 0.28, 0.95)
 		cap.material = wall_mat
 		_multi(root, cap, caps)
-	for k in banners:
-		if (banners[k] as Array).is_empty():
-			continue
-		var q := QuadMesh.new()
-		q.size = Vector2(1.1, 2.3)
-		q.material = _banner_material(theme, k)
-		_multi(root, q, banners[k])
+	for pk in banners:
+		for k in banners[pk]:
+			if (banners[pk][k] as Array).is_empty():
+				continue
+			var q := QuadMesh.new()
+			q.size = Vector2(1.1, 2.3)
+			q.material = _banner_material(pk, k)
+			_multi(root, q, banners[pk][k])
+	for key in prims:
+		for shape in prims[key]:
+			_multi(root, _shape_mesh(str(shape), mats[key]), prims[key][shape])
+
+## Cases où aucun accessoire ne se pose : objets du niveau (coffres, fontaines, pièges…), marchand, escaliers, départ.
+static func _blocked_cells(level: Dictionary) -> Dictionary:
+	var out := {}
+	for it in level.get("items", []):
+		out[Vector2i(int(it.get("x", -1)), int(it.get("y", -1)))] = true
+	var tm = level.get("travelingMerchant")
+	if tm is Dictionary:
+		out[Vector2i(int(tm.get("x", -1)), int(tm.get("y", -1)))] = true
+	for st in level.get("stairs", []):
+		out[Vector2i(int(st.get("x", -1)), int(st.get("y", -1)))] = true
+	out[Vector2i(int(level.get("startX", -1)), int(level.get("startY", -1)))] = true
+	return out
 
 static func _multi(root: Node3D, mesh: Mesh, xforms: Array) -> void:
 	var mm := MultiMesh.new()
@@ -93,19 +159,21 @@ static func _multi(root: Node3D, mesh: Mesh, xforms: Array) -> void:
 
 ## Quatre piliers par salle (d'au moins 3 x 3 cases), posés sur les sommets entre quatre cases proches des angles : jamais dans une case.
 ## Ruines : piliers brisés à hauteur variable.
-static func _pillars(rect: Rect2i, inside: Dictionary, theme: String, hs: int, shafts: Array, bases: Array, caps: Array) -> void:
+static func _pillars(rect: Rect2i, inside: Dictionary, theme: String, hs: int, shafts: Array, bases: Array, caps: Array, skip = null, ruined := false) -> void:
 	if rect.size.x < 3 or rect.size.y < 3:
 		return
 	for vi in [1, rect.size.x - 1]:
 		for vj in [1, rect.size.y - 1]:
 			var cx: int = rect.position.x + vi
 			var cy: int = rect.position.y + vj
+			if skip != null and skip == Vector2i(cx, cy):      # la pièce maîtresse occupe ce sommet
+				continue
 			# le sommet est entouré de quatre cases de la salle
 			if not (inside.has(Vector2i(cx - 1, cy - 1)) and inside.has(Vector2i(cx, cy - 1)) and inside.has(Vector2i(cx - 1, cy)) and inside.has(Vector2i(cx, cy))):
 				continue
 			var wx := (cx - 0.5) * CELL
 			var wz := (cy - 0.5) * CELL
-			var broken := theme == "ruins" and _h(cx, cy, hs) % 3 == 0
+			var broken := (theme == "ruins" or ruined) and _h(cx, cy, hs) % 3 == 0
 			var h := CELL if not broken else CELL * (0.45 + 0.4 * float(_h(cy, cx, hs) % 100) / 100.0)
 			var sh := Transform3D(Basis.from_scale(Vector3(1, h, 1)), Vector3(wx, h * 0.5, wz))
 			shafts.append(sh)
@@ -290,7 +358,7 @@ static func _banner_material(theme: String, variant: int) -> Material:
 	return mat
 
 ## Bannières contre les murs des salles, sur les pans sans torche (le décor de torches pose une torche sur un pan sur deux).
-static func _banners(rows: Array, cells: Array, inside: Dictionary, hs: int, out: Dictionary) -> void:
+static func _banners(rows: Array, cells: Array, inside: Dictionary, hs: int, out: Dictionary, used: Dictionary = {}) -> void:
 	var half := CELL * 0.5
 	for c in cells:
 		if (c.x + c.y) % 2 == 0:
@@ -300,7 +368,7 @@ static func _banners(rows: Array, cells: Array, inside: Dictionary, hs: int, out
 			var ch := "#"
 			if n.y >= 0 and n.y < rows.size() and n.x >= 0 and n.x < str(rows[n.y]).length():
 				ch = str(rows[n.y])[n.x]
-			if ch != "#":
+			if ch != "#" or used.has("%d,%d,%d,%d" % [c.x, c.y, d.x, d.y]):
 				continue
 			if _h(c.x * 4 + d.x, c.y * 4 + d.y, hs) % 3 != 0:
 				continue
@@ -308,3 +376,288 @@ static func _banners(rows: Array, cells: Array, inside: Dictionary, hs: int, out
 			var pos := Vector3(c.x * CELL, 0, c.y * CELL) + Vector3(d.x * half, 0, d.y * half) + nrm * 0.05 + Vector3(0, 1.95, 0)
 			var b := Basis(Vector3.UP, atan2(nrm.x, nrm.z))
 			(out[_h(c.x, c.y, hs) % 2] as Array).append(Transform3D(b, pos))
+
+# ------------------------------------------------------------------ matériaux et formes des accessoires
+
+static func _solid(c: Color, rough := 0.9, metal := 0.0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.roughness = rough
+	m.metallic = metal
+	return m
+
+static func _material(key: String, wall_mat: Material) -> Material:
+	if key.begins_with("cloth"):
+		var parts := key.split("@")
+		var p := _pal(parts[1])
+		var m := _solid(_col(p[0]) if parts[0] == "cloth_a" else _col(p[1]), 1.0)
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		return m
+	match key:
+		"stone": return wall_mat
+		"wood": return _solid(Color("6b4a2a"), 0.95)
+		"dark_wood": return _solid(Color("3c2814"), 0.95)
+		"marble": return _solid(Color("d8d4cc"), 0.4)
+		"iron": return _solid(Color("2a2a2e"), 0.5, 0.5)
+		"gold":
+			var g := _solid(Color("d8b040"), 0.35, 0.8)
+			g.emission_enabled = true
+			g.emission = Color("d8b040")
+			g.emission_energy_multiplier = 0.12
+			return g
+		"bone": return _solid(Color("e0d8c0"), 0.8)
+		"paper": return _solid(Color("e8dcb4"), 1.0)
+		"straw": return _solid(Color("9a8a5c"), 1.0)
+		"moss": return _solid(Color("3f6a2a"), 1.0)
+		"candle": return _solid(Color("f0e8cc"), 0.8)
+		"soot": return _solid(Color("0d0b0a"), 1.0)
+		"book1": return _solid(Color("7a2a2a"), 0.9)
+		"book2": return _solid(Color("2a4a6a"), 0.9)
+		"book3": return _solid(Color("3a5a2a"), 0.9)
+		"water":
+			var w := _solid(Color(0.16, 0.3, 0.4, 0.6), 0.1, 0.3)
+			w.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			return w
+		"ember":
+			var e := _solid(Color("ff7a2a"), 1.0)
+			e.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			return e
+		"shroom":
+			var sh := _solid(Color("6affa0"), 0.8)
+			sh.emission_enabled = true
+			sh.emission = Color("4aff90")
+			sh.emission_energy_multiplier = 1.2
+			return sh
+	return _solid(Color("808080"))
+
+static var _shape_cache: Dictionary = {}
+
+static func _shape_mesh(shape: String, mat: Material) -> Mesh:
+	var mesh: Mesh
+	match shape:
+		"box":
+			mesh = BoxMesh.new()
+		"cyl":
+			var c := CylinderMesh.new()
+			c.top_radius = 0.5
+			c.bottom_radius = 0.5
+			c.height = 1.0
+			c.radial_segments = 14
+			c.rings = 1
+			mesh = c
+		"sph":
+			var sp := SphereMesh.new()
+			sp.radius = 0.5
+			sp.height = 1.0
+			sp.radial_segments = 12
+			sp.rings = 6
+			mesh = sp
+		_:
+			var co := CylinderMesh.new()
+			co.top_radius = 0.0
+			co.bottom_radius = 0.5
+			co.height = 1.0
+			co.radial_segments = 10
+			co.rings = 1
+			mesh = co
+	mesh.material = mat
+	return mesh
+
+# ------------------------------------------------------------------ flammes, toiles, ambiance
+
+const FLAME_COLORS := {
+	"green": Color(0.4, 1.0, 0.55),
+	"red": Color(1.0, 0.3, 0.2),
+	"gold": Color(1.0, 0.82, 0.4),
+}
+
+static func _flame(root: Node3D, p: Vector3, size: float, kind: String, pk: String) -> void:
+	var col: Color = FLAME_COLORS.get(kind, _col(_pal(pk)[1]).lerp(Color(1.0, 0.7, 0.3), 0.6))
+	var fm := StandardMaterial3D.new()
+	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	fm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	fm.albedo_texture = ProceduralTextures.flame()
+	fm.albedo_color = col
+	var gm := fm.duplicate() as StandardMaterial3D
+	gm.albedo_texture = ProceduralTextures.glow()
+	gm.albedo_color = Color(col.r, col.g, col.b, 0.35)
+	var fq := QuadMesh.new()
+	fq.size = Vector2(0.34, 0.5) * size
+	fq.material = fm
+	var gq := QuadMesh.new()
+	gq.size = Vector2(1.5, 1.5) * size
+	gq.material = gm
+	var f := MeshInstance3D.new()
+	f.mesh = fq
+	f.position = p
+	root.add_child(f)
+	var g := MeshInstance3D.new()
+	g.mesh = gq
+	g.position = p
+	root.add_child(g)
+
+static func _web(root: Node3D, p: Vector3, yaw: float) -> void:
+	var key := "web"
+	if not _tex.has(key):
+		var W := 48
+		var img := Image.create(W, W, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0, 0, 0, 0))
+		var col := Color(0.92, 0.92, 0.95, 0.75)
+		for i in 7:                                  # fils rayonnant depuis le haut
+			var a := PI * (0.12 + 0.76 * float(i) / 6.0)
+			for t in W:
+				var x := int(W * 0.5 + cos(a) * t * 0.98)
+				var y := int(sin(a) * t * 0.98)
+				if x >= 0 and x < W and y >= 0 and y < W:
+					img.set_pixel(x, y, col)
+		for rr in [10, 18, 27, 36]:                  # arcs de soie
+			for k in 90:
+				var a2 := PI * (0.1 + 0.8 * float(k) / 89.0)
+				var x2 := int(W * 0.5 + cos(a2) * rr)
+				var y2 := int(sin(a2) * rr)
+				if x2 >= 0 and x2 < W and y2 >= 0 and y2 < W:
+					img.set_pixel(x2, y2, col)
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = ImageTexture.create_from_image(img)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_tex[key] = m
+	var q := QuadMesh.new()
+	q.size = Vector2(1.5, 1.5)
+	q.material = _tex[key]
+	var mi := MeshInstance3D.new()
+	mi.mesh = q
+	mi.position = p
+	mi.rotation.y = yaw
+	root.add_child(mi)
+
+## Poussière, braises, brume ou éclats dorés flottant dans la salle (peu de particules, en simple CPU pour l'export Web).
+static func _ambiance(root: Node3D, cells: Array, rect: Rect2i, kind: String) -> void:
+	if kind == "":
+		return
+	var pr := CPUParticles3D.new()
+	pr.name = "Ambiance_" + kind
+	pr.amount = clampi(int(cells.size() * (1.2 if kind != "mist" else 0.5)), 8, 28)
+	pr.lifetime = 9.0
+	pr.preprocess = 9.0
+	pr.local_coords = false
+	pr.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	pr.emission_box_extents = Vector3(rect.size.x * CELL * 0.5, 1.6 if kind != "mist" else 0.4, rect.size.y * CELL * 0.5)
+	pr.position = Vector3((rect.position.x + rect.size.x * 0.5 - 0.5) * CELL, 1.8 if kind != "mist" else 0.5, (rect.position.y + rect.size.y * 0.5 - 0.5) * CELL)
+	pr.direction = Vector3.UP
+	pr.spread = 180.0
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.vertex_color_use_as_albedo = true
+	var q := QuadMesh.new()
+	match kind:
+		"dust":
+			mat.albedo_texture = ProceduralTextures.glow()
+			pr.color = Color(0.85, 0.8, 0.7, 0.35)
+			pr.initial_velocity_min = 0.02
+			pr.initial_velocity_max = 0.08
+			q.size = Vector2(0.07, 0.07)
+		"embers":
+			mat.albedo_texture = ProceduralTextures.glow()
+			pr.color = Color(1.0, 0.5, 0.2, 0.8)
+			pr.initial_velocity_min = 0.1
+			pr.initial_velocity_max = 0.3
+			pr.gravity = Vector3(0, 0.12, 0)
+			q.size = Vector2(0.06, 0.06)
+		"motes":
+			mat.albedo_texture = ProceduralTextures.glow()
+			pr.color = Color(1.0, 0.9, 0.55, 0.7)
+			pr.initial_velocity_min = 0.03
+			pr.initial_velocity_max = 0.12
+			q.size = Vector2(0.09, 0.09)
+		_:
+			mat.albedo_texture = ProceduralTextures.smoke()
+			pr.color = Color(0.55, 0.9, 0.75, 0.1)
+			pr.initial_velocity_min = 0.03
+			pr.initial_velocity_max = 0.1
+			q.size = Vector2(2.4, 2.4)
+	q.material = mat
+	pr.mesh = q
+	root.add_child(pr)
+
+# ------------------------------------------------------------------ sol
+
+static func _floor_texture(name: String) -> Texture2D:
+	var key := "floor|" + name
+	if _tex.has(key):
+		return _tex[key]
+	var N := 64
+	var img := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	for y in N:
+		for x in N:
+			var n := float(_h(x, y, name.hash()) % 100) / 100.0
+			var c := Color(0, 0, 0, 0)
+			match name:
+				"parquet":
+					var plank := (x / 8) % 2
+					c = Color("6b4a2a").lerp(Color("8a6238"), 0.35 * float(plank) + 0.2 * n)
+					if x % 8 == 0 or (y + plank * 16) % 32 == 0:
+						c = c.darkened(0.45)
+				"dalles":
+					c = Color("5a5a64").lerp(Color("74747e"), n * 0.6 + (0.2 if ((x / 32) + (y / 32)) % 2 == 0 else 0.0))
+					if x % 32 < 1 or y % 32 < 1:
+						c = Color("33333a")
+				"terre":
+					c = Color(0.18, 0.12, 0.07, 0.35 + 0.3 * n)
+				"damier":
+					c = Color("8c8a86") if ((x / 32) + (y / 32)) % 2 == 0 else Color("1e1e26")
+					c = c.lerp(Color(0.5, 0.5, 0.5), n * 0.08)
+					if x % 32 == 0 or y % 32 == 0:
+						c = Color("8a7030")
+				"fissures":
+					c = Color(0.08, 0.07, 0.07, 0.15 + 0.2 * n)
+					var cr := absi((x * 3 + y * 5 + (y / 9) * 11) % 41 - 20)
+					if cr < 1 and n < 0.8:
+						c = Color(0.02, 0.02, 0.02, 0.8)
+				"planches":
+					var pl := (y / 10) % 2
+					c = Color("7a5a38").lerp(Color("5e4126"), 0.3 * float(pl) + 0.3 * n)
+					if y % 10 == 0 or (x + pl * 21) % 42 == 0:
+						c = c.darkened(0.5)
+				"mouille":
+					c = Color(0.05, 0.14, 0.15, 0.3 + 0.25 * n)
+				"dore":
+					c = Color("2a2418").lerp(Color("3a3020"), n * 0.6)
+					if x % 32 < 2 or y % 32 < 2 or absi((x % 32) - (y % 32)) < 1:
+						c = Color("d8b040")
+				"sang":
+					var blob := sin(float(x) * 0.22) * cos(float(y) * 0.19) + sin(float(x + y) * 0.31)
+					c = Color(0.35, 0.03, 0.03, 0.55) if blob > 1.0 else Color(0.06, 0.03, 0.03, 0.35 + 0.15 * n)
+				"paille":
+					c = Color(0.62, 0.5, 0.22, 0.5 + 0.25 * n)
+					if (x * 7 + y * 3) % 13 == 0:
+						c = Color(0.8, 0.66, 0.3, 0.9)
+			img.set_pixel(x, y, c)
+	img.generate_mipmaps()
+	var t := ImageTexture.create_from_image(img)
+	_tex[key] = t
+	return t
+
+## Revêtement de sol propre au style, posé sur le sol du thème (une dalle par case de la salle).
+static func _floor(root: Node3D, cells: Array, name: String) -> void:
+	var key := "floormat|" + name
+	if not _tex.has(key):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = _floor_texture(name)
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.roughness = 0.9
+		_tex[key] = m
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(CELL, CELL)
+	pm.material = _tex[key]
+	var xf: Array = []
+	for c in cells:
+		xf.append(Transform3D(Basis.IDENTITY, Vector3(c.x * CELL, 0.012, c.y * CELL)))
+	_multi(root, pm, xf)
