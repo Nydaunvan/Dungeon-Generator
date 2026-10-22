@@ -412,3 +412,6 @@ Le `Replayer` (si `ReplayLive` est à l'écran) montre l'inventaire avant les co
 
 ## Fermeture du volet d'inventaire par clic extérieur
 `EquipDock._input` referme le volet (même glissement que la touche Échap) sur un clic gauche hors de `_panel`, et absorbe ce clic. Inactif pendant un rejeu, avec une fenêtre du groupe `modal` ouverte ou pendant un glisser d'objet.
+
+## Point rouge des demandes d'amis à l'accueil
+`HomeScreen._make_friend_dot` pose un `NotifDot` clignotant sur le bord du sceau (alimenté par `Friends.pending_count`, relu à chaque changement de session `Cloud.session_changed`) ; l'onglet Amis de `OnlineHub` a le même point. Aucun changement de sauvegarde.

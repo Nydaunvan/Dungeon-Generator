@@ -145,6 +145,7 @@ func _build() -> void:
 	_tagline = _label(L.t("ui.home_screen.creez_explorez_survivez"), 17, Color("cbb083"), UiTheme.F_BODY_ITALIC)
 
 	_seal = _make_seal()
+	_make_friend_dot()
 	_refresh_seal_texts()
 	if not Cloud.session_changed.is_connected(_refresh_seal_texts):
 		Cloud.session_changed.connect(_refresh_seal_texts)       # connexion / déconnexion / restauration de session : le texte suit
@@ -265,6 +266,7 @@ func _make_seal() -> Control:
 ## Petit « lancer » du sceau au clic (les dés du HTML roulent au survol).
 ## Texte du sceau : « Donjon aléatoire / jamais deux fois pareil » hors ligne, « Expédition / classée ou libre » une fois connecté.
 func _refresh_seal_texts() -> void:
+	_load_friend_requests()
 	if _seal_title == null:
 		return
 	var online := Cloud.is_signed_in()
@@ -471,3 +473,34 @@ func _layout_stacked(area: Rect2) -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_foot.custom_minimum_size = Vector2(0, 90)
 	_foot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+## Point rouge clignotant sur le sceau « Expédition en ligne » tant que des demandes d'amis attendent (posé sur le bord du disque, en haut à droite).
+var _friend_requests := 0
+var _friend_dot: NotifDot = null
+
+func _make_friend_dot() -> void:
+	_friend_dot = NotifDot.attach(_seal, func(): return _friend_requests, false)
+	_friend_dot.anchor_left = 0.854
+	_friend_dot.anchor_right = 0.854
+	_friend_dot.anchor_top = 0.146
+	_friend_dot.anchor_bottom = 0.146
+	_friend_dot.offset_left = -10.0
+	_friend_dot.offset_right = 10.0
+	_friend_dot.offset_top = -10.0
+	_friend_dot.offset_bottom = 10.0
+	_friend_dot.z_index = 5
+	var blink := _friend_dot.create_tween().set_loops()
+	blink.tween_property(_friend_dot, "modulate:a", 0.15, 0.55)
+	blink.tween_property(_friend_dot, "modulate:a", 1.0, 0.55)
+
+func _load_friend_requests() -> void:
+	if _friend_dot == null:
+		return
+	if not Cloud.is_signed_in():
+		_friend_requests = 0
+		_friend_dot._update()
+		return
+	var r: Dictionary = await Friends.pending_count()
+	if is_inside_tree() and r.get("ok", false) and (r.data is int or r.data is float):
+		_friend_requests = int(r.data)
+		_friend_dot._update()
