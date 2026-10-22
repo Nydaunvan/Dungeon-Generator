@@ -1057,11 +1057,10 @@ func snapshot() -> Dictionary:
 func _modals() -> Node:
 	return _modal_layer
 
-## Bouton « Retour à l'accueil » d'une fin de partie : l'accueil lui-même, sans rouvrir la fenêtre du mode en ligne.
+## Bouton « Retour à l'accueil » d'une fin de partie : le menu en ligne si la partie en venait (hub_return), sinon le menu général.
 func _home() -> void:
 	_end_ranked_run()
-	Data.hub_return = false
-	Data.go_home()
+	Data.go_home()   # hub_return (parties lancées du mode en ligne) rouvre la fenêtre en ligne ; sinon accueil
 
 func _restart() -> void:
 	var cfg: Dictionary = Data.active()
