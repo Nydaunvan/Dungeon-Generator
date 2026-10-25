@@ -45,6 +45,18 @@ static func _cone(P: Dictionary, m: String, p: Vector3, z: Vector3, rol := 0.0) 
 static func _flame(P: Dictionary, p: Vector3, size: float, kind := "warm") -> void:
 	P.flames.append({"p": p, "size": size, "kind": kind})
 
+## Modèle 3D détaillé (voir PropMeshes) posé en `p` (au sol, sauf objets muraux), tourné de `yaw`, mis à l'échelle `sc`.
+static func _model(P: Dictionary, name: String, p: Vector3, yaw := 0.0, sc := 1.0) -> void:
+	P.prims.append({"m": name, "s": "mesh", "p": p, "z": Vector3(sc, sc, sc), "y": yaw, "pit": 0.0, "rol": 0.0})
+
+## Point `local` (repère du modèle : +Z vers l'intérieur de la salle) converti dans le repère de la salle.
+static func _at(p: Vector3, yaw: float, local: Vector3) -> Vector3:
+	return p + Basis(Vector3.UP, yaw) * local
+
+## Variante (0..n-1) déterministe d'après la position.
+static func _var(p: Vector3, n: int) -> int:
+	return absi(int(floor(p.x * 37.0 + p.z * 91.0))) % n
+
 ## Point contre le mur `d` de la case `c` : `off` = distance au mur du centre de l'accessoire, `lat` = décalage le long du mur.
 static func _wp(c: Vector2i, d: Vector2i, off: float, lat := 0.0, y := 0.0) -> Vector3:
 	var t := Vector3(absf(float(d.y)), 0.0, absf(float(d.x)))
@@ -138,49 +150,37 @@ static func _center_vertex(ctx: Dictionary):
 # ------------------------------------------------------------------ objets communs
 
 static func _barrel(P: Dictionary, p: Vector3, big := 1.0) -> void:
-	_cyl(P, "wood", p + Vector3(0, 0.475 * big, 0), Vector3(0.8, 0.95, 0.8) * big)
-	_cyl(P, "iron", p + Vector3(0, 0.22 * big, 0), Vector3(0.84, 0.05, 0.84) * big)
-	_cyl(P, "iron", p + Vector3(0, 0.72 * big, 0), Vector3(0.84, 0.05, 0.84) * big)
+	_model(P, "barrel%d" % _var(p, 3), p, 0.0, big)
 
 static func _crate(P: Dictionary, p: Vector3, s: float, yaw: float) -> void:
-	_box(P, "dark_wood", p + Vector3(0, s * 0.5, 0), Vector3(s, s, s), yaw)
-	_box(P, "wood", p + Vector3(0, s * 0.5, 0), Vector3(s * 1.03, s * 0.12, s * 1.03), yaw)
+	_model(P, "crate%d" % _var(p, 2), p, yaw, s)
 
 static func _sack(P: Dictionary, p: Vector3, yaw: float) -> void:
-	_sph(P, "straw", p + Vector3(0, 0.3, 0), Vector3(0.65, 0.6, 0.55), yaw)
+	_model(P, "sack%d" % _var(p, 3), p, yaw)
 
 static func _candle(P: Dictionary, p: Vector3, h := 0.35, kind := "warm") -> void:
-	_cyl(P, "candle", p + Vector3(0, h * 0.5, 0), Vector3(0.09, h, 0.09))
-	_flame(P, p + Vector3(0, h + 0.1, 0), 0.32, kind)
+	_model(P, "candle", p, 0.0, h / 0.4)
+	_flame(P, p + Vector3(0, h + 0.07, 0), 0.32, kind)
 
 static func _brazier(P: Dictionary, p: Vector3, kind := "warm", gold := false) -> void:
-	var m := "gold" if gold else "iron"
-	_cyl(P, m, p + Vector3(0, 0.45, 0), Vector3(0.1, 0.9, 0.1))
-	_cyl(P, m, p + Vector3(0, 0.95, 0), Vector3(0.55, 0.3, 0.55))
-	_cyl(P, "ember", p + Vector3(0, 1.08, 0), Vector3(0.44, 0.04, 0.44))
-	_flame(P, p + Vector3(0, 1.4, 0), 0.9, kind)
+	_model(P, "brazier_gold" if gold else "brazier_iron", p)
+	_flame(P, p + Vector3(0, 1.2, 0), 0.9, kind)
 
 static func _rubble(P: Dictionary, ctx: Dictionary, p: Vector3, n: int, spread: float) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
-	for i in n:
-		var s := 0.18 + rng.randf() * 0.34
-		var q := p + Vector3((rng.randf() - 0.5) * spread, 0.0, (rng.randf() - 0.5) * spread)
-		_box(P, "stone", q + Vector3(0, s * 0.35, 0), Vector3(s, s * 0.7, s * (0.7 + rng.randf() * 0.5)), rng.randf() * TAU, (rng.randf() - 0.5) * 0.4)
+	var sc := clampf(0.75 + float(n) * 0.06, 0.85, 1.4)
+	_model(P, "rubble%d" % (rng.randi() % 3), p, rng.randf() * TAU, sc)
+	if spread > 1.2:
+		_model(P, "rubble%d" % (rng.randi() % 3), p + Vector3(0.7, 0, -0.6), rng.randf() * TAU, 1.0)
+		_model(P, "rock%d" % (rng.randi() % 3), p + Vector3(-0.6, 0, 0.7), rng.randf() * TAU, 1.2)
 
 static func _coins(P: Dictionary, ctx: Dictionary, p: Vector3, n: int) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
-	for i in n:
-		_cyl(P, "gold", p + Vector3((rng.randf() - 0.5) * 0.9, 0.012, (rng.randf() - 0.5) * 0.9), Vector3(0.11, 0.02, 0.11))
+	_model(P, "coins%d" % (rng.randi() % 3), p, rng.randf() * TAU, 1.0 + float(n) * 0.03)
 
 static func _bones(P: Dictionary, ctx: Dictionary, p: Vector3, n: int) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
-	for i in n:
-		var q := p + Vector3((rng.randf() - 0.5) * 1.1, 0.0, (rng.randf() - 0.5) * 1.1)
-		if rng.randf() < 0.22:
-			_sph(P, "bone", q + Vector3(0, 0.13, 0), Vector3(0.26, 0.24, 0.28), rng.randf() * TAU)
-			_box(P, "bone", q + Vector3(0, 0.05, 0.12), Vector3(0.17, 0.08, 0.1), rng.randf() * TAU)
-		else:
-			_cyl(P, "bone", q + Vector3(0, 0.05, 0), Vector3(0.06, 0.5 + rng.randf() * 0.35, 0.06), rng.randf() * TAU, 0.0, PI * 0.5)
+	_model(P, "bones%d" % (rng.randi() % 3), p, rng.randf() * TAU, 0.8 + float(n) * 0.06)
 
 # ------------------------------------------------------------------ plan
 
@@ -216,27 +216,14 @@ static func _bibliotheque(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vec
 	var rng: RandomNumberGenerator = ctx.rng
 	var slots := _slots(ctx, true)
 	for s in _take(P, slots, _count(ctx, slots, 0.55, 9)):
-		var c: Vector2i = s.c
-		var d: Vector2i = s.d
-		var yaw := _yaw(d)
-		_box(P, "dark_wood", _wp(c, d, 0.2, 0, 1.25), Vector3(1.7, 2.5, 0.4), yaw)
-		for lv in 4:
-			var y := 0.42 + lv * 0.58
-			_box(P, "wood", _wp(c, d, 0.28, 0, y), Vector3(1.72, 0.05, 0.56), yaw)
-			var lat := -0.74
-			while lat < 0.7:
-				var w := 0.13 + rng.randf() * 0.1
-				var h := 0.28 + rng.randf() * 0.2
-				_box(P, "book%d" % (1 + rng.randi() % 3), _wp(c, d, 0.5, lat + w * 0.5, y + 0.03 + h * 0.5), Vector3(w, h, 0.22), yaw, 0.0, (rng.randf() - 0.5) * 0.12 if rng.randf() < 0.1 else 0.0)
-				lat += w + 0.015
+		_model(P, "bookshelf%d" % (rng.randi() % 3), _wp(s.c, s.d, 0.2, 0, 0.0), _yaw(s.d))
 	var floor_slots := _slots(ctx)
 	for s in _take(P, floor_slots, 3 + int(5.0 * ctx.density)):
 		var q := _wp(s.c, s.d, 0.55 + rng.randf() * 0.45, (rng.randf() - 0.5) * 1.6, 0.012)
 		_box(P, "paper", q, Vector3(0.42, 0.012, 0.3), rng.randf() * TAU)
 	if feature:
-		_box(P, "dark_wood", vw + Vector3(0, 0.5, 0), Vector3(0.55, 1.0, 0.55))
-		_box(P, "paper", vw + Vector3(0, 1.07, 0), Vector3(0.78, 0.05, 0.56), 0.0, -0.45)
-		_candle(P, vw + Vector3(0.3, 1.0, 0.0), 0.3)
+		_model(P, "table_small", vw, rng.randf() * TAU)
+		_candle(P, vw + Vector3(0.3, 0.82, 0.0), 0.3)
 
 static func _armes(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
@@ -248,28 +235,15 @@ static func _armes(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -
 		var d: Vector2i = taken[i].d
 		var yaw := _yaw(d)
 		if i % 2 == 0:
-			for sx in [-0.75, 0.75]:
-				_box(P, "dark_wood", _wp(c, d, 0.1, sx, 0.95), Vector3(0.1, 1.9, 0.1), yaw)
-			for y in [0.5, 1.3]:
-				_box(P, "dark_wood", _wp(c, d, 0.14, 0, y), Vector3(1.6, 0.08, 0.1), yaw)
-			for k in 3:
-				var lat := -0.4 + 0.4 * k
-				_cyl(P, "wood", _wp(c, d, 0.24, lat, 1.0), Vector3(0.05, 1.9, 0.05), yaw, 0.0, (rng.randf() - 0.5) * 0.1)
-				_cone(P, "iron", _wp(c, d, 0.24, lat, 2.05), Vector3(0.1, 0.24, 0.1))
+			_model(P, "weapon_rack%d" % ((i / 2) % 2), _wp(c, d, 0.2, 0, 0.0), yaw)
 		else:
-			_cyl(P, "cloth_a", _wp(c, d, 0.05, 0, 1.55), Vector3(0.82, 0.07, 0.82), yaw, PI * 0.5)
-			_cyl(P, "cloth_b", _wp(c, d, 0.09, 0, 1.55), Vector3(0.5, 0.05, 0.5), yaw, PI * 0.5)
-			_sph(P, "iron", _wp(c, d, 0.16, 0, 1.55), Vector3(0.2, 0.2, 0.2))
+			_model(P, "shield_wall%d" % (rng.randi() % 2), _wp(c, d, 0.0, 0, 1.55), yaw)
 	var corners := _corners(ctx)
 	var nb := 1 + int(2.0 * ctx.density)
 	for i in mini(nb, corners.size()):
 		_brazier(P, _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.45), "warm")
 	if feature:
-		_box(P, "wood", vw + Vector3(0, 0.07, 0), Vector3(0.8, 0.14, 0.8))
-		_cyl(P, "wood", vw + Vector3(0, 0.8, 0), Vector3(0.14, 1.4, 0.14))
-		_box(P, "wood", vw + Vector3(0, 1.15, 0), Vector3(1.0, 0.1, 0.1))
-		_sph(P, "straw", vw + Vector3(0, 1.62, 0), Vector3(0.32, 0.34, 0.32))
-		_sph(P, "straw", vw + Vector3(0, 0.95, 0), Vector3(0.42, 0.6, 0.3))
+		_model(P, "dummy", vw, rng.randf() * TAU)
 
 static func _cellier(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
@@ -289,7 +263,7 @@ static func _cellier(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3)
 	for s in _take(P, slots, _count(ctx, slots, 0.4, 8)):
 		var c: Vector2i = s.c
 		var d: Vector2i = s.d
-		match rng.randi() % 3:
+		match rng.randi() % 4:
 			0:
 				_barrel(P, _wp(c, d, 0.45, (rng.randf() - 0.5) * 1.4))
 			1:
@@ -297,6 +271,8 @@ static func _cellier(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3)
 			2:
 				_sack(P, _wp(c, d, 0.4, -0.4), rng.randf() * TAU)
 				_sack(P, _wp(c, d, 0.45, 0.35), rng.randf() * TAU)
+			3:
+				_model(P, "vase%d" % (rng.randi() % 2), _wp(c, d, 0.4, (rng.randf() - 0.5) * 1.2), rng.randf() * TAU)
 	if feature:
 		_crate(P, vw + Vector3(-0.5, 0, 0.3), 0.9, 0.2)
 		_crate(P, vw + Vector3(0.5, 0, -0.2), 0.8, -0.3)
@@ -308,23 +284,24 @@ static func _autel(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -
 	for s in _take(P, slots, _count(ctx, slots, 0.35, 5)):
 		var d: Vector2i = s.d
 		var yaw := _yaw(d)
-		_box(P, "iron", _wp(s.c, d, 0.14, 0, 1.75), Vector3(0.08, 0.08, 0.28), yaw)
-		_cyl(P, "iron", _wp(s.c, d, 0.28, 0, 1.8), Vector3(0.22, 0.12, 0.22), yaw)
-		_flame(P, _wp(s.c, d, 0.28, 0, 2.05), 0.5)
+		var o := _wp(s.c, d, 0.0, 0, 1.8)
+		_model(P, "sconce", o, yaw)
+		_flame(P, _at(o, yaw, Vector3(0, 0.3, 0.26)), 0.5)
 	if feature:
-		_box(P, "stone", vw + Vector3(0, 0.09, 0), Vector3(2.8, 0.18, 2.8))
-		_box(P, "stone", vw + Vector3(0, 0.6, 0), Vector3(1.5, 0.85, 0.7))
-		_box(P, "marble", vw + Vector3(0, 1.07, 0), Vector3(1.72, 0.1, 0.92))
-		_box(P, "cloth_a", vw + Vector3(0, 1.13, 0), Vector3(0.5, 0.02, 0.94))
-		for sx in [-1.15, 1.15]:
-			for sz in [-1.15, 1.15]:
-				_candle(P, vw + Vector3(sx, 0.18, sz), 0.45)
-		_cyl(P, "gold", vw + Vector3(0, 1.3, 0), Vector3(0.12, 0.38, 0.12))
-		_sph(P, "gold", vw + Vector3(0, 1.55, 0), Vector3(0.22, 0.22, 0.22))
+		_model(P, "altar", vw)
+		for sx in [-1.05, 1.05]:
+			for sz in [-1.05, 1.05]:
+				var cp := vw + Vector3(sx, 0.0, sz)
+				_model(P, "candelabra", cp)
+				for fp in PropMeshes.CANDELABRA_FLAMES:
+					_flame(P, cp + fp + Vector3(0, 0.03, 0), 0.4)
 	else:
 		var corners := _corners(ctx)
 		for i in mini(2, corners.size()):
-			_candle(P, _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.4), 0.5)
+			var cp := _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.45)
+			_model(P, "candelabra", cp)
+			for fp in PropMeshes.CANDELABRA_FLAMES:
+				_flame(P, cp + fp + Vector3(0, 0.03, 0), 0.4)
 
 static func _ruine(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
@@ -338,49 +315,40 @@ static func _ruine(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -
 	for i in taken.size():
 		var c: Vector2i = taken[i].c
 		var d: Vector2i = taken[i].d
-		if i % 3 == 0:
-			var lat := (rng.randf() - 0.5) * 0.6
-			_cyl(P, "stone", _wp(c, d, 0.45, lat, 0.3), Vector3(0.6, 1.8, 0.6), _yaw(d), PI * 0.5, 0.0)
-		else:
-			_rubble(P, ctx, _wp(c, d, 0.5, (rng.randf() - 0.5) * 1.2), 3 + rng.randi() % 4, 0.8)
+		match i % 3:
+			0:
+				_model(P, "column_stump", _wp(c, d, 0.5, (rng.randf() - 0.5) * 0.6, 0.0), rng.randf() * TAU)
+			1:
+				_model(P, "column_fallen", _wp(c, d, 0.5, (rng.randf() - 0.5) * 0.4, 0.0), _yaw(d) + (rng.randf() - 0.5) * 0.3)
+			_:
+				_rubble(P, ctx, _wp(c, d, 0.5, (rng.randf() - 0.5) * 1.2), 3 + rng.randi() % 4, 0.8)
 	if feature:
 		_rubble(P, ctx, vw, 10, 1.5)
-		_cyl(P, "stone", vw + Vector3(0.3, 0.3, 0.2), Vector3(0.6, 1.6, 0.6), rng.randf() * TAU, PI * 0.5)
+		_model(P, "column_fallen", vw + Vector3(0.3, 0, 0.2), rng.randf() * TAU)
 
 static func _commune(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
 	if feature:
-		_box(P, "wood", vw + Vector3(0, 0.8, 0), Vector3(3.2, 0.08, 0.95))
-		for sx in [-1.4, 1.4]:
-			for sz in [-0.35, 0.35]:
-				_box(P, "dark_wood", vw + Vector3(sx, 0.38, sz), Vector3(0.1, 0.76, 0.1))
+		_model(P, "table_long", vw)
 		for sz in [-0.85, 0.85]:
-			_box(P, "wood", vw + Vector3(0, 0.45, sz), Vector3(3.0, 0.08, 0.3))
-			for sx in [-1.25, 1.25]:
-				_box(P, "dark_wood", vw + Vector3(sx, 0.2, sz), Vector3(0.1, 0.4, 0.22))
-		for i in 5:
-			var q := vw + Vector3(-1.2 + i * 0.6, 0.84, (rng.randf() - 0.5) * 0.5)
-			if i % 2 == 0:
-				_cyl(P, "iron", q + Vector3(0, 0.07, 0), Vector3(0.1, 0.14, 0.1))
-			else:
-				_cyl(P, "paper", q + Vector3(0, 0.01, 0), Vector3(0.26, 0.02, 0.26))
-		_candle(P, vw + Vector3(0, 0.84, 0), 0.3)
+			_model(P, "bench", vw + Vector3(0, 0, sz))
+		_model(P, "tableware", vw)
+		_candle(P, vw + Vector3(0.0, 0.8, 0.0), 0.3)
 	var tall := _slots(ctx, true)
 	var chimney: Array = _take(P, tall, 1) if bool(ctx.vedette) else []
 	if not chimney.is_empty():
 		var c: Vector2i = chimney[0].c
 		var d: Vector2i = chimney[0].d
 		var yaw := _yaw(d)
-		_box(P, "stone", _wp(c, d, 0.3, 0, 1.3), Vector3(2.0, 2.6, 0.6), yaw)
-		_box(P, "soot", _wp(c, d, 0.62, 0, 0.6), Vector3(1.0, 1.1, 0.06), yaw)
-		_cyl(P, "wood", _wp(c, d, 0.75, 0, 0.12), Vector3(0.14, 0.8, 0.14), yaw, 0.0, PI * 0.5)
-		_flame(P, _wp(c, d, 0.85, 0, 0.55), 1.2)
+		var o := _wp(c, d, 0.3, 0, 0.0)
+		_model(P, "fireplace", o, yaw)
+		_flame(P, _at(o, yaw, Vector3(0, 0.55, 0.02)), 1.2)
 	var slots := _slots(ctx)
 	for s in _take(P, slots, _count(ctx, slots, 0.3, 6)):
 		var c: Vector2i = s.c
 		var d: Vector2i = s.d
 		if rng.randf() < 0.5:
-			_cyl(P, "wood", _wp(c, d, 0.35, (rng.randf() - 0.5) * 1.2, 0.22), Vector3(0.42, 0.44, 0.42))
+			_model(P, "stool", _wp(c, d, 0.4, (rng.randf() - 0.5) * 1.2), rng.randf() * TAU)
 		else:
 			_barrel(P, _wp(c, d, 0.45, (rng.randf() - 0.5) * 1.2), 0.85)
 
@@ -396,20 +364,20 @@ static func _humide(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) 
 			_cyl(P, "moss", _wp(c, d, 0.3, (rng.randf() - 0.5) * 1.6, 0.02), Vector3(0.7, 0.012, 0.5), rng.randf() * TAU)
 		match rng.randi() % 3:
 			0:
-				var h := 0.8 + rng.randf() * 0.7
-				_cone(P, "stone", _wp(c, d, 0.3, (rng.randf() - 0.5) * 1.4, CELL - h * 0.5), Vector3(0.3, h, 0.3), PI)
+				var vv := rng.randi() % 2
+				var ht := 0.85 + 0.35 * float(vv)
+				_model(P, "stalactite%d" % vv, _wp(c, d, 0.3, (rng.randf() - 0.5) * 1.4, CELL - ht), rng.randf() * TAU)
 			1:
-				var h2 := 0.35 + rng.randf() * 0.4
-				_cone(P, "stone", _wp(c, d, 0.35, (rng.randf() - 0.5) * 1.4, h2 * 0.5), Vector3(0.34, h2, 0.34))
+				_model(P, "stalagmite%d" % (rng.randi() % 3), _wp(c, d, 0.35, (rng.randf() - 0.5) * 1.4, 0.0), rng.randf() * TAU)
 			2:
 				var q := _wp(c, d, 0.3, (rng.randf() - 0.5) * 1.4, 0.0)
-				_cyl(P, "stone", q + Vector3(0, 0.1, 0), Vector3(0.07, 0.2, 0.07))
-				_sph(P, "shroom", q + Vector3(0, 0.24, 0), Vector3(0.28, 0.16, 0.28))
+				_model(P, "mushrooms%d" % (rng.randi() % 2), q, rng.randf() * TAU, 1.5)
 				_flame(P, q + Vector3(0, 0.3, 0), 0.45, "green")
 	if feature:
 		_cyl(P, "water", vw + Vector3(0, 0.014, 0), Vector3(2.2, 0.01, 1.8))
-		_cone(P, "stone", vw + Vector3(0.3, 0.5, 0.2), Vector3(0.5, 1.0, 0.5))
-		_cone(P, "stone", vw + Vector3(-0.35, 0.3, -0.25), Vector3(0.4, 0.6, 0.4))
+		_model(P, "stalagmite2", vw + Vector3(0.3, 0, 0.2), 0.3, 1.3)
+		_model(P, "stalagmite0", vw + Vector3(-0.35, 0, -0.25), 1.2, 1.1)
+		_model(P, "mushrooms1", vw + Vector3(0.1, 0, -0.5), 0.5, 1.6)
 		_flame(P, vw + Vector3(0, 0.3, 0), 0.9, "green")
 
 static func _tresor(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
@@ -417,19 +385,20 @@ static func _tresor(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) 
 	var slots := _slots(ctx)
 	for s in _take(P, slots, _count(ctx, slots, 0.4, 7)):
 		var p := _wp(s.c, s.d, 0.55, (rng.randf() - 0.5) * 1.2)
-		_cyl(P, "gold", p + Vector3(0, 0.06, 0), Vector3(0.85, 0.12, 0.85))
-		_cyl(P, "gold", p + Vector3(0, 0.2, 0), Vector3(0.6, 0.16, 0.6))
-		_cyl(P, "gold", p + Vector3(0, 0.34, 0), Vector3(0.34, 0.14, 0.34))
-		_coins(P, ctx, p, 6)
+		if rng.randf() < 0.65:
+			_model(P, "gold_pile%d" % (rng.randi() % 2), p, rng.randf() * TAU, 1.0 + rng.randf() * 0.3)
+			_coins(P, ctx, p + Vector3(0.4, 0, 0.3), 6)
+		else:
+			_model(P, "vase%d" % (rng.randi() % 2), p, rng.randf() * TAU)
+			_model(P, "gold_bars", p + Vector3(0.5, 0, 0.1), rng.randf() * TAU)
 	var corners := _corners(ctx)
 	for i in mini(2 + int(2.0 * ctx.density), corners.size()):
 		_brazier(P, _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.45), "gold", true)
 	if feature:
-		_cone(P, "gold", vw + Vector3(0, 0.45, 0), Vector3(2.0, 0.9, 2.0))
-		_coins(P, ctx, vw + Vector3(0.6, 0, 0.6), 9)
-		_coins(P, ctx, vw + Vector3(-0.7, 0, -0.5), 9)
-		_cyl(P, "iron", vw + Vector3(0.2, 0.95, 0.1), Vector3(0.05, 1.0, 0.05), 0.0, 0.0, 0.3)
-		_flame(P, vw + Vector3(0, 1.0, 0), 1.0, "gold")
+		_model(P, "gold_hoard", vw, rng.randf() * TAU)
+		_coins(P, ctx, vw + Vector3(1.0, 0, 0.9), 9)
+		_coins(P, ctx, vw + Vector3(-1.1, 0, -0.8), 9)
+		_flame(P, vw + Vector3(0, 1.3, 0), 1.0, "gold")
 
 static func _repaire(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
@@ -438,10 +407,7 @@ static func _repaire(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3)
 		_bones(P, ctx, _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.7), 5 + rng.randi() % 4)
 	var tall := _slots(ctx, true)
 	for s in _take(P, tall, _count(ctx, tall, 0.3, 4)):
-		var p := _wp(s.c, s.d, 0.15, 0, 1.5)
-		_cyl(P, "iron", p, Vector3(0.05, 1.8, 0.05), _yaw(s.d))
-		for k in 3:
-			_cyl(P, "iron", p + Vector3(0, -0.6 + k * 0.6, 0.0), Vector3(0.18, 0.04, 0.18), _yaw(s.d), PI * 0.5)
+		_model(P, "wall_chains", _wp(s.c, s.d, 0.0, 0, 2.1), _yaw(s.d))
 	var slots := _slots(ctx)
 	for s in _take(P, slots, _count(ctx, slots, 0.3, 5)):
 		_bones(P, ctx, _wp(s.c, s.d, 0.6, (rng.randf() - 0.5) * 1.2), 3 + rng.randi() % 3)
@@ -449,13 +415,10 @@ static func _repaire(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3)
 		var cr = corners[corners.size() - 1 - i]
 		_brazier(P, _corner(cr.c, cr.d1, cr.d2, 0.45), "red")
 	if feature:
-		_box(P, "stone", vw + Vector3(0, 0.15, 0), Vector3(1.4, 0.3, 1.3))
-		_box(P, "stone", vw + Vector3(0, 0.65, -0.5), Vector3(1.4, 1.4, 0.3))
-		_box(P, "stone", vw + Vector3(-0.6, 0.55, 0.0), Vector3(0.2, 0.5, 1.1))
-		_box(P, "stone", vw + Vector3(0.6, 0.55, 0.0), Vector3(0.2, 0.5, 1.1))
-		_bones(P, ctx, vw + Vector3(0.2, 0.3, 1.0), 6)
-		_sph(P, "bone", vw + Vector3(0, 1.45, -0.5), Vector3(0.34, 0.3, 0.34))
-		_flame(P, vw + Vector3(0, 1.0, 0.2), 0.8, "red")
+		_model(P, "throne", vw, 0.0)
+		_bones(P, ctx, vw + Vector3(0.5, 0, 1.1), 6)
+		_brazier(P, vw + Vector3(-1.3, 0, 0.9), "red")
+		_brazier(P, vw + Vector3(1.3, 0, 0.9), "red")
 
 static func _marche(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
@@ -464,25 +427,19 @@ static func _marche(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) 
 		var c: Vector2i = s.c
 		var d: Vector2i = s.d
 		var yaw := _yaw(d)
-		_box(P, "wood", _wp(c, d, 0.32, 0, 0.45), Vector3(1.8, 0.9, 0.64), yaw)
-		_box(P, "cloth_a", _wp(c, d, 0.6, 0, 2.25), Vector3(2.1, 0.05, 1.2), yaw, -0.32)
-		_box(P, "cloth_b", _wp(c, d, 0.98, 0, 1.98), Vector3(2.1, 0.12, 0.05), yaw)
-		for k in 3:
-			_sph(P, "straw" if k != 1 else "cloth_b", _wp(c, d, 0.32, -0.55 + k * 0.55, 1.05), Vector3(0.3, 0.26, 0.3))
-		_cyl(P, "iron", _wp(c, d, 0.85, 0.75, 1.8), Vector3(0.18, 0.26, 0.18))
-		_flame(P, _wp(c, d, 0.85, 0.75, 1.85), 0.5)
+		var o := _wp(c, d, 0.4, 0, 0.0)
+		_model(P, "stall", o, yaw)
+		_flame(P, _at(o, yaw, PropMeshes.STALL_FLAME), 0.5)
 	var slots := _slots(ctx)
 	for s in _take(P, slots, _count(ctx, slots, 0.35, 6)):
 		var c: Vector2i = s.c
 		var d: Vector2i = s.d
-		match rng.randi() % 3:
+		match rng.randi() % 4:
 			0: _crate(P, _wp(c, d, 0.42, (rng.randf() - 0.5) * 1.2), 0.75, _yaw(d))
 			1: _sack(P, _wp(c, d, 0.4, (rng.randf() - 0.5) * 1.2), rng.randf() * TAU)
 			2: _barrel(P, _wp(c, d, 0.45, (rng.randf() - 0.5) * 1.2), 0.9)
+			3: _model(P, "vase%d" % (rng.randi() % 2), _wp(c, d, 0.4, (rng.randf() - 0.5) * 1.2), rng.randf() * TAU)
 	if feature:
-		_box(P, "wood", vw + Vector3(0, 0.8, 0), Vector3(1.8, 0.08, 1.0))
-		for sx in [-0.8, 0.8]:
-			for sz in [-0.4, 0.4]:
-				_box(P, "dark_wood", vw + Vector3(sx, 0.38, sz), Vector3(0.09, 0.76, 0.09))
-		_crate(P, vw + Vector3(-0.4, 0.84, 0.0), 0.4, 0.3)
-		_sack(P, vw + Vector3(0.4, 0.84, 0.0), 0.0)
+		_model(P, "table_small", vw)
+		_crate(P, vw + Vector3(-0.4, 0.82, 0.0), 0.4, 0.3)
+		_sack(P, vw + Vector3(0.4, 0.82, 0.0), 0.0)

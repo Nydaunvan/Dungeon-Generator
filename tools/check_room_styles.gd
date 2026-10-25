@@ -103,7 +103,7 @@ func _ready() -> void:
 							if dx < 0.8 and dz < 0.8:
 								bad += 1
 								print("ÉCHEC accessoire au centre d'une case : ", style, " ", p, " ", pr.m)
-							if blocked.has(cell) and p.y < CELL - 0.5 and p.y > 0.0:
+							if blocked.has(cell) and p.y < CELL - 0.5 and p.y >= 0.0:
 								bad += 1
 								print("ÉCHEC accessoire sur case occupée : ", style, " ", cell, " ", pr.m)
 	if consec > 0:

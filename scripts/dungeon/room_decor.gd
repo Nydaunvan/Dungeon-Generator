@@ -56,6 +56,7 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 	var vedette := RoomStyles.vedette(rooms)
 	var blocked := _blocked_cells(level)
 	var mats := {}
+	var models := {}                      # nom de modèle -> [Transform3D]
 	var prims := {}                       # matériau -> forme -> [Transform3D]
 	var shafts: Array = []
 	var bases: Array = []
@@ -86,6 +87,12 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 				banners[pk] = {0: [], 1: []}
 			_banners(rows, r.cells, inside, hs, banners[pk], plan.used)
 		for pr in plan.prims:
+			if str(pr.s) == "mesh":                                  # modèle détaillé (PropMeshes)
+				var mb := Basis(Vector3.UP, float(pr.y)) * Basis.from_scale(pr.z)
+				if not models.has(pr.m):
+					models[pr.m] = []
+				(models[pr.m] as Array).append(Transform3D(mb, pr.p))
+				continue
 			var key := str(pr.m) if not str(pr.m).begins_with("cloth") else "%s@%s" % [pr.m, pk]     # les tissus suivent la palette de la salle
 			if not mats.has(key):
 				mats[key] = _material(key, wall_mat)
@@ -128,6 +135,8 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 			q.size = Vector2(1.1, 2.3)
 			q.material = _banner_material(pk, k)
 			_multi(root, q, banners[pk][k])
+	for mn in models:
+		_multi_model(root, PropMeshes.get_mesh(str(mn)), models[mn])
 	for key in prims:
 		for shape in prims[key]:
 			_multi(root, _shape_mesh(str(shape), mats[key]), prims[key][shape])
@@ -144,6 +153,10 @@ static func _blocked_cells(level: Dictionary) -> Dictionary:
 		out[Vector2i(int(st.get("x", -1)), int(st.get("y", -1)))] = true
 	out[Vector2i(int(level.get("startX", -1)), int(level.get("startY", -1)))] = true
 	return out
+
+## Modèle PropMeshes : matériaux (mat / métal / lueur) partagés et déjà portés par le maillage.
+static func _multi_model(root: Node3D, mesh: Mesh, xforms: Array) -> void:
+	_multi(root, mesh, xforms)
 
 static func _multi(root: Node3D, mesh: Mesh, xforms: Array) -> void:
 	var mm := MultiMesh.new()
