@@ -192,27 +192,33 @@ static func _rug_texture(theme: String, w: int, h: int) -> Texture2D:
 	var field := _col(p[0])
 	var trim := _col(p[1])
 	var dark := _col(p[2])
-	var T := 32
+	var T := 64                        # pixels par case : tissage fin, bords lissés
 	var img := Image.create(w * T, h * T, false, Image.FORMAT_RGBA8)
 	for y in h * T:
 		for x in w * T:
-			var edge := mini(mini(x, w * T - 1 - x), mini(y, h * T - 1 - y))
+			var edge := float(mini(mini(x, w * T - 1 - x), mini(y, h * T - 1 - y))) / T
 			var c := field
-			if edge < 3:
-				c = trim
-			elif edge < 6:
-				c = dark
-			elif edge < 8:
-				c = trim
-			else:
-				# motif en losanges répété
-				var u := absi((x % T) - T / 2)
-				var v := absi((y % T) - T / 2)
-				if u + v < 7:
-					c = trim.darkened(0.15)
-				elif u + v < 9:
-					c = dark
-			img.set_pixel(x, y, c)
+			# bordure : filet clair, bande sombre, filet clair (transitions lissées)
+			c = c.lerp(dark, 1.0 - smoothstep(0.115, 0.135, edge))
+			c = c.lerp(trim, 1.0 - smoothstep(0.075, 0.095, edge))
+			c = c.lerp(dark, 1.0 - smoothstep(0.045, 0.06, edge))
+			c = c.lerp(trim, 1.0 - smoothstep(0.015, 0.03, edge))
+			# losanges répétés au cœur du tapis
+			var inner := smoothstep(0.15, 0.19, edge)
+			var u := absf(float(x % T) / T - 0.5)
+			var v := absf(float(y % T) / T - 0.5)
+			var d := u + v
+			var pat := field
+			pat = pat.lerp(dark, 1.0 - smoothstep(0.26, 0.29, d))
+			pat = pat.lerp(trim.darkened(0.15), 1.0 - smoothstep(0.19, 0.22, d))
+			pat = pat.lerp(field.darkened(0.2), 1.0 - smoothstep(0.07, 0.1, d))
+			c = c.lerp(pat, inner)
+			# fibres : grain fin et trame
+			var g := float(_h(x, y, 5) % 100) / 100.0
+			var weave := 0.5 + 0.5 * sin(float(x) * 1.9) * sin(float(y) * 1.9)
+			var k := 0.9 + 0.1 * g + 0.05 * weave
+			img.set_pixel(x, y, Color(c.r * k, c.g * k, c.b * k, 1.0))
+	img.generate_mipmaps()
 	var t := ImageTexture.create_from_image(img)
 	_tex[key] = t
 	return t
@@ -231,7 +237,7 @@ static func _rug(root: Node3D, rect: Rect2i, inside: Dictionary, theme: String) 
 	pm.size = Vector2(rw * CELL * 0.94, rh * CELL * 0.94)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = _rug_texture(theme, rw, rh)
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	mat.roughness = 1.0
 	pm.material = mat
 	var mi := MeshInstance3D.new()
@@ -636,8 +642,182 @@ static func _floor_texture(name: String) -> Texture2D:
 	_tex[key] = t
 	return t
 
-## Revêtement de sol propre au style, posé sur le sol du thème (une dalle par case de la salle).
+## Revêtement de sol propre au style : un matériau PBR (couleur + normales + rugosité, mêmes jeux de textures que le village) posé sur le sol
+## du thème, une dalle par case de la salle, puis un calque dessiné lissé (joints, damier, filets d'or, fissures, paille, sang) par-dessus.
+## Sans les textures PBR (export allégé), on retombe sur l'ancien dessin à basse définition.
+## style -> [texture PBR, répétitions par case, teinte, rugosité (0 = celle de la texture), calque]
+const FLOOR_PBR := {
+	"parquet": ["bois_m", Vector2(2, 1), Color(1.9, 1.35, 0.9), 0.0, ""],
+	"planches": ["bois_m", Vector2(1, 1), Color(1.6, 1.3, 1.0), 0.0, ""],
+	"dalles": ["beton", Vector2(2, 2), Color(0.85, 0.87, 0.95), 0.0, "joints"],
+	"terre": ["terre", Vector2(1, 1), Color(0.62, 0.55, 0.5), 0.0, ""],
+	"damier": ["beton", Vector2(1, 1), Color(1, 1, 1), 0.35, "damier"],
+	"fissures": ["beton", Vector2(2, 2), Color(0.55, 0.55, 0.58), 0.0, "fissures"],
+	"mouille": ["paves", Vector2(2, 2), Color(0.5, 0.62, 0.6), 0.45, ""],
+	"dore": ["beton", Vector2(2, 2), Color(0.42, 0.38, 0.34), 0.5, "filets"],
+	"sang": ["beton", Vector2(2, 2), Color(0.38, 0.33, 0.33), 0.0, "sang"],
+	"paille": ["terre", Vector2(1, 1), Color(1.15, 0.98, 0.6), 0.0, "paille"],
+}
+
+static func _floor_base(name: String) -> Material:
+	var key := "floorpbr|" + name
+	if _tex.has(key):
+		return _tex[key]
+	var d: Array = FLOOR_PBR[name]
+	var src := VillageKit.mat(str(d[0]), d[1])
+	var m: StandardMaterial3D = null
+	if src != null:
+		m = src.duplicate() as StandardMaterial3D           # le matériau du village est partagé : on ne le teinte pas
+		m.albedo_color = d[2]
+		if float(d[3]) > 0.0:
+			m.roughness = float(d[3])
+	_tex[key] = m
+	return m
+
+## Calque dessiné (256 px, filtré en lissé) ; l'alpha porte le motif.
+static func _floor_overlay(kind: String) -> Texture2D:
+	var key := "floorov|" + kind
+	if _tex.has(key):
+		return _tex[key]
+	var N := 256
+	var img := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = kind.hash()
+	match kind:
+		"joints":
+			for y in N:
+				for x in N:
+					var u := float(x) / N
+					var v := float(y) / N
+					var dx := absf(fposmod(u * 2.0 + 0.5, 1.0) - 0.5) / 2.0
+					var dy := absf(fposmod(v * 2.0 + 0.5, 1.0) - 0.5) / 2.0
+					var dl := minf(dx, dy)
+					var line := 1.0 - smoothstep(0.004, 0.011, dl)
+					var tone := float(_h(int(u * 2.0), int(v * 2.0), 7) % 100) / 100.0
+					var n := _pnoise(u * 8.0, v * 8.0, 8) * 0.5 + _pnoise(u * 24.0, v * 24.0, 24) * 0.5
+					var a := clampf(line * 0.9 + (1.0 - line) * (0.06 + 0.16 * tone) * (0.6 + n), 0.0, 1.0)
+					img.set_pixel(x, y, Color(0.03, 0.03, 0.04, a))
+		"damier":
+			for y in N:
+				for x in N:
+					var u := float(x) / N
+					var v := float(y) / N
+					var cx := int(floorf(u * 4.0))
+					var cy := int(floorf(v * 4.0))
+					var white := (cx + cy) % 2 == 0
+					var n := _pnoise(u * 6.0, v * 6.0, 6) * 0.6 + _pnoise(u * 20.0, v * 20.0, 20) * 0.4
+					var vein := 1.0 - smoothstep(0.0, 0.05, absf(_pnoise(u * 5.0 + 3.0, v * 5.0, 5) - 0.5))
+					var c := Color(0.82, 0.8, 0.76).lerp(Color(0.6, 0.58, 0.55), n * 0.7) if white else Color(0.07, 0.07, 0.09).lerp(Color(0.16, 0.16, 0.2), n)
+					c = c.lerp(Color(0.5, 0.5, 0.55) if white else Color(0.3, 0.3, 0.36), vein * 0.5)
+					var ex := absf(fposmod(u * 4.0 + 0.5, 1.0) - 0.5) / 4.0
+					var ey := absf(fposmod(v * 4.0 + 0.5, 1.0) - 0.5) / 4.0
+					var e := 1.0 - smoothstep(0.002, 0.007, minf(ex, ey))
+					c = c.lerp(Color(0.04, 0.035, 0.03), e * 0.8)
+					img.set_pixel(x, y, Color(c.r, c.g, c.b, 1.0))
+		"filets":
+			for y in N:
+				for x in N:
+					var u := float(x) / N - 0.5
+					var v := float(y) / N - 0.5
+					var border := absf(maxf(absf(u), absf(v)) - 0.46)
+					var diamond := absf(absf(u) + absf(v) - 0.34)
+					var line := maxf(1.0 - smoothstep(0.006, 0.016, border), 1.0 - smoothstep(0.004, 0.012, diamond))
+					var n := _pnoise((u + 0.5) * 16.0, (v + 0.5) * 16.0, 16)
+					var c := Color(0.9, 0.7, 0.25).lerp(Color(0.62, 0.45, 0.14), n * 0.6)
+					img.set_pixel(x, y, Color(c.r, c.g, c.b, line))
+		"fissures":
+			for y in N:
+				for x in N:
+					var u := float(x) / N
+					var v := float(y) / N
+					var w := _pnoise(u * 3.0, v * 3.0, 3) * 0.5
+					var cr := absf(_pnoise(u * 5.0 + w, v * 5.0 + w, 5) - 0.5)
+					var cr2 := absf(_pnoise(u * 9.0 + 2.0, v * 9.0 - w, 9) - 0.5)
+					var a := maxf(1.0 - smoothstep(0.004, 0.02, cr), (1.0 - smoothstep(0.003, 0.012, cr2)) * 0.6)
+					var dust := _pnoise(u * 7.0, v * 7.0, 7)
+					img.set_pixel(x, y, Color(0.02, 0.02, 0.02, clampf(a * 0.9 + 0.12 * dust, 0.0, 1.0)))
+		"sang":
+			for y in N:
+				for x in N:
+					var u := float(x) / N
+					var v := float(y) / N
+					var n := _pnoise(u * 3.0, v * 3.0, 3) * 0.55 + _pnoise(u * 7.0, v * 7.0, 7) * 0.3 + _pnoise(u * 18.0, v * 18.0, 18) * 0.15
+					var a := smoothstep(0.54, 0.62, n)
+					var rim := smoothstep(0.54, 0.6, n) * (1.0 - smoothstep(0.62, 0.72, n))
+					var c := Color(0.34, 0.03, 0.03).lerp(Color(0.14, 0.01, 0.01), rim)
+					img.set_pixel(x, y, Color(c.r, c.g, c.b, a * 0.8))
+		"paille":
+			img.fill(Color(0, 0, 0, 0))
+			for i in 420:
+				var cx := rng.randf() * N
+				var cy := rng.randf() * N
+				var ang := rng.randf() * TAU
+				var ln := 14.0 + rng.randf() * 20.0
+				var c := Color(0.86, 0.7, 0.32).lerp(Color(0.6, 0.45, 0.18), rng.randf())
+				for k in int(ln):
+					var px := int(fposmod(cx + cos(ang) * k, N))
+					var py := int(fposmod(cy + sin(ang) * k, N))
+					img.set_pixel(px, py, Color(c.r, c.g, c.b, 0.85))
+					var px2 := int(fposmod(cx + cos(ang) * k + 1.0, N))
+					img.set_pixel(px2, py, Color(c.r, c.g, c.b, 0.45))
+	img.generate_mipmaps()
+	var t := ImageTexture.create_from_image(img)
+	_tex[key] = t
+	return t
+
+## Bruit de valeur périodique (période entière : le motif se raccorde d'une case à l'autre).
+static func _pnoise(x: float, y: float, period: int) -> float:
+	var xi := int(floorf(x))
+	var yi := int(floorf(y))
+	var fx: float = x - floorf(x)
+	var fy: float = y - floorf(y)
+	fx = fx * fx * (3.0 - 2.0 * fx)
+	fy = fy * fy * (3.0 - 2.0 * fy)
+	var x0 := posmod(xi, period)
+	var x1 := posmod(xi + 1, period)
+	var y0 := posmod(yi, period)
+	var y1 := posmod(yi + 1, period)
+	var a := float(_h(x0, y0, 31) % 1000) / 1000.0
+	var b := float(_h(x1, y0, 31) % 1000) / 1000.0
+	var c := float(_h(x0, y1, 31) % 1000) / 1000.0
+	var d := float(_h(x1, y1, 31) % 1000) / 1000.0
+	return lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy)
+
 static func _floor(root: Node3D, cells: Array, name: String) -> void:
+	var base := _floor_base(name) if FLOOR_PBR.has(name) else null
+	if base == null:
+		_floor_legacy(root, cells, name)
+		return
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(CELL, CELL)
+	pm.material = base
+	var xf: Array = []
+	for c in cells:
+		xf.append(Transform3D(Basis.IDENTITY, Vector3(c.x * CELL, 0.012, c.y * CELL)))
+	_multi(root, pm, xf)
+	var ov := str((FLOOR_PBR[name] as Array)[4])
+	if ov == "":
+		return
+	var okey := "floorovmat|" + ov
+	if not _tex.has(okey):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = _floor_overlay(ov)
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		m.texture_repeat = false
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if ov != "damier" else BaseMaterial3D.TRANSPARENCY_DISABLED
+		m.roughness = 0.25 if ov == "sang" else (0.35 if ov == "damier" else (0.3 if ov == "filets" else 0.85))
+		m.metallic = 0.6 if ov == "filets" else 0.0
+		m.metallic_specular = 0.5
+		_tex[okey] = m
+	var om := PlaneMesh.new()
+	om.size = Vector2(CELL, CELL)
+	om.material = _tex[okey]
+	var oxf: Array = []
+	for c in cells:
+		oxf.append(Transform3D(Basis.IDENTITY, Vector3(c.x * CELL, 0.018, c.y * CELL)))
+	_multi(root, om, oxf)
+
+static func _floor_legacy(root: Node3D, cells: Array, name: String) -> void:
 	var key := "floormat|" + name
 	if not _tex.has(key):
 		var m := StandardMaterial3D.new()
