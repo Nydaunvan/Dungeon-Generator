@@ -335,6 +335,7 @@ func _open_chest(it: Dictionary) -> void:
 		_log(L.fa(L.t("game.interactions.le_groupe_ramasse"), c.get("name", L.t("game.interactions.un_objet"))))
 	if left == 0:
 		st["emptied"] = true
+		view.entities.empty_chest(str(it.id))
 	bag_changed.emit()
 	ctrl.changed.emit()
 

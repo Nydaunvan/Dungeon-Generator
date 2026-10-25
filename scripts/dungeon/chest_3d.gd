@@ -9,9 +9,10 @@ extends Node3D
 
 const MODEL := preload("res://assets/models/chest/chest.fbx")
 const LONG_SIDE := 1.4             ## longueur du coffre (m) le long du mur
-## Le fichier montre le couvercle dressé à la verticale (rotation 0) : fermé = -90° (rabattu vers l'avant), ouvert = +17° (renversé vers l'arrière).
+## Le fichier montre le couvercle dressé à la verticale (rotation 0) : fermé = -90° (rabattu vers l'avant), ouvert = -10° (presque droit, légèrement
+## penché vers l'avant) : à plus de 0° il basculerait vers l'arrière et traverserait le mur contre lequel le coffre est posé.
 const CLOSED_ANGLE := -90.0
-const OPEN_ANGLE := 17.0
+const OPEN_ANGLE := -10.0
 const BODY := "POOR_CHEST_BIG_BOT_VAR_1"
 const TOP := "POOR_CHEST_BIG_TOP_VAR_1"
 ## niveau de détail -> [distance min, distance max] en mètres (0 = sans limite)
@@ -23,6 +24,7 @@ static var _glow: StandardMaterial3D
 static var _gold: StandardMaterial3D
 
 var is_open := false
+var is_empty := false               ## butin entièrement ramassé : plus de tas de pièces ni d'éclat doré
 var _lid: Node3D
 var _coins: MeshInstance3D
 var _glow_node: MeshInstance3D
@@ -148,14 +150,16 @@ func set_open(open: bool, animate: bool = false) -> void:
 	if _tween != null:
 		_tween.kill()
 	is_open = open
+	if open and is_empty:
+		animate = false
 	var target := deg_to_rad(OPEN_ANGLE if open else CLOSED_ANGLE)
 	if not animate:
 		_lid.rotation.z = target
-		_coins.visible = open
-		_glow_node.visible = open
+		_coins.visible = open and not is_empty
+		_glow_node.visible = open and not is_empty
 		(_glow_node.mesh as QuadMesh).size = Vector2(1.2, 1.2)
 		return
-	_coins.visible = open
+	_coins.visible = open and not is_empty
 	_tween = create_tween()
 	_tween.tween_property(_lid, "rotation:z", target, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if open:
@@ -164,5 +168,16 @@ func set_open(open: bool, animate: bool = false) -> void:
 		gq.size = Vector2(0.3, 0.3)
 		_tween.parallel().tween_method(func(s: float): gq.size = Vector2(s, s), 0.3, 2.2, 0.35).set_delay(0.12)
 		_tween.tween_method(func(s: float): gq.size = Vector2(s, s), 2.2, 1.2, 0.5)
+	else:
+		_glow_node.visible = false
+
+## Butin ramassé : le tas de pièces disparaît et l'éclat doré s'éteint (après le petit éclat d'ouverture si le coffre vient de s'ouvrir).
+func set_empty(empty: bool) -> void:
+	is_empty = empty
+	if not empty:
+		return
+	_coins.visible = false
+	if _tween != null and _tween.is_running():
+		_tween.finished.connect(func(): _glow_node.visible = false)
 	else:
 		_glow_node.visible = false

@@ -421,6 +421,8 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 			var cst: Dictionary = ((gs.level_states.get(lvl_id, {}) as Dictionary).get("items_state", {}) as Dictionary).get(str(it.id), {})
 			if bool(cst.get("opened", false)):
 				level_node.entities.open_chest(str(it.id), false)
+				if bool(cst.get("emptied", false)):
+					level_node.entities.empty_chest(str(it.id))
 	for m in level.get("monsters", []):
 		var mst: Dictionary = ls.monsters.get(str(m.id), {})
 		if bool(m.get("startHidden", false)) and not mst.is_empty() and not mst.get("hidden", true):

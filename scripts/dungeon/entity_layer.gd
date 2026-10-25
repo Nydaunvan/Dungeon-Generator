@@ -117,7 +117,7 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			ch.name = "Chest_" + str(it.id)
 			var wd: Vector2i = WALL_SIDES.get(str(it.get("wall", "N")), WALL_SIDES["N"])["d"]
 			# posé contre son mur, face au centre de la case : il ne gêne jamais le passage
-			ch.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL - wd.x * 0.55, 0.0, (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL - wd.y * 0.55)
+			ch.position = Vector3((int(it.x) + wd.x * 0.5) * LevelBuilder.CELL - wd.x * 0.76, 0.0, (int(it.y) + wd.y * 0.5) * LevelBuilder.CELL - wd.y * 0.76)
 			ch.rotation.y = atan2(float(-wd.x), float(-wd.y))
 			ch.visible = not bool(it.get("startHidden", false))
 			add_child(ch)
@@ -142,6 +142,12 @@ func open_chest(id: String, animate: bool = true) -> void:
 	var c = chests.get(id)
 	if c != null and is_instance_valid(c):
 		c.set_open(true, animate)
+
+## Le coffre `id` est vidé : plus de pièces ni d'éclat doré.
+func empty_chest(id: String) -> void:
+	var c = chests.get(id)
+	if c != null and is_instance_valid(c):
+		c.set_empty(true)
 
 ## Met à jour l'eau des fontaines (active / tarie) ; `instant` : sans transition (chargement du niveau).
 func refresh_fountains(instant: bool = false) -> void:
