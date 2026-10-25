@@ -217,7 +217,9 @@ static func _rug_texture(theme: String, w: int, h: int) -> Texture2D:
 			var g := float(_h(x, y, 5) % 100) / 100.0
 			var weave := 0.5 + 0.5 * sin(float(x) * 1.9) * sin(float(y) * 1.9)
 			var k := 0.9 + 0.1 * g + 0.05 * weave
-			img.set_pixel(x, y, Color(c.r * k, c.g * k, c.b * k, 1.0))
+			# bord du tapis fondu sur ~2 pixels : bord lissé sans dépendre du réglage MSAA
+			var edge_a := clampf((edge * T + 0.5) / 2.5, 0.0, 1.0)
+			img.set_pixel(x, y, Color(c.r * k, c.g * k, c.b * k, edge_a))
 	img.generate_mipmaps()
 	var t := ImageTexture.create_from_image(img)
 	_tex[key] = t
@@ -238,6 +240,8 @@ static func _rug(root: Node3D, rect: Rect2i, inside: Dictionary, theme: String) 
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = _rug_texture(theme, rw, rh)
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.texture_repeat = false
 	mat.roughness = 1.0
 	pm.material = mat
 	var mi := MeshInstance3D.new()
