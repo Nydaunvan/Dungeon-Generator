@@ -185,14 +185,7 @@ func play(id: String, kind: String) -> void:
 	for p in monsters.keys():
 		for e in monsters[p]:
 			if str(e.def.id) == id and is_instance_valid(e.node) and e.node.visible:
-				_end_react(e.node)
-				_react[e.node] = {"kind": kind, "t": 0.0, "dur": float(REACT_DUR.get(kind, 0.4))}
-				if kind == "hit":
-					var base: Material = e.node.material_override
-					e.node.set_meta("mat0", base)
-					var flash: StandardMaterial3D = base.duplicate()
-					flash.albedo_color = Color(1.0, 0.35, 0.35)
-					e.node.material_override = flash
+				_start_react(e.node, kind)
 				return
 
 func _end_react(n: Node3D) -> void:
@@ -260,18 +253,50 @@ func animate_stage(nodes: Array, delta: float) -> void:
 		if is_instance_valid(n) and n.visible and n.has_meta("by"):
 			_pose(n, delta, true, charge, idle, cb)
 
+## Lance une réaction sur un sprite : déformation (voir `_pose`), et, si le monstre a des illustrations propres à la pose
+## (assets/monsters/mNN_attack.webp, mNN_hit.webp), changement de pose pendant la réaction ; le coup reçu teinte en plus le sprite en rouge.
+func _start_react(n: Node3D, kind: String) -> void:
+	_end_react(n)
+	var dur := float(REACT_DUR.get(kind, 0.4))
+	var mi := n as MeshInstance3D
+	var pm := _pose_material(n, kind)
+	if pm != null:
+		dur = maxf(dur, 0.6 if kind == "attack" else 0.55)       # le temps de bien voir la pose
+		n.set_meta("mat0", mi.material_override)
+		mi.material_override = pm
+	_react[n] = {"kind": kind, "t": 0.0, "dur": dur}
+	if kind == "hit":
+		var base: Material = mi.material_override
+		if not n.has_meta("mat0"):
+			n.set_meta("mat0", base)
+		var flash: StandardMaterial3D = base.duplicate()
+		flash.albedo_color = Color(1.0, 0.35, 0.35)
+		mi.material_override = flash
+
+## Matériau de la pose `kind` (« attack » ou « hit ») d'un monstre de la planche, ou null s'il n'a pas d'illustration pour cette pose.
+func _pose_material(n: Node3D, kind: String) -> Material:
+	if kind != "attack" and kind != "hit":
+		return null
+	var id := str(n.get_meta("pose_id", ""))
+	if id == "" or bool(n.get_meta("boss", false)):
+		return null
+	var idx := NEW_MONSTER_IDS.find(id)
+	if idx < 0:
+		var remake: Dictionary = Data.constants.get("REMAKE_MAP", {})
+		idx = int(remake.get(id, -1))
+	if idx < 0:
+		return null
+	var key := "P|%d|%s" % [idx, kind]
+	if not _mats.has(key):
+		var path := "res://assets/monsters/m%02d_%s.webp" % [idx, kind]
+		_mats[key] = _base_material(load(path)) if ResourceLoader.exists(path) else null
+	return _mats[key]
+
 ## Réaction courte sur un sprite précis (salle de combat).
 func play_node(n: Node3D, kind: String) -> void:
 	if not Settings.monster_anim or not is_instance_valid(n) or not n.visible or not n.has_meta("by"):
 		return
-	_end_react(n)
-	_react[n] = {"kind": kind, "t": 0.0, "dur": float(REACT_DUR.get(kind, 0.4))}
-	if kind == "hit":
-		var base: Material = (n as MeshInstance3D).material_override
-		n.set_meta("mat0", base)
-		var flash: StandardMaterial3D = base.duplicate()
-		flash.albedo_color = Color(1.0, 0.35, 0.35)
-		(n as MeshInstance3D).material_override = flash
+	_start_react(n, kind)
 
 ## Mort animée d'un sprite précis (salle de combat).
 func die_node(n: Node3D) -> void:
@@ -599,6 +624,8 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 	mi.mesh = q
 	mi.material_override = mat
 	mi.set_meta("h", h)
+	if not is_item and not is_boss:
+		mi.set_meta("pose_id", _icon_id(icon))
 	return mi
 
 ## Décalage vertical d'ancrage (fraction de la hauteur) propre à certaines icônes.
