@@ -98,10 +98,11 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 				by_shape[pr.s] = []
 			(by_shape[pr.s] as Array).append(t)
 		for f in plan.flames:
-			_flame(root, f.p, float(f.size), str(f.kind), pk)
+			_flame(Vector3(f.p), float(f.size), str(f.kind), theme)
 		for w in plan.webs:
 			_web(root, w.p, float(w.yaw))
 		_ambiance(root, r.cells, rect, str(def.fx))
+	_flush_flames(root)
 	if not shafts.is_empty():
 		var shaft := CylinderMesh.new()
 		shaft.top_radius = 0.3
@@ -273,24 +274,6 @@ static func _chandelier(root: Node3D, rect: Rect2i, inside: Dictionary, theme: S
 	rm.mesh = ring
 	rm.position = Vector3(0, CELL - 0.95, 0)
 	n.add_child(rm)
-	var flame_col := _col(p[1]).lerp(Color(1.0, 0.7, 0.3), 0.6)
-	var fm := StandardMaterial3D.new()
-	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	fm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	fm.albedo_texture = ProceduralTextures.flame()
-	fm.albedo_color = flame_col
-	fm.no_depth_test = false
-	var gm := fm.duplicate() as StandardMaterial3D
-	gm.albedo_texture = ProceduralTextures.glow()
-	gm.albedo_color = Color(flame_col.r, flame_col.g, flame_col.b, 0.35)
-	var fq := QuadMesh.new()
-	fq.size = Vector2(0.34, 0.5)
-	fq.material = fm
-	var gq := QuadMesh.new()
-	gq.size = Vector2(1.5, 1.5)
-	gq.material = gm
 	for i in 6:
 		var a := TAU * float(i) / 6.0
 		var pos := Vector3(cos(a) * 0.46, CELL - 0.95, sin(a) * 0.46)
@@ -304,14 +287,7 @@ static func _chandelier(root: Node3D, rect: Rect2i, inside: Dictionary, theme: S
 		cmi.mesh = cand
 		cmi.position = pos + Vector3(0, 0.12, 0)
 		n.add_child(cmi)
-		var f := MeshInstance3D.new()
-		f.mesh = fq
-		f.position = pos + Vector3(0, 0.45, 0)
-		n.add_child(f)
-	var g := MeshInstance3D.new()
-	g.mesh = gq
-	g.position = Vector3(0, CELL - 0.9, 0)
-	n.add_child(g)
+		_flame(n.position + pos + Vector3(0, 0.3, 0), 0.5, "warm", theme)
 
 # ------------------------------------------------------------------ bannières
 
@@ -471,32 +447,48 @@ const FLAME_COLORS := {
 	"gold": Color(1.0, 0.82, 0.4),
 }
 
-static func _flame(root: Node3D, p: Vector3, size: float, kind: String, pk: String) -> void:
-	var col: Color = FLAME_COLORS.get(kind, _col(_pal(pk)[1]).lerp(Color(1.0, 0.7, 0.3), 0.6))
-	var fm := StandardMaterial3D.new()
-	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	fm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	fm.albedo_texture = ProceduralTextures.flame()
-	fm.albedo_color = col
-	var gm := fm.duplicate() as StandardMaterial3D
-	gm.albedo_texture = ProceduralTextures.glow()
-	gm.albedo_color = Color(col.r, col.g, col.b, 0.35)
-	var fq := QuadMesh.new()
-	fq.size = Vector2(0.34, 0.5) * size
-	fq.material = fm
-	var gq := QuadMesh.new()
-	gq.size = Vector2(1.5, 1.5) * size
-	gq.material = gm
-	var f := MeshInstance3D.new()
-	f.mesh = fq
-	f.position = p
-	root.add_child(f)
-	var g := MeshInstance3D.new()
-	g.mesh = gq
-	g.position = p
-	root.add_child(g)
+## Flammes de décor : exactement celles des torches des couloirs (TorchLayer : goutte 3D animée par shader + cœur + halo vacillant),
+## regroupées en MultiMesh par couleur. `p` = centre de l'ancienne flamme ; le pied de la nouvelle est posé un peu plus bas.
+static var _pending_flames: Array = []
+
+static func _flame(p: Vector3, size: float, kind: String, theme: String) -> void:
+	_pending_flames.append({"p": p, "size": size, "kind": kind, "theme": theme})
+
+static func _flush_flames(root: Node3D) -> void:
+	var groups := {}
+	var cfg: Dictionary = Data.constants.get("CANDELABRA_THEME", {})
+	for f in _pending_flames:
+		var kind := str(f.kind)
+		var col: Color
+		var glow: Color
+		var key: String
+		if FLAME_COLORS.has(kind):
+			col = FLAME_COLORS[kind]
+			glow = col
+			key = "room_" + kind
+		else:
+			var c: Dictionary = cfg.get(str(f.theme), cfg.get("stone", {}))
+			col = TorchLayer._hex(int(c.get("flame", 0xffb050)))
+			glow = TorchLayer._hex(int(c.get("glow", 0xffb060)))
+			key = str(f.theme)
+		if not groups.has(key):
+			groups[key] = {"flame": [], "inner": [], "glow": [], "fc": col, "gc": glow}
+		var g: Dictionary = groups[key]
+		var k: float = float(f.size) * 1.4
+		var base: Vector3 = f.p - Vector3(0, 0.2 * float(f.size), 0)
+		g.flame.append(Transform3D(Basis.from_scale(Vector3.ONE * k), base))
+		g.inner.append(Transform3D(Basis.from_scale(Vector3(0.52, 0.72, 0.52) * k), base))
+		g.glow.append(Transform3D(Basis.from_scale(Vector3.ONE * float(f.size) * 1.6), base + Vector3(0, TorchLayer.FLAME_H * 0.44 * k, 0)))
+	_pending_flames.clear()
+	if groups.is_empty():
+		return
+	var glow_quad := QuadMesh.new()
+	glow_quad.size = Vector2(0.5, 0.5)
+	for key in groups:
+		var g: Dictionary = groups[key]
+		root.add_child(TorchLayer._multimesh(glow_quad, g.glow, TorchLayer._get_glow_mat(key, g.gc)))
+		root.add_child(TorchLayer._multimesh(TorchLayer._get_flame_mesh(), g.flame, TorchLayer._get_flame_mat(key, false, g.fc)))
+		root.add_child(TorchLayer._multimesh(TorchLayer._get_flame_mesh(), g.inner, TorchLayer._get_flame_mat(key, true, g.fc)))
 
 static func _web(root: Node3D, p: Vector3, yaw: float) -> void:
 	var key := "web"
