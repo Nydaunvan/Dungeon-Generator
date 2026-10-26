@@ -27,6 +27,14 @@ func _init() -> void:
 	_svc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_svc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_svc)
+	# Composition ADDITIVE de la couche : les halos additifs des sorts laissent un peu d'opacité (alpha) dans cette image transparente ; posée
+	# normalement sur la vue, cette opacité voilait la cible d'un disque noir. En additif, seule la lumière ajoutée compte (les teintes sombres
+	# ne retirent plus rien).
+	var cm := ShaderMaterial.new()
+	var csh := Shader.new()
+	csh.code = "shader_type canvas_item;\nrender_mode blend_add;\nvoid fragment() {\n\tvec4 c = texture(TEXTURE, UV);\n\tCOLOR = vec4(c.rgb, 1.0);\n}\n"
+	cm.shader = csh
+	_svc.material = cm
 	_vp = SubViewport.new()
 	_vp.own_world_3d = true
 	_vp.transparent_bg = true
