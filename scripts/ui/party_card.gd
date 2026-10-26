@@ -22,6 +22,9 @@ var framed: bool = false   # true : la carte est posée dans une fente du bandea
 
 var pic: TextureRect
 var badge: Label
+var status_row: HBoxContainer      # une pastille (icône + tours restants) par statut actif, au-dessus des effets visuels
+var _status_sig := ""
+var _status_fs := 10
 var name_lbl: Label
 var cls_lbl: Label
 var lvl_lbl: Label
@@ -53,6 +56,12 @@ func _init() -> void:
 	badge.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
 	badge.add_theme_stylebox_override("normal", UiTheme.box(Color(0.05, 0.03, 0.02, 0.85), Color("6b4a24"), 1, 6))
 	add_child(badge)
+	status_row = HBoxContainer.new()
+	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_row.add_theme_constant_override("separation", 2)
+	status_row.z_index = 60                    # au-dessus de CardFxOverlay (z 50) : les flammes et le givre ne les cachent pas
+	status_row.z_as_relative = false
+	add_child(status_row)
 	name_lbl = _label(UiTheme.F_TITLE_BOLD, Color("f5ecd8"))
 	cls_lbl = _label(UiTheme.F_BODY_ITALIC, Color("a9793a"))
 	lvl_lbl = _label(UiTheme.F_BODY_BOLD, Color("f5ecd8"))
@@ -128,6 +137,8 @@ func _layout_framed() -> void:
 	badge.add_theme_font_size_override("font_size", maxi(6, int(11.0 * k)))
 	badge.size = Vector2(minf(100.0 * k, size.x * 0.4), 15.0 * k)
 	badge.position = Vector2(pic.position.x + d * 0.5 - badge.size.x * 0.5, pic.position.y + d - 10.0 * k)
+	status_row.position = Vector2(pic.position.x - 2.0 * k, pic.position.y + d - 8.0 * k)
+	_status_font(maxi(8, int(14.0 * k)))
 	cls_ico.visible = false
 	var ch := 20.0 * k
 	var lfs := maxi(6, int(17.0 * k))
@@ -165,6 +176,38 @@ func _bar_px(b: TextBar, x: float, y: float, w: float, h: float, fs: float, outl
 	b.custom_minimum_size = Vector2(0, h)
 	b.set_font_size(maxi(1, int(fs)), outline)
 
+## Taille de police des pastilles de statut ; reconstruit la rangée si elle change.
+func _status_font(fs: int) -> void:
+	if fs != _status_fs:
+		_status_fs = fs
+		_status_sig = ""
+
+## Affiche une pastille par statut : `list` = [{"text": "🔥 3", "color": Color}], vide pour tout retirer.
+func set_statuses(list: Array) -> void:
+	var sig := str(_status_fs) + "|" + str(list)
+	if sig == _status_sig:
+		return
+	_status_sig = sig
+	for ch in status_row.get_children():
+		ch.queue_free()
+	for it in list:
+		var col: Color = it.color
+		var lb := Label.new()
+		lb.text = str(it.text)
+		lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lb.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+		lb.add_theme_font_size_override("font_size", _status_fs)
+		lb.add_theme_color_override("font_color", col.lightened(0.4))
+		lb.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		lb.add_theme_constant_override("outline_size", 3)
+		var sb := UiTheme.box(Color(col.r * 0.22, col.g * 0.22, col.b * 0.22, 0.95), col, 1, 7)
+		sb.content_margin_left = 4
+		sb.content_margin_right = 4
+		sb.content_margin_top = 0
+		sb.content_margin_bottom = 0
+		lb.add_theme_stylebox_override("normal", sb)
+		status_row.add_child(lb)
+
 func _layout() -> void:
 	if framed:
 		_layout_framed()
@@ -179,6 +222,8 @@ func _layout() -> void:
 	badge.add_theme_font_size_override("font_size", maxi(7, int(u(10.5))))
 	badge.size = Vector2(minf(u(92.0), size.x * 0.42), u(14.0))
 	badge.position = Vector2(pic.position.x + d * 0.5 - badge.size.x * 0.5, pic.position.y + d - u(9.0))
+	status_row.position = Vector2(pic.position.x - u(2.0), pic.position.y + d - u(8.0))
+	_status_font(maxi(8, int(u(13.0))))
 	# rangée haute à droite : icône de classe, niveau, coffre
 	var ico := u(18.0)
 	var ch := u(21.0)

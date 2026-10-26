@@ -241,18 +241,20 @@ const STATUS_COLORS := {"freeze": "7fd0ff", "stun": "e6d36b", "burn": "ff8a3d", 
 func _refresh_status(c: Dictionary, cd: Dictionary, dead: bool) -> void:
 	var effs: Array = [] if dead else Statuses.active(c)
 	var card: PartyCard = cd.card
+	cd.badge.visible = false          # remplacée par la rangée de pastilles (une par statut, icône + tours)
+	var chips: Array = []
+	for i in mini(effs.size(), 4):
+		var e: Dictionary = effs[i]
+		chips.append({"text": "%s %d" % [Statuses.icon_of(e), int(e.remaining)], "color": Color(str(STATUS_COLORS.get(str(e.type), "ffd88a")))})
+	if effs.size() > 4:
+		chips.append({"text": "+%d" % (effs.size() - 4), "color": Color("c9a27a")})
+	card.set_statuses(chips)
 	if effs.is_empty():
-		cd.badge.visible = false
 		if card.ring_override.a > 0.0:
 			card.ring_override = Color(0, 0, 0, 0)
 			card.queue_redraw()
 		return
-	var e: Dictionary = effs[0]
-	var sdef := Statuses.def(str(e.type))
-	var col := Color(str(STATUS_COLORS.get(str(e.type), "ffd88a")))
-	cd.badge.text = "%s %d" % [str(sdef.label), int(e.remaining)] + (" +%d" % (effs.size() - 1) if effs.size() > 1 else "")
-	cd.badge.add_theme_color_override("font_color", col)
-	cd.badge.visible = true
+	var col := Color(str(STATUS_COLORS.get(str(effs[0].type), "ffd88a")))
 	if card.ring_override != col:
 		card.ring_override = col
 		card.queue_redraw()
