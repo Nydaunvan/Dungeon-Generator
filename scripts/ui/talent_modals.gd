@@ -34,17 +34,9 @@ static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary,
 	m.add_text(L.fa(L.t("ui.talent_modals.atteint_le_niveau_choisissez"), [c.name, int(track.level)]))
 	for o in track.options:
 		var oid := str(o.id)
-		var tico := str(o.get("icon", ""))
-		var ttex := IconResolver.texture(tico) if tico.begins_with("@icon:") else null
 		var tdesc := str(o.get("descFr", Talents.effect_label(o.get("effects", {}))))
-		var b := m.add_button(("%s\n%s" % [o.get("labelFr", ""), tdesc]) if ttex != null else ("%s %s\n%s" % [tico, o.get("labelFr", ""), tdesc]), func():
+		_choice_button(m, str(o.get("icon", "")), str(o.get("labelFr", "")), tdesc, 40.0, func():
 			Flows.choose("talent", oid))
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 56)
-		if ttex != null:
-			b.icon = ttex
-			b.expand_icon = true
-			b.add_theme_constant_override("icon_max_width", 40)
 	m.set_buttons([])
 	Flows.open("talent", m, func(oid: Variant):
 		gs.choice_queue.erase(q)
@@ -53,9 +45,65 @@ static func _talent(host: Node, gs: GameState, c: Dictionary, track: Dictionary,
 			c["hp"] = c.maxHp
 		done.call())
 
+## Bouton de choix : icône à gauche (image réelle « @icon:… » ou, à défaut, emoji devant le titre), titre et description qui passent à la ligne.
+## Le texte n'est pas celui du bouton : un bouton à icône réduit celle-ci à rien quand le texte est long (Mage-Archer, Berserker…), donc l'icône et les
+## textes sont des enfants posés dans le bouton, dont la hauteur suit leur contenu.
+static func _choice_button(m: Modal, ico: String, title: String, desc: String, icon_px: float, cb: Callable) -> Button:
+	var b := m.add_button("", cb)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.custom_minimum_size = Vector2(0, maxf(56.0, icon_px + 16.0))
+	var tex := IconResolver.texture(ico)
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.offset_left = 10
+	row.offset_right = -10
+	row.add_theme_constant_override("separation", 12)
+	b.add_child(row)
+	if tex != null:
+		var tr := TextureRect.new()
+		tr.texture = tex
+		tr.custom_minimum_size = Vector2(icon_px, icon_px)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(tr)
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	col.add_theme_constant_override("separation", 0)
+	row.add_child(col)
+	var t := Label.new()
+	t.text = title if tex != null else "%s %s" % [ico, title]
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	t.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
+	t.add_theme_font_size_override("font_size", 16)
+	t.add_theme_color_override("font_color", Color("e8b45c"))
+	col.add_child(t)
+	var d := Label.new()
+	d.text = desc
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	d.custom_minimum_size = Vector2(220, 0)
+	d.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	d.add_theme_font_size_override("font_size", 14)
+	d.add_theme_color_override("font_color", Color("d9c8a0"))
+	col.add_child(d)
+	# hauteur du bouton = contenu ; recalculée chaque fois que le contenu change de hauteur (largeur connue, texte qui passe à la ligne)
+	var fit := func():
+		var want := maxf(maxf(56.0, icon_px + 16.0), col.get_combined_minimum_size().y + 16.0)
+		if absf(b.custom_minimum_size.y - want) > 1.0:
+			b.custom_minimum_size.y = want
+	col.minimum_size_changed.connect(fit)
+	d.minimum_size_changed.connect(fit)
+	b.resized.connect(fit)
+	return b
+
 static func _evolution(host: Node, gs: GameState, c: Dictionary, q: Dictionary, done: Callable) -> void:
 	var cls := Characters.class_def(gs.cfg, str(c.classId))
-	var m := Modal.open(host, L.t("ui.talent_modals.evolution_de_classe"), 440.0)
+	var m := Modal.open(host, L.t("ui.talent_modals.evolution_de_classe"), 520.0)
 	m.esc_closes = false
 	m.add_text(L.fa(L.t("ui.talent_modals.a_atteint_le_niveau_requis"), c.name))
 	for cid in cls.get("evolvesTo", []):
@@ -63,18 +111,8 @@ static func _evolution(host: Node, gs: GameState, c: Dictionary, q: Dictionary, 
 		if oc.is_empty():
 			continue
 		var id := str(cid)
-		var ico := str(oc.get("icon", ""))
-		var tex := IconResolver.texture(ico)
-		# icône réelle (« @icon:… ») : image à gauche ; sinon (emoji) le glyphe reste devant le nom
-		var label := ("%s\n%s" % [oc.get("name", ""), oc.get("descFr", "")]) if tex != null else ("%s %s\n%s" % [ico, oc.get("name", ""), oc.get("descFr", "")])
-		var b := m.add_button(label, func():
+		_choice_button(m, str(oc.get("icon", "")), str(oc.get("name", "")), str(oc.get("descFr", "")), 48.0, func():
 			Flows.choose("evolve", id))
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 64)
-		if tex != null:
-			b.icon = tex
-			b.expand_icon = true
-			b.add_theme_constant_override("icon_max_width", 48)
 	m.set_buttons([])
 	Flows.open("evolve", m, func(cid_chosen: Variant):
 		gs.choice_queue.erase(q)
