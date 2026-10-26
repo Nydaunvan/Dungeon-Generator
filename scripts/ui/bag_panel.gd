@@ -30,7 +30,7 @@ func setup(state: GameState) -> void:
 	add_child(head)
 	head.add_child(BagCommon.coin(UiMetrics.rem(1.0)))
 	_gold = Label.new()
-	_gold.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.95)))
+	_gold.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.78)))
 	_gold.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
 	_gold.add_theme_color_override("font_color", Color("ffd88a"))
 	_gold.add_theme_color_override("font_shadow_color", Color.BLACK)
@@ -47,11 +47,14 @@ func setup(state: GameState) -> void:
 	inv_btn.tooltip_text = L.t("ui.bag.open_inventory_tip")
 	inv_btn.focus_mode = Control.FOCUS_NONE
 	inv_btn.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_BOLD))
-	inv_btn.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.78)))
+	inv_btn.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.62)))
 	inv_btn.add_theme_color_override("font_color", Color("e2d2b0"))
 	var ist := IronBox.button_styles()
 	for k in ist:
-		inv_btn.add_theme_stylebox_override(k, ist[k])
+		var sb: StyleBox = ist[k]
+		sb.content_margin_left = UiMetrics.css(8.0)       # le texte réduit ne doit pas toucher les rivets du cadre
+		sb.content_margin_right = UiMetrics.css(8.0)
+		inv_btn.add_theme_stylebox_override(k, sb)
 	inv_btn.pressed.connect(func(): inventory_pressed.emit())
 	head.add_child(inv_btn)
 	var row := HBoxContainer.new()
