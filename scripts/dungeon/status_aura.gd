@@ -8,6 +8,7 @@ extends Node3D
 const LOOKS := ["sleep", "stun", "poison", "burn", "freeze", "slow", "weaken", "warcry", "haste", "vigor", "weaponfire", "lifedrain"]
 
 var mix_mode := false      ## vrai dans la couche transparente des cartes : le mélange additif n'y laisserait aucune opacité (invisible une fois posé sur l'interface)
+var ring_mode := false     ## cartes des héros : les effets courent autour du cadre (jamais sur les barres) au lieu de remplir la zone
 var ext := Vector2(1.0, 1.0)
 var _t := 0.0
 var _fx: Dictionary = {}          # look -> {"nodes": Array, "fns": Array}
@@ -38,7 +39,10 @@ func set_looks(list: Array) -> void:
 	for lk in list:
 		if not _fx.has(lk) and LOOKS.has(lk):
 			_fx[lk] = {"nodes": [], "fns": []}
-			call("_build_" + str(lk), _fx[lk])
+			if ring_mode:
+				_build_ring(_fx[lk], str(lk))
+			else:
+				call("_build_" + str(lk), _fx[lk])
 
 func is_empty() -> bool:
 	return _fx.is_empty()
@@ -289,6 +293,114 @@ func _build_lifedrain(fx: Dictionary) -> void:
 			var k := fposmod(t * 0.35 + float(i) * 0.2, 1.0)
 			var s := _g() * 0.45
 			_put(w, Vector2(ext.x * (-0.3 + 0.15 * float(i)) + sin(t * 3.0 + float(i)) * ext.x * 0.03, lerpf(-ext.y * 0.4, ext.y * 0.6, k)), Vector2(s, s), sin(k * PI) * 0.8))
+
+# ------------------------------------------------------------------------------------------ cadre des cartes
+
+## Aspect de chaque statut autour du cadre d'une carte : texture, couleur, nombre d'éléments, taille (part de la hauteur), mouvement.
+## `out` : l'élément pointe vers l'extérieur (flammes) ; `run` : vitesse de course le long du cadre (tours par seconde) ; `spin` : rotation propre.
+const RING := {
+	"burn": {"tex": "flame", "col": Color(1.0, 0.5, 0.1), "inner": Color(1.0, 0.9, 0.45), "n": 18, "size": 0.55, "out": true, "flick": true, "run": 0.0, "glow": Color(1.0, 0.38, 0.08)},
+	"weaponfire": {"tex": "flame", "col": Color(1.0, 0.55, 0.15), "inner": Color(1.0, 0.9, 0.5), "n": 10, "size": 0.45, "out": true, "flick": true, "run": 0.03},
+	"freeze": {"tex": "snow", "col": Color(0.85, 0.97, 1.0), "n": 14, "size": 0.45, "run": 0.02, "spin": 0.8, "glow": Color(0.45, 0.8, 1.0)},
+	"poison": {"tex": "bubble", "col": Color(0.55, 1.0, 0.45), "n": 14, "size": 0.3, "run": 0.0, "bob": true, "glow": Color(0.35, 0.95, 0.3)},
+	"stun": {"tex": "star", "col": Color(1.0, 0.9, 0.4), "n": 6, "size": 0.3, "run": 0.12, "spin": 2.0},
+	"sleep": {"tex": "z", "col": Color(0.82, 0.78, 1.0), "n": 5, "size": 0.3, "run": 0.0, "bob": true},
+	"slow": {"tex": "bubble", "col": Color(0.5, 0.6, 0.95), "n": 10, "size": 0.3, "run": -0.03, "bob": true, "glow": Color(0.35, 0.45, 0.85)},
+	"weaken": {"tex": "arrow_down", "col": Color(0.9, 0.42, 0.36), "n": 8, "size": 0.28, "run": 0.0, "bob": true},
+	"warcry": {"tex": "star", "col": Color(1.0, 0.3, 0.2), "n": 10, "size": 0.26, "run": 0.0, "spin": 1.0, "glow": Color(1.0, 0.25, 0.2)},
+	"haste": {"tex": "streak", "col": Color(0.7, 0.97, 1.0), "n": 8, "size": 0.4, "run": 0.35, "tangent": true},
+	"vigor": {"tex": "note", "col": Color(1.0, 0.85, 0.45), "n": 8, "size": 0.3, "run": 0.05, "bob": true},
+	"lifedrain": {"tex": "glow", "col": Color(0.75, 0.2, 0.5), "n": 12, "size": 0.26, "run": -0.04, "bob": true, "glow": Color(0.6, 0.15, 0.55)},
+}
+
+## Point du cadre (rectangle aux coins arrondis, centré, tour complet u dans [0, 1[) : position et normale sortante.
+func _perim(u: float) -> Array:
+	var hx := ext.x * 0.5
+	var hy := ext.y * 0.5
+	var r := minf(hy * 0.55, hx)
+	var lx := 2.0 * (hx - r)
+	var ly := 2.0 * (hy - r)
+	var arc := PI * 0.5 * r
+	var total := 2.0 * lx + 2.0 * ly + 4.0 * arc
+	var d := fposmod(u, 1.0) * total
+	# haut (de gauche à droite), coin haut-droit, côté droit (vers le bas), coin bas-droit, bas (vers la gauche), coin bas-gauche, côté gauche, coin haut-gauche
+	var segs := [[lx, 0], [arc, 1], [ly, 2], [arc, 3], [lx, 4], [arc, 5], [ly, 6], [arc, 7]]
+	for sg in segs:
+		var l: float = sg[0]
+		if d > l:
+			d -= l
+			continue
+		var f := d / maxf(l, 0.0001)
+		match int(sg[1]):
+			0: return [Vector2(-hx + r + f * lx, hy), Vector2(0, 1)]
+			1: return _corner_pt(Vector2(hx - r, hy - r), 0.5 * PI - f * 0.5 * PI, r)
+			2: return [Vector2(hx, hy - r - f * ly), Vector2(1, 0)]
+			3: return _corner_pt(Vector2(hx - r, -hy + r), 0.0 - f * 0.5 * PI, r)
+			4: return [Vector2(hx - r - f * lx, -hy), Vector2(0, -1)]
+			5: return _corner_pt(Vector2(-hx + r, -hy + r), -0.5 * PI - f * 0.5 * PI, r)
+			6: return [Vector2(-hx, -hy + r + f * ly), Vector2(-1, 0)]
+			_: return _corner_pt(Vector2(-hx + r, hy - r), PI - f * 0.5 * PI, r)
+	return [Vector2(0, hy), Vector2(0, 1)]
+
+static func _corner_pt(c: Vector2, a: float, r: float) -> Array:
+	var n := Vector2(cos(a), sin(a))
+	return [c + n * r, n]
+
+func _build_ring(fx: Dictionary, lk: String) -> void:
+	var sp: Dictionary = RING.get(lk, RING.burn)
+	var n := int(sp.n)
+	var base := ext.y * float(sp.size)
+	if bool(sp.get("fire", false)):
+		for i in n:
+			var f := _fire_quad(fx, float(i) * 1.7, 0.9 + 0.5 * _h(i), 0.95)
+			fx.fns.append(func(t: float):
+				if not is_instance_valid(f):
+					return
+				var pt: Array = _perim(float(i) / float(n) + t * float(sp.run))
+				var nrm: Vector2 = pt[1]
+				var sz := base * (0.8 + 0.35 * _h(i + 3)) * (0.9 + 0.1 * sin(t * 7.0 + float(i)))
+				f.position = Vector3(pt[0].x + nrm.x * sz * 0.2, pt[0].y + nrm.y * sz * 0.2, 0.01)
+				f.scale = Vector3(sz * 0.75, sz, 1.0)
+				f.rotation.z = atan2(-nrm.x, nrm.y)
+				(f.material_override as ShaderMaterial).set_shader_parameter("aspect", 0.75))
+		return
+	if sp.has("glow"):
+		# fin halo coloré qui suit le cadre
+		for i in 8:
+			var g := _spr(fx, "glow", sp.glow)
+			fx.fns.append(func(t: float):
+				var pt: Array = _perim(float(i) / 8.0)
+				var sz := base * 1.6
+				_put(g, pt[0], Vector2(sz, sz), 0.16 + 0.06 * sin(t * 2.0 + float(i))))
+	var layers: Array = [[sp.col, 1.0]]
+	if sp.has("inner"):
+		layers.append([sp.inner, 0.55])
+	for ly in layers:
+		for i in n:
+			var e := _spr(fx, str(sp.tex), ly[0])
+			fx.fns.append(func(t: float):
+				var pt: Array = _perim(float(i) / float(n) + t * float(sp.run))
+				var nrm: Vector2 = pt[1]
+				var sz := base * (0.8 + 0.4 * _h(i + 7)) * float(ly[1])
+				var pos: Vector2 = pt[0]
+				var alpha := 0.9
+				if bool(sp.get("bob", false)):
+					var k := fposmod(t * 0.4 + _h(i), 1.0)
+					pos += nrm * base * 0.6 * k
+					alpha = sin(k * PI)
+				var rot := 0.0
+				var wh := Vector2(sz, sz)
+				if bool(sp.get("out", false)):
+					rot = atan2(-nrm.x, nrm.y) + 0.12 * sin(t * 5.0 + float(i) * 1.9)
+					var fl := 0.8 + 0.3 * sin(t * 9.0 + float(i) * 2.3) + 0.15 * sin(t * 15.0 + float(i))
+					wh = Vector2(sz * 0.7, sz * fl)
+					pos += nrm * wh.y * 0.35
+					alpha = 0.85 + 0.15 * sin(t * 11.0 + float(i))
+				elif bool(sp.get("tangent", false)):
+					rot = atan2(nrm.x, nrm.y) + PI * 0.5
+				elif float(sp.get("spin", 0.0)) != 0.0:
+					rot = t * float(sp.spin) + float(i)
+				_put(e, pos, wh, alpha, rot))
 
 # ------------------------------------------------------------------------------------------ textures (dessinées une fois)
 

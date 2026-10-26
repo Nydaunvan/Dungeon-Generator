@@ -170,6 +170,7 @@ func _sync_status() -> void:
 		if a == null:
 			a = StatusAura.new()
 			a.mix_mode = true
+			a.ring_mode = true
 			_status_root.add_child(a)
 			_auras[key] = a
 			if not visible:
