@@ -375,8 +375,9 @@ func _shock(at: Vector3, col: Color, size: float, dur: float, delay: float = 0.0
 		m.set_shader_parameter("progress", w))
 
 ## Lentille de distorsion (palier 3) : suit `follow` ou reste en place, s'éteint en `dur` secondes.
+## Réservée à Forward+ / Mobile : en Compatibilité la copie de l'écran n'est pas fiable et la lentille dessinait un disque noir (ALPHA = masque) sur la cible.
 func _lens(at: Vector3, size: float, strength: float, dur: float) -> MeshInstance3D:
-	if _tier < 3:
+	if _tier < 3 or not VisualFx.is_forward():
 		return null
 	var m := _smat("lens", SH_LENS, 4)
 	m.set_shader_parameter("strength", strength)
