@@ -83,7 +83,7 @@ static func all_modifiers() -> Array:
 ## Effets cumulés des modificateurs d'expédition choisis (ids).
 static func combine_mods(ids: Array) -> Dictionary:
 	var eff := {"attackSpeedMult": 1.0, "xpMult": 1.0, "goldMult": 1.0, "monsterCountMult": 1.0, "itemMult": 1.0, "staminaMult": 1.0,
-		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "minRarity": "", "startWeaponRarity": "", "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "fogMinimap": false, "soloParty": false, "noSpells": false}
+		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "minRarity": "", "startWeaponRarity": "", "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "bossMythicPct": -1.0, "fogMinimap": false, "soloParty": false, "noSpells": false}
 	for id in ids:
 		for m in all_modifiers():
 			if m.id != id:
@@ -98,6 +98,8 @@ static func combine_mods(ids: Array) -> Dictionary:
 			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells"]:
 				if m.get(k, false):
 					eff[k] = true
+			if m.has("bossMythicPct"):          # taux de mythique du butin du boss (le reste est légendaire) ; le plus haut l'emporte
+				eff["bossMythicPct"] = maxf(float(eff["bossMythicPct"]), float(m.bossMythicPct))
 			for k in ["minRarity", "startWeaponRarity"]:      # palier le plus haut demandé par les modificateurs choisis
 				if str(m.get(k, "")) != "" and Rarity.index(str(m[k])) > Rarity.index(str(eff[k])) :
 					eff[k] = str(m[k])
@@ -373,8 +375,10 @@ func mythic_chance() -> float:
 	return clampf(0.04 * lvl_i + 0.08 * run_bonus + (0.1 if difficulty == "hardcore" else 0.0), 0.0, 0.4)
 
 ## Fait de l'objet un légendaire (ou, plus rarement, un mythique) : nom unique, capacités du palier, bonus ×1,7 (×2 pour un mythique).
-func apply_legendary(item: Dictionary) -> Dictionary:
-	var tier := "mythic" if randf() < mythic_chance() else "legendary"
+## `mythic_pct` >= 0 impose le taux de mythique (en %), sinon `mythic_chance()`. Un seul tirage dans les deux cas (même consommation du hasard).
+func apply_legendary(item: Dictionary, mythic_pct: float = -1.0) -> Dictionary:
+	var chance := mythic_chance() if mythic_pct < 0.0 else mythic_pct / 100.0
+	var tier := "mythic" if randf() < chance else "legendary"
 	Rarity.upgrade_to(item, tier, func(): return randf())
 	item["name"] = choice(LEGENDARY_NAMES)
 	return item
@@ -839,7 +843,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	boss_loot["startHidden"] = true
 	legend_pct = minf(100.0, legend_pct + _legend_pity)   # « pitié » : chaque gardien sans légendaire rapproche le prochain
 	if randf() < legend_pct / 100.0:
-		apply_legendary(boss_loot)
+		apply_legendary(boss_loot, float(mod.bossMythicPct) if mod.forceLegendary else -1.0)
 		_legend_pity = 0.0
 	else:
 		_legend_pity = minf(40.0, _legend_pity + 8.0)

@@ -186,11 +186,12 @@
    "icon": "👹",
    "labelFr": "Nid de monstres",
    "labelEn": "Monster Den",
-   "descFr": "40% de monstres en plus par niveau et davantage de groupes, mais butin du boss toujours légendaire.",
-   "descEn": "40% more monsters per level and more groups, but boss loot is always legendary.",
+   "descFr": "40% de monstres en plus par niveau et davantage de groupes, mais butin du boss toujours légendaire (75 %) ou mythique (25 %).",
+   "descEn": "40% more monsters per level and more groups, but boss loot is always legendary (75%) or mythic (25%).",
    "monsterCountMult": 1.4,
    "groupChanceMult": 1.6,
-   "forceLegendary": true
+   "forceLegendary": true,
+   "bossMythicPct": 25
   },
   {
    "id": "mod_fog",
