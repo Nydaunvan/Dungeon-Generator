@@ -2654,6 +2654,8 @@
   "admin.classes.vitesse_aide": "Class base speed: the higher it is, the more often the character acts in combat.",
   "ui.party_modal.caracteristiques": "Attributes",
   "ui.party_modal.combat": "Combat",
+  "ui.party_modal.statuts": "Status effects",
+  "ui.party_modal.aucun_statut": "No active status",
   "ui.party_modal.col_base": "Base",
   "ui.party_modal.col_equip": "Gear",
   "ui.party_modal.col_talents": "Talents",

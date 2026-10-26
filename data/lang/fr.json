@@ -2654,6 +2654,8 @@
   "admin.classes.vitesse_aide": "Vitesse de base de la classe : plus elle est haute, plus le personnage joue souvent en combat.",
   "ui.party_modal.caracteristiques": "Caractéristiques",
   "ui.party_modal.combat": "Combat",
+  "ui.party_modal.statuts": "Statuts",
+  "ui.party_modal.aucun_statut": "Aucun statut actif",
   "ui.party_modal.col_base": "Base",
   "ui.party_modal.col_equip": "Équip.",
   "ui.party_modal.col_talents": "Talents",

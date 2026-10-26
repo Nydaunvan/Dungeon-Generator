@@ -203,6 +203,7 @@ func _stats(p: Control, c: Dictionary) -> void:
 	t.add_child(cl)
 	head.add_child(t)
 	p.add_child(head)
+	_statuses(p, c)
 	_section(p, L.t("ui.party_modal.caracteristiques"))
 	_attr_table(p, c)
 	_section(p, L.t("ui.party_modal.combat"))
@@ -211,6 +212,34 @@ func _stats(p: Control, c: Dictionary) -> void:
 	_combat_grid(p, c)
 	_section(p, "Progression")
 	_bar_row(p, L.t("ui.party_modal.experience"), float(c.get("xp", 0)), float(c.get("xpToNext", 1)), "%d/%d" % [int(c.get("xp", 0)), int(c.get("xpToNext", 1))], Color("4a8fc0"))
+
+## Statuts actifs du personnage (brûlure, gel, poison, célérité…) : pastille colorée (icône, nom, tours restants) puis effets chiffrés.
+func _statuses(p: Control, c: Dictionary) -> void:
+	_section(p, L.t("ui.party_modal.statuts"))
+	var effs: Array = Statuses.active(c) if int(c.hp) > 0 else []
+	if effs.is_empty():
+		var none := Label.new()
+		none.text = L.t("ui.party_modal.aucun_statut")
+		none.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
+		none.add_theme_font_size_override("font_size", 14)
+		none.add_theme_color_override("font_color", GOLD_DIM)
+		p.add_child(none)
+		return
+	for e in effs:
+		var col := Color(str(PartyHud.STATUS_COLORS.get(str(e.type), "ffd88a")))
+		var one := VBoxContainer.new()
+		one.add_theme_constant_override("separation", 2)
+		var row := HBoxContainer.new()
+		row.add_child(PartyTip._chip("%s %s · %s" % [Statuses.icon_of(e), L.c(Statuses.label_of(e)), L.fa(L.t("ui.party_tip.tours"), int(e.remaining))], col))
+		one.add_child(row)
+		for line in Statuses.effect_lines(e):
+			var ll := Label.new()
+			ll.text = "• " + str(line)
+			ll.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ll.add_theme_font_size_override("font_size", 13)
+			ll.add_theme_color_override("font_color", GOLD_DIM)
+			one.add_child(ll)
+		p.add_child(one)
 
 # ------------------------------------------------------------------ sorts
 
