@@ -108,7 +108,7 @@ func _start(prev: Dictionary) -> void:
 	body.add_child(_summary)
 	body.move_child(_summary, m._buttons_row.get_index())
 	m.set_buttons([
-		{"text": L.t("ui.expedition.generer"), "cb": _launch, "primary": true},
+		{"text": L.t("ui.expedition.generer"), "cb": _confirm_launch, "primary": true},
 		{"text": L.t("common.annuler"), "cb": func(): m.close()},
 	], true)
 	_refresh_all()
@@ -654,6 +654,13 @@ func _refresh_summary() -> void:
 			dn = L.t(str(d[1])) if _diff != "hardcore" else "Hardcore"
 	_summary.text = "⚔ %s   ·   🗺 %d × %d × %d   ·   %s %s   ·   ✨ %s" % [" · ".join(PackedStringArray(names)), _levels, _width, _height,
 		DIFF_ICONS[_diff], dn, " + ".join(PackedStringArray(mods)) if not mods.is_empty() else L.t("ui.expedition.aucun_mod")]
+
+## « Générer et jouer » demande d'abord confirmation : oui lance l'expédition, « Retour au menu » referme la question et laisse l'écran tel quel.
+func _confirm_launch() -> void:
+	if _modal == null or not is_instance_valid(_modal):
+		return
+	Dialogs.confirm(_modal.get_parent(), L.t("ui.expedition.confirm_titre"),
+		L.t("ui.expedition.confirm_texte") + "\n\n" + _summary.text, _launch, L.t("ui.expedition.confirm_oui"), L.t("ui.expedition.confirm_retour"))
 
 func _launch() -> void:
 	var picks: Array = []

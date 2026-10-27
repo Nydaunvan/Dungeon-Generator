@@ -74,5 +74,41 @@ func _ready() -> void:
 			if lc > 2:
 				ok = false
 				print("ECHEC description trop longue : ", d[0])
+	# « Générer et jouer » : confirmation d'abord ; « Retour au menu » laisse l'écran ouvert, « Oui » lance la génération
+	var launched := [false]
+	var before := get_tree().get_nodes_in_group("modal").size()
+	scr._on_launch = func(_c): launched[0] = true
+	scr._confirm_launch()
+	await get_tree().process_frame
+	var after := get_tree().get_nodes_in_group("modal").size()
+	print("confirmation ouverte : ", after == before + 1, " (modales ", before, " -> ", after, ")")
+	if after != before + 1 or launched[0]:
+		ok = false
+		print("ECHEC confirmation")
+	var conf: Modal = null
+	for m in get_tree().get_nodes_in_group("modal"):
+		if m != scr._modal:
+			conf = m
+	var btns: Array = conf.find_children("*", "Button", true, false)
+	print("boutons de la confirmation : ", btns.map(func(b): return b.text))
+	btns[1].pressed.emit()          # « Retour au menu »
+	await get_tree().create_timer(0.6).timeout
+	print("après retour : écran toujours ouvert = ", is_instance_valid(scr._modal) and not scr._modal.is_queued_for_deletion(), ", lancé = ", launched[0])
+	if launched[0] or not is_instance_valid(scr._modal) or scr._modal.is_queued_for_deletion():
+		ok = false
+		print("ECHEC retour au menu")
+	scr._confirm_launch()
+	await get_tree().process_frame
+	for m in get_tree().get_nodes_in_group("modal"):
+		if m != scr._modal and not m.is_queued_for_deletion():
+			(m.find_children("*", "Button", true, false)[0] as Button).pressed.emit()          # « Oui »
+	for i in 600:
+		await get_tree().process_frame
+		if launched[0]:
+			break
+	print("après « Oui » : expédition lancée = ", launched[0])
+	if not launched[0]:
+		ok = false
+		print("ECHEC lancement après confirmation")
 	print("RESULTAT expédition -> ", "OK" if ok else "ECHEC")
 	get_tree().quit()

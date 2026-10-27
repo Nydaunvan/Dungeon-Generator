@@ -43,4 +43,7 @@ func _ready() -> void:
 		m._scroll.scroll_vertical = 3000
 	await get_tree().create_timer(0.4).timeout
 	root.get_texture().get_image().save_png("/tmp/exp_4.png")
+	scr._confirm_launch()
+	await get_tree().create_timer(0.6).timeout
+	root.get_texture().get_image().save_png("/tmp/exp_5.png")
 	get_tree().quit()
