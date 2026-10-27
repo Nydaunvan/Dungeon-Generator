@@ -16,6 +16,12 @@ func check(label: String, cond: bool) -> void:
 		fails += 1
 		print("ÉCHEC : ", label)
 
+func _flow_open() -> bool:
+	for n in get_nodes_in_group("modal"):
+		if n.has_meta("flow") and not n.is_queued_for_deletion():
+			return true
+	return false
+
 func _bfs(m: Node, goal_fn: Callable) -> Array:
 	var grid = m.grid
 	var start := Vector2i(m.rig.gx, m.rig.gy)
@@ -223,9 +229,13 @@ func _init() -> void:
 	var done := 0
 	var kinds := {}
 	var t0 := Time.get_ticks_msec()
-	while done < max_actions and RL.is_clean() and not gs.game_over and (Time.get_ticks_msec() - t0) < 170000:
+	# une fenêtre de décision encore ouverte au bout des N actions (jet de piège en cours…) est menée à son terme avant de figer :
+	# le rejeu, lui, attend toujours la fin de la fenêtre ; sinon l'empreinte directe serait prise en plein milieu de la résolution.
+	while (done < max_actions or _flow_open()) and RL.is_clean() and not gs.game_over and ((Time.get_ticks_msec() - t0) < 170000 or done >= max_actions):
 		await process_frame
 		var modals: Array = get_nodes_in_group("modal")
+		if modals.is_empty() and done >= max_actions:
+			break
 		if not modals.is_empty():
 			if not RL.is_clean():
 				break
