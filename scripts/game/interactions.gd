@@ -91,6 +91,7 @@ func step_items() -> void:
 			continue
 		match str(it.get("type", "")):
 			"trap": _prompt_trap(it)
+			"pendulum": _cross_pendulum(it)
 			"fountain":
 				# fontaine logée dans un décroché : on l'utilise en avançant vers elle (comme une porte), pas en passant dessus
 				if LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id)) == Vector2i.ZERO or bool(level.get("outdoor", false)):
@@ -457,8 +458,52 @@ func _trigger_switch(it: Dictionary) -> void:
 			ist["hidden"] = false
 			view.entities.set_item_visible(iid, true)
 			_log(L.t("game.interactions.un_objet_apparait_jusque_la"))
+	var pid := str(it.get("switchDisarmsId", ""))      # levier de contrepoids : bloque la hache pendulaire du niveau
+	if pid != "":
+		var pst := gs.item_state(_lid(), pid)
+		if not pst.get("disarmed", false):
+			pst["disarmed"] = true
+			view.entities.disarm_item(pid)
+			_log(L.t("game.interactions.pendule_bloque"))
 	if str(it.get("message", "")) != "":
 		_log(str(it.message))
+
+# ------------------------------------------------------------------ hache pendulaire
+
+## Le groupe entre sous la hache : chaque héros tente de l'esquiver (Dextérité, voir `TrapRules.pendulum_dodge`), les autres sont touchés.
+## Le piège reste actif à chaque passage tant que le levier de contrepoids (`leverId`) n'a pas été tiré. Aucune fenêtre : tout est tiré dans
+## le flux « trap », donc rejouable à l'identique.
+func _cross_pendulum(it: Dictionary) -> void:
+	var s := _trap_cfg()
+	var st := gs.item_state(_lid(), str(it.id))
+	_log(L.t("game.interactions.pendule_balaie"))
+	var hits: Array = []
+	var dodged: Array = []
+	for c in gs.alive_party():
+		if GameRng.f("trap") * 100.0 < float(TrapRules.pendulum_dodge(c, s)):
+			dodged.append(str(c.name))
+		else:
+			hits.append(_hit_for(it, c, float(s.pendulumDmgPct) / 100.0))
+	if not st.get("known", false):       # première fois : les gravures des fentes mettent sur la piste du levier
+		st["known"] = true
+		var lever := _find_item(str(it.get("leverId", "")))
+		if not lever.is_empty():
+			var dx := int(lever.x) - int(it.x)
+			var dy := int(lever.y) - int(it.y)
+			var key := ("game.interactions.cap_est" if dx > 0 else "game.interactions.cap_ouest") if absi(dx) > absi(dy) else ("game.interactions.cap_sud" if dy > 0 else "game.interactions.cap_nord")
+			_log(L.fa(L.t("game.interactions.pendule_indice"), L.t(key)))
+	if hits.is_empty():
+		_log(L.t("game.interactions.pendule_indemne"))
+		return
+	if not dodged.is_empty():
+		_log(L.fa(L.t("game.interactions.pendule_esquive"), ", ".join(PackedStringArray(dodged))))
+	_apply_trap_hits(it, hits)
+
+func _find_item(id: String) -> Dictionary:
+	for d in level.get("items", []):
+		if str(d.id) == id:
+			return d
+	return {}
 
 # ------------------------------------------------------------------ fontaine
 

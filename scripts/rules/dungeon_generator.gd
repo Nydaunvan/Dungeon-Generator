@@ -477,6 +477,7 @@ func levels(num_levels: int, width: int, height: int, party_pow: float = 1.0) ->
 		l.erase("_fwdX")
 		l.erase("_fwdY")
 	_place_merchant(out)
+	_place_pendulums(out)
 	return out
 
 func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_levels: Array, party_pow: float,
@@ -1017,6 +1018,124 @@ func _try_locking_door(grid: Array, dist: Array, rooms: Array, candidates: Array
 						best = {"cell": n, "dist": dl, "locked": locked}
 				break
 	return best
+
+## Hache pendulaire : sur certains niveaux (chance `pendulumChancePct`, à partir du niveau `pendulumMinLevel`), un piège de couloir sur le
+## chemin de la sortie et, ailleurs sur la carte, le levier de contrepoids qui le bloque. Passage à part, avec son propre générateur
+## (seedé par l'identifiant du niveau) : il ne consomme AUCUN tirage du hasard général, donc ne change ni les monstres ni le butin d'une graine.
+func _place_pendulums(lvls: Array) -> void:
+	var s := TrapRules.cfg(cfg)
+	if float(s.pendulumChancePct) <= 0.0:
+		return
+	for i in lvls.size():
+		var lv: Dictionary = lvls[i]
+		if i + 1 < int(s.pendulumMinLevel):
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash("pendulum|" + str(lv.id))
+		if rng.randf() * 100.0 >= float(s.pendulumChancePct):
+			continue
+		var rows: Array = lv.mapRows
+		var occupied := {}
+		var specials: Array = [Vector2i(int(lv.startX), int(lv.startY))]
+		for m in lv.monsters:
+			occupied[_key(int(m.x), int(m.y))] = true
+		for it in lv.items:
+			occupied[_key(int(it.x), int(it.y))] = true
+			if str(it.get("type", "")) == "fountain":
+				specials.append(Vector2i(int(it.x), int(it.y)))
+		for d in lv.doors:
+			occupied[_key(int(d.x), int(d.y))] = true
+			specials.append(Vector2i(int(d.x), int(d.y)))
+		for st in lv.stairs:
+			occupied[_key(int(st.x), int(st.y))] = true
+			specials.append(Vector2i(int(st.x), int(st.y)))
+		var tm = lv.get("travelingMerchant")
+		if tm is Dictionary:
+			specials.append(Vector2i(int(tm.x), int(tm.y)))
+		var grid: Array = []
+		for r in rows:
+			grid.append((r as String).split(""))
+		# chemin le plus court de l'arrivée à la sortie : le piège s'y trouve de préférence (on le rencontre forcément)
+		var dist := bfs(grid, int(lv.startX), int(lv.startY))
+		var path := {}
+		var cur := Vector2i(int(lv.stairs[0].x), int(lv.stairs[0].y))
+		var guard := 0
+		while dist[cur.y][cur.x] > 0 and guard < 100000:
+			guard += 1
+			path[_key(cur.x, cur.y)] = true
+			var nxt := Vector2i(-1, -1)
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = cur + d
+				if n.y >= 0 and n.y < dist.size() and n.x >= 0 and n.x < dist[0].size() and int(dist[n.y][n.x]) == int(dist[cur.y][cur.x]) - 1 and int(dist[n.y][n.x]) >= 0:
+					nxt = n
+					break
+			if nxt.x < 0:
+				break
+			cur = nxt
+		var on_path: Array = []
+		var anywhere: Array = []
+		for y in rows.size():
+			for x in (rows[y] as String).length():
+				if (x + y) % 2 != 1 or occupied.has(_key(x, y)):     # parité : ces cases ne portent jamais de torche murale (voir LevelBuilder)
+					continue
+				var axis := _corridor_axis(rows, x, y)
+				if axis == "":
+					continue
+				var near := false
+				for sp in specials:
+					if maxi(absi(sp.x - x), absi(sp.y - y)) <= 2:
+						near = true
+						break
+				if near:
+					continue
+				var c := {"x": x, "y": y, "axis": axis}
+				anywhere.append(c)
+				if path.has(_key(x, y)):
+					on_path.append(c)
+		var pool: Array = on_path if not on_path.is_empty() else anywhere
+		if pool.is_empty():
+			continue
+		var spot: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
+		# levier de contrepoids : une case libre loin de la hache, ni sur le chemin forcé ni près d'un point spécial
+		var free: Array = []
+		for y in rows.size():
+			for x in (rows[y] as String).length():
+				if (rows[y] as String)[x] != "." or occupied.has(_key(x, y)) or (x == int(spot.x) and y == int(spot.y)):
+					continue
+				if maxi(absi(x - int(spot.x)), absi(y - int(spot.y))) < 6 or int(dist[y][x]) < 0:
+					continue
+				var close := false
+				for sp in specials:
+					if maxi(absi(sp.x - x), absi(sp.y - y)) <= 1:
+						close = true
+						break
+				if not close:
+					free.append(Vector2i(x, y))
+		if free.is_empty():
+			continue
+		var lever: Vector2i = free[rng.randi_range(0, free.size() - 1)]
+		var pid := "pend_gen_%d" % i
+		lv.items.append({"id": pid, "name": L.t("rules.dungeon_generator.hache_pendulaire"), "icon": "🪓", "x": int(spot.x), "y": int(spot.y), "type": "pendulum",
+			"axis": str(spot.axis), "permanent": true, "leverId": "pend_lever_%d" % i,
+			"trapDmgMin": 2 + int(i * 0.8) + int(run_bonus * 0.5), "trapDmgMax": 5 + int(i * 1.2) + run_bonus})
+		lv.items.append({"id": "pend_lever_%d" % i, "name": L.t("rules.dungeon_generator.levier_de_contrepoids"), "icon": "@icon:misc_lever", "x": lever.x, "y": lever.y,
+			"type": "switch", "switchDisarmsId": pid})
+
+## Axe d'un couloir rectiligne : « ns » (murs à l'est et à l'ouest, ouvert au nord et au sud), « ew » (l'inverse), « » sinon.
+static func _corridor_axis(rows: Array, x: int, y: int) -> String:
+	if (rows[y] as String)[x] != ".":
+		return ""
+	var n := not _wall_at(rows, x, y - 1) and (rows[y - 1] as String)[x] == "."
+	var s2 := not _wall_at(rows, x, y + 1) and (rows[y + 1] as String)[x] == "."
+	var e := _wall_at(rows, x + 1, y)
+	var w := _wall_at(rows, x - 1, y)
+	if n and s2 and e and w:
+		return "ns"
+	var e2 := not _wall_at(rows, x + 1, y) and (rows[y] as String)[x + 1] == "."
+	var w2 := not _wall_at(rows, x - 1, y) and (rows[y] as String)[x - 1] == "."
+	if e2 and w2 and _wall_at(rows, x, y - 1) and _wall_at(rows, x, y + 1):
+		return "ew"
+	return ""
 
 ## Marchand ambulant sur le 2ᵉ niveau (ou le seul) : étal logé dans un décroché du mur, sur une case libre contre un mur.
 func _place_merchant(lvls: Array) -> void:

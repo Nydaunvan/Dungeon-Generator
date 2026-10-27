@@ -20,6 +20,9 @@ const DEFAULTS := {
 	# récompenses
 	"rewardChancePct": 15.0, "rewardPerfectPct": 60.0, "puzzleRewardPct": 70.0,
 	"rewardGoldMin": 15.0, "rewardGoldMax": 60.0, "rewardXp": 12.0, "rewardHealPct": 30.0,
+	# hache pendulaire (piège de couloir : esquive au passage, désactivé par un levier de contrepoids)
+	"pendulumChancePct": 35.0, "pendulumMinLevel": 2.0, "pendulumDodgeBase": 55.0, "pendulumDexBonus": 3.0,
+	"pendulumMin": 25.0, "pendulumMax": 92.0, "pendulumDmgPct": 130.0,
 }
 
 ## Méthodes : icône, caractéristique qui compte, cible du jet.
@@ -63,6 +66,17 @@ static func cfg(game_cfg: Dictionary) -> Dictionary:
 	o["dexCap"] = maxf(o.dexCap, 0.0)
 	o["methodCount"] = clampf(o.methodCount, 2.0, 4.0)
 	return o
+
+## Chance (0-100) qu'un héros esquive la hache pendulaire : base + Dextérité au-dessus de 10 (+ bonus des classes de voleur), bornée.
+static func pendulum_dodge(c: Dictionary, s: Dictionary) -> int:
+	var raw: float = float(s.pendulumDodgeBase) + maxf(0.0, float(c.get("effDex", c.get("dex", 10))) - 10.0) * float(s.pendulumDexBonus)
+	var cid := str(c.get("classId", ""))
+	if cid == "class_rogue" or cid == "class_thief":
+		raw += float(s.rogueBonus) * 0.5
+	elif cid == "class_assassin":
+		raw += float(s.assassinBonus) * 0.5
+	var lo: float = float(s.pendulumMin)
+	return int(round(clampf(raw, lo, maxf(lo, float(s.pendulumMax)))))
 
 ## Type du piège : celui de son décor (`trapKind` : spikes, dart, pit, gas) ; à défaut, stable d'après son identifiant.
 static func kind_of(item: Dictionary) -> Dictionary:

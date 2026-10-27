@@ -1,6 +1,6 @@
 class_name TrapPendulum
 extends Node3D
-## Piège « hache pendulaire » (ESSAI) : une grande hache à double tranchant, suspendue au plafond par une tige, qui balaie le couloir
+## Piège « hache pendulaire » : une grande hache à double tranchant, suspendue au plafond par une tige, qui balaie le couloir
 ## d'un mur à l'autre. À chaque extrémité de sa course, la lame s'enfonce dans une fente verticale ménagée dans le mur.
 ## Repère local : l'origine est au centre de la case, au sol ; le plan d'oscillation est perpendiculaire au sens de marche
 ## (X = latéral, Y = haut). Le nœud se tourne comme le joueur (`rotation.y = -PI/2 * dir`).

@@ -91,6 +91,17 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			add_child(dec)
 			_register(items, Vector2i(int(it.x), int(it.y)), dec, it)
 			continue
+		if type == "pendulum":      # hache pendulaire : balaie le couloir d'un mur à l'autre, lame logée dans une fente à chaque bout
+			var pn := TrapPendulum.make()
+			pn.name = "Pendulum_" + str(it.id)
+			pn.position = Vector3(int(it.x) * LevelBuilder.CELL, 0.0, int(it.y) * LevelBuilder.CELL)
+			pn.rotation.y = PI * 0.5 if str(it.get("axis", "ns")) == "ew" else 0.0      # « ns » : couloir nord-sud, la hache oscille d'est en ouest
+			pn.t = float(absi(str(it.id).hash()) % 1000) / 1000.0 * TrapPendulum.PERIOD       # phase propre : deux haches ne battent pas en même temps
+			pn.set_meta("pendulum", true)
+			pn.visible = not bool(it.get("startHidden", false))
+			add_child(pn)
+			_register(items, Vector2i(int(it.x), int(it.y)), pn, it)
+			continue
 		if type == "fountain":
 			var f := Fountain3D.new()
 			var nd: Vector2i = Vector2i.ZERO
@@ -564,6 +575,9 @@ func disarm_item(id: String, animate: bool = true) -> void:
 					done = true
 				elif e.node.has_meta("trap_rune"):
 					TrapRune.stop(e.node, animate)
+					done = true
+				elif e.node.has_meta("pendulum"):
+					(e.node as TrapPendulum).lock(1 if absi(str(id).hash()) % 2 == 0 else -1, animate)      # la lame reste coincée dans une fente
 					done = true
 	if not done:
 		remove_item(id)

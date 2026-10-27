@@ -113,7 +113,7 @@ func _free(p: Vector2i, except_id: String, include_merchant: bool = true) -> boo
 ## Piège encore actif (ni désamorcé, ni pris, ni caché) sur la case : aucun monstre ne le franchit, même dans sa zone de patrouille ou en poursuite.
 func _active_trap_at(p: Vector2i) -> bool:
 	for it in level.get("items", []):
-		if str(it.get("type", "")) != "trap" or int(it.x) != p.x or int(it.y) != p.y:
+		if not ["trap", "pendulum"].has(str(it.get("type", ""))) or int(it.x) != p.x or int(it.y) != p.y:
 			continue
 		var st: Dictionary = ((gs.level_states.get(str(level.id), {}) as Dictionary).get("items_state", {}) as Dictionary).get(str(it.id), {})   # lecture seule (item_state créerait l'entrée)
 		if not (st.get("taken", false) or st.get("disarmed", false) or st.get("hidden", bool(it.get("startHidden", false)))):
@@ -187,7 +187,7 @@ func _build_cache(ls: Dictionary) -> void:
 		_occ[k] = int(_occ.get(k, 0)) + 1
 	_trap_cells = {}
 	for it in level.get("items", []):
-		if str(it.get("type", "")) == "trap":
+		if ["trap", "pendulum"].has(str(it.get("type", ""))):
 			var p := Vector2i(int(it.x), int(it.y))
 			if _active_trap_at(p):
 				_trap_cells[p] = true
