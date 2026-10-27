@@ -252,7 +252,7 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 		right = camera.global_transform.basis.x
 	var feet: float = float((0.5 - (info.center.y + info.size.y * 0.5)) * h)
 	# posée juste au-dessus du sol et avancée vers la caméra : en perspective elle apparaît sous les pieds du monstre sans passer sous le sol
-	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.55
+	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.8
 	pos.y = maxf(at.y + feet, 0.02) + 0.13
 	var bar: MeshInstance3D = e.get("bar")
 	if bar == null:
