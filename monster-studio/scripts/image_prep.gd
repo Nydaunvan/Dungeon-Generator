@@ -16,6 +16,7 @@ static func prepare(src: String, dst: String) -> String:
 	if img == null or img.is_empty():
 		return "image illisible"
 	img.convert(Image.FORMAT_RGBA8)
+	var full := img.duplicate() as Image                     # pleine résolution, pour le découpage texturé (cut.png)
 	var m := maxi(img.get_width(), img.get_height())
 	if m > WORK:
 		var k := float(WORK) / float(m)
@@ -73,6 +74,7 @@ static func prepare(src: String, dst: String) -> String:
 				y1 = maxi(y1, y)
 	if x1 < x0 or (x1 - x0) < 8 or (y1 - y0) < 8:
 		return "sujet introuvable"
+	_save_cut(full, mask, w, h, Rect2i(x0, y0, x1 - x0 + 1, y1 - y0 + 1), dst.get_base_dir().path_join("cut.png"))
 	var out := Image.create(SIZE, SIZE, false, Image.FORMAT_RGB8)
 	out.fill(Color(0.5, 0.5, 0.5))
 	var sub := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_RGBA8)
@@ -89,6 +91,27 @@ static func prepare(src: String, dst: String) -> String:
 	out.blit_rect(sub, Rect2i(0, 0, sub.get_width(), sub.get_height()), Vector2i((SIZE - sub.get_width()) / 2, (SIZE - sub.get_height()) / 2))
 	DirAccess.make_dir_recursive_absolute(dst.get_base_dir())
 	return "" if out.save_png(dst) == OK else "écriture impossible"
+
+## cut.png : le sujet recadré en pleine résolution, avec un alpha doux (masque de travail agrandi) — sert à plaquer le dessin d'origine sur le modèle.
+static func _save_cut(full: Image, mask: PackedByteArray, w: int, h: int, box: Rect2i, path: String) -> void:
+	var k := float(full.get_width()) / float(w)
+	var fb := Rect2i(int(box.position.x * k), int(box.position.y * k), int(box.size.x * k), int(box.size.y * k))
+	fb = fb.intersection(Rect2i(0, 0, full.get_width(), full.get_height()))
+	if fb.size.x < 4 or fb.size.y < 4:
+		return
+	var a := Image.create(box.size.x, box.size.y, false, Image.FORMAT_L8)
+	for y in box.size.y:
+		for x in box.size.x:
+			a.set_pixel(x, y, Color(1, 1, 1) if mask[(box.position.y + y) * w + box.position.x + x] == 1 else Color(0, 0, 0))
+	a.resize(fb.size.x, fb.size.y, Image.INTERPOLATE_BILINEAR)
+	var cut := full.get_region(fb)
+	cut.convert(Image.FORMAT_RGBA8)
+	for y in fb.size.y:
+		for x in fb.size.x:
+			var c := cut.get_pixel(x, y)
+			c.a = a.get_pixel(x, y).r
+			cut.set_pixel(x, y, c)
+	cut.save_png(path)
 
 static func _px(d: PackedByteArray, w: int, x: int, y: int) -> Vector3:
 	var o := (y * w + x) * 4

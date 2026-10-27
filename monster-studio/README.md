@@ -45,3 +45,4 @@ Double-cliquez sur **`uninstall_triposr.bat`** : il demande confirmation puis re
 - L'image est détourée et recadrée par Monster Studio avant TripoSR quand le fond est uni (fond vert, blanc, etc.) : le sujet est plus net. Un fond chargé est détouré par TripoSR lui-même.
 - Le maillage est calculé en 384 (au lieu de 256) : plus de détail, un peu plus lent. Réglable dans la commande (`--mc-resolution`).
 - La « texture » est portée par les couleurs des sommets du modèle : ce que tu vois dans la vue 3D est ce qui est exporté dans le .glb.
+- **Texture 2K/4K** (Réglages → Texture) : ton dessin est plaqué tel quel sur la face avant ; le dos et les côtés sont complétés d'après les couleurs de l'IA et le grain du dessin. Le modèle est aussi remis automatiquement dans le bon sens (façade vers l'avant) et allégé à 30 000 triangles. Le détail de l'avant ne peut pas dépasser celui de ton image d'origine : plus elle est grande, plus la texture est fine.

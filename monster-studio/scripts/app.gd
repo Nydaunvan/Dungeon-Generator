@@ -45,6 +45,7 @@ var _workdir_dialog: FileDialog
 var _settings_pop: AcceptDialog
 var _cmd_edit: LineEdit
 var _workdir_edit: LineEdit
+var _tex_opt: OptionButton
 var _result_edit: LineEdit
 
 func _ready() -> void:
@@ -798,15 +799,22 @@ func _open_settings() -> void:
 		v.add_child(_row("Commande", _cmd_edit))
 		_result_edit = LineEdit.new()
 		v.add_child(_row("Résultat", _result_edit))
+		_tex_opt = OptionButton.new()
+		for t in [["Pas de texture (couleurs par sommet)", 0], ["1K (1024 px)", 1024], ["2K (2048 px)", 2048], ["4K (4096 px)", 4096]]:
+			_tex_opt.add_item(t[0], t[1])
+		v.add_child(_row("Texture", _tex_opt))
+		v.add_child(_lbl("La texture reprend ton dessin à l'avant ; le dos et les côtés sont complétés d'après les couleurs de l'IA. Plus grande = plus lent.", 12, DIM))
 		v.add_child(_lbl("Variables : {image} = image du monstre, {outdir} = dossier de sortie. « Résultat » = le .glb que la commande produit.", 12, DIM))
 		_settings_pop.add_child(v)
 		_settings_pop.confirmed.connect(func():
 			cfg.workdir = _workdir_edit.text
 			cfg.command = _cmd_edit.text
 			cfg.result = _result_edit.text
+			cfg.texture_size = _tex_opt.get_selected_id()
 			StudioSettings.save_all(cfg))
 		add_child(_settings_pop)
 	_workdir_edit.text = str(cfg.workdir)
 	_cmd_edit.text = str(cfg.command)
 	_result_edit.text = str(cfg.result)
+	_tex_opt.select(_tex_opt.get_item_index(int(cfg.get("texture_size", 2048))))
 	_settings_pop.popup_centered()

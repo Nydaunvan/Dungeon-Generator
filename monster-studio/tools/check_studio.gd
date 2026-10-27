@@ -168,5 +168,18 @@ func _ready() -> void:
 	reloaded.slug = app.cur.slug
 	reloaded.load_meta()
 	check("clés conservées dans rig.json", reloaded.anim_keys.has("idle") and reloaded.has_rig())
+	# texture cuite (bake_texture.py) : UV et texture traversent squelette, peau et export
+	app.converter.use_glb(app.cur, ProjectSettings.globalize_path("res://tools/fixtures/textured.glb"))
+	app.cur.orient = Vector3.ZERO
+	await app._load_model()
+	var tm := ModelIO.load_normalized(app.cur.model_path())
+	var tmat: Material = tm.surfaces[0].material if tm.has("surfaces") else null
+	check("texture : UV et image de texture lues", tm.has("surfaces") and tm.surfaces[0].arrays[Mesh.ARRAY_TEX_UV] != null and tmat is BaseMaterial3D and (tmat as BaseMaterial3D).albedo_texture != null)
+	app.place_skeleton("biped")
+	await app.compute_skin()
+	var tout: String = await app.export_current("/tmp/studio_textured.glb")
+	var tback := ModelIO.load_normalized(tout)
+	var tmat2: Material = tback.surfaces[0].material if tback.has("surfaces") else null
+	check("texture : conservée après squelette, peau et export", tback.has("surfaces") and tback.surfaces[0].arrays[Mesh.ARRAY_TEX_UV] != null and tmat2 is BaseMaterial3D and (tmat2 as BaseMaterial3D).albedo_texture != null)
 	print("RESULTAT Monster Studio -> ", "OK" if fails == 0 else "%d ECHEC(S)" % fails)
 	get_tree().quit(0 if fails == 0 else 1)

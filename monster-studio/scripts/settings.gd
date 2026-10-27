@@ -8,6 +8,7 @@ const DEFAULTS := {
 	"workdir": "",                                                             # dossier du modèle d'IA (ex. TripoSR cloné)
 	"command": "python run.py \"{image}\" --output-dir \"{outdir}\" --model-save-format glb --mc-resolution 384",
 	"result": "{outdir}/0/mesh.glb",                                           # fichier produit par la commande
+	"texture_size": 2048,                                                      # texture du modèle : 0 = aucune (couleurs par sommet), 1024 / 2048 / 4096
 	"export_dir": "",                                                          # dossier d'export par défaut (ex. celui des modèles du jeu)
 }
 

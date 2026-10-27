@@ -435,7 +435,13 @@ def write_glb(path, V, N, UV, F, png_bytes):
 
 def load_cut(cut_path):
     im = Image.open(cut_path).convert("RGBA")
-    return np.asarray(im, np.float32) / 255.0
+    a = np.asarray(im, np.float32) / 255.0
+    # sous la transparence, on recopie la couleur du sujet le plus proche (plus de frange du fond quand on échantillonne)
+    bg = a[..., 3] < 0.5
+    if bg.any() and not bg.all():
+        idx = ndi.distance_transform_edt(bg, return_distances=False, return_indices=True)
+        a[..., :3] = a[idx[0], idx[1], :3]
+    return a
 
 
 def main():

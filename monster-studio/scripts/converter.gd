@@ -40,22 +40,49 @@ func start_ai(m: Monster, cfg: Dictionary) -> void:
 	var cmd := command_line(cmd_tpl, image, outdir)
 	var result_path := str(cfg.get("result", "")).replace("{outdir}", outdir)
 	var model_dst := ProjectSettings.globalize_path(m.model_path())
+	var bake := ""
+	var tex_size := int(cfg.get("texture_size", 2048))
+	if tex_size > 0 and FileAccess.file_exists(outdir + "/cut.png"):
+		bake = _bake_command(cmd_tpl, result_path, outdir + "/cut.png", model_dst, tex_size)
 	_busy = true
 	_thread = Thread.new()
-	_thread.start(_run.bind(workdir, cmd, result_path, model_dst))
+	_thread.start(_run.bind(workdir, cmd, result_path, model_dst, bake))
 
-func _run(workdir: String, cmd: String, result_path: String, model_dst: String) -> void:
-	var out: Array = []
-	var code := -1
+## Commande de cuisson de texture (script Python livré avec Monster Studio, copié sur le disque pour pouvoir être lancé).
+func _bake_command(cmd_tpl: String, mesh: String, cut: String, out: String, size: int) -> String:
+	var script := ProjectSettings.globalize_path("user://studio/bake_texture.py")
+	DirAccess.make_dir_recursive_absolute(script.get_base_dir())
+	var src := FileAccess.get_file_as_string("res://tools_py/bake_texture.py")
+	if src == "":
+		return ""
+	var f := FileAccess.open(script, FileAccess.WRITE)
+	f.store_string(src)
+	f.close()
+	var py := cmd_tpl.strip_edges().split(" ")[0]
+	return "%s \"%s\" --mesh \"%s\" --cut \"%s\" --out \"%s\" --size %d" % [py, script, mesh, cut, out, size]
+
+func _shell(workdir: String, cmd: String, out: Array) -> int:
 	if OS.get_name() == "Windows":
-		code = OS.execute("cmd", ["/c", "cd /d \"%s\" && %s" % [workdir, cmd]], out, true)
-	else:
-		code = OS.execute("sh", ["-c", "cd \"%s\" && %s" % [workdir, cmd]], out, true)
+		return OS.execute("cmd", ["/c", "cd /d \"%s\" && %s" % [workdir, cmd]], out, true)
+	return OS.execute("sh", ["-c", "cd \"%s\" && %s" % [workdir, cmd]], out, true)
+
+func _run(workdir: String, cmd: String, result_path: String, model_dst: String, bake: String) -> void:
+	var out: Array = []
+	var code := _shell(workdir, cmd, out)
 	var log := "\n".join(PackedStringArray(out.map(func(x): return str(x))))
 	var ok := code == 0 and FileAccess.file_exists(result_path)
+	var note := ""
 	if ok:
-		DirAccess.copy_absolute(result_path, model_dst)
-	call_deferred("_done", ok, ("Modèle 3D créé." if ok else "Échec (code %d). Sortie :\n%s" % [code, log.right(1500)]))
+		var baked := false
+		if bake != "":
+			var bout: Array = []
+			var bcode := _shell(workdir, bake, bout)
+			var blog := "\n".join(PackedStringArray(bout.map(func(x): return str(x))))
+			baked = bcode == 0 and FileAccess.file_exists(model_dst) and blog.contains("BAKE: terminé")
+			note = " Texture cuite." if baked else " Texture impossible (couleurs par sommet gardées) :\n" + blog.right(900)
+		if not baked:
+			DirAccess.copy_absolute(result_path, model_dst)
+	call_deferred("_done", ok, ("Modèle 3D créé." + note if ok else "Échec (code %d). Sortie :\n%s" % [code, log.right(1500)]))
 
 func _done(ok: bool, msg: String) -> void:
 	if _thread != null:
