@@ -39,8 +39,7 @@ func _ready() -> void:
 	if not same:
 		ok = false
 	# l'écran
-	var layer := Control.new()
-	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var layer := CanvasLayer.new()      # comme dans le jeu : l'hôte des fenêtres est un CanvasLayer (pas un Control)
 	add_child(layer)
 	ExpeditionScreen.open(layer, func(_c): pass, {"levels": 99, "width": 3, "height": 500, "diff": "hard"})
 	await get_tree().create_timer(0.5).timeout

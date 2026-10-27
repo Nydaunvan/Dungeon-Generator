@@ -82,7 +82,7 @@ func _start(prev: Dictionary) -> void:
 	var m := Modal.open_framed(_host, L.t("ui.expedition.titre"), 1060.0)
 	_modal = m
 	# le corps défile : on lui laisse la hauteur de l'écran moins l'en-tête, le résumé et les boutons (la fenêtre entière doit tenir à l'écran)
-	var vp: Vector2 = _host.get_viewport_rect().size if _host.is_inside_tree() else Vector2(1280, 720)
+	var vp: Vector2 = _host.get_viewport().get_visible_rect().size if _host.is_inside_tree() else Vector2(1280, 720)
 	m.fit_ratio = clampf((vp.y - UiMetrics.css(250.0)) / vp.y, 0.3, 0.8)
 	m.set_meta("screen", self)          # garde l'écran en vie tant que la fenêtre existe
 	var intro := m.add_text(L.t("ui.expedition.intro"), UiTheme.DIM, int(UiMetrics.rem(0.86)), true)
