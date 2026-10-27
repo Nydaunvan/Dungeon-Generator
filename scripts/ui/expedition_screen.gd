@@ -25,6 +25,8 @@ const BONUS_FIRST := ["mod_crit"]
 
 var _host: Node
 var _on_launch: Callable
+var _on_back: Callable          ## appelée quand on quitte l'écran sans lancer (Annuler, croix, Échap) : retour à la fenêtre d'où l'on vient
+var _launching := false
 var _modal: Modal
 var _base: Dictionary
 var _classes: Array = []            # définitions des classes de base
@@ -57,10 +59,11 @@ var _toast: Label
 var _toast_tween: Tween
 
 ## Ouvre l'écran ; `on_launch(cfg)` reçoit la configuration générée (comme l'ancienne fenêtre).
-static func open(host: Node, on_launch: Callable, prev: Dictionary = {}) -> void:
+static func open(host: Node, on_launch: Callable, prev: Dictionary = {}, on_back: Callable = Callable()) -> void:
 	var s := ExpeditionScreen.new()
 	s._host = host
 	s._on_launch = on_launch
+	s._on_back = on_back
 	s._start(prev)
 
 func _start(prev: Dictionary) -> void:
@@ -85,6 +88,9 @@ func _start(prev: Dictionary) -> void:
 	var vp: Vector2 = _host.get_viewport().get_visible_rect().size if _host.is_inside_tree() else Vector2(1280, 720)
 	m.fit_ratio = clampf((vp.y - UiMetrics.css(212.0)) / vp.y, 0.3, 0.8)
 	m.set_meta("screen", self)          # garde l'écran en vie tant que la fenêtre existe
+	m.closed.connect(func():
+		if not _launching and _on_back.is_valid():
+			_on_back.call())
 	var intro := m.add_text(L.t("ui.expedition.intro"), UiTheme.DIM, int(UiMetrics.rem(0.86)), true)
 	intro.custom_minimum_size.x = 0
 	intro.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -677,6 +683,7 @@ func _launch() -> void:
 	var diff := _diff
 	var base: Dictionary = Data.config
 	var cb := _on_launch
+	_launching = true          # fermeture pour lancer : pas de retour en arrière
 	_modal.close()
 	Loader.generate(func(): return DungeonGenerator.build_config(base, l, w, h, diff, mods, 1, -1, picks), cb)
 

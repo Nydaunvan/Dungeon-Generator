@@ -63,11 +63,16 @@ func _on_action(name: String) -> void:
 
 ## Donjon aléatoire : d'abord les défis en cours et leurs classements (si le service en ligne est configuré), puis les réglages habituels.
 func _open_random() -> void:
-	var settings := func(): GeneratorDialog.open(_modal_layer, _launch_generated)
 	if Cloud.is_configured():
-		ChallengesModal.open(_modal_layer, settings)
+		ChallengesModal.open(_modal_layer, _open_expedition)
 	else:
-		settings.call()
+		_open_expedition()
+
+## Écran « Préparer l'expédition » ; Annuler, croix ou Échap : en mode en ligne on retourne sur la fenêtre des défis, sinon sur l'accueil principal.
+func _open_expedition() -> void:
+	GeneratorDialog.open(_modal_layer, _launch_generated, {}, func():
+		if Cloud.is_configured():
+			ChallengesModal.open(_modal_layer, _open_expedition))
 
 func _soon(what: String) -> void:
 	Dialogs.notice(_modal_layer, what, L.t("home.cette_partie_est_en_cours"))

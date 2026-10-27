@@ -110,5 +110,45 @@ func _ready() -> void:
 	if not launched[0]:
 		ok = false
 		print("ECHEC lancement après confirmation")
+	# Annuler / croix / Échap : « retour » appelé ; lancer : jamais
+	var backs := [0]
+	ExpeditionScreen.open(layer, func(_c): pass, {}, func(): backs[0] += 1)
+	await get_tree().create_timer(0.4).timeout
+	var sc2: ExpeditionScreen = null
+	for m in get_tree().get_nodes_in_group("modal"):
+		if not m.is_queued_for_deletion() and m.has_meta("screen"):
+			sc2 = m.get_meta("screen")
+	for t in ["Annuler|Cancel", "croix"]:
+		var btn: Button = null
+		for bb in sc2._modal.find_children("*", "Button", true, false):
+			if bb.text == "Annuler" or bb.text == "Cancel":
+				btn = bb
+		if btn != null and t != "croix":
+			btn.pressed.emit()
+		else:
+			sc2._modal.close()
+		await get_tree().create_timer(0.3).timeout
+		print("retour après ", t, " : ", backs[0])
+		if t == "croix":
+			break
+		ExpeditionScreen.open(layer, func(_c): pass, {}, func(): backs[0] += 1)
+		await get_tree().create_timer(0.4).timeout
+		for m in get_tree().get_nodes_in_group("modal"):
+			if not m.is_queued_for_deletion() and m.has_meta("screen"):
+				sc2 = m.get_meta("screen")
+	if backs[0] != 2:
+		ok = false
+		print("ECHEC retour : attendu 2, obtenu ", backs[0])
+	ExpeditionScreen.open(layer, func(_c): pass, {}, func(): backs[0] += 100)
+	await get_tree().create_timer(0.4).timeout
+	for m in get_tree().get_nodes_in_group("modal"):
+		if not m.is_queued_for_deletion() and m.has_meta("screen"):
+			sc2 = m.get_meta("screen")
+	sc2._launch()
+	await get_tree().create_timer(0.5).timeout
+	print("retour après lancement (doit rester 2) : ", backs[0])
+	if backs[0] != 2:
+		ok = false
+		print("ECHEC : le lancement ne doit pas déclencher le retour")
 	print("RESULTAT expédition -> ", "OK" if ok else "ECHEC")
 	get_tree().quit()

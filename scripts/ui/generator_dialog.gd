@@ -30,8 +30,9 @@ static func _spin(lo: int, hi: int, value: int) -> SpinBox:
 	return s
 
 ## Ouvre l'écran de préparation de l'expédition (groupe, taille du donjon, difficulté, modificateurs) ; `on_launch(cfg)` reçoit la configuration générée.
-static func open(host: Node, on_launch: Callable, prev: Dictionary = {}) -> void:
-	ExpeditionScreen.open(host, on_launch, prev)
+## `on_back` (facultatif) : appelée quand on quitte l'écran sans lancer (Annuler, croix, Échap).
+static func open(host: Node, on_launch: Callable, prev: Dictionary = {}, on_back: Callable = Callable()) -> void:
+	ExpeditionScreen.open(host, on_launch, prev, on_back)
 
 static func _pick_modifiers(host: Node, params: Dictionary, on_launch: Callable) -> void:
 	pick_modifiers(host, func(mods: Array): _generate(host, params, mods, on_launch), func(): open(host, on_launch, params))
