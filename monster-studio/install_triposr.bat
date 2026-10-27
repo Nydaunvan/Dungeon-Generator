@@ -7,7 +7,7 @@ echo   Monster Studio : installation de l'IA 2D vers 3D (TripoSR)
 echo ============================================================
 echo.
 echo Ce script installe TripoSR en local, dans un environnement isole.
-echo Il faut : Python 3.10 a 3.12, Git, une carte NVIDIA a jour.
+echo Il faut : Python 3.11 ^(ou 3.10^), Git, une carte NVIDIA a jour.
 echo Duree : 10 a 30 minutes, environ 6 Go telecharges.
 echo.
 
@@ -19,17 +19,21 @@ echo.
 
 rem --- verifications
 set "PY="
-where py >nul 2>nul && py -3 -c "import sys" >nul 2>nul && set "PY=py -3"
+where py >nul 2>nul && py -3.11 -c "import sys" >nul 2>nul && set "PY=py -3.11"
+if "%PY%"=="" where py >nul 2>nul && py -3.10 -c "import sys" >nul 2>nul && set "PY=py -3.10"
 if "%PY%"=="" where python >nul 2>nul && set "PY=python"
 if "%PY%"=="" (
-  echo [ERREUR] Python est introuvable. Installez Python 3.11 depuis python.org
+  echo [ERREUR] Python est introuvable. Installez Python 3.11 ^(64 bits^) depuis python.org
   echo          en cochant "Add python.exe to PATH", puis relancez ce script.
   goto :fail
 )
-%PY% -c "import sys; sys.exit(0 if (3,10) <= sys.version_info[:2] <= (3,12) else 1)" >nul 2>nul
+%PY% -c "import sys; sys.exit(0 if (3,10) <= sys.version_info[:2] <= (3,11) else 1)" >nul 2>nul
 if errorlevel 1 (
-  echo [ERREUR] Version de Python non prise en charge. Installez Python 3.11 ^(3.10 a 3.12^).
+  echo [ERREUR] TripoSR demande Python 3.10 ou 3.11 : les versions plus recentes ^(3.12 et plus^)
+  echo          n'ont pas toutes les dependances prevues. Version trouvee :
   %PY% --version
+  echo          Installez Python 3.11 ^(64 bits^) depuis python.org ^(il peut cohabiter avec l'autre^),
+  echo          puis relancez ce script : il utilisera automatiquement la 3.11.
   goto :fail
 )
 where git >nul 2>nul
@@ -62,7 +66,12 @@ cd /d "%TRIPO%"
 if errorlevel 1 goto :fail
 
 rem --- environnement isole
-if exist "venv\Scripts\python.exe" goto :have_venv
+if not exist "venv\Scripts\python.exe" goto :make_venv
+"venv\Scripts\python.exe" -c "import sys; sys.exit(0 if (3,10) <= sys.version_info[:2] <= (3,11) else 1)" >nul 2>nul
+if not errorlevel 1 goto :have_venv
+echo [2/5] Ancien environnement cree avec une autre version de Python : on le refait.
+rmdir /s /q venv
+:make_venv
 echo [2/5] Creation de l'environnement Python...
 %PY% -m venv venv
 if errorlevel 1 goto :fail
@@ -139,8 +148,10 @@ exit /b 0
 :fail_mcubes
 echo.
 echo ============================================================
-echo [ERREUR] La compilation de torchmcubes a echoue.
-echo Installez, puis relancez ce script :
+echo [ERREUR] L'installation des dependances de TripoSR a echoue.
+echo Faites defiler la fenetre vers le haut : la vraie cause est dans les lignes rouges.
+echo Cas le plus frequent : la compilation de torchmcubes. Dans ce cas, installez,
+echo puis relancez ce script :
 echo   1. Visual Studio Build Tools ^(visualstudio.microsoft.com/fr/downloads,
 echo      "Outils de generation", charge de travail "Developpement Desktop en C++"^)
 echo   2. Le kit CUDA 12.1 ^(developer.nvidia.com/cuda-12-1-0-download-archive^)

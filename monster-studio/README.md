@@ -17,7 +17,7 @@ Les données sont rangées par monstre dans `user://studio/<monstre>/` (image, m
 
 ## Brancher l'IA 2D → 3D (TripoSR, une seule fois)
 
-**Le plus simple : double-cliquez sur `install_triposr.bat`** (dans ce dossier). Il vérifie Python 3.10–3.12, Git et la carte NVIDIA, télécharge TripoSR dans `%USERPROFILE%\TripoSR` (ou dans le dossier donné en argument), crée un environnement isolé, installe PyTorch (CUDA 12.1) et les dépendances, fait un essai complet (téléchargement du modèle compris), puis écrit lui-même les réglages de Monster Studio. Il peut être relancé : il reprend là où il s'est arrêté. Si la compilation de `torchmcubes` échoue, il indique quoi installer (Build Tools de Visual Studio, kit CUDA 12.1). Il n'a pas encore été essayé sur un vrai PC Windows.
+**Le plus simple : double-cliquez sur `install_triposr.bat`** (dans ce dossier). Il vérifie Python 3.11 (ou 3.10 ; la 3.12 et au-delà ne sont pas prises en charge par les dépendances de TripoSR), Git et la carte NVIDIA, télécharge TripoSR dans `%USERPROFILE%\TripoSR` (ou dans le dossier donné en argument), crée un environnement isolé, installe PyTorch (CUDA 12.1) et les dépendances, fait un essai complet (téléchargement du modèle compris), puis écrit lui-même les réglages de Monster Studio. Il peut être relancé : il reprend là où il s'est arrêté. Si la compilation de `torchmcubes` échoue, il indique quoi installer (Build Tools de Visual Studio, kit CUDA 12.1). Il n'a pas encore été essayé sur un vrai PC Windows.
 
 À la main :
 
