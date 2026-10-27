@@ -29,7 +29,14 @@ func start_ai(m: Monster, cfg: Dictionary) -> void:
 	var outdir := ProjectSettings.globalize_path(m.dir() + "/ia_out")
 	DirAccess.make_dir_recursive_absolute(outdir)
 	var image := ProjectSettings.globalize_path(m.source_path())
-	var cmd := command_line(str(cfg.get("command", "")), image, outdir)
+	var cmd_tpl := str(cfg.get("command", ""))
+	# Détourage et cadrage faits ici (fond uni) : TripoSR reçoit un sujet propre sur gris, sans refaire son propre détourage.
+	var prep_msg := ImagePrep.prepare(image, outdir + "/prepared.png")
+	if prep_msg == "":
+		image = outdir + "/prepared.png"
+		if not cmd_tpl.contains("--no-remove-bg"):
+			cmd_tpl += " --no-remove-bg"
+	var cmd := command_line(cmd_tpl, image, outdir)
 	var result_path := str(cfg.get("result", "")).replace("{outdir}", outdir)
 	var model_dst := ProjectSettings.globalize_path(m.model_path())
 	_busy = true

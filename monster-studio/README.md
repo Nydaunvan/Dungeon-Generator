@@ -40,3 +40,8 @@ Double-cliquez sur **`uninstall_triposr.bat`** : il demande confirmation puis re
 ## Vérification
 
 `xvfb-run -a godot --path monster-studio res://tools/check_studio.tscn` joue toute la chaîne (hors IA) sur des silhouettes de test pour les 4 gabarits : import, squelette, poids, animations, export `.glb` et relecture.
+
+## Qualité de la conversion
+- L'image est détourée et recadrée par Monster Studio avant TripoSR quand le fond est uni (fond vert, blanc, etc.) : le sujet est plus net. Un fond chargé est détouré par TripoSR lui-même.
+- Le maillage est calculé en 384 (au lieu de 256) : plus de détail, un peu plus lent. Réglable dans la commande (`--mc-resolution`).
+- La « texture » est portée par les couleurs des sommets du modèle : ce que tu vois dans la vue 3D est ce qui est exporté dans le .glb.
