@@ -83,7 +83,7 @@ func _start(prev: Dictionary) -> void:
 	_modal = m
 	# le corps défile : on lui laisse la hauteur de l'écran moins l'en-tête, le résumé et les boutons (la fenêtre entière doit tenir à l'écran)
 	var vp: Vector2 = _host.get_viewport().get_visible_rect().size if _host.is_inside_tree() else Vector2(1280, 720)
-	m.fit_ratio = clampf((vp.y - UiMetrics.css(250.0)) / vp.y, 0.3, 0.8)
+	m.fit_ratio = clampf((vp.y - UiMetrics.css(212.0)) / vp.y, 0.3, 0.8)
 	m.set_meta("screen", self)          # garde l'écran en vie tant que la fenêtre existe
 	var intro := m.add_text(L.t("ui.expedition.intro"), UiTheme.DIM, int(UiMetrics.rem(0.86)), true)
 	intro.custom_minimum_size.x = 0
@@ -286,13 +286,8 @@ func _build_party(parent: Control) -> void:
 	_detail.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.8)))
 	_detail.add_theme_color_override("font_color", UiTheme.DIM)
 	v.add_child(_detail)
-	var note := Label.new()
-	note.text = L.t("ui.expedition.note_compagnie")
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
-	note.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.7)))
-	note.add_theme_color_override("font_color", UiTheme.DIM)
-	v.add_child(note)
+	_pick_title.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pick_title.tooltip_text = L.t("ui.expedition.note_compagnie")      # la règle « 2 par classe » : en infobulle pour gagner de la place
 	parent.add_child(box)
 
 func _random_all() -> void:
@@ -691,17 +686,17 @@ class ArchCard extends Control:
 		color = c
 		active = is_active
 		mouse_filter = Control.MOUSE_FILTER_PASS
-		custom_minimum_size = Vector2(0, UiMetrics.css(346.0))
+		custom_minimum_size = Vector2(0, UiMetrics.css(262.0))
 		var v := VBoxContainer.new()
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		v.offset_left = UiMetrics.css(14.0)
 		v.offset_right = -UiMetrics.css(14.0)
-		v.offset_top = UiMetrics.css(30.0)
-		v.offset_bottom = -UiMetrics.css(10.0)
-		v.add_theme_constant_override("separation", int(UiMetrics.css(5.0)))
+		v.offset_top = UiMetrics.css(28.0)
+		v.offset_bottom = -UiMetrics.css(8.0)
+		v.add_theme_constant_override("separation", int(UiMetrics.css(3.0)))
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(v)
-		var pr := UiTheme.portrait(tex, c, UiMetrics.css(112.0))
+		var pr := UiTheme.portrait(tex, c, UiMetrics.css(76.0))
 		pr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		v.add_child(pr)
 		var n := ExpeditionScreen._title_label(title.to_upper(), 0.98, c)
@@ -710,8 +705,9 @@ class ArchCard extends Control:
 		var r := Label.new()
 		r.text = role
 		r.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		r.custom_minimum_size = Vector2(0, UiMetrics.rem(2.3))
+		r.autowrap_mode = TextServer.AUTOWRAP_OFF
+		r.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		r.custom_minimum_size = Vector2(0, UiMetrics.rem(1.2))
 		r.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
 		r.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
 		r.add_theme_color_override("font_color", UiTheme.DIM)
@@ -732,7 +728,7 @@ class ArchCard extends Control:
 			b.color = c
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			b.custom_minimum_size = Vector2(0, UiMetrics.css(8.0))
+			b.custom_minimum_size = Vector2(0, UiMetrics.css(7.0))
 			h.add_child(b)
 			v.add_child(h)
 		var sp := Control.new()
@@ -746,7 +742,7 @@ class ArchCard extends Control:
 			var bt := Button.new()
 			bt.text = str(t[0])
 			bt.focus_mode = Control.FOCUS_NONE
-			bt.custom_minimum_size = Vector2(UiMetrics.css(34.0), UiMetrics.css(34.0))
+			bt.custom_minimum_size = Vector2(UiMetrics.css(30.0), UiMetrics.css(30.0))
 			for k in ["normal", "hover", "pressed"]:
 				bt.add_theme_stylebox_override(k, UiTheme.round_button_style(UiTheme.GOLD if k == "hover" else UiTheme.BRONZE, Color("4a3820") if k == "hover" else Color("241a10")))
 			var kind := str(t[1])
@@ -860,7 +856,7 @@ class StatBar extends Control:
 class ClassTile extends Button:
 	func setup(c: Color, tex: Texture2D, title: String, sub: String, selected: bool, full: bool) -> void:
 		focus_mode = Control.FOCUS_NONE
-		custom_minimum_size = Vector2(0, UiMetrics.css(104.0))
+		custom_minimum_size = Vector2(0, UiMetrics.css(80.0))
 		for k in ["normal", "hover", "pressed", "focus"]:
 			var sb := StyleBoxFlat.new()
 			sb.bg_color = c.darkened(0.78) if (selected or k == "hover") else Color("0e0905")
@@ -877,7 +873,7 @@ class ClassTile extends Button:
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		v.add_theme_constant_override("separation", int(UiMetrics.css(3.0)))
 		add_child(v)
-		var pr := UiTheme.portrait(tex, c, UiMetrics.css(52.0), false)
+		var pr := UiTheme.portrait(tex, c, UiMetrics.css(38.0), false)
 		pr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		v.add_child(pr)
 		var n := ExpeditionScreen._title_label(title.to_upper(), 0.62, UiTheme.PARCH)

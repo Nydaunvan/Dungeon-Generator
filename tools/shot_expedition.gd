@@ -11,8 +11,10 @@ func _ready() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(bg)
 	add_child(layer)
+	var host := CanvasLayer.new()      # comme dans le jeu
+	add_child(host)
 	await get_tree().create_timer(2.0).timeout
-	GeneratorDialog.open(layer, func(cfg): print("lancé : ", (cfg.party as Array).map(func(h): return str(h.classId) + ":" + str(h.portrait))))
+	GeneratorDialog.open(host, func(cfg): print("lancé : ", (cfg.party as Array).map(func(h): return str(h.classId) + ":" + str(h.portrait))))
 	await get_tree().create_timer(1.2).timeout
 	root.get_texture().get_image().save_png("/tmp/exp_0.png")
 	var scr: ExpeditionScreen = null
