@@ -30,6 +30,7 @@ const LEGENDARY_PERKS := ["lifesteal", "crit", "thorns"]
 const HERO_NAMES := ["Aldric", "Brienne", "Cassian", "Dorian", "Elowen", "Fenwick", "Gwyneth", "Hadrian", "Isolde", "Joren", "Kaelen", "Liora", "Magnus", "Nyra", "Osric", "Perenelle", "Quillan", "Rhiannon", "Silas", "Thalia", "Ulric", "Vesna", "Wystan", "Xanthe", "Yorick", "Zephyrine", "Alistair", "Branwen", "Cedric", "Dariel"]
 const ARCHETYPE_STATS := {
 	"Guerrier": [16, 11, 14, 7], "Archer": [10, 17, 11, 8], "Roublard": [11, 16, 10, 9], "Mage": [7, 10, 9, 17], "Prêtre": [9, 9, 13, 14], "Druide": [9, 10, 13, 14],
+	"Barde": [9, 15, 11, 13],      # [force, dex, con, int] : dextérité, puis intelligence, constitution, force
 }
 const PORTRAIT_COUNTS := {"Guerrier": 7, "Mage": 8, "Roublard": 6, "Archer": 8, "Barde": 4, "Prêtre": 6, "Druide": 5}
 const PORTRAIT_FILES := {"Guerrier": "guerrier", "Mage": "mage", "Roublard": "roublard", "Archer": "archer", "Barde": "barde", "Prêtre": "pretre", "Druide": "druide"}
@@ -1256,7 +1257,9 @@ static func _has_evolution(cfg: Dictionary, cls: Dictionary) -> bool:
 	return false
 
 ## 4 héros de classes de base (2 exemplaires d'une même classe au maximum), portraits et noms distincts.
-static func generate_party(cfg: Dictionary, diff: String) -> Array:
+## `picks` (facultatif, partie libre) : le groupe choisi par le joueur, [{"classId", "portrait"}] pour 1 à 4 héros (2 d'une même classe au maximum) ;
+## `portrait` = indice du portrait de la classe (-1 : au hasard). Vide : groupe tiré au hasard comme avant.
+static func generate_party(cfg: Dictionary, diff: String, picks: Array = []) -> Array:
 	var base_ids: Array = []
 	for c in cfg.get("classes", []):
 		if _is_base(c):
@@ -1265,13 +1268,22 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 		return cfg.get("party", [])
 	var counts := {}
 	var chosen: Array = []
-	for i in 4:
-		var avail := base_ids.filter(func(id): return int(counts.get(id, 0)) < 2)
-		var pick: String = choice(avail)
-		counts[pick] = int(counts.get(pick, 0)) + 1
-		chosen.append(pick)
-	chosen.shuffle()
-	var any_evo := false
+	var wanted: Array = []        # portrait demandé par héros (indice), -1 = au hasard
+	for pk in picks:
+		var cid := str(pk.get("classId", ""))
+		if chosen.size() < 4 and base_ids.has(cid) and int(counts.get(cid, 0)) < 2:
+			counts[cid] = int(counts.get(cid, 0)) + 1
+			chosen.append(cid)
+			wanted.append(int(pk.get("portrait", -1)))
+	var manual := not chosen.is_empty()
+	if not manual:
+		for i in 4:
+			var avail := base_ids.filter(func(id): return int(counts.get(id, 0)) < 2)
+			var pick: String = choice(avail)
+			counts[pick] = int(counts.get(pick, 0)) + 1
+			chosen.append(pick)
+		chosen.shuffle()
+	var any_evo := manual         # un groupe choisi à la main n'est pas retouché
 	for id in chosen:
 		if _has_evolution(cfg, Characters.class_def(cfg, id)):
 			any_evo = true
@@ -1291,12 +1303,17 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 		var t: Array = ARCHETYPE_STATS.get(cname, [11, 11, 11, 11])
 		var portrait := ""
 		if PORTRAIT_FILES.has(cname):
+			var want: int = int(wanted[idx]) if idx < wanted.size() else -1
+			var want_path := "res://assets/portraits/%s_%d.webp" % [PORTRAIT_FILES[cname], want]
+			if want >= 0 and want < int(PORTRAIT_COUNTS[cname]) and not used_portraits.has(want_path) and not used_portraits.has(_portrait_twin(want_path)):
+				portrait = want_path
+				used_portraits[portrait] = true
 			var free: Array = []
 			for n in int(PORTRAIT_COUNTS[cname]):
 				var p := "res://assets/portraits/%s_%d.webp" % [PORTRAIT_FILES[cname], n]
 				if not used_portraits.has(p) and not used_portraits.has(_portrait_twin(p)):
 					free.append(p)
-			if not free.is_empty():
+			if portrait == "" and not free.is_empty():
 				portrait = choice(free)
 				used_portraits[portrait] = true
 		var weapon_id := ""
@@ -1322,12 +1339,12 @@ static func generate_party(cfg: Dictionary, diff: String) -> Array:
 ## Configuration complète d'une expédition aléatoire à partir de la configuration de base.
 ## `seed_value` >= 0 : génération REPRODUCTIBLE (mêmes paramètres + même graine = même donjon, même groupe de héros, mêmes titres) ;
 ## indispensable aux parties classées, que le serveur rejoue pour les vérifier. -1 : hasard libre.
-static func build_config(base: Dictionary, num_levels: int, width: int, height: int, diff: String, mods: Array, run: int = 1, seed_value: int = -1) -> Dictionary:
+static func build_config(base: Dictionary, num_levels: int, width: int, height: int, diff: String, mods: Array, run: int = 1, seed_value: int = -1, picks: Array = []) -> Dictionary:
 	if seed_value >= 0:
-		return Seeds.with_global(Seeds.derive(seed_value, "expedition", run), func(): return build_config(base, num_levels, width, height, diff, mods, run, -1))
+		return Seeds.with_global(Seeds.derive(seed_value, "expedition", run), func(): return build_config(base, num_levels, width, height, diff, mods, run, -1, picks))
 	var c: Dictionary = base.duplicate(true)
 	var gen := DungeonGenerator.new(c, diff, run, mods)
-	c["party"] = generate_party(c, diff)
+	c["party"] = generate_party(c, diff, picks)
 	if bool(gen.mod.soloParty) and (c["party"] as Array).size() > 1:
 		c["party"] = (c["party"] as Array).slice(0, 1)        # « Héros solitaire » : le tirage du groupe est le même, seul le premier part
 	c["levels"] = gen.levels(num_levels, width, height)

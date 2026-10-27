@@ -29,33 +29,9 @@ static func _spin(lo: int, hi: int, value: int) -> SpinBox:
 	s.custom_minimum_size = Vector2(110, 0)
 	return s
 
-## Ouvre la fenêtre de réglages ; `on_launch(cfg)` reçoit la configuration générée.
+## Ouvre l'écran de préparation de l'expédition (groupe, taille du donjon, difficulté, modificateurs) ; `on_launch(cfg)` reçoit la configuration générée.
 static func open(host: Node, on_launch: Callable, prev: Dictionary = {}) -> void:
-	var m := Modal.open(host, L.t("ui.generator_dialog.generation_aleatoire"), 500.0)
-	m.add_text(L.t("ui.generator_dialog.tout_est_genere_automatiquement"), UiTheme.DIM, 14, true)
-	var levels := _spin(1, 8, int(prev.get("levels", 3)))
-	var width := _spin(7, 60, int(prev.get("width", 13)))
-	var height := _spin(7, 60, int(prev.get("height", 11)))
-	_row(m, L.t("ui.generator_dialog.nombre_de_niveaux_max_8"), levels)
-	_row(m, L.t("ui.generator_dialog.largeur_par_niveau_max_60"), width)
-	_row(m, L.t("ui.generator_dialog.hauteur_par_niveau_max_60"), height)
-	var diff := OptionButton.new()
-	for d in DIFFS:
-		diff.add_item(str(d[1]))
-	var di := 1
-	for i in DIFFS.size():
-		if str(DIFFS[i][0]) == str(prev.get("diff", "normal")):
-			di = i
-	diff.select(di)
-	diff.custom_minimum_size = Vector2(150, 0)
-	_row(m, L.t("ui.generator_dialog.difficulte"), diff)
-	var blurb := m.add_text(str(BLURBS[DIFFS[di][0]]), UiTheme.DIM, 13, true)
-	diff.item_selected.connect(func(i: int): blurb.text = str(BLURBS[DIFFS[i][0]]))
-	var go := func():
-		var params := {"levels": int(levels.value), "width": int(width.value), "height": int(height.value), "diff": str(DIFFS[diff.selected][0])}
-		m.close()
-		_pick_modifiers(host, params, on_launch)
-	m.set_buttons([{"text": L.t("ui.generator_dialog.generer_et_jouer"), "cb": go}, {"text": L.t("common.annuler"), "cb": func(): m.close()}])
+	ExpeditionScreen.open(host, on_launch, prev)
 
 static func _pick_modifiers(host: Node, params: Dictionary, on_launch: Callable) -> void:
 	pick_modifiers(host, func(mods: Array): _generate(host, params, mods, on_launch), func(): open(host, on_launch, params))
