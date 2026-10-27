@@ -125,6 +125,25 @@ func _ready() -> void:
 			check("[%s] animations relues : %s" % [tpl, str(ap2.get_animation_list()) if ap2 else "aucune"], ap2 != null and ap2.has_animation("walk") and ap2.has_animation("death"))
 			check("[%s] maillage skinné relu" % tpl, skinned)
 			back.free()
+	# couleurs de sommets (sortie de TripoSR) : le matériau doit les utiliser, même si le .glb fournit un matériau blanc
+	var cst := SurfaceTool.new()
+	cst.begin(Mesh.PRIMITIVE_TRIANGLES)
+	cst.set_color(Color(0.9, 0.2, 0.1))
+	cst.add_vertex(Vector3(0, 0, 0))
+	cst.set_color(Color(0.1, 0.9, 0.2))
+	cst.add_vertex(Vector3(1, 0, 0))
+	cst.set_color(Color(0.1, 0.2, 0.9))
+	cst.add_vertex(Vector3(0, 2, 0))
+	var cr := Node3D.new()
+	var cmi := MeshInstance3D.new()
+	cmi.mesh = cst.commit()
+	cmi.material_override = StandardMaterial3D.new()
+	cr.add_child(cmi)
+	ModelIO.save_glb(cr, "/tmp/studio_colors.glb")
+	cr.free()
+	var cm := ModelIO.load_normalized("/tmp/studio_colors.glb")
+	var cmat: Material = cm.surfaces[0].material if not cm.is_empty() else null
+	check("couleurs de sommets conservées et utilisées par le matériau", cm.has("surfaces") and cm.surfaces[0].arrays[Mesh.ARRAY_COLOR] != null and cmat is BaseMaterial3D and (cmat as BaseMaterial3D).vertex_color_use_as_albedo)
 	# orientation : un demi-tour inverse l'avant et le modèle reste normalisé ; le squelette est à replacer
 	var before: AABB = app.model.aabb
 	app._turn(Vector3(90, 0, 0))

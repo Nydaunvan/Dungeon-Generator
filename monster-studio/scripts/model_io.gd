@@ -69,10 +69,14 @@ static func load_normalized(path: String, orient := Vector3.ZERO) -> Dictionary:
 			var mat: Material = mi.get_active_material(s)
 			if mat == null:
 				mat = mi.mesh.surface_get_material(s)
-			if mat == null and arr[Mesh.ARRAY_COLOR] != null:
-				var sm := StandardMaterial3D.new()
-				sm.vertex_color_use_as_albedo = true
-				mat = sm
+			if arr[Mesh.ARRAY_COLOR] != null:
+				# couleurs de sommets (cas de TripoSR) : le matériau les utilise, sinon le modèle s'affiche tout blanc
+				if mat == null:
+					mat = StandardMaterial3D.new()
+				elif mat is BaseMaterial3D:
+					mat = mat.duplicate()
+				if mat is BaseMaterial3D:
+					(mat as BaseMaterial3D).vertex_color_use_as_albedo = true
 			surfs.append({"arrays": arr, "material": mat})
 	root.free()
 	if surfs.is_empty():
