@@ -475,3 +475,6 @@ Projet Godot **séparé** du jeu (son propre `project.godot` ; Godot ignore ce d
 - **Assemblage** (`RigBuilder`) : `Skeleton3D` + `MeshInstance3D` skinné (`create_skin_from_rest_transforms`) + `AnimationPlayer` ; c'est aussi la scène exportée (`GLTFDocument`).
 - **Animations** (`AnimPresets`) : repos, marche, attaque, coup reçu, mort, procédurales selon le rôle des os (avant = rotation X négative ; démarche en diagonale ; amplitude répartie sur les longues chaînes comme un serpent) ; une clé de pose (en degrés) remplace la piste de l'os (`Monster.anim_keys`).
 - **Interface** (`app.gd`, `StudioViewer`) : caméra orbitale, squelette dessiné par-dessus (clic sur une articulation pour la choisir), 4 onglets (Modèle, Squelette, Animation, Export). Test : `monster-studio/tools/check_studio.tscn`.
+
+### Monster Studio : attaque centrée sur le bras
+`AnimPresets._rot` (animation `attack`) : le bras droit (`arm_r`, rangs épaule/avant-bras/main à 100 %, 55 %, 30 %) monte vers l'arrière (+105° autour de X) puis s'abat vers l'avant ; le bras gauche fait un léger contrepoids, le buste se tord de 12° et se penche légèrement vers l'avant au moment du coup, la jambe avant avance un peu, et le décalage de la racine est réduit à 0,12. Une arme tenue dans la main suit le bras (elle est dans le maillage de la main).

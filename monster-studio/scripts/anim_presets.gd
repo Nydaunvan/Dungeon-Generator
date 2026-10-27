@@ -81,21 +81,28 @@ static func _rot(anim: String, role: String, bone: String, rank: int, u: float) 
 				"wing":
 					r.z = side * -(8.0 + 8.0 * sin(2.0 * ph + 0.5 * rank))
 		"attack":
-			var e := _env(u, [[0.0, 0.0], [0.25, -0.3], [0.45, 1.0], [0.7, 0.25], [1.0, 0.0]])
+			# e : armement (+1, bras en arrière/en haut) puis frappe (-0,6, bras vers l'avant) ; g : élan du corps (0 → 1 au moment du coup).
+			var e := _env(u, [[0.0, 0.0], [0.35, 1.0], [0.5, -0.6], [0.75, -0.25], [1.0, 0.0]])
+			var g := _env(u, [[0.0, 0.0], [0.35, -0.3], [0.5, 1.0], [0.75, 0.4], [1.0, 0.0]])
 			match base:
 				"spine":
-					r.x = -20.0 * e
+					r.x = -8.0 * e
+					r.y = 12.0 * e * (1.0 if rank == 0 else 0.6)
 				"head":
-					r.x = -12.0 * e
+					r.x = -5.0 * e
 				"arm":
-					r.x = -80.0 * e if rank == 0 else -35.0 * e
-					r.z = side * -8.0 * e
+					if side < 0.0:       # bras qui frappe (côté droit) : armer puis abattre, avant-bras et main suivent
+						r.x = 105.0 * e * (1.0 if rank == 0 else (0.55 if rank == 1 else 0.3))
+						r.z = 10.0 * e
+					else:                # bras libre : léger contrepoids
+						r.x = -14.0 * e * (1.0 if rank == 0 else 0.4)
 				"leg":
-					r.x = 10.0 * e if rank == 0 else 0.0
+					if rank == 0:
+						r.x = -9.0 * g if side > 0.0 else 7.0 * g
 				"tail":
-					r.y = 28.0 * e * (1.0 + 0.3 * rank)
+					r.y = 24.0 * e * (1.0 + 0.3 * rank)
 				"wing":
-					r.z = side * -(10.0 + 35.0 * e)
+					r.z = side * -(10.0 + 25.0 * absf(e))
 		"hit":
 			var h := _env(u, [[0.0, 0.0], [0.2, 1.0], [0.5, 0.35], [1.0, 0.0]])
 			match base:
@@ -141,7 +148,7 @@ static func _root_offset(anim: String, u: float, rest: Vector3) -> Vector3:
 		"walk":
 			return Vector3(0, 0.035 * absf(sin(ph)), 0)
 		"attack":
-			return Vector3(0, 0, 0.16 * _env(u, [[0.0, 0.0], [0.25, -0.2], [0.45, 1.0], [0.7, 0.3], [1.0, 0.0]]))
+			return Vector3(0, 0, 0.12 * _env(u, [[0.0, 0.0], [0.35, -0.3], [0.5, 1.0], [0.75, 0.4], [1.0, 0.0]]))
 		"hit":
 			return Vector3(0, 0, -0.1 * _env(u, [[0.0, 0.0], [0.2, 1.0], [0.5, 0.3], [1.0, 0.0]]))
 		"death":

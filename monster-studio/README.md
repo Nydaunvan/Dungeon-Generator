@@ -5,7 +5,7 @@ Logiciel **indépendant du jeu** (projet Godot séparé, dossier `monster-studio
 1. **Importer** des images 2D (png, webp, jpg) — par le bouton ou en les glissant sur la fenêtre ;
 2. **Créer le modèle 3D** avec une IA qui tourne sur votre PC (par défaut TripoSR, open source) ;
 3. **Placer un squelette** (gabarit bipède, quadrupède, ailé ou serpent) puis l'ajuster os par os ;
-4. **Calculer la peau** (poids automatiques) et **animer** : repos, marche, attaque, coup reçu, mort, avec retouche de pose par clés ;
+4. **Calculer la peau** (poids automatiques) et **animer** : repos, marche, attaque (le bras droit arme puis frappe, le corps accompagne le coup), coup reçu, mort, avec retouche de pose par clés ;
 5. **Exporter en `.glb`** (maillage + squelette + animations), prêt à charger dans Godot.
 
 Les données sont rangées par monstre dans `user://studio/<monstre>/` (image, modèle, `rig.json`).
