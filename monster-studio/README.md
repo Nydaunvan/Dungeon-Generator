@@ -27,6 +27,10 @@ Les réglages de Monster Studio (bouton « Réglages ») sont écrits par le scr
 
 La commande est libre : tout outil qui transforme une image en `.glb` convient (autre modèle open source, script maison…). On peut aussi **importer un `.glb` déjà fait** (autre outil ou service en ligne), ou essayer la chaîne avec une **silhouette de test**.
 
+## Tout désinstaller
+
+Double-cliquez sur **`uninstall_triposr.bat`** : il demande confirmation puis retire le dossier TripoSR (avec son environnement et PyTorch), les modèles d'IA téléchargés (cache Hugging Face, modèles de détourage), et, sur demande, le cache de pip et les réglages de Monster Studio. Il ne touche ni à Python, ni à Git, ni au logiciel lui-même, et **conserve vos monstres et vos `.glb`** sauf réponse « oui » à une dernière question, séparée. Si TripoSR n'est pas dans `%USERPROFILE%\TripoSR` : `uninstall_triposr.bat "C:\chemin\vers\TripoSR"`. Pour retirer Python ou Git : Paramètres Windows → Applications.
+
 ## Conseils
 
 - Le modèle est normalisé à l'import : centré, pieds au sol, **hauteur 2**, façade vers **+Z**. Si l'IA le produit couché ou de dos, utilisez les boutons d'orientation (onglet 1) avant de placer le squelette.
