@@ -105,6 +105,8 @@ func _free_entry(k, dying: bool = false) -> void:
 		e.halo.queue_free()
 	if e.get("rage") != null:
 		e.rage.queue_free()
+	if e.get("bar") != null:
+		e.bar.queue_free()
 	_nodes.erase(k)       # l'effet de statut est enfant du sprite : il disparaît avec lui
 
 func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
@@ -223,6 +225,7 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 		if raged and not e.was and e.rage != null:
 			_rage_burst(e.rage)          # entrée en rage : grognement, onde de choc, l'aura monte en puissance
 		e["was"] = raged
+		_update_bar(e, st, idx, at, mirrored, fwd)
 		if e.rage != null:
 			e.rage.visible = raged
 			e.rage.position = at + Vector3(0, -h * 0.02, 0) - Vector3(fwd.x, 0, fwd.y) * 0.12
@@ -232,6 +235,90 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			_free_entry(k, true)       # membre du groupe tombé : il s'effondre et s'efface lui-même, les autres restent debout
 	_cur_st = st
 	_sync_auras()
+
+## Barre de vie sous chaque combattant : bandeau face caméra posé sous ses pieds visibles, qui se vide en douceur à chaque coup reçu
+## (et se remplit après un soin). Un membre de groupe a la sienne ; elle disparaît avec lui.
+func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored: bool, fwd: Vector2i) -> void:
+	var holder: Dictionary = st.members[idx] if idx >= 0 and st.has("members") and idx < st.members.size() else st
+	var max_hp := maxf(1.0, float(holder.get("maxHp", st.get("maxHp", 1))))
+	var frac := clampf(float(holder.get("hp", max_hp)) / max_hp, 0.0, 1.0)
+	var h: float = e.h
+	var info: Dictionary = _sprite_mass(e.node)
+	var vis_w: float = h * float(info.size.x)
+	var width := clampf(vis_w * 0.8, 0.8, 2.4)
+	var mirror := -1.0 if mirrored else 1.0
+	var right: Vector3 = Vector3.RIGHT
+	if camera != null:
+		right = camera.global_transform.basis.x
+	var feet: float = float((0.5 - (info.center.y + info.size.y * 0.5)) * h)
+	# posée juste au-dessus du sol et avancée vers la caméra : en perspective elle apparaît sous les pieds du monstre sans passer sous le sol
+	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.55
+	pos.y = maxf(at.y + feet, 0.02) + 0.13
+	var bar: MeshInstance3D = e.get("bar")
+	if bar == null:
+		bar = MeshInstance3D.new()
+		bar.mesh = QuadMesh.new()
+		bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var m := ShaderMaterial.new()
+		m.shader = _bar_shader()
+		m.set_shader_parameter("frac", frac)
+		bar.material_override = m
+		bar.name = "HpBar_%d" % idx
+		add_child(bar)
+		e["bar"] = bar
+	var q := bar.mesh as QuadMesh
+	q.size = Vector2(width, 0.13)
+	bar.position = pos
+	var mat := bar.material_override as ShaderMaterial
+	mat.set_shader_parameter("aspect", width / 0.13)
+	var cur := float(mat.get_shader_parameter("frac"))
+	if absf(cur - frac) > 0.001:
+		if e.get("bar_tw") != null and (e.bar_tw as Tween).is_valid():
+			(e.bar_tw as Tween).kill()
+		var tw := create_tween()
+		tw.tween_method(func(v: float): mat.set_shader_parameter("frac", v), cur, frac, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		e["bar_tw"] = tw
+
+static var _bar_sh: Shader
+
+static func _bar_shader() -> Shader:
+	if _bar_sh == null:
+		_bar_sh = Shader.new()
+		_bar_sh.code = """shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, fog_disabled;
+uniform float frac = 1.0;
+uniform float aspect = 8.0;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+float rbox(vec2 p, vec2 b, float r) {
+	vec2 q = abs(p) - b + vec2(r);
+	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+void fragment() {
+	vec2 p = (UV - 0.5) * vec2(aspect, 1.0);
+	vec2 half_size = vec2(aspect, 1.0) * 0.5;
+	float d = rbox(p, half_size, 0.5);
+	if (d > 0.0) { discard; }
+	vec3 col = vec3(0.05, 0.02, 0.02);
+	float a = 0.92;
+	float edge = smoothstep(-0.14, -0.02, d);                    // liseré sombre extérieur
+	float ix = (UV.x * aspect - 0.18) / max(aspect - 0.36, 0.001);   // position 0..1 le long de la jauge
+	float iy = (UV.y - 0.18) / 0.64;
+	vec2 pi = (UV - 0.5) * vec2(aspect, 1.0);
+	float di = rbox(pi, half_size - vec2(0.12), 0.38);
+	if (di < 0.0 && ix <= frac && ix >= 0.0) {
+		vec3 hi = frac > 0.5 ? mix(vec3(0.95, 0.78, 0.22), vec3(0.42, 0.80, 0.32), (frac - 0.5) * 2.0) : mix(vec3(0.85, 0.18, 0.12), vec3(0.95, 0.78, 0.22), frac * 2.0);
+		float g = 1.0 - 0.35 * smoothstep(0.0, 1.0, iy);              // léger dégradé vertical
+		col = hi * g;
+		if (iy < 0.28) { col += 0.18; }                                // reflet en haut
+	}
+	col = mix(col, vec3(0.0), edge);
+	ALBEDO = col;
+	ALPHA = a;
+}
+"""
+	return _bar_sh
 
 ## Effets de statut persistants sur chaque combattant affiché : ils restent tant que le statut dure (sommeil, poison, brûlure, gel…).
 func _sync_auras() -> void:
