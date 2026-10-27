@@ -11,6 +11,8 @@ const CEILING := 4.0
 const ARM := 2.95                    ## pivot → centre de la tête de hache
 const MAX_ANGLE := deg_to_rad(42.0)  ## amplitude : à ce moment la lame est dans la fente
 const PERIOD := 3.2                  ## durée d'un aller-retour (s)
+const SWISH_LEAD := 0.18             ## le pic du son (pendulum_swing.ogg) tombe 0,18 s après son début : on le lance d'avance
+const HEARD := 14.0                  ## distance (m) au-delà de laquelle le souffle ne se joue pas
 const SLIT_W := 0.34                 ## largeur de la fente, dans le sens du couloir
 const SLIT_H := 2.1
 
@@ -99,8 +101,18 @@ func _slit(s: float, cy: float) -> void:
 
 func _process(delta: float) -> void:
 	if playing and locked == 0:
+		var before := floori((t + SWISH_LEAD) / (PERIOD * 0.5))
 		t += delta
 		_apply(sin(TAU * t / PERIOD) * amp)
+		if floori((t + SWISH_LEAD) / (PERIOD * 0.5)) != before and amp > 0.5:
+			_swish()
+
+
+## Souffle de la lame : à chaque passage au centre du couloir, si le groupe est assez près pour l'entendre.
+func _swish() -> void:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam != null and cam.global_position.distance_to(global_position) <= HEARD:
+		Sound.pendulum_swing()
 
 
 ## Angle du pendule : -1 … +1 (fraction de l'amplitude).

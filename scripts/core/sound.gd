@@ -159,14 +159,14 @@ const SFX_GAIN_DB := {
 	"swing|axe": 12.0, "swing|bow": 10.5, "swing|dagger": 11.5, "swing|mace": 12.0,
 	"swing|staff": 12.0, "swing|sword": 11.5, "swing|unarmed": 12.0,
 	"spell_file": -14.0, "attack_standard": -14.0, "boss_win_1": -14.0, "boss_win_2": -14.0, "potion": -14.0, "fountain_file": -14.0,
-	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5, "wood_thud": -13.5, "rune_seal": -13.0, "rage": -7.0,
+	"coins": 0.5, "dice": -14.0, "door_open": -13.0, "map_open": -14.0, "trap_snap": -14.0, "steam_hiss": -14.0, "dart_swish": -13.5, "wood_thud": -13.5, "rune_seal": -13.0, "pendulum_swing": -13.0, "rage": -7.0,
 }
 
 ## Bruit de dés qui roulent (fichier OGG, chargé une fois).
 const FILE_SOUNDS := {"dice": "res://assets/sounds/dice.ogg", "coins": "res://assets/sounds/coins.ogg", "map_open": "res://assets/sounds/map_open.ogg",
 		"door_open": "res://assets/sounds/door_open.ogg", "trap_snap": "res://assets/sounds/trap_snap.ogg", "steam_hiss": "res://assets/sounds/steam_hiss.ogg",
 		"dart_swish": "res://assets/sounds/dart_swish.ogg", "wood_thud": "res://assets/sounds/wood_thud.ogg",
-		"rune_seal": "res://assets/sounds/rune_seal.ogg", "rage": "res://assets/sounds/rage.ogg"}
+		"rune_seal": "res://assets/sounds/rune_seal.ogg", "pendulum_swing": "res://assets/sounds/pendulum_swing.ogg", "rage": "res://assets/sounds/rage.ogg"}
 
 func _file_sfx(key: String) -> void:
 	if not _cache.has(key):
@@ -184,6 +184,11 @@ func coins() -> void:
 func rage() -> void:
 	if enabled:
 		_file_sfx("rage")
+
+## Souffle de la hache pendulaire quand elle fend le couloir (fichier OGG ~0,6 s, pic à 0,18 s).
+func pendulum_swing() -> void:
+	if enabled:
+		_file_sfx("pendulum_swing")
 
 ## Ouverture de la grande carte.
 func map_open() -> void:
