@@ -84,27 +84,46 @@ static func all_modifiers() -> Array:
 ## Effets cumulés des modificateurs d'expédition choisis (ids).
 static func combine_mods(ids: Array) -> Dictionary:
 	var eff := {"attackSpeedMult": 1.0, "xpMult": 1.0, "goldMult": 1.0, "monsterCountMult": 1.0, "itemMult": 1.0, "staminaMult": 1.0,
-		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "minRarity": "", "startWeaponRarity": "", "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "bossMythicPct": -1.0, "fogMinimap": false, "soloParty": false, "noSpells": false}
+		"hpMult": 1.0, "dmgMult": 1.0, "lootMult": 1.0, "monsterHpMult": 1.0, "monsterDmgMult": 1.0, "minRarity": "", "startWeaponRarity": "", "critChanceBonus": 0.0, "groupChanceMult": 1.0, "maxGroupSize": 3, "noFountains": false, "forceLegendary": false, "bossMythicPct": -1.0, "bossMythicMult": 0.0, "fogMinimap": false, "soloParty": false, "noSpells": false,
+		"rageChanceMult": 1.0, "trapMult": 1.0, "noSecondWind": false}
 	for id in ids:
 		for m in all_modifiers():
 			if m.id != id:
 				continue
-			for k in ["attackSpeedMult", "xpMult", "goldMult", "monsterCountMult", "itemMult", "staminaMult", "hpMult", "dmgMult", "groupChanceMult", "lootMult", "monsterHpMult", "monsterDmgMult"]:
+			for k in ["attackSpeedMult", "xpMult", "goldMult", "monsterCountMult", "itemMult", "staminaMult", "hpMult", "dmgMult", "groupChanceMult", "lootMult", "monsterHpMult", "monsterDmgMult", "rageChanceMult", "trapMult"]:
 				if m.has(k):
 					eff[k] = float(eff[k]) * float(m[k])
 			if m.has("maxGroupSize"):
 				eff["maxGroupSize"] = mini(int(eff["maxGroupSize"]), int(m.maxGroupSize))
 			if m.has("critChanceBonus"):
 				eff["critChanceBonus"] = float(eff["critChanceBonus"]) + float(m.critChanceBonus)
-			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells"]:
+			for k in ["noFountains", "forceLegendary", "fogMinimap", "soloParty", "noSpells", "noSecondWind"]:
 				if m.get(k, false):
 					eff[k] = true
 			if m.has("bossMythicPct"):          # taux de mythique du butin du boss (le reste est légendaire) ; le plus haut l'emporte
 				eff["bossMythicPct"] = maxf(float(eff["bossMythicPct"]), float(m.bossMythicPct))
+			if m.has("bossMythicMult"):         # multiplicateur de la chance de mythique de la difficulté (butin du boss) ; le plus haut l'emporte
+				eff["bossMythicMult"] = maxf(float(eff["bossMythicMult"]), float(m.bossMythicMult))
 			for k in ["minRarity", "startWeaponRarity"]:      # palier le plus haut demandé par les modificateurs choisis
 				if str(m.get(k, "")) != "" and Rarity.index(str(m[k])) > Rarity.index(str(eff[k])) :
 					eff[k] = str(m[k])
+	eff["monsterDmgMult"] = minf(float(eff["monsterDmgMult"]), MAX_MONSTER_DMG_MULT)       # plafond : les dégâts des monstres ne dépassent jamais ×1,5 avec les modificateurs
 	return eff
+
+## Dégâts maximum des monstres avec les modificateurs cumulés.
+const MAX_MONSTER_DMG_MULT := 1.5
+
+## Modificateurs de `ids` qui ne peuvent pas être pris avec `id` (champ `incompatibleWith`, dans les deux sens).
+static func conflicts(id: String, ids: Array) -> Array:
+	var out: Array = []
+	for other in ids:
+		if str(other) == id:
+			continue
+		for m in all_modifiers():
+			if (str(m.id) == id and (m.get("incompatibleWith", []) as Array).has(str(other))) or (str(m.id) == str(other) and (m.get("incompatibleWith", []) as Array).has(id)):
+				if not out.has(str(other)):
+					out.append(str(other))
+	return out
 
 static func _key(x: int, y: int) -> String:
 	return "%d,%d" % [x, y]
@@ -381,6 +400,14 @@ func mythic_chance() -> float:
 		"hardcore": return clampf(0.1 + 0.04 * lvl_i + extra, 0.0, 0.4)
 	return clampf(0.04 * lvl_i + extra, 0.0, 0.4)
 
+## Taux de mythique (en %) imposé au butin du boss par « Nid de monstres » : `bossMythicMult` × la chance de la difficulté (au plus 100) ; -1 = chance normale.
+func _boss_mythic_pct() -> float:
+	if not mod.forceLegendary:
+		return -1.0
+	if float(mod.bossMythicMult) > 0.0:
+		return minf(100.0, mythic_chance() * float(mod.bossMythicMult) * 100.0)
+	return float(mod.bossMythicPct)
+
 ## Fait de l'objet un légendaire (ou, plus rarement, un mythique) : nom unique, capacités du palier, bonus ×1,7 (×2 pour un mythique).
 ## `mythic_pct` >= 0 impose le taux de mythique (en %), sinon `mythic_chance()`. Un seul tirage dans les deux cas (même consommation du hasard).
 func apply_legendary(item: Dictionary, mythic_pct: float = -1.0) -> Dictionary:
@@ -624,7 +651,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		m.merge(Resist.roll(str(fl[1]), false, 100.0, true), true)        # résistances de famille : toujours présentes, valeurs au hasard (jamais zéro)
 		m.merge(MonsterEffects.roll(str(fl[1]), false, float(cfg.get("monsterStatusChancePct", 60)), false, i), true)       # effet de famille (au hasard)
 		# rage : tous les monstres peuvent en avoir une, au hasard (chance réglée dans l'admin) ; elle se déclenche sous un seuil de PV
-		var rage_on := randf() * 100.0 < float(cfg.get("monsterRageChancePct", 25))
+		var rage_on := randf() * 100.0 < minf(100.0, float(cfg.get("monsterRageChancePct", 25)) * float(mod.rageChanceMult))
 		m["enrageThreshold"] = randi_range(30, 50) if rage_on else 0
 		m["enrageBonusPct"] = randi_range(15, 30) if rage_on else 0
 		monsters.append(m)
@@ -751,7 +778,9 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	# pièges : toujours sur le passage obligé (une case que le groupe doit traverser pour atteindre la sortie), jamais dans une impasse
 	# où le joueur ne s'aventurerait pas ; faute de passage libre, la case est remplacée par un objet à ramasser
 	var forced: Array = _forced_passage(grid, dist, item_pool, far, sx, sy)
-	for ti in randi_range(2, 3):
+	var trap_n := randi_range(2, 3)
+	trap_n = int(round(trap_n * float(mod.trapMult)))        # « Couloirs piégés » : +50 % (2 → 3, 3 → 5) ; sans modificateur, inchangé
+	for ti in trap_n:
 		var tk: Dictionary = choice(TRAP_KINDS)
 		var r: Dictionary = {}
 		if tk.kind == "dart":     # fléchettes : mécanisme fixé au mur, donc seulement sur une case adossée à un mur ; à défaut, des pointes
@@ -854,7 +883,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	boss_loot["startHidden"] = true
 	legend_pct = minf(100.0, legend_pct + _legend_pity)   # « pitié » : chaque gardien sans légendaire rapproche le prochain
 	if randf() < legend_pct / 100.0:
-		apply_legendary(boss_loot, float(mod.bossMythicPct) if mod.forceLegendary else -1.0)
+		apply_legendary(boss_loot, _boss_mythic_pct())
 		_legend_pity = 0.0
 	else:
 		_legend_pity = minf(10.0 if difficulty == "easy" else 40.0, _legend_pity + (2.0 if difficulty == "easy" else 8.0))
@@ -1042,7 +1071,7 @@ func _place_pendulums(lvls: Array) -> void:
 			continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash("pendulum|" + str(lv.id))
-		if rng.randf() * 100.0 >= float(s.pendulumChancePct):
+		if rng.randf() * 100.0 >= minf(100.0, float(s.pendulumChancePct) * float(mod.trapMult)):
 			continue
 		var rows: Array = lv.mapRows
 		var occupied := {}

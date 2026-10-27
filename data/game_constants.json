@@ -169,7 +169,8 @@
    "descEn": "Monsters attack 30% faster, but gold and XP earned +50%.",
    "attackSpeedMult": 0.7,
    "xpMult": 1.5,
-   "goldMult": 1.5
+   "goldMult": 1.5,
+   "risk": 2
   },
   {
    "id": "mod_norest",
@@ -179,19 +180,21 @@
    "descFr": "Aucune fontaine dans ce donjon, mais XP gagnée +35%.",
    "descEn": "No fountains in this dungeon, but XP earned +35%.",
    "noFountains": true,
-   "xpMult": 1.35
+   "xpMult": 1.35,
+   "risk": 2
   },
   {
    "id": "mod_horde2",
    "icon": "👹",
    "labelFr": "Nid de monstres",
    "labelEn": "Monster Den",
-   "descFr": "40% de monstres en plus par niveau et davantage de groupes, mais butin du boss toujours légendaire (75 %) ou mythique (25 %).",
-   "descEn": "40% more monsters per level and more groups, but boss loot is always legendary (75%) or mythic (25%).",
+   "descFr": "40% de monstres en plus par niveau et davantage de groupes, mais butin du boss toujours légendaire, avec trois fois plus de chances d'être mythique.",
+   "descEn": "40% more monsters per level and more groups, but boss loot is always legendary, with three times the usual chance of being mythic.",
    "monsterCountMult": 1.4,
    "groupChanceMult": 1.6,
    "forceLegendary": true,
-   "bossMythicPct": 25
+   "risk": 3,
+   "bossMythicMult": 3.0
   },
   {
    "id": "mod_fog",
@@ -201,7 +204,8 @@
    "descFr": "Mini-carte très réduite (zone visible minimale), mais butin d'objets +40%.",
    "descEn": "Very reduced minimap (minimal visible area), but item loot +40%.",
    "fogMinimap": true,
-   "itemMult": 1.4
+   "itemMult": 1.4,
+   "risk": 1
   },
   {
    "id": "mod_lowsta",
@@ -211,7 +215,8 @@
    "descFr": "Endurance maximale du groupe réduite de 30%, mais or gagné +50%.",
    "descEn": "Party max stamina reduced by 30%, but gold earned +50%.",
    "staminaMult": 0.7,
-   "goldMult": 1.5
+   "goldMult": 1.5,
+   "risk": 1
   },
   {
    "id": "mod_crit",
@@ -221,7 +226,57 @@
    "descFr": "Chances de coup critique du groupe +15%, mais PV max du groupe -20%.",
    "descEn": "Party critical hit chance +15%, but party max HP -20%.",
    "critChanceBonus": 15,
-   "hpMult": 0.8
+   "hpMult": 0.8,
+   "risk": 2,
+   "incompatibleWith": [
+    "mod_glass"
+   ]
+  },
+  {
+   "id": "mod_brutes",
+   "icon": "💢",
+   "labelFr": "Brutes",
+   "labelEn": "Brutes",
+   "descFr": "Monstres +25 % de PV et +15 % de dégâts, mais XP +40 % et butin +25 %.",
+   "descEn": "Monsters +25% HP and +15% damage, but XP +40% and loot +25%.",
+   "monsterHpMult": 1.25,
+   "monsterDmgMult": 1.15,
+   "xpMult": 1.4,
+   "lootMult": 1.25,
+   "risk": 2
+  },
+  {
+   "id": "mod_pack",
+   "icon": "😡",
+   "labelFr": "Meute enragée",
+   "labelEn": "Enraged Pack",
+   "descFr": "Rage des monstres deux fois plus fréquente, mais or gagné +40 %.",
+   "descEn": "Monsters enrage twice as often, but gold earned +40%.",
+   "rageChanceMult": 2.0,
+   "goldMult": 1.4,
+   "risk": 2
+  },
+  {
+   "id": "mod_traps",
+   "icon": "☠️",
+   "labelFr": "Couloirs piégés",
+   "labelEn": "Trapped Corridors",
+   "descFr": "Pièges et haches pendulaires +50 %, mais or gagné +40 %.",
+   "descEn": "Traps and swinging axes +50%, but gold earned +40%.",
+   "trapMult": 1.5,
+   "goldMult": 1.4,
+   "risk": 1
+  },
+  {
+   "id": "mod_nobreath",
+   "icon": "🩸",
+   "labelFr": "Pas de second souffle",
+   "labelEn": "No Second Wind",
+   "descFr": "Plus aucun regain de PV hors combat, mais XP gagnée +30 %.",
+   "descEn": "No more HP regained out of combat, but XP earned +30%.",
+   "noSecondWind": true,
+   "xpMult": 1.3,
+   "risk": 2
   },
   {
    "id": "mod_glass",
@@ -234,7 +289,11 @@
    "critChanceBonus": 5,
    "maxGroupSize": 2,
    "weeklyOnly": true,
-   "unlockBadge": "wk_r_glass"
+   "unlockBadge": "wk_r_glass",
+   "risk": 3,
+   "incompatibleWith": [
+    "mod_crit"
+   ]
   },
   {
    "id": "mod_frenzy",
@@ -245,7 +304,8 @@
    "descEn": "Monsters attack twice as fast.",
    "attackSpeedMult": 0.5,
    "weeklyOnly": true,
-   "unlockBadge": "wk_r_frenzy"
+   "unlockBadge": "wk_r_frenzy",
+   "risk": 3
   },
   {
    "id": "mod_solo",
@@ -258,7 +318,8 @@
    "hpMult": 2.0,
    "dmgMult": 1.3333,
    "weeklyOnly": true,
-   "unlockBadge": "wk_r_solo"
+   "unlockBadge": "wk_r_solo",
+   "risk": 3
   },
   {
    "id": "mod_legend",
@@ -274,7 +335,8 @@
    "startWeaponRarity": "rare",
    "monsterHpMult": 1.25,
    "monsterDmgMult": 1.15,
-   "weeklyOnly": true
+   "weeklyOnly": true,
+   "risk": 2
   },
   {
    "id": "mod_nospells",
@@ -287,7 +349,8 @@
    "minRarity": "rare",
    "startWeaponRarity": "epic",
    "weeklyOnly": true,
-   "unlockBadge": "wk_r_nospells"
+   "unlockBadge": "wk_r_nospells",
+   "risk": 3
   }
  ],
  "MON_HEIGHTS": [

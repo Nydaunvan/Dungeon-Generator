@@ -1,5 +1,6 @@
 extends Node
-## Modificateur « Nid de monstres » : le butin du boss est toujours légendaire ou mythique, avec ~25 % de mythique.
+## Modificateur « Nid de monstres » : le butin du boss est toujours légendaire ou mythique, avec 3 fois la chance de mythique de la difficulté
+## (Normale, 3 niveaux : 3 × 4 % × niveau, soit 0, 12 et 24 % : environ 12 % en moyenne).
 func _ready() -> void:
 	await get_tree().create_timer(2.0).timeout
 	var leg := 0
@@ -17,6 +18,6 @@ func _ready() -> void:
 	var tot := leg + myth
 	var pct := 100.0 * float(myth) / maxf(1.0, float(tot))
 	print("NID légendaires=", leg, " mythiques=", myth, " autres=", other, " part mythique=", snappedf(pct, 0.1), " %")
-	var ok := other == 0 and tot >= 150 and pct > 15.0 and pct < 35.0
+	var ok := other == 0 and tot >= 150 and pct > 6.0 and pct < 18.0
 	print("RESULTAT nid de monstres -> ", "OK" if ok else "ECHEC")
 	get_tree().quit()

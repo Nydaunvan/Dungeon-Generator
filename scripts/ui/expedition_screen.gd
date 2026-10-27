@@ -581,14 +581,19 @@ func _refresh_mods() -> void:
 	for mod in _all_mods():
 		var id := str(mod.id)
 		var on := _mods.has(id)
+		var clash := not on and not DungeonGenerator.conflicts(id, _mods).is_empty()
 		var card := ModCard.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		var parts := _split_mod(mod)
-		card.setup(str(mod.icon), L.c(str(mod.labelFr)) + (" 🔓" if bool(mod.get("weeklyOnly", false)) else ""), parts[0], parts[1], on, not on and _mods.size() >= MAX_MODS)
+		card.setup(str(mod.icon), _mod_label(mod) + (" 🔓" if bool(mod.get("weeklyOnly", false)) else ""), parts[0], parts[1], on,
+			(not on and _mods.size() >= MAX_MODS) or clash, int(mod.get("risk", 0)))
 		card.pressed.connect(func():
 			if _mods.has(id):
 				_mods.erase(id)
+			elif not DungeonGenerator.conflicts(id, _mods).is_empty():
+				_say(L.fa(L.t("ui.expedition.incompatible"), _mod_label(_mod_by_id(str(DungeonGenerator.conflicts(id, _mods)[0])))))
+				return
 			elif _mods.size() < MAX_MODS:
 				_mods.append(id)
 			else:
@@ -599,9 +604,25 @@ func _refresh_mods() -> void:
 	_mod_tag.text = "%d / %d" % [_mods.size(), MAX_MODS]
 	_refresh_summary()
 
+func _mod_by_id(id: String) -> Dictionary:
+	for m in _all_mods():
+		if str(m.id) == id:
+			return m
+	return {}
+
+static func _english() -> bool:
+	return TranslationServer.get_locale().begins_with("en")
+
+## Nom et description du modificateur dans la langue du jeu (les données portent les deux).
+static func _mod_label(mod: Dictionary) -> String:
+	return str(mod.get("labelEn", mod.get("labelFr", ""))) if _english() else str(mod.get("labelFr", ""))
+
+static func _mod_desc(mod: Dictionary) -> String:
+	return str(mod.get("descEn", mod.get("descFr", ""))) if _english() else str(mod.get("descFr", ""))
+
 ## Sépare la description « revers, mais bonus. » en [bonus, revers] ; une phrase d'un seul bloc reste neutre (bonus = "").
 func _split_mod(mod: Dictionary) -> Array:
-	var desc := L.c(str(mod.descFr)).strip_edges()
+	var desc := _mod_desc(mod).strip_edges()
 	for sep in [", mais ", ", but "]:
 		var i := desc.find(sep)
 		if i > 0:
@@ -628,7 +649,7 @@ func _refresh_summary() -> void:
 	var mods: Array = []
 	for mod in _all_mods():
 		if _mods.has(str(mod.id)):
-			mods.append(L.c(str(mod.labelFr)))
+			mods.append(_mod_label(mod))
 	var dn := ""
 	for d in GeneratorDialog.DIFFS:
 		if str(d[0]) == _diff:
@@ -643,7 +664,7 @@ func _launch() -> void:
 	var mods: Array = []
 	var valid: Array = _all_mods().map(func(x): return str(x.id))
 	for id in _mods:
-		if valid.has(str(id)) and mods.size() < MAX_MODS:
+		if valid.has(str(id)) and mods.size() < MAX_MODS and DungeonGenerator.conflicts(str(id), mods).is_empty():
 			mods.append(str(id))
 	var l := clampi(_levels, 1, MAX_LEVELS)
 	var w := clampi(_width, MIN_W, MAX_DIM)
@@ -875,7 +896,7 @@ class ClassTile extends Button:
 
 ## Carte de modificateur : icône et nom, bonus (vert) et revers (rouge).
 class ModCard extends Button:
-	func setup(icon: String, title: String, bonus: String, malus: String, on: bool, dim: bool) -> void:
+	func setup(icon: String, title: String, bonus: String, malus: String, on: bool, dim: bool, risk: int = 0) -> void:
 		focus_mode = Control.FOCUS_NONE
 		custom_minimum_size = Vector2(0, UiMetrics.css(152.0))
 		for k in ["normal", "hover", "pressed", "focus"]:
@@ -903,6 +924,19 @@ class ModCard extends Button:
 		if bonus != "":
 			v.add_child(_pill(bonus, Color("7ab648"), Color("cfe9b2")))
 		v.add_child(_pill(malus, Color("c0392b") if bonus != "" else UiTheme.BRONZE, Color("f0b8b0") if bonus != "" else UiTheme.PARCH))
+		if risk > 0:
+			var rk := Label.new()
+			rk.text = "💀".repeat(risk)
+			rk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			rk.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			rk.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
+			rk.add_theme_color_override("font_color", Color("e07a5f") if risk >= 3 else (Color("e8b45c") if risk == 2 else Color("9ec27a")))
+			rk.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+			rk.offset_left = -UiMetrics.css(70.0)
+			rk.offset_right = -UiMetrics.css(10.0)
+			rk.offset_top = -UiMetrics.css(24.0)
+			rk.offset_bottom = -UiMetrics.css(4.0)
+			add_child(rk)
 		if on:
 			var ck := Label.new()
 			ck.text = "✔"

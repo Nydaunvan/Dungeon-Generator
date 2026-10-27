@@ -47,7 +47,7 @@ static func pick_modifiers(host: Node, on_chosen: Callable, on_back: Callable = 
 	var refresh := func():
 		for id in buttons:
 			var b: Button = buttons[id]
-			b.disabled = not chosen.has(id) and chosen.size() >= 2
+			b.disabled = not chosen.has(id) and (chosen.size() >= 2 or not DungeonGenerator.conflicts(id, chosen).is_empty())
 			b.modulate = Color(1.25, 1.15, 0.85) if chosen.has(id) else Color.WHITE
 		(refs.validate as Button).disabled = chosen.is_empty()
 	for mod in DungeonGenerator.run_modifiers() + Unlocks.unlocked_modifiers():
@@ -74,7 +74,7 @@ static func pick_modifiers(host: Node, on_chosen: Callable, on_back: Callable = 
 		var clean: Array = []
 		if mods is Array:
 			for id in mods:
-				if valid.has(str(id)) and not clean.has(str(id)) and clean.size() < 2:
+				if valid.has(str(id)) and not clean.has(str(id)) and clean.size() < 2 and DungeonGenerator.conflicts(str(id), clean).is_empty():
 					clean.append(str(id))
 		on_chosen.call(clean))
 	var specs: Array = [

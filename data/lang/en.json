@@ -967,6 +967,7 @@
   "ui.expedition.deux_mods_max": "At most two modifiers.",
   "ui.expedition.aucun_mod": "No modifier",
   "ui.expedition.generer": "⚔ Generate and play",
+  "ui.expedition.incompatible": "Incompatible with “%s”.",
   "ui.expedition.stat_for": "STR",
   "ui.expedition.stat_dex": "DEX",
   "ui.expedition.stat_con": "CON",

@@ -22,7 +22,7 @@ func _ready() -> void:
 		sc.scroll_vertical = 600
 	await get_tree().create_timer(0.5).timeout
 	root.get_texture().get_image().save_png("/tmp/exp_1.png")
-	scr._mods = ["mod_horde", "mod_crit"]
+	scr._mods = ["mod_brutes", "mod_crit"]
 	scr._diff = "hard"
 	scr._levels = 6
 	scr._width = 40
@@ -37,4 +37,8 @@ func _ready() -> void:
 		m._scroll.scroll_vertical = 600
 	await get_tree().create_timer(0.4).timeout
 	root.get_texture().get_image().save_png("/tmp/exp_3.png")
+	for m in get_tree().get_nodes_in_group("modal"):
+		m._scroll.scroll_vertical = 3000
+	await get_tree().create_timer(0.4).timeout
+	root.get_texture().get_image().save_png("/tmp/exp_4.png")
 	get_tree().quit()

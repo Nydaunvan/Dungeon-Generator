@@ -44,6 +44,8 @@ static func on_step(gs: GameState, cell: Vector2i, difficulty: String, in_combat
 	gs.stats["regenTrail"] = trail
 	if in_combat or not enabled(gs.cfg):
 		return out
+	if bool(DungeonGenerator.combine_mods(gs.cfg.get("runModifierIds", [])).noSecondWind):       # « Pas de second souffle »
+		return out
 	var cool := int(gs.stats.get("regenCooldown", 0))
 	if cool > 0:
 		gs.stats["regenCooldown"] = cool - 1
