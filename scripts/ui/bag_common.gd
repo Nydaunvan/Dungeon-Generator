@@ -281,74 +281,9 @@ static func _corner_label(text: String, col: Color, top_right: bool) -> Label:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
 
-## Contenu de l'infobulle : nom, type, caractéristiques (avec écart par rapport à l'objet équipé), objet remplacé.
+## Contenu de l'infobulle d'un objet : voir `ItemTip` (en-tête, bloc principal, bonus avec écart, pouvoirs, pied).
 static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Control:
-	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", UiTheme.box(Color("120c07"), Color("a9793a"), 1, 6))
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 2)
-	v.custom_minimum_size = Vector2(210, 0)
-	box.add_child(v)
-	var name_l := _lbl(L.c(str(it.get("name", ""))), 14, Rarity.color(it) if Rarity.is_special(it) else UiTheme.GOLD, UiTheme.F_TITLE_BOLD)
-	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name_l.custom_minimum_size = Vector2(210, 0)     # largeur connue d'emblée : la hauteur du texte est juste dès la première image
-	v.add_child(name_l)
-	v.add_child(_lbl(EquipDock.type_label(it), 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
-	for pline in Rarity.lines(it):
-		var pl := _lbl(str(pline), 12, Rarity.color(it))
-		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		pl.custom_minimum_size = Vector2(210, 0)
-		v.add_child(pl)
-	var c := gs.char_by_id(char_id)
-	var slot := Inventory.slot_of(it)
-	var eq = c.get("equipment", {}).get(slot) if slot != "" else null
-	var worn: bool = eq != null and is_same(eq, it)       # l'objet survolé est déjà porté par ce héros : stats seules, sans comparaison
-	if worn:
-		eq = null
-	if slot != "":
-		var is_w := str(it.get("type", "")) == "weapon"
-		var rn := EquipDock.stat_rows(it, is_w)
-		var emap := {}
-		if eq != null:
-			for r in EquipDock.stat_rows(eq, is_w):
-				emap[r.key] = r.value
-		var keys: Array = []
-		var seen := {}
-		for r in rn + (EquipDock.stat_rows(eq, is_w) if eq != null else []):
-			if not seen.has(r.key):
-				seen[r.key] = true
-				keys.append(r)
-		for r in keys:
-			var val := 0
-			for x in rn:
-				if x.key == r.key:
-					val = int(x.value)
-			var h := HBoxContainer.new()
-			var a := _lbl(str(r.label), 13, UiTheme.PARCH)
-			a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			h.add_child(a)
-			h.add_child(_lbl("%s%d" % ["+" if val > 0 else "", val], 13, UiTheme.PARCH, UiTheme.F_BODY_BOLD))
-			if eq != null:
-				var d := val - int(emap.get(r.key, 0))
-				var col := UP if d > 0 else (DOWN if d < 0 else UiTheme.DIM)
-				h.add_child(_lbl(" (%s)" % (("+%d" % d) if d > 0 else (str(d) if d < 0 else "=")), 13, col))
-			v.add_child(h)
-			var net := val - int(emap.get(r.key, 0))
-			var hint := _effect_hint(c, str(r.key), net)
-			if hint != "":
-				var hl := _lbl(hint, 11, UiTheme.DIM, UiTheme.F_BODY_ITALIC)
-				hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				hl.custom_minimum_size = Vector2(210, 0)
-				v.add_child(hl)
-		var foot := L.fa(L.t("ui.bag.equipe_par"), str(c.get("name", ""))) if worn else (L.fa(L.t("ui.bag.remplace"), str(eq.get("name", ""))) if eq != null else L.t("ui.bag.emplacement_libre"))
-		v.add_child(_lbl(foot, 12, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
-	else:
-		for line in Inventory.describe(it, gs.cfg):
-			var l := _lbl(line, 13, UiTheme.PARCH)
-			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			l.custom_minimum_size = Vector2(210, 0)
-			v.add_child(l)
-	return box
+	return ItemTip.build(gs, it, char_id)
 
 static func _sg(n: int) -> String:
 	return ("+%d" % n) if n > 0 else str(n)
