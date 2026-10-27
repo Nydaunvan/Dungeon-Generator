@@ -389,6 +389,8 @@ func _build_dungeon(parent: Control) -> void:
 	lv.add_child(_diff_row)
 	_blurb = Label.new()
 	_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_blurb.max_lines_visible = 2          # jamais plus de deux lignes (les textes sont écrits pour tenir ; sécurité si une traduction dépasse)
+	_blurb.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_blurb.custom_minimum_size = Vector2(0, UiMetrics.rem(2.4))
 	_blurb.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
 	_blurb.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.8)))

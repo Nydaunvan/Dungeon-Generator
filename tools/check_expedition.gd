@@ -61,5 +61,18 @@ func _ready() -> void:
 	print("assigner une 3e classe identique : ", scr._assign(2, 0))
 	if scr._assign(2, 0):
 		ok = false
+	# la description de la difficulté ne dépasse jamais deux lignes (FR et EN)
+	for lang in ["fr", "en"]:
+		TranslationServer.set_locale(lang)
+		for d in GeneratorDialog.DIFFS:
+			scr._diff = str(d[0])
+			scr._refresh_dungeon()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			var lc: int = scr._blurb.get_line_count()
+			print("description ", lang, " ", d[0], " : ", lc, " ligne(s) (", scr._blurb.text.length(), " car.)")
+			if lc > 2:
+				ok = false
+				print("ECHEC description trop longue : ", d[0])
 	print("RESULTAT expédition -> ", "OK" if ok else "ECHEC")
 	get_tree().quit()
