@@ -558,9 +558,9 @@ func _refresh_dungeon() -> void:
 func _build_mods(parent: Control) -> void:
 	_mod_tag = _section(parent, L.t("ui.expedition.modificateurs"))
 	_mod_grid = GridContainer.new()
-	_mod_grid.columns = 3
-	_mod_grid.add_theme_constant_override("h_separation", int(UiMetrics.css(10.0)))
-	_mod_grid.add_theme_constant_override("v_separation", int(UiMetrics.css(10.0)))
+	_mod_grid.columns = 4
+	_mod_grid.add_theme_constant_override("h_separation", int(UiMetrics.css(8.0)))
+	_mod_grid.add_theme_constant_override("v_separation", int(UiMetrics.css(8.0)))
 	parent.add_child(_mod_grid)
 	var note := Label.new()
 	note.text = L.t("ui.expedition.note_mods")
@@ -897,7 +897,7 @@ class ClassTile extends Button:
 class ModCard extends Button:
 	func setup(icon: String, title: String, bonus: String, malus: String, on: bool, dim: bool, risk: int = 0) -> void:
 		focus_mode = Control.FOCUS_NONE
-		custom_minimum_size = Vector2(0, UiMetrics.css(152.0))
+		custom_minimum_size = Vector2(0, UiMetrics.css(112.0))
 		for k in ["normal", "hover", "pressed", "focus"]:
 			var sb := StyleBoxFlat.new()
 			sb.bg_color = Color("3a2810") if on else (Color("2a1d10") if k == "hover" else Color("1b130c"))
@@ -912,12 +912,12 @@ class ModCard extends Button:
 		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		v.offset_left = UiMetrics.css(10.0)
 		v.offset_right = -UiMetrics.css(10.0)
-		v.offset_top = UiMetrics.css(8.0)
-		v.offset_bottom = -UiMetrics.css(8.0)
+		v.offset_top = UiMetrics.css(6.0)
+		v.offset_bottom = -UiMetrics.css(22.0 if risk > 0 else 6.0)      # la place des crânes, en bas à droite
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		v.add_theme_constant_override("separation", int(UiMetrics.css(5.0)))
+		v.add_theme_constant_override("separation", int(UiMetrics.css(4.0)))
 		add_child(v)
-		var t := ExpeditionScreen._title_label("%s  %s" % [icon, title], 0.78, UiTheme.PARCH)
+		var t := ExpeditionScreen._title_label("%s  %s" % [icon, title], 0.7, UiTheme.PARCH)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(t)
 		if bonus != "":
@@ -964,6 +964,16 @@ class ModCard extends Button:
 		if dim:
 			modulate = Color(1, 1, 1, 0.4)
 		UiFx.hover_pop(self, 1.02)
+		_fit.call_deferred(v, UiMetrics.css(28.0 if risk > 0 else 12.0))
+
+	## La carte grandit si le texte, une fois la largeur connue, dépasse la hauteur minimale (une ligne de plus ne doit jamais être coupée).
+	func _fit(v: Control, extra: float) -> void:
+		if not is_inside_tree():
+			return
+		await get_tree().process_frame
+		if not is_inside_tree():
+			return
+		custom_minimum_size.y = maxf(custom_minimum_size.y, v.get_combined_minimum_size().y + extra)
 
 	static func _pill(text: String, bar: Color, fg: Color) -> Control:
 		var p := PanelContainer.new()
@@ -975,14 +985,14 @@ class ModCard extends Button:
 		sb.set_corner_radius_all(5)
 		sb.content_margin_left = 8
 		sb.content_margin_right = 6
-		sb.content_margin_top = 3
-		sb.content_margin_bottom = 3
+		sb.content_margin_top = 2
+		sb.content_margin_bottom = 2
 		p.add_theme_stylebox_override("panel", sb)
 		var l := Label.new()
 		l.text = text
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.7)))
+		l.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.62)))
 		l.add_theme_color_override("font_color", fg)
 		p.add_child(l)
 		return p

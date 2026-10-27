@@ -194,7 +194,10 @@
    "groupChanceMult": 1.6,
    "forceLegendary": true,
    "risk": 3,
-   "bossMythicMult": 3.0
+   "bossMythicMult": 3.0,
+   "incompatibleWith": [
+    "mod_elites"
+   ]
   },
   {
    "id": "mod_fog",
@@ -277,6 +280,35 @@
    "noSecondWind": true,
    "xpMult": 1.3,
    "risk": 2
+  },
+  {
+   "id": "mod_bands",
+   "icon": "🐺",
+   "labelFr": "Bandes organisées",
+   "labelEn": "Organised Bands",
+   "descFr": "Beaucoup plus de groupes de monstres (+80 %), mais butin d'objets +30 % et XP gagnée +20 %.",
+   "descEn": "Many more monster groups (+80%), but item loot +30% and XP earned +20%.",
+   "groupChanceMult": 1.8,
+   "itemMult": 1.3,
+   "xpMult": 1.2,
+   "risk": 2
+  },
+  {
+   "id": "mod_elites",
+   "icon": "🛡️",
+   "labelFr": "Élites",
+   "labelEn": "Elites",
+   "descFr": "Monstres +50 % de PV et +20 % de dégâts, mais 40 % de monstres en moins ; XP et or gagnés +35 %.",
+   "descEn": "Monsters +50% HP and +20% damage, but 40% fewer monsters; XP and gold earned +35%.",
+   "monsterCountMult": 0.6,
+   "monsterHpMult": 1.5,
+   "monsterDmgMult": 1.2,
+   "xpMult": 1.35,
+   "goldMult": 1.35,
+   "risk": 2,
+   "incompatibleWith": [
+    "mod_horde2"
+   ]
   },
   {
    "id": "mod_glass",
