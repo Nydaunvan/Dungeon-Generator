@@ -8,9 +8,11 @@ echo ============================================================
 echo.
 echo Ce script installe TripoSR en local, dans un environnement isole.
 echo Il faut : Python 3.11 ^(ou 3.10^), Git, une carte NVIDIA a jour.
+echo Aucun compilateur n'est necessaire.
 echo Duree : 10 a 30 minutes, environ 6 Go telecharges.
 echo.
 
+set "HERE=%~dp0"
 rem --- dossier d'installation (argument 1 facultatif)
 set "TRIPO=%~1"
 if "%TRIPO%"=="" set "TRIPO=%USERPROFILE%\TripoSR"
@@ -46,13 +48,6 @@ if errorlevel 1 (
   echo [ATTENTION] Aucune carte NVIDIA detectee : l'IA fonctionnera sur le processeur, tres lentement.
   echo.
 )
-where nvcc >nul 2>nul
-if errorlevel 1 (
-  echo [INFO] Le kit CUDA ^(nvcc^) n'est pas installe. Il n'est necessaire que si la compilation
-  echo        de torchmcubes echoue plus bas : voir le message final.
-  echo.
-)
-
 rem --- TripoSR
 if exist "%TRIPO%\run.py" goto :have_repo
 echo [1/5] Telechargement de TripoSR...
@@ -88,20 +83,17 @@ echo [3/5] Installation de PyTorch ^(CUDA 12.1^), environ 3 Go...
 "%VPY%" -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 if errorlevel 1 goto :fail
 
-rem --- dependances de TripoSR
+rem --- dependances de TripoSR (sans torchmcubes : il demande un compilateur ; un remplacant en Python pur est copie a la place)
 echo [4/5] Installation des dependances de TripoSR...
-"%VPY%" -m pip install --prefer-binary -r requirements.txt
-if errorlevel 1 goto :alt_mcubes
-goto :after_deps
-:alt_mcubes
-echo.
-echo Echec : on tente la methode alternative pour torchmcubes...
-"%VPY%" -m pip install setuptools==49.6.0
-"%VPY%" -m pip install --prefer-binary git+https://github.com/tatsy/torchmcubes.git
-if errorlevel 1 goto :fail_mcubes
-"%VPY%" -m pip install --prefer-binary -r requirements.txt
-if errorlevel 1 goto :fail_mcubes
-:after_deps
+if not exist "%HERE%triposr_shim\torchmcubes.py" (
+  echo [ERREUR] Fichier manquant : triposr_shim\torchmcubes.py ^(a cote de ce script^). Recuperez le dossier monster-studio complet.
+  goto :fail
+)
+findstr /v /i "torchmcubes" requirements.txt > requirements_sans_mcubes.txt
+"%VPY%" -m pip install --prefer-binary -r requirements_sans_mcubes.txt scikit-image onnxruntime "numpy<2"
+if errorlevel 1 goto :fail
+copy /y "%HERE%triposr_shim\torchmcubes.py" "%TRIPO%\torchmcubes.py" >nul
+if errorlevel 1 goto :fail
 
 rem --- essai complet (telecharge aussi le modele, quelques centaines de Mo)
 echo [5/5] Essai de TripoSR ^(premier lancement : telechargement du modele^)...
@@ -144,22 +136,6 @@ echo ============================================================
 echo.
 pause
 exit /b 0
-
-:fail_mcubes
-echo.
-echo ============================================================
-echo [ERREUR] L'installation des dependances de TripoSR a echoue.
-echo Faites defiler la fenetre vers le haut : la vraie cause est dans les lignes rouges.
-echo Cas le plus frequent : la compilation de torchmcubes. Dans ce cas, installez,
-echo puis relancez ce script :
-echo   1. Visual Studio Build Tools ^(visualstudio.microsoft.com/fr/downloads,
-echo      "Outils de generation", charge de travail "Developpement Desktop en C++"^)
-echo   2. Le kit CUDA 12.1 ^(developer.nvidia.com/cuda-12-1-0-download-archive^)
-echo Puis lancez ce script depuis "x64 Native Tools Command Prompt for VS".
-echo ============================================================
-echo.
-pause
-exit /b 1
 
 :fail
 echo.
