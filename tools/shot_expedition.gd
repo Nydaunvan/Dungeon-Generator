@@ -3,7 +3,7 @@ extends Node
 ## Lancer : xvfb-run -a godot --path . --rendering-driver opengl3 res://tools/shot_expedition.tscn   (images dans /tmp/exp_*.png)
 func _ready() -> void:
 	var root := get_tree().root
-	root.size = Vector2i(1280, 800)
+	root.size = Vector2i(1280, int(OS.get_environment("SHOT_H")) if OS.get_environment("SHOT_H") != "" else 800)
 	var layer := Control.new()
 	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()

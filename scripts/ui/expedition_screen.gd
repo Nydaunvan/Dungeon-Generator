@@ -4,11 +4,12 @@ extends RefCounted
 ## Remplace les deux fenêtres « Génération aléatoire » puis « Modificateurs d'expédition ». Le groupe choisi part dans `build_config(…, picks)`.
 
 const MAX_LEVELS := 8
-const MIN_DIM := 7
+const MIN_W := 13           # taille minimale d'un niveau : 13 × 11 (rien en dessous)
+const MIN_H := 11
 const MAX_DIM := 60
 const MAX_MODS := 2
 const MAX_SAME_CLASS := 2
-const PRESETS := [["ui.expedition.petit", 9, 9, 2], ["ui.expedition.moyen", 13, 11, 3], ["ui.expedition.grand", 25, 25, 4], ["ui.expedition.colossal", 40, 40, 6]]
+const PRESETS := [["ui.expedition.petit", 13, 11, 3], ["ui.expedition.moyen", 20, 18, 4], ["ui.expedition.grand", 30, 30, 5], ["ui.expedition.colossal", 45, 45, 6]]
 const DIFF_COLORS := {"easy": "8fd16a", "normal": "e8b45c", "hard": "ff8a4c", "hardcore": "ff4a3d"}
 const DIFF_ICONS := {"easy": "🕊️", "normal": "⚔️", "hard": "💀", "hardcore": "🔥"}
 const STAT_KEYS := ["ui.expedition.stat_for", "ui.expedition.stat_dex", "ui.expedition.stat_con", "ui.expedition.stat_int"]
@@ -71,8 +72,8 @@ func _start(prev: Dictionary) -> void:
 	if _classes.is_empty():
 		return
 	_levels = clampi(int(prev.get("levels", 3)), 1, MAX_LEVELS)
-	_width = clampi(int(prev.get("width", 13)), MIN_DIM, MAX_DIM)
-	_height = clampi(int(prev.get("height", 11)), MIN_DIM, MAX_DIM)
+	_width = clampi(int(prev.get("width", 13)), MIN_W, MAX_DIM)
+	_height = clampi(int(prev.get("height", 11)), MIN_H, MAX_DIM)
 	_diff = str(prev.get("diff", "normal"))
 	for i in [0, 1, 3, 4]:
 		_slots.append({"c": mini(i, _classes.size() - 1), "p": -1})
@@ -80,7 +81,9 @@ func _start(prev: Dictionary) -> void:
 		_slots[i].p = _free_portrait(i, int(_slots[i].c))
 	var m := Modal.open_framed(_host, L.t("ui.expedition.titre"), 1060.0)
 	_modal = m
-	m.fit_ratio = 0.8
+	# le corps défile : on lui laisse la hauteur de l'écran moins l'en-tête, le résumé et les boutons (la fenêtre entière doit tenir à l'écran)
+	var vp: Vector2 = _host.get_viewport_rect().size if _host.is_inside_tree() else Vector2(1280, 720)
+	m.fit_ratio = clampf((vp.y - UiMetrics.css(250.0)) / vp.y, 0.3, 0.8)
 	m.set_meta("screen", self)          # garde l'écran en vie tant que la fenêtre existe
 	var intro := m.add_text(L.t("ui.expedition.intro"), UiTheme.DIM, int(UiMetrics.rem(0.86)), true)
 	intro.custom_minimum_size.x = 0
@@ -384,8 +387,8 @@ func _build_dungeon(parent: Control) -> void:
 	_preset_row.add_theme_constant_override("h_separation", int(UiMetrics.css(6.0)))
 	lv.add_child(_preset_row)
 	_slider_row(lv, "levels", L.t("ui.expedition.niveaux"), 1, MAX_LEVELS, _levels)
-	_slider_row(lv, "width", L.t("ui.expedition.largeur"), MIN_DIM, MAX_DIM, _width)
-	_slider_row(lv, "height", L.t("ui.expedition.hauteur"), MIN_DIM, MAX_DIM, _height)
+	_slider_row(lv, "width", L.t("ui.expedition.largeur"), MIN_W, MAX_DIM, _width)
+	_slider_row(lv, "height", L.t("ui.expedition.hauteur"), MIN_H, MAX_DIM, _height)
 	_diff_row = HBoxContainer.new()
 	_diff_row.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
 	lv.add_child(_diff_row)
@@ -643,8 +646,8 @@ func _launch() -> void:
 		if valid.has(str(id)) and mods.size() < MAX_MODS:
 			mods.append(str(id))
 	var l := clampi(_levels, 1, MAX_LEVELS)
-	var w := clampi(_width, MIN_DIM, MAX_DIM)
-	var h := clampi(_height, MIN_DIM, MAX_DIM)
+	var w := clampi(_width, MIN_W, MAX_DIM)
+	var h := clampi(_height, MIN_H, MAX_DIM)
 	var diff := _diff
 	var base: Dictionary = Data.config
 	var cb := _on_launch
@@ -756,10 +759,12 @@ class ArchCard extends Control:
 		pill.add_theme_stylebox_override("panel", sb)
 		pill.add_child(tag)
 		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pill.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE)
-		pill.position.y = UiMetrics.css(4.0)
-		add_child(pill)
-		pill.resized.connect(func(): pill.position.x = (size.x - pill.size.x) * 0.5)
+		var cc := CenterContainer.new()          # centré sur toute la largeur de la carte, quelle que soit sa taille
+		cc.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		cc.offset_top = UiMetrics.css(4.0)
+		cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cc.add_child(pill)
+		add_child(cc)
 		if active:
 			_tw = create_tween().set_loops()
 			_tw.tween_property(self, "glow", 0.35, 1.1).set_trans(Tween.TRANS_SINE)

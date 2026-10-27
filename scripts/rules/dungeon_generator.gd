@@ -372,8 +372,14 @@ func roll_rarity(item: Dictionary, source: String) -> Dictionary:
 	return Rarity.apply(item, tier, func(): return randf())
 
 ## Chance qu'un objet légendaire soit mythique : croît avec le niveau, le numéro de partie et la difficulté.
+## Facile : quasi inexistante (1 % + 0,5 % par niveau, au plus 5 %) ; Normale : 4 % par niveau ; Difficile : 3 % + 5 % par niveau ; Hardcore : 10 % + 4 % par niveau.
 func mythic_chance() -> float:
-	return clampf(0.04 * lvl_i + 0.08 * run_bonus + (0.1 if difficulty == "hardcore" else 0.0), 0.0, 0.4)
+	var extra := 0.08 * run_bonus
+	match difficulty:
+		"easy": return clampf(0.01 + 0.005 * lvl_i + extra, 0.0, 0.05)
+		"hard": return clampf(0.03 + 0.05 * lvl_i + extra, 0.0, 0.4)
+		"hardcore": return clampf(0.1 + 0.04 * lvl_i + extra, 0.0, 0.4)
+	return clampf(0.04 * lvl_i + extra, 0.0, 0.4)
 
 ## Fait de l'objet un légendaire (ou, plus rarement, un mythique) : nom unique, capacités du palier, bonus ×1,7 (×2 pour un mythique).
 ## `mythic_pct` >= 0 impose le taux de mythique (en %), sinon `mythic_chance()`. Un seul tirage dans les deux cas (même consommation du hasard).
@@ -835,7 +841,10 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		mon["lootChance"] = mini(100, int(round(randi_range(40, 80) * float(mod.lootMult))))
 
 	# butin du boss
-	var legend_base: float = 45.0 if difficulty == "hardcore" else (25.0 if difficulty == "hard" else float(cfg.get("legendaryChancePct", 25)) * 0.6)
+	# chance de base d'un légendaire sur un boss : Facile 4 % (très rare), Normale 15 %, Difficile 30 %, Hardcore 50 % (Facile et Normale suivent le réglage « legendaryChancePct ») ;
+	# avec la « pitié » la moyenne mesurée par boss est d'environ 7 / 22 / 37 / 56 % (tools/check_boss_loot.tscn)
+	var cfg_legend := float(cfg.get("legendaryChancePct", 25))
+	var legend_base: float = 50.0 if difficulty == "hardcore" else (30.0 if difficulty == "hard" else (cfg_legend * 0.16 if difficulty == "easy" else cfg_legend * 0.6))
 	var legend_pct: float = 100.0 if mod.forceLegendary else minf(100.0, roundf(legend_base * run_escalation))
 	var boss_loot: Dictionary
 	match choice(["weapon", "armor", "jewelry"]):
@@ -848,7 +857,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		apply_legendary(boss_loot, float(mod.bossMythicPct) if mod.forceLegendary else -1.0)
 		_legend_pity = 0.0
 	else:
-		_legend_pity = minf(40.0, _legend_pity + 8.0)
+		_legend_pity = minf(10.0 if difficulty == "easy" else 40.0, _legend_pity + (2.0 if difficulty == "easy" else 8.0))
 	items.append(boss_loot)
 	boss["lootItemId"] = boss_loot.id
 	boss["lootChance"] = 100

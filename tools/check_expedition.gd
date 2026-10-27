@@ -1,7 +1,7 @@
 extends Node
 ## Écran « Préparer l'expédition » : (1) le groupe choisi (classes, portraits) se retrouve dans le donjon généré, 2 héros d'une même classe au maximum ;
 ## (2) statistiques du Barde : dextérité > intelligence > constitution > force ; (3) sans choix, génération graînée inchangée (mêmes niveaux) ;
-## (4) l'écran s'ouvre, borne ses réglages (niveaux 1-8, taille 7-60) et fabrique les `picks` attendus.
+## (4) l'écran s'ouvre, borne ses réglages (niveaux 1-8, largeur 13-60, hauteur 11-60) et fabrique les `picks` attendus.
 ## Lancer : xvfb-run -a godot --path . --rendering-driver opengl3 res://tools/check_expedition.tscn
 func _ready() -> void:
 	await get_tree().create_timer(1.5).timeout
@@ -48,14 +48,14 @@ func _ready() -> void:
 	for m in get_tree().get_nodes_in_group("modal"):
 		scr = m.get_meta("screen")
 	print("réglages bornés : niveaux ", scr._levels, " largeur ", scr._width, " hauteur ", scr._height)
-	if scr._levels != 8 or scr._width != 7 or scr._height != 60:
+	if scr._levels != 8 or scr._width != 13 or scr._height != 60:
 		ok = false
 		print("ECHEC bornes")
 	var s1: HSlider = scr._sliders["width"]
 	var s2: HSlider = scr._sliders["height"]
 	var s3: HSlider = scr._sliders["levels"]
 	print("curseurs : largeur ", s1.min_value, "-", s1.max_value, " hauteur ", s2.min_value, "-", s2.max_value, " niveaux ", s3.min_value, "-", s3.max_value)
-	if s1.max_value != 60 or s2.max_value != 60 or s1.min_value != 7 or s3.max_value != 8:
+	if s1.max_value != 60 or s2.max_value != 60 or s1.min_value != 13 or s2.min_value != 11 or s3.max_value != 8:
 		ok = false
 	scr._slots[0].c = 0
 	scr._slots[1].c = 0
