@@ -28,6 +28,7 @@ func start_ai(m: Monster, cfg: Dictionary) -> void:
 		return
 	var outdir := ProjectSettings.globalize_path(m.dir() + "/ia_out")
 	DirAccess.make_dir_recursive_absolute(outdir)
+	DirAccess.make_dir_recursive_absolute(outdir + "/0")      # avec --no-remove-bg, TripoSR ne crée pas ce dossier et échoue à l'écriture de mesh.glb
 	var image := ProjectSettings.globalize_path(m.source_path())
 	var cmd_tpl := str(cfg.get("command", ""))
 	# Détourage et cadrage faits ici (fond uni) : TripoSR reçoit un sujet propre sur gris, sans refaire son propre détourage.
