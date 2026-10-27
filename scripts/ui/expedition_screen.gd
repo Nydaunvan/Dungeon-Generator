@@ -9,7 +9,7 @@ const MIN_H := 11
 const MAX_DIM := 60
 const MAX_MODS := 2
 const MAX_SAME_CLASS := 2
-const PRESETS := [["ui.expedition.petit", 13, 11, 3], ["ui.expedition.moyen", 20, 18, 4], ["ui.expedition.grand", 30, 30, 5], ["ui.expedition.colossal", 45, 45, 6]]
+const PRESETS := [["ui.expedition.petit", 13, 11, 3], ["ui.expedition.moyen", 20, 18, 4], ["ui.expedition.grand", 30, 30, 5], ["ui.expedition.gigantesque", 45, 45, 6], ["ui.expedition.colossal", 60, 60, 8]]
 const DIFF_COLORS := {"easy": "8fd16a", "normal": "e8b45c", "hard": "ff8a4c", "hardcore": "ff4a3d"}
 const DIFF_ICONS := {"easy": "🕊️", "normal": "⚔️", "hard": "💀", "hardcore": "🔥"}
 const STAT_KEYS := ["ui.expedition.stat_for", "ui.expedition.stat_dex", "ui.expedition.stat_con", "ui.expedition.stat_int"]
@@ -47,7 +47,7 @@ var _cells: Label
 var _dung_tag: Label
 var _sliders := {}
 var _slider_vals := {}
-var _preset_row: HFlowContainer
+var _preset_row: HBoxContainer
 var _diff_row: HBoxContainer
 var _blurb: Label
 var _mod_grid: GridContainer
@@ -237,12 +237,12 @@ static func _box(pad: float = 14.0) -> PanelContainer:
 	p.add_theme_stylebox_override("panel", sb)
 	return p
 
-static func _chip(text: String, on: bool = false) -> Button:
+static func _chip(text: String, on: bool = false, compact: bool = false) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.62)))
+	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.5 if compact else 0.62)))
 	b.add_theme_color_override("font_color", Color("1a0f05") if on else Color("e2d2b0"))
 	b.add_theme_color_override("font_hover_color", Color("1a0f05") if on else Color("fff0c8"))
 	for k in ["normal", "hover", "pressed", "focus"]:
@@ -250,11 +250,11 @@ static func _chip(text: String, on: bool = false) -> Button:
 		sb.bg_color = UiTheme.GOLD if on else (Color("4a3820") if k == "hover" else UiTheme.BRONZE_DARK)
 		sb.border_color = UiTheme.GOLD if (on or k == "hover") else UiTheme.BRONZE
 		sb.set_border_width_all(1)
-		sb.set_corner_radius_all(99)
-		sb.content_margin_left = UiMetrics.css(12.0)
-		sb.content_margin_right = UiMetrics.css(12.0)
-		sb.content_margin_top = UiMetrics.css(6.0)
-		sb.content_margin_bottom = UiMetrics.css(6.0)
+		sb.set_corner_radius_all(int(UiMetrics.css(10.0)) if compact else 99)
+		sb.content_margin_left = UiMetrics.css(4.0 if compact else 12.0)
+		sb.content_margin_right = UiMetrics.css(4.0 if compact else 12.0)
+		sb.content_margin_top = UiMetrics.css(3.0 if compact else 6.0)
+		sb.content_margin_bottom = UiMetrics.css(3.0 if compact else 6.0)
 		b.add_theme_stylebox_override(k, sb)
 	return b
 
@@ -378,8 +378,8 @@ func _build_dungeon(parent: Control) -> void:
 	var lv := VBoxContainer.new()
 	lv.add_theme_constant_override("separation", int(UiMetrics.css(10.0)))
 	left.add_child(lv)
-	_preset_row = HFlowContainer.new()
-	_preset_row.add_theme_constant_override("h_separation", int(UiMetrics.css(6.0)))
+	_preset_row = HBoxContainer.new()
+	_preset_row.add_theme_constant_override("separation", int(UiMetrics.css(4.0)))
 	lv.add_child(_preset_row)
 	_slider_row(lv, "levels", L.t("ui.expedition.niveaux"), 1, MAX_LEVELS, _levels)
 	_slider_row(lv, "width", L.t("ui.expedition.largeur"), MIN_W, MAX_DIM, _width)
@@ -490,7 +490,8 @@ func _refresh_dungeon() -> void:
 		ch.queue_free()
 	for p in PRESETS:
 		var on := int(p[1]) == _width and int(p[2]) == _height and int(p[3]) == _levels
-		var b := _chip("%s · %d×%d" % [L.t(str(p[0])), int(p[1]), int(p[2])], on)
+		var b := _chip(L.t(str(p[0])).to_upper() + "\n" + L.fa(L.t("ui.expedition.preset_detail"), [int(p[1]), int(p[2]), int(p[3])]), on, true)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var pp: Array = p
 		b.pressed.connect(func():
 			_width = int(pp[1])

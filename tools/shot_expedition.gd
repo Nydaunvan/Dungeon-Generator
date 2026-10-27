@@ -21,7 +21,7 @@ func _ready() -> void:
 	for m in get_tree().get_nodes_in_group("modal"):
 		scr = m.get_meta("screen")
 		var sc: ScrollContainer = m._scroll
-		sc.scroll_vertical = 600
+		sc.scroll_vertical = 420
 	await get_tree().create_timer(0.5).timeout
 	root.get_texture().get_image().save_png("/tmp/exp_1.png")
 	scr._mods = ["mod_brutes", "mod_crit"]

@@ -958,6 +958,8 @@
   "ui.expedition.petit": "Petit",
   "ui.expedition.moyen": "Moyen",
   "ui.expedition.grand": "Grand",
+  "ui.expedition.gigantesque": "Gigantesque",
+  "ui.expedition.preset_detail": "%d×%d · %d niv.",
   "ui.expedition.colossal": "Colossal",
   "ui.expedition.cases_total": "%d cases au total",
   "ui.expedition.niveaux_de": "%d niveaux de %d × %d",
