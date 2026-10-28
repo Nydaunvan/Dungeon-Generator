@@ -196,6 +196,41 @@ static func clickable(c: Control, cb: Callable) -> void:
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			cb.call())
 
+## Onglets soulignés (page ou panneau) : `items` = [[id, libellé], …] ; l'onglet actif est souligné d'or.
+static func tabs(items: Array, current: String, cb: Callable, size: int = 14) -> Control:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 4)
+	for it in items:
+		var id: String = it[0]
+		var on := id == current
+		var b := Button.new()
+		b.text = str(it[1])
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 40)
+		b.add_theme_font_size_override("font_size", size)
+		for k in ["normal", "hover", "pressed", "focus"]:
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = Color(1, 1, 1, 0.04) if k == "hover" and not on else Color(0, 0, 0, 0)
+			sb.border_color = Color("e8b45c") if on else Color(0, 0, 0, 0)
+			sb.border_width_bottom = 2
+			sb.content_margin_left = 16
+			sb.content_margin_right = 16
+			sb.content_margin_top = 6
+			sb.content_margin_bottom = 6
+			b.add_theme_stylebox_override(k, sb)
+		for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+			b.add_theme_color_override(c, Color("ffd88a") if on else Color("b8a781"))
+		b.pressed.connect(func(): cb.call(id))
+		h.add_child(b)
+	var wrap := VBoxContainer.new()
+	wrap.add_theme_constant_override("separation", 0)
+	wrap.add_child(h)
+	var line := ColorRect.new()
+	line.color = Color("3a2c18")
+	line.custom_minimum_size = Vector2(0, 1)
+	wrap.add_child(line)
+	return wrap
+
 static func muted(text: String, size: int = 12) -> Label:
 	var l := Label.new()
 	l.text = text

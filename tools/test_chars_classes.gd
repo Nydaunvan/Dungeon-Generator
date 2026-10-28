@@ -44,6 +44,9 @@ func _init() -> void:
 	warrior["allowedSpellIds"] = []
 	for i in 6:
 		(warrior.allowedSpellIds as Array).append(cfg.spells[i].id)
+	var ac: GDScript = load("res://scripts/admin/admin_classes.gd")
+	ac.set("_csel", "class_warrior")
+	ac.set("_ctab", "spells")
 	adm._select_tab("classes")
 	await create_timer(0.8).timeout
 	var boxes := find_all(adm, func(n): return n is CheckBox and not n.button_pressed and not n.disabled and str(n.text).contains(str(cfg.spells[7].name)))
@@ -56,8 +59,8 @@ func _init() -> void:
 		ok((warrior.allowedSpellIds as Array).size() == 6 and not (boxes[0] as CheckBox).button_pressed, "plafond respecté, case décochée")
 	# ajout d'une classe via la fenêtre
 	var n0: int = (cfg.classes as Array).size()
-	var add_btn := find_all(adm, func(n): return n is Button and str(n.text) == "+ Ajouter une classe")
-	ok(add_btn.size() == 1, "bouton + Ajouter une classe")
+	var add_btn := find_all(adm, func(n): return n is Button and str(n.text).to_upper().contains("NOUVELLE"))
+	ok(add_btn.size() == 1, "bouton + Nouvelle")
 	(add_btn[0] as Button).pressed.emit()
 	await create_timer(0.5).timeout
 	var create := find_all(adm, func(n): return n is Button and str(n.text) == "Créer")
@@ -69,8 +72,8 @@ func _init() -> void:
 	ok(not nc.has("baseSpeed") and (nc.evolvesTo as Array).size() == 2 and int(nc.evolveLevel) == 5, "nouvelle classe sans baseSpeed")
 	ok((cfg.classTalents as Dictionary).has(nc.id), "talents créés pour la nouvelle classe")
 	# suppression : confirmation puis retrait
-	var trash := find_all(adm, func(n): return n is Button and str(n.text) == "🗑")
-	ok(trash.size() > 0, "boutons 🗑")
+	var trash := find_all(adm, func(n): return n is Button and str(n.text) == "Supprimer")
+	ok(trash.size() > 0, "bouton Supprimer")
 	# onglet Personnages
 	adm._select_tab("chars")
 	await create_timer(1.0).timeout
