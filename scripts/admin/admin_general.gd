@@ -66,10 +66,40 @@ static func _sv(s: SpinBox, v: float) -> void:
 static func _clamp(v: float, lo: float, hi: float) -> float:
 	return maxf(lo, minf(hi, v))
 
-static func build(host: VBoxContainer, admin: Node) -> void:
+## Pages de l'atelier : chaque page assemble des panneaux (voir `_p_*`).
+const PAGES := {
+	"combat": ["timer", "endurance", "rage", "effects", "boss", "resist"],
+	"progress": ["growth", "xp", "legendary"],
+	"explore": ["regen", "fountains"],
+	"traps": ["lockpick", "methods"],
+	"identity": ["identity", "security"],
+	"share": ["config", "code"],
+}
+
+static func build_page(host: VBoxContainer, admin: Node, page: String) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	var save: Callable = func(): admin.save()
+	for n in PAGES.get(page, []):
+		match str(n):
+			"identity": _p_identity(host, admin, cfg, save)
+			"security": _p_security(host, admin, cfg, save)
+			"timer": _p_timer(host, admin, cfg, save)
+			"endurance": _p_endurance(host, admin, cfg, save)
+			"regen": _p_regen(host, admin, cfg, save)
+			"growth": _p_growth(host, admin, cfg, save)
+			"fountains": _p_fountains(host, admin, cfg, save)
+			"lockpick": _p_lockpick(host, admin, cfg, save)
+			"methods": _p_methods(host, admin, cfg, save)
+			"legendary": _p_legendary(host, admin, cfg, save)
+			"rage": _p_rage(host, admin, cfg, save)
+			"effects": _p_effects(host, admin, cfg, save)
+			"boss": _p_boss(host, admin, cfg, save)
+			"resist": _p_resist(host, admin, cfg, save)
+			"xp": _p_xp(host, admin, cfg, save)
+			"config": _p_config(host, admin, cfg, save)
+			"code": _p_code(host, admin, cfg, save)
 
+static func _p_identity(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Identité du jeu
 	var b := Form.panel(host, L.t("admin.general.identite_du_jeu"))
 	var title_in := Form.text_row(b, L.t("admin.general.nom_du_jeu"), str(cfg.get("title", "")), 260.0)
@@ -80,8 +110,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer_le_titre"), act1, true]])
 
+static func _p_security(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Sécurité
-	b = Form.panel(host, L.t("admin.general.securite"))
+	var b := Form.panel(host, L.t("admin.general.securite"))
 	var pw_in := Form.text_row(b, L.t("admin.general.mot_de_passe_admin"), str(cfg.get("adminPassword", "")), 200.0)
 	_h(b, L.t("admin.general.protection_basique_cote_appareil"), 0.0)
 	var pw_save := func():
@@ -91,8 +122,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer_le_mot_de_passe"), pw_save, true], [L.t("admin.general.se_deconnecter"), func(): admin.logout()]])
 
+static func _p_timer(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Combat (enregistrement immédiat)
-	b = Form.panel(host, "Combat")
+	var b := Form.panel(host, "Combat")
 	var chk := CheckBox.new()
 	chk.text = L.t("admin.general.limite_de_temps_par_tour")
 	chk.button_pressed = bool(cfg.get("turnTimerEnabled", true))
@@ -112,8 +144,8 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	sec.value_changed.connect(func(_v): timer_save.call())
 	_h(b, L.t("admin.general.evite_qu_un_joueur_attende"), 6.0)
 
-	# ---- Endurance
-	b = Form.panel(host, L.t("common.endurance"))
+static func _p_endurance(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
+	var b := Form.panel(host, L.t("common.endurance"))
 	var sta: Dictionary = cfg.get("staminaSettings", {"attackCost": 10, "hitGain": 8, "moveGain": 2})
 	var vic: Dictionary = Form.sub(sta, "victoryGainPct")
 	_h(b, L.t("admin.general.applique_a_tous_les_personnages"))
@@ -131,30 +163,38 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	var v_norm := Form.num_row(b, L.t("admin.general.fin_de_combat_normal"), float(vic.get("normal", 0)))
 	var v_hard := Form.num_row(b, L.t("admin.general.fin_de_combat_difficile"), float(vic.get("hard", 0)))
 	var v_hc := Form.num_row(b, L.t("admin.general.fin_de_combat_cauchemar"), float(vic.get("hardcore", 0)))
-	_h(b, L.t("admin.general.regeneration_partielle_de_pv"), 10.0)
-	var t_hp := Form.num_row(b, L.t("admin.general.arrivee_sur_un_niveau_pv"), float(sta.get("levelTransitionHpPct", 0)))
-	var t_sta := Form.num_row(b, L.t("admin.general.arrivee_sur_un_niveau_endurance"), float(sta.get("levelTransitionStaPct", 0)))
-	var t_regen := Form.check(b, L.t("admin.general.regen_exploration"), sta, "exploreRegen", true)
-	Form.hint(b, L.t("admin.general.regen_exploration_hint"))
 	var act2 := func():
-		var ns: Dictionary = sta.duplicate(true)
+		var ns: Dictionary = Form.sub(cfg, "staminaSettings")
 		ns["attackCost"] = _num0(s_atk)
 		ns["hitGain"] = _num0(s_hit)
 		ns["moveGain"] = _num0(s_move)
 		ns["moveInterval"] = maxf(1.0, _num0(s_int) if _num0(s_int) != 0.0 else 1.0)
 		ns["victoryGainPct"] = {"easy": _clamp(_num0(v_easy), 0, 100), "normal": _clamp(_num0(v_norm), 0, 100),
 			"hard": _clamp(_num0(v_hard), 0, 100), "hardcore": _clamp(_num0(v_hc), 0, 100)}
-		ns["levelTransitionHpPct"] = _clamp(_num0(t_hp), 0, 100)
-		ns["levelTransitionStaPct"] = _clamp(_num0(t_sta), 0, 100)
-		cfg["staminaSettings"] = ns
 		_sv(s_atk, ns.attackCost); _sv(s_hit, ns.hitGain); _sv(s_move, ns.moveGain); _sv(s_int, ns.moveInterval)
 		_sv(v_easy, ns.victoryGainPct.easy); _sv(v_norm, ns.victoryGainPct.normal); _sv(v_hard, ns.victoryGainPct.hard); _sv(v_hc, ns.victoryGainPct.hardcore)
-		_sv(t_hp, ns.levelTransitionHpPct); _sv(t_sta, ns.levelTransitionStaPct)
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act2, true]])
 
+## Régénération (page Exploration) : récupération à l'arrivée dans un niveau et en marchant.
+static func _p_regen(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
+	var b := Form.panel(host, L.t("ui.atelier.regen_title"))
+	var sta: Dictionary = Form.sub(cfg, "staminaSettings")
+	_h(b, L.t("admin.general.regeneration_partielle_de_pv"), 0.0)
+	var t_hp := Form.num_row(b, L.t("admin.general.arrivee_sur_un_niveau_pv"), float(sta.get("levelTransitionHpPct", 0)))
+	var t_sta := Form.num_row(b, L.t("admin.general.arrivee_sur_un_niveau_endurance"), float(sta.get("levelTransitionStaPct", 0)))
+	Form.check(b, L.t("admin.general.regen_exploration"), sta, "exploreRegen", true)
+	Form.hint(b, L.t("admin.general.regen_exploration_hint"))
+	var act := func():
+		sta["levelTransitionHpPct"] = _clamp(_num0(t_hp), 0, 100)
+		sta["levelTransitionStaPct"] = _clamp(_num0(t_sta), 0, 100)
+		_sv(t_hp, sta.levelTransitionHpPct); _sv(t_sta, sta.levelTransitionStaPct)
+		save.call()
+	Form.actions(b, [[L.t("admin.general.enregistrer"), act, true]])
+
+static func _p_growth(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Progression au niveau
-	b = Form.panel(host, L.t("admin.general.progression_au_niveau"))
+	var b := Form.panel(host, L.t("admin.general.progression_au_niveau"))
 	var grow: Dictionary = Form.sub(cfg, "levelUpGrowth")
 	_h(b, L.t("admin.general.a_chaque_niveau_gagne_par"))
 	var g_stat := Form.num_row(b, L.t("admin.general.stats_de_base_points_cumules"), float(grow.get("statPerLevel", 0)), 0.1)
@@ -169,8 +209,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act3, true]])
 
+static func _p_fountains(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Fontaines
-	b = Form.panel(host, L.t("admin.general.fontaines"))
+	var b := Form.panel(host, L.t("admin.general.fontaines"))
 	_h(b, L.t("admin.general.placees_dans_les_niveaux_type"))
 	var f_cd := Form.num_row(b, L.t("admin.general.delai_de_recharge_minutes"), float(cfg.get("fountainCooldownMinutes", 10)))
 	var act4 := func():
@@ -179,8 +220,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act4, true]])
 
+static func _p_lockpick(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Pièges — crochetage
-	b = Form.panel(host, L.t("admin.general.pieges_crochetage"))
+	var b := Form.panel(host, L.t("admin.general.pieges_crochetage"))
 	var tr := _trap_cfg(cfg)
 	_h(b, L.t("admin.general.chance_de_desamorcer_un_piege"))
 	var t_base := Form.num_row(b, L.t("admin.general.chance_de_base"), tr.base)
@@ -209,8 +251,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act5, true]])
 
+static func _p_methods(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Pièges — méthodes, puzzles et butin
-	b = Form.panel(host, L.t("admin.general.pieges_methodes"))
+	var b := Form.panel(host, L.t("admin.general.pieges_methodes"))
 	var ts: Dictionary = Form.sub(cfg, "trapSettings")
 	var tr2 := _trap_cfg(cfg)
 	_h(b, L.t("admin.general.pieges_methodes_aide"))
@@ -238,8 +281,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_trap2, true]])
 
+static func _p_legendary(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Objets légendaires
-	b = Form.panel(host, L.t("admin.general.objets_legendaires"))
+	var b := Form.panel(host, L.t("admin.general.objets_legendaires"))
 	_h(b, L.t("admin.general.applique_aux_donjons_generes"))
 	var l_ch := Form.num_row(b, L.t("admin.general.chance_sur_le_butin_de"), float(cfg.get("legendaryChancePct", 25)))
 	var act6 := func():
@@ -248,8 +292,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act6, true]])
 
+static func _p_rage(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Rage des monstres
-	b = Form.panel(host, L.t("admin.general.rage_des_monstres"))
+	var b := Form.panel(host, L.t("admin.general.rage_des_monstres"))
 	_h(b, L.t("admin.general.rage_des_monstres_aide"))
 	var r_ch := Form.num_row(b, L.t("admin.general.rage_chance_monstres"), float(cfg.get("monsterRageChancePct", 25)))
 	Form.check(b, L.t("admin.general.rage_boss_systematique"), cfg, "bossRage", true)
@@ -259,8 +304,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_rage, true]])
 
+static func _p_effects(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Effets des monstres
-	b = Form.panel(host, L.t("admin.general.effets_monstres"))
+	var b := Form.panel(host, L.t("admin.general.effets_monstres"))
 	_h(b, L.t("admin.general.effets_monstres_aide"))
 	var s_ch := Form.num_row(b, L.t("admin.general.effets_monstres_chance"), float(cfg.get("monsterStatusChancePct", 60)))
 	Form.check(b, L.t("admin.general.effets_boss_systematique"), cfg, "bossStatus", true)
@@ -270,8 +316,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_status, true]])
 
+static func _p_boss(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Boss des donjons générés
-	b = Form.panel(host, L.t("admin.general.boss_titre"))
+	var b := Form.panel(host, L.t("admin.general.boss_titre"))
 	_h(b, L.t("admin.general.boss_aide"))
 	var bs_hp := Form.num_row(b, L.t("admin.general.boss_pv"), float(cfg.get("bossHpMult", 1.8)), 0.1)
 	var bs_fin := Form.num_row(b, L.t("admin.general.boss_pv_final"), float(cfg.get("bossFinalHpMult", 2.2)), 0.1)
@@ -289,16 +336,18 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_boss, true]])
 
+static func _p_resist(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Résistances des monstres
-	b = Form.panel(host, L.t("admin.general.resistances"))
+	var b := Form.panel(host, L.t("admin.general.resistances"))
 	_h(b, L.t("admin.general.resistances_aide"))
 	Form.check(b, L.t("admin.general.resistances_boss"), cfg, "bossResist", true)
 	var act_res := func():
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act_res, true]])
 
+static func _p_xp(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Répartition de l'expérience
-	b = Form.panel(host, L.t("admin.general.repartition_de_l_experience"))
+	var b := Form.panel(host, L.t("admin.general.repartition_de_l_experience"))
 	var xp: Dictionary = cfg.get("xpSettings", {})
 	_h(b, L.t("admin.general.la_mort_un_monstre_repartit"))
 	var x_ratio := Form.num_row(b, L.t("admin.general.ratio_soins_contribution"), float(xp.get("healRatio", 0.8)), 0.1)
@@ -309,8 +358,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 		save.call()
 	Form.actions(b, [[L.t("admin.general.enregistrer"), act7, true]])
 
+static func _p_config(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Configuration
-	b = Form.panel(host, "Configuration")
+	var b := Form.panel(host, "Configuration")
 	_h(b, L.t("admin.general.la_configuration_personnages"))
 	Form.actions(b, [
 		[L.t("admin.general.exporter_json"), func(): export_config(admin)],
@@ -322,8 +372,9 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 				admin.say(admin._now_message()))]])
 	admin.admin_status = Form.status_label(b)
 
+static func _p_code(host: VBoxContainer, admin: Node, cfg: Dictionary, save: Callable) -> void:
 	# ---- Code de donjon
-	b = Form.panel(host, L.t("admin.general.code_de_donjon"))
+	var b := Form.panel(host, L.t("admin.general.code_de_donjon"))
 	_h(b, L.t("admin.general.alternative_a_l_export_import"))
 	var out: TextEdit = null
 	var status: Label = null

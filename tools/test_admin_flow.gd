@@ -63,7 +63,7 @@ func _init() -> void:
 	adm._try_login()
 	check(data.admin_unlocked, "nouveau mot de passe accepté")
 	# 5. enregistrement : message d'état
-	adm._select_tab("general")
+	adm._select_tab("share")
 	await create_timer(0.3).timeout
 	adm.save()
 	check(adm.admin_status != null and adm.admin_status.text.begins_with("Configuration enregistrée à "), "message : %s" % adm.admin_status.text)

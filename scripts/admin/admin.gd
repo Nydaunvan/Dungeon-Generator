@@ -4,9 +4,8 @@ extends Control
 ## État de session : `Data.admin_unlocked` (adminUnlocked), `Data.play_origin == "random"` (cameFromRandomGen),
 ## `Data.own_dungeon_launched` (ownDungeonLaunched), `Data.resume_game` (la partie suspendue : STATE de l'original).
 
-const TABS := [["general", "admin.main.general"], ["chars", "common.personnages"], ["classes", "Classes"], ["spells", "admin.main.sorts_capacites"], ["items", "common.objets_de_base"], ["levels", "admin.main.niveaux"]]
-const SHARED_TABS := ["classes", "spells", "items"]
-const SHARED_TIP := "admin.main.enregistrer_comme_configuration"
+## Sections de l'atelier (menu latéral : `AtelierSide.GROUPS`). Anciens identifiants d'onglet → section actuelle.
+const LEGACY := {"general": "combat", "chars": "party", "items": "party"}
 
 var _root: VBoxContainer
 var _header: AppHeader
@@ -14,17 +13,20 @@ var _scroll: ScrollContainer
 var _page: VBoxContainer
 var _gate: Control
 var _main: VBoxContainer
-var _banner: OrnatePanel
+var _banner: Control
 var _banner_text: Label
 var _btn_play: Button
 var _btn_resume: Button
-var _tab_bar: HFlowContainer
+var _body: HBoxContainer
+var _side: AtelierSide
+var _menu_row: HBoxContainer
+var _menu_title: Label
+var _side_open := false
 var _content_host: VBoxContainer
-var _tab := "general"
+var _tab := "home"
 var _modal_layer: CanvasLayer
 var _pw_input: LineEdit
 var _pw_error: Label
-var _tab_buttons: Dictionary = {}
 var _footer: Label
 ## « #adminStatus » de l'onglet Général (renseigné par AdminGeneral) : reçoit les messages de `say()`.
 var admin_status: Label
@@ -54,10 +56,21 @@ func _ready() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, UiMetrics.css(12.0))
 	_root.add_child(gap)
+	_body = HBoxContainer.new()
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body.add_theme_constant_override("separation", int(UiMetrics.css(26.0)))
+	_root.add_child(_body)
+	_side = AtelierSide.new()
+	_side.picked.connect(func(id: String):
+		_side_open = false
+		_select_tab(id))
+	_side.search_pressed.connect(_open_search)
+	_body.add_child(_side)
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_root.add_child(_scroll)
+	_body.add_child(_scroll)
 	_page = VBoxContainer.new()
 	_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_page.add_theme_constant_override("separation", 0)
@@ -78,6 +91,7 @@ func _ready() -> void:
 
 func _layout() -> void:
 	UiMetrics.update(self)
+	_apply_side()
 	var side := UiMetrics.css(14.0)
 	var maxw := clampf(size.x * 0.82, 1440.0, 2000.0)
 	var extra := maxf(0.0, (size.x - maxw) * 0.5)
@@ -190,6 +204,7 @@ func logout() -> void:
 func _show_state() -> void:
 	_gate.visible = not Data.admin_unlocked
 	_main.visible = Data.admin_unlocked
+	_apply_side()
 	if Data.admin_unlocked:
 		_update_banner()
 		_select_tab(_tab)
@@ -213,84 +228,61 @@ func _build_main() -> void:
 	_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_main.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
 	_page.add_child(_main)
-	# bannière #adminPlayBanner
-	_banner = OrnatePanel.new()
-	_main.add_child(_banner)
-	_banner_text = Form.note(_banner.body, "", 0.0, 8.0)
-	_banner_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var brow := HFlowContainer.new()
-	brow.alignment = FlowContainer.ALIGNMENT_CENTER
-	brow.add_theme_constant_override("h_separation", int(UiMetrics.css(4.0)))
-	brow.add_theme_constant_override("v_separation", int(UiMetrics.css(4.0)))
-	_banner.body.add_child(brow)
-	_btn_play = Form._button([L.t("admin.main.jouer_ce_donjon"), _banner_primary, true])
-	_btn_resume = Form._button([L.t("admin.main.reprendre_la_ou_vous_etiez"), Data.resume_from_admin])
-	var tut := Form._button([L.t("admin.main.tutoriel"), func(): DocModal.tutorial(_modal_layer)])
-	for b in [_btn_play, _btn_resume, tut]:
-		brow.add_child(b)
-		_pad_button(b, 24.0, 12.0)
-	# onglets
-	_tab_bar = HFlowContainer.new()
-	_tab_bar.add_theme_constant_override("h_separation", int(UiMetrics.css(6.0)))
-	_tab_bar.add_theme_constant_override("v_separation", int(UiMetrics.css(6.0)))
-	_main.add_child(_tab_bar)
-	var group := ButtonGroup.new()
-	for t in TABS:
-		var id: String = t[0]
-		var b := Button.new()
-		b.toggle_mode = true
-		b.button_group = group
-		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", int(round(UiMetrics.rem(0.78))))
-		b.text = str(t[1])
-		b.pressed.connect(func(): _select_tab(id))
-		_tab_bar.add_child(b)
-		_pad_button(b, 16.0, 8.0)
-		_tab_buttons[id] = b
-		if id in SHARED_TABS:
-			_add_badge(b)
+	# écran étroit : le menu latéral se range derrière un bouton
+	_menu_row = HBoxContainer.new()
+	_menu_row.add_theme_constant_override("separation", 12)
+	_main.add_child(_menu_row)
+	var mb := Button.new()
+	mb.focus_mode = Control.FOCUS_NONE
+	mb.icon = GameIcons.tex("menu", 44, Color("e8b45c"), 1.8)
+	mb.add_theme_constant_override("icon_max_width", 22)
+	mb.tooltip_text = L.t("ui.atelier.menu")
+	mb.custom_minimum_size = Vector2(44, 44)
+	mb.pressed.connect(func():
+		_side_open = not _side_open
+		_apply_side())
+	_menu_row.add_child(mb)
+	_menu_title = Label.new()
+	_menu_title.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_TITLE_BOLD, 2))
+	_menu_title.add_theme_font_size_override("font_size", 18)
+	_menu_title.add_theme_color_override("font_color", Color("ffd88a"))
+	_menu_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_menu_row.add_child(_menu_title)
+	# bannière « Tester la partie / Reprendre » : dans le pied du menu latéral
+	_banner = _side.banner
+	_banner_text = _side.banner_text
+	_btn_play = _side.btn_play
+	_btn_resume = _side.btn_resume
+	_btn_play.pressed.connect(_banner_primary)
+	_btn_resume.pressed.connect(Data.resume_from_admin)
 	_content_host = VBoxContainer.new()
 	_content_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content_host.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
 	_main.add_child(_content_host)
 
-## Pastille « 🎲 partagé » (`.tab-shared-badge`) collée à droite du libellé de l'onglet, avec son infobulle.
-func _add_badge(b: Button) -> void:
-	var badge := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(232.0 / 255.0, 180.0 / 255.0, 92.0 / 255.0, 0.18)
-	sb.border_color = Color(232.0 / 255.0, 180.0 / 255.0, 92.0 / 255.0, 0.5)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = UiMetrics.css(6.0)
-	sb.content_margin_right = UiMetrics.css(6.0)
-	sb.content_margin_top = UiMetrics.css(1.0)
-	sb.content_margin_bottom = UiMetrics.css(1.0)
-	badge.add_theme_stylebox_override("panel", sb)
-	badge.mouse_filter = Control.MOUSE_FILTER_PASS
-	badge.tooltip_text = SHARED_TIP
-	var lab := Label.new()
-	lab.text = SHARED_BADGE
-	lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lab.add_theme_font_size_override("font_size", int(round(UiMetrics.rem(0.65))))
-	lab.add_theme_color_override("font_color", Color("ffd88a"))
-	badge.add_child(lab)
-	b.add_child(badge)
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	# réserve la place sous le badge (marge gauche de 5 px de `.tab-shared-badge`)
-	var font := b.get_theme_font("font")
-	var fs := b.get_theme_font_size("font_size")
-	var bw := lab.get_minimum_size().x + UiMetrics.css(12.0) + 2.0
-	var tw := font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	b.custom_minimum_size.x = tw + UiMetrics.css(32.0) + UiMetrics.css(5.0) + bw
-	badge.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-	badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	badge.offset_right = -UiMetrics.css(16.0)
-	badge.offset_left = -UiMetrics.css(16.0) - bw
-	badge.offset_top = -lab.get_minimum_size().y * 0.5 - 1.0
-	badge.offset_bottom = lab.get_minimum_size().y * 0.5 + 1.0
+## Écran étroit (portrait) ?
+func _narrow() -> bool:
+	return size.x < 860.0
 
-const SHARED_BADGE := "admin.main.partage"
+## Menu latéral : visible une fois connecté ; sur écran étroit, seulement à la demande (bouton ☰).
+func _apply_side() -> void:
+	if _side == null:
+		return
+	var narrow := _narrow()
+	_side.visible = Data.admin_unlocked and (not narrow or _side_open)
+	_menu_row.visible = narrow and Data.admin_unlocked
+	if narrow:
+		_side.custom_minimum_size.x = minf(UiMetrics.css(300.0), size.x * 0.82)
+	else:
+		_side.custom_minimum_size.x = UiMetrics.css(268.0)
+
+func _open_search() -> void:
+	AtelierSearch.open(self)
+
+func _unhandled_key_input(e: InputEvent) -> void:
+	if Data.admin_unlocked and e is InputEventKey and e.pressed and e.keycode == KEY_K and (e.ctrl_pressed or e.meta_pressed):
+		get_viewport().set_input_as_handled()
+		_open_search()
 
 ## `updateAdminPlayBanner` : trois états.
 func _update_banner() -> void:
@@ -334,20 +326,41 @@ func _show_loader(title: String, text: String) -> void:
 	m.add_text(text, UiTheme.PARCH, 15, true)
 
 func _select_tab(id: String) -> void:
+	if LEGACY.has(id):
+		if id == "items":
+			AtelierParty.sub = "items"
+		id = str(LEGACY[id])
 	_tab = id
-	for k in _tab_buttons:
-		(_tab_buttons[k] as Button).set_pressed_no_signal(k == id)
+	_side.select(id)
+	_menu_title.text = _section_title(id)
+	_apply_side()
 	for ch in _content_host.get_children():
 		ch.queue_free()
 	admin_status = null
+	if id != "home" and id != "party":
+		Atelier.page_header(_content_host, id)
 	match id:
-		"general": AdminGeneral.build(_content_host, self)
-		"chars": AdminChars.build(_content_host, self)
+		"home": AtelierHome.build(_content_host, self)
+		"levels": AdminLevels.build(_content_host, self)
+		"party": AtelierParty.build(_content_host, self)
 		"classes": AdminClasses.build(_content_host, self)
 		"spells": AdminSpells.build(_content_host, self)
-		"items": AdminItems.build(_content_host, self)
-		"levels": AdminLevels.build(_content_host, self)
+		_: AdminGeneral.build_page(_content_host, self, id)
+	Atelier.visited(id)
 	_fit_wide.call_deferred()
+
+## Titre d'une section (clé de langue du menu).
+static func _section_title(id: String) -> String:
+	for g in AtelierSide.GROUPS:
+		for it in g[1]:
+			if str(it[0]) == id:
+				return L.t(str(it[1]))
+	return ""
+
+## Ouvre une section depuis une autre page (accueil, recherche).
+func go(id: String) -> void:
+	_select_tab(id)
+	_scroll.scroll_vertical = 0
 
 ## Écran étroit (portrait) : une case à cocher ou un texte plus large que la page passe à la ligne au lieu de la déborder.
 func _fit_wide() -> void:
@@ -392,6 +405,7 @@ static func _now_message() -> String:
 
 ## `saveConfigNow` : enregistre la configuration éditée ; le message va dans `status` (ou dans l'état du Général).
 func save(status: Label = null) -> void:
+	Atelier.touch(_tab)
 	var msg := _now_message() if Data.save_config() else L.t("admin.main.echec_de_l_enregistrement")
 	if status != null and is_instance_valid(status):
 		status.text = msg
