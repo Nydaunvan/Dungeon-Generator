@@ -50,6 +50,8 @@ set "HF=%USERPROFILE%\.cache\huggingface\hub"
 if exist "%HF%\models--stabilityai--TripoSR" rmdir /s /q "%HF%\models--stabilityai--TripoSR"
 if exist "%HF%\models--facebook--dino-vitb16" rmdir /s /q "%HF%\models--facebook--dino-vitb16"
 if exist "%USERPROFILE%\.u2net" rmdir /s /q "%USERPROFILE%\.u2net"
+if exist "%HF%\.locks\models--stabilityai--TripoSR" rmdir /s /q "%HF%\.locks\models--stabilityai--TripoSR"
+if exist "%HF%\.locks\models--facebook--dino-vitb16" rmdir /s /q "%HF%\.locks\models--facebook--dino-vitb16"
 echo        Fait.
 
 rem --- 3. cache de pip (contient les gros fichiers PyTorch telecharges)
@@ -69,6 +71,7 @@ echo [4/4] Reglages de Monster Studio ^(dossier de l'IA, commande, dossier d'exp
 choice /c ON /n /m "Remettre a zero ces reglages ? [O]ui / [N]on : "
 if errorlevel 2 goto :library
 if exist "%MS%\settings.json" del /q "%MS%\settings.json"
+if exist "%MS%\bake_texture.py" del /q "%MS%\bake_texture.py"
 echo        Fait.
 
 :library
@@ -82,6 +85,7 @@ echo ------------------------------------------------------------
 choice /c ON /n /m "Supprimer la bibliotheque ? [O]ui / [N]on (conseille : N) : "
 if errorlevel 2 goto :done
 if exist "%MS%" rmdir /s /q "%MS%"
+rmdir "%APPDATA%\Godot\app_userdata\Monster Studio" >nul 2>nul
 echo        Bibliotheque supprimee.
 goto :done
 
@@ -98,6 +102,9 @@ echo ============================================================
 echo   Desinstallation terminee.
 echo   Pour retirer aussi Python ou Git : Parametres Windows, puis
 echo   Applications, Applications installees.
+echo   Pour retirer Monster Studio lui-meme : supprimez simplement le
+echo   dossier monster-studio ^(ce script en fait partie, il ne peut pas
+echo   se supprimer tout seul pendant qu'il tourne^).
 echo ============================================================
 echo.
 pause
