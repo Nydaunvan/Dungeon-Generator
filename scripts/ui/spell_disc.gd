@@ -114,25 +114,37 @@ func _draw() -> void:
 	var cap_h := _cap_height()
 	var area := Vector2(size.x, size.y - cap_h)
 	var c := Vector2(size.x * 0.5, area.y * 0.5)
-	var r := minf(area.x, area.y) * 0.5 - 2.0
-	if _hover and not _down and tone != "empty":
+	var r := minf(area.x, area.y) * 0.5 - 4.0
+	var hot := (_hover or highlight) and tone != "empty"
+	if hot and not _down:
 		r += 1.0
 	var k := clampf(r / 23.0, 0.6, 2.2)
 	var mod := Color(1, 1, 1, dim)
 	if _down:
 		r *= 0.94
-	var ring := Atlas.COPPER_DIM
-	if tone == "empty":
-		ring = Color(Atlas.COPPER_DIM, 0.5)
-	elif _hover or highlight:
-		ring = Atlas.AMBER
-	elif tone == "attack":
-		ring = Atlas.COPPER
-	var body := Color("0a0c0b") if tone == "empty" else (Color("2a1a14") if tone == "attack" else Color("1b201d"))
+	var body := Color("0a0c0b") if tone == "empty" else (Color("2a1a14") if tone == "attack" else Color("151a18"))
+	if hot:    # halo ambre autour du disque survolé / sélectionné
+		for i in 4:
+			draw_arc(c, r + 1.0 + i * 1.6 * k, 0.0, TAU, 56, Color(Atlas.AMBER, (0.20 - i * 0.045) * dim), 1.6 * k, true)
 	draw_circle(c, r, body * mod, true, -1.0, true)
-	draw_arc(c, r - 0.5, 0.0, TAU, 48, ring * mod, maxf(1.2, 1.4 * k), true)
+	# anneau extérieur en dégradé (cuivre éclairé en haut à gauche, ardoise sombre en bas à droite) ; ambre quand il est chaud
+	var lit := Atlas.AMBER if hot else (Atlas.COPPER if tone != "empty" else Atlas.COPPER_DIM)
+	var shade := Atlas.AMBER_DIM if hot else Color("2c3430")
+	var n := 48
+	var w_out := maxf(1.3, 1.5 * k) * (1.5 if hot else 1.0)
+	for i in n:
+		var t0 := float(i) / n
+		var t1 := float(i + 1) / n
+		var a0 := t0 * TAU
+		var a1 := t1 * TAU + 0.02
+		var m := absf(fmod(t0 + 0.625, 1.0) * 2.0 - 1.0)   # 0 = angle -135° (haut gauche), 1 = opposé
+		draw_arc(c, r - 0.5, a0, a1, 3, lit.lerp(shade, m * m * (3.0 - 2.0 * m)) * mod, w_out, true)
 	if tone != "empty":
-		draw_arc(c, r - 3.0 * k, 0.0, TAU, 48, Color(Atlas.COPPER_DIM, 0.5 * dim), 1.0, true)
+		draw_arc(c, r - 3.2 * k, 0.0, TAU, 48, Color(Atlas.COPPER_DIM, 0.55 * dim), 1.0, true)
+		# repères aux quatre points cardinaux, de part et d'autre de l'anneau
+		var tc := Color(Atlas.AMBER if hot else Atlas.COPPER, 0.9 * dim)
+		for dir in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+			draw_line(c + dir * (r - 1.0), c + dir * (r + 2.6 * k), tc, 1.0, true)
 	if caption != "":
 		var cf := Atlas.font(Atlas.F_BODY_BOLD)
 		var cs := _cap_font()

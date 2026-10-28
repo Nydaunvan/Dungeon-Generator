@@ -267,10 +267,10 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 		add_child(bar)
 		e["bar"] = bar
 	var q := bar.mesh as QuadMesh
-	q.size = Vector2(width, 0.085)
+	q.size = Vector2(width, 0.05)
 	bar.position = pos
 	var mat := bar.material_override as ShaderMaterial
-	mat.set_shader_parameter("aspect", width / 0.085)
+	mat.set_shader_parameter("aspect", width / 0.05)
 	var cur := float(mat.get_shader_parameter("frac"))
 	if absf(cur - frac) > 0.001:
 		if e.get("bar_tw") != null and (e.bar_tw as Tween).is_valid():
@@ -299,9 +299,9 @@ void fragment() {
 	// parallélogramme Atlas (bout droit en biais), fond creux, filet cuivre, remplissage rouge comme les fiches des héros
 	float x = UV.x * aspect;
 	float y = UV.y;
-	float sl = 0.45;
+	float sl = 0.5;
 	float edge = aspect - sl * y;
-	float bw = 0.11;
+	float bw = 0.14;
 	if (x < 0.0 || x > edge) { discard; }
 	vec3 col = vec3(0.60, 0.42, 0.26);
 	float a = 0.95;

@@ -77,7 +77,7 @@ var _timer_track: ColorRect
 var _timer_fill: ColorRect
 var _was_combat: bool = false
 var _flash: ColorRect
-var pouch: VBoxContainer
+var pouch: HFlowContainer
 var _pouch_sig: String = ""
 
 var _building := false        # première construction pendant le chargement : le travail est réparti sur plusieurs images
@@ -466,20 +466,9 @@ func _build_parts() -> void:
 	stage.add_child(_timer_track)
 
 	# barre rapide potions / parchemins (combat)
-	pouch = VBoxContainer.new()
-	pouch.add_theme_constant_override("separation", 8)
-	pouch.anchor_left = 0.0
-	pouch.anchor_right = 0.0
-	pouch.anchor_top = 0.5
-	pouch.anchor_bottom = 0.5
-	pouch.offset_left = 12
-	pouch.offset_right = 62
-	pouch.offset_top = 0
-	pouch.offset_bottom = 0
-	pouch.grow_horizontal = Control.GROW_DIRECTION_END
-	pouch.grow_vertical = Control.GROW_DIRECTION_BOTH
+	pouch = HFlowContainer.new()
 	pouch.visible = false
-	safe.add_child(pouch)
+	_place_pouch(true)
 
 	banner = CombatBanner.new()
 	banner.setup(ctrl)
@@ -662,7 +651,7 @@ func _detach(n: Node) -> void:
 		n.get_parent().remove_child(n)
 
 func _rebuild() -> void:
-	for n in [header, frame, queue, strip, hud, footer, panel_map, panel_bag, panel_log]:
+	for n in [header, frame, queue, strip, hud, footer, panel_map, panel_bag, panel_log, pouch]:
 		_detach(n)
 	if _root != null:
 		_root.queue_free()
@@ -710,6 +699,7 @@ func _rebuild() -> void:
 	v.add_child(header)
 	await _yield()
 	if _portrait:
+		_place_pouch(true)
 		frame.size_flags_stretch_ratio = 4.0
 		v.add_child(frame)
 		await _yield()
@@ -820,6 +810,8 @@ func _rebuild() -> void:
 		left.add_child(panel_map)
 		right.add_child(panel_bag)
 		right.add_child(panel_log)
+		_place_pouch(false)
+		right.add_child(pouch)
 		right.resized.connect(_sync_safe)
 		left.resized.connect(_sync_safe)
 		await _yield()
@@ -951,6 +943,33 @@ func set_level_name(text: String) -> void:
 	if type_badge != null:
 		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, RankedRun.mode_label(gs.cfg))
 
+## Barre rapide potions / parchemins : en paysage elle se range en largeur sous le carnet (colonne de droite) ;
+## en portrait elle reste un petit empilement vertical à gauche de la vue.
+func _place_pouch(portrait: bool) -> void:
+	_detach(pouch)
+	pouch.add_theme_constant_override("h_separation", 6)
+	pouch.add_theme_constant_override("v_separation", 6)
+	pouch.vertical = portrait
+	if portrait:
+		pouch.size_flags_horizontal = Control.SIZE_FILL
+		pouch.anchor_left = 0.0
+		pouch.anchor_right = 0.0
+		pouch.anchor_top = 0.5
+		pouch.anchor_bottom = 0.5
+		pouch.offset_left = 12
+		pouch.offset_right = 62
+		pouch.offset_top = 0
+		pouch.offset_bottom = 0
+		pouch.grow_horizontal = Control.GROW_DIRECTION_END
+		pouch.grow_vertical = Control.GROW_DIRECTION_BOTH
+		safe.add_child(pouch)
+	else:
+		pouch.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		pouch.size_flags_horizontal = Control.SIZE_FILL
+		pouch.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		pouch.grow_horizontal = Control.GROW_DIRECTION_END
+		pouch.grow_vertical = Control.GROW_DIRECTION_END
+
 func _refresh_pouch(on: bool) -> void:
 	var potions: Array = []
 	var scrolls := 0
@@ -1038,7 +1057,7 @@ func _process(_d: float) -> void:
 		# `#viewPlay.in-combat .save-menu-panel{opacity:.4;pointer-events:none;filter:grayscale(1)}` : sauvegarde indisponible en combat
 		save_menu.locked = on
 		save_menu.modulate = Color(0.62, 0.62, 0.62, 0.4) if on else Color.WHITE
-	pad.visible = not on
+	pad.visible = (not on) and _portrait    # la croix directionnelle n'existe que sur mobile (portrait)
 	map_btn.visible = _compact and not on
 	_comp.visible = not on
 	for vb in view_controls.get_children():      # la pause reste accessible en combat

@@ -61,7 +61,7 @@ class Crest extends Control:
 			total = wa
 			sep = 0.0
 		var x0 := (size.x - total) * 0.5
-		var y := size.y * 0.5
+		var y := size.y * 0.64        # le repère est descendu dans le décroché
 		draw_string(f, Vector2(x0, y + fs * 0.36), a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Atlas.IVORY)
 		if b != "":
 			draw_string(f, Vector2(x0 + wa + sep, y + fs * 0.36), b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Atlas.IVORY_DIM)
@@ -76,7 +76,7 @@ class Crest extends Control:
 		Atlas.draw_taper(self, Vector2(minf(lim_l, lx1 - 20.0), yl), Vector2(lx1, yl), 0.4, 2.0, Color(Atlas.COPPER, 0.9))
 		Atlas.draw_taper(self, Vector2(maxf(lim_r, rx0 + 20.0), yl), Vector2(rx0, yl), 0.4, 2.0, Color(Atlas.COPPER, 0.9))
 		# décroché sous le repère : le filet du bas descend d'un cran autour du texte
-		var yb := y + fs * 1.5
+		var yb := y + fs * 1.0
 		var dq := 14.0
 		draw_polyline(PackedVector2Array([Vector2(x0 - 46.0, yb), Vector2(x0 - 46.0 + dq, yb + dq * 0.5), Vector2(x0 + total + 46.0 - dq, yb + dq * 0.5), Vector2(x0 + total + 46.0, yb)]), Color(Atlas.COPPER, 0.7), 1.0, true)
 		Atlas.draw_diamond(self, Vector2(lx1 + 7.0, yl), 5.0, Atlas.COPPER)

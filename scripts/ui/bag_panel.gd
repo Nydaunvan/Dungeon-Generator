@@ -173,7 +173,11 @@ func refresh() -> void:
 	var total := 0
 	for cat in ["items", "potions", "keys"]:
 		total += Inventory.tab_count(gs, cat)
-	_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * 3])
+	var cat: String = TABS[_tab][4]
+	if cat == "":
+		_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * 3])
+	else:    # onglet filtré : possédé / maximum de sa catégorie de capacité
+		_total.text = L.fa(L.t("ui.bag.total"), [Inventory.tab_count(gs, cat), Inventory.MAX_PER_TAB])
 	for b in _tab_btns:
 		b.queue_redraw()
 	for ch in _grid.get_children():
