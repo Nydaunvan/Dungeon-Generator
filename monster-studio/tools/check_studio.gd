@@ -27,7 +27,7 @@ func _ready() -> void:
 	app.import_paths([src])
 	await get_tree().process_frame
 	check("image importée dans la bibliothèque", app.monsters.size() == 1 and app.monsters[0].has_source())
-	var kinds := {"biped": "biped", "quadruped": "quadruped", "winged": "biped", "serpent": "serpent"}
+	var kinds := {"biped": "biped", "quadruped": "quadruped", "winged": "biped", "serpent": "serpent", "blob": "biped"}
 	var n := 0
 	for tpl in kinds:
 		var m: Monster = app.cur
@@ -43,7 +43,7 @@ func _ready() -> void:
 		check("[%s] modèle normalisé (hauteur 2, pieds à 0)" % tpl, not app.model.is_empty() and absf(app.model.aabb.size.y - 2.0) < 0.001 and absf(app.model.aabb.position.y) < 0.001)
 		app.place_skeleton(tpl)
 		var bones: Array = app.cur.rig.bones
-		check("[%s] squelette placé (%d os)" % [tpl, bones.size()], bones.size() >= 8)
+		check("[%s] squelette placé (%d os)" % [tpl, bones.size()], bones.size() >= 4)
 		# un parent précède toujours son enfant
 		var seen := {}
 		var order_ok := true

@@ -103,6 +103,10 @@ static func _rot(anim: String, role: String, bone: String, rank: int, u: float) 
 					r.y = 24.0 * e * (1.0 + 0.3 * rank)
 				"wing":
 					r.z = side * -(10.0 + 25.0 * absf(e))
+				"body":
+					# recule en armant (e = +1) puis se jette vers l'avant (e = −0,6) ; le haut du corps suit en retard
+					r.x = -30.0 * e * (0.6 + 0.2 * rank)
+					r.y = 8.0 * e
 		"hit":
 			var h := _env(u, [[0.0, 0.0], [0.2, 1.0], [0.5, 0.35], [1.0, 0.0]])
 			match base:
@@ -119,6 +123,9 @@ static func _rot(anim: String, role: String, bone: String, rank: int, u: float) 
 					r.y = -18.0 * h
 				"wing":
 					r.z = side * -(15.0 * h)
+				"body":
+					r.x = -22.0 * h * (0.6 + 0.2 * rank)
+					r.z = 9.0 * h * sin(ph * 6.0)
 		"death":
 			var d := _env(u, [[0.0, 0.0], [0.45, 0.55], [1.0, 1.0]])
 			match base:
@@ -135,22 +142,49 @@ static func _rot(anim: String, role: String, bone: String, rank: int, u: float) 
 					r.y = 15.0 * d
 				"wing":
 					r.z = side * -(20.0 * d)
+				"body":
+					r.x = 12.0 * d * (0.6 + 0.2 * rank)
 	if role == "root":
 		return r if anim == "death" else Vector3.ZERO
 	return r
 
 ## Décalage de position de l'os racine (en unités du modèle, hauteur 2).
-static func _root_offset(anim: String, u: float, rest: Vector3) -> Vector3:
+## Échelle de l'os racine du corps souple : respiration, écrasement à l'armement, étirement au coup, aplatissement à la mort.
+static func _root_scale(anim: String, u: float) -> Vector3:
 	var ph := TAU * u
+	match anim:
+		"idle":
+			var b := 0.018 * sin(ph)
+			return Vector3(1.0 - b * 0.5, 1.0 + b, 1.0 - b * 0.5)
+		"walk":
+			var w := 0.03 * absf(sin(ph))
+			return Vector3(1.0 + w * 0.5, 1.0 - w, 1.0 + w * 0.5)
+		"attack":
+			var k := _env(u, [[0.0, 0.0], [0.35, -1.0], [0.5, 1.0], [0.75, 0.2], [1.0, 0.0]])   # −1 : écrasé, +1 : étiré
+			var y := 1.0 + (0.14 * k if k > 0.0 else 0.12 * k)
+			return Vector3(1.0 / sqrt(y), y, 1.0 / sqrt(y))
+		"hit":
+			var hh := _env(u, [[0.0, 0.0], [0.2, 1.0], [0.5, 0.3], [1.0, 0.0]])
+			var y2 := 1.0 - 0.14 * hh
+			return Vector3(1.0 / sqrt(y2), y2, 1.0 / sqrt(y2))
+		"death":
+			var dd := _env(u, [[0.0, 0.0], [0.45, 0.55], [1.0, 1.0]])
+			var y3 := 1.0 - 0.25 * dd
+			return Vector3(1.0 / sqrt(y3), y3, 1.0 / sqrt(y3))
+	return Vector3.ONE
+
+static func _root_offset(anim: String, u: float, rest: Vector3, blob := false) -> Vector3:
+	var ph := TAU * u
+	var kk := 2.0 if blob else 1.0
 	match anim:
 		"idle":
 			return Vector3(0, 0.012 * sin(ph), 0)
 		"walk":
-			return Vector3(0, 0.035 * absf(sin(ph)), 0)
+			return Vector3(0, 0.035 * kk * absf(sin(ph)), 0)
 		"attack":
-			return Vector3(0, 0, 0.12 * _env(u, [[0.0, 0.0], [0.35, -0.3], [0.5, 1.0], [0.75, 0.4], [1.0, 0.0]]))
+			return Vector3(0, 0, 0.12 * kk * _env(u, [[0.0, 0.0], [0.35, -0.3], [0.5, 1.0], [0.75, 0.4], [1.0, 0.0]]))
 		"hit":
-			return Vector3(0, 0, -0.1 * _env(u, [[0.0, 0.0], [0.2, 1.0], [0.5, 0.3], [1.0, 0.0]]))
+			return Vector3(0, 0, -0.1 * kk * _env(u, [[0.0, 0.0], [0.2, 1.0], [0.5, 0.3], [1.0, 0.0]]))
 		"death":
 			var d := _env(u, [[0.0, 0.0], [0.45, 0.55], [1.0, 1.0]])
 			return Vector3(0, -(rest.y - 0.16) * d, 0)
@@ -166,6 +200,7 @@ static func build(bones: Array, anim: String, custom: Dictionary = {}) -> Animat
 	var counts := {}
 	for b0 in bones:
 		counts[str(b0.role)] = int(counts.get(str(b0.role), 0)) + 1
+	var blob: bool = counts.has("body")
 	var idx := {}
 	for i in bones.size():
 		idx[str(bones[i].name)] = i
@@ -198,5 +233,11 @@ static func build(bones: Array, anim: String, custom: Dictionary = {}) -> Animat
 			var rest := _pos(b)
 			for i in samples + 1:
 				var u2 := float(i) / float(samples)
-				a.position_track_insert_key(pt, u2 * a.length, rest - parent_pos + _root_offset(anim, u2, rest))
+				a.position_track_insert_key(pt, u2 * a.length, rest - parent_pos + _root_offset(anim, u2, rest, blob))
+			if blob:
+				var st := a.add_track(Animation.TYPE_SCALE_3D)
+				a.track_set_path(st, path)
+				for i2 in samples + 1:
+					var u3 := float(i2) / float(samples)
+					a.scale_track_insert_key(st, u3 * a.length, _root_scale(anim, u3))
 	return a

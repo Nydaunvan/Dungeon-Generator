@@ -4,10 +4,10 @@ extends RefCounted
 ## (x : gauche-droite, y : bas-haut, z : arrière-avant ; façade = +Z, « gauche » = +X).
 ## Rôles : root, spine, head, tail, arm_l/arm_r (bras ou pattes avant), leg_l/leg_r (jambes ou pattes arrière), wing_l/wing_r.
 
-const IDS := ["biped", "quadruped", "winged", "serpent"]
+const IDS := ["biped", "quadruped", "winged", "serpent", "blob"]
 
 static func label(id: String) -> String:
-	return {"biped": "Bipède", "quadruped": "Quadrupède", "winged": "Ailé (bipède + ailes)", "serpent": "Serpent / ver"}.get(id, id)
+	return {"biped": "Bipède", "quadruped": "Quadrupède", "winged": "Ailé (bipède + ailes)", "serpent": "Serpent / ver", "blob": "Corps souple (toute forme)"}.get(id, id)
 
 ## Un os : [nom, parent, rôle, fx, fy, fz]. Les os finissant par « _l » sont dupliqués en « _r » (fx → 1 − fx).
 static func _def(id: String) -> Array:
@@ -19,6 +19,12 @@ static func _def(id: String) -> Array:
 				["tail1", "hips", "tail", 0.5, 0.55, 0.12], ["tail2", "tail1", "tail", 0.5, 0.5, 0.04],
 				["front_upper_l", "chest", "arm_l", 0.72, 0.5, 0.74], ["front_lower_l", "front_upper_l", "arm_l", 0.72, 0.26, 0.74], ["front_foot_l", "front_lower_l", "arm_l", 0.72, 0.04, 0.78],
 				["hind_upper_l", "hips", "leg_l", 0.72, 0.5, 0.26], ["hind_lower_l", "hind_upper_l", "leg_l", 0.72, 0.26, 0.26], ["hind_foot_l", "hind_lower_l", "leg_l", 0.72, 0.04, 0.3],
+			]
+		"blob":
+			# Chaîne verticale au centre du corps : convient à toute forme sans membres (œil flottant, gelée, plante, golem rond…).
+			return [
+				["base", "", "root", 0.5, 0.08, 0.5], ["body1", "base", "body", 0.5, 0.3, 0.5],
+				["body2", "body1", "body", 0.5, 0.55, 0.5], ["body3", "body2", "body", 0.5, 0.8, 0.5],
 			]
 		"serpent":
 			var out: Array = []
