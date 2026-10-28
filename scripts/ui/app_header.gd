@@ -310,6 +310,7 @@ func rescale() -> void:
 	var side := UiMetrics.css(40.0 if not UiMetrics.portrait else 22.0)
 	_box.content_margin_left = UiMetrics.css(30.0 if not UiMetrics.portrait else 12.0)
 	_box.content_margin_right = UiMetrics.css(30.0 if not UiMetrics.portrait else 10.0)
+	_box.content_margin_top = UiMetrics.css(15.0 if not UiMetrics.portrait else 0.0)    # titre et icônes descendus vers le décroché
 	_box.emit_changed()
 	if _emblem != null:
 		_emblem.custom_minimum_size = Vector2(side * 1.4, side * 1.4)
