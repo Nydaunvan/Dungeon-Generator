@@ -30,6 +30,7 @@ var _grid: GridContainer
 var _total: Label
 var _slot := 60.0
 var _sig := ""
+var avail_w := 0.0       ## largeur disponible imposée par la mise en page (0 = suivre la largeur réelle)
 
 func setup(state: GameState) -> void:
 	gs = state
@@ -101,9 +102,13 @@ func _draw_tab_dot(b: Button, i: int) -> void:
 	if cat != "" and Inventory.tab_count(gs, cat) >= CAPACITY:
 		b.draw_circle(Vector2(b.size.x - 7.0, 7.0), 3.0, Atlas.DANGER)
 
+func set_avail(w: float) -> void:
+	avail_w = w
+	_apply_slot()
+
 func _apply_slot() -> void:
-	var avail := size.x - 2.0
-	var s := clampf(floorf((avail - GAP * (COLS - 1)) / COLS), 38.0, 96.0)
+	var avail := (avail_w if avail_w > 0.0 else size.x) - 2.0
+	var s := clampf(floorf((avail - GAP * (COLS - 1)) / COLS), 34.0, 96.0)
 	if absf(s - _slot) < 0.5:
 		return
 	_slot = s
@@ -193,8 +198,13 @@ func refresh() -> void:
 		var i2: int = e.idx
 		b.pressed.connect(func(): item_pressed.emit(i2))
 		b.quick.connect(func(i: int): item_quick.emit(i))
+		b.custom_minimum_size = Vector2(16, _slot)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_grid.add_child(b)
 	var min_cells := COLS * 2
 	var cells := maxi(min_cells, int(ceil(tiles.size() / float(COLS))) * COLS)
 	for _i in range(tiles.size(), cells):
-		_grid.add_child(BagCommon.empty_cell_atlas(_slot))
+		var ec := BagCommon.empty_cell_atlas(_slot)
+		ec.custom_minimum_size = Vector2(16, _slot)
+		ec.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_grid.add_child(ec)

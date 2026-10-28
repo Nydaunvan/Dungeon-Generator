@@ -15,8 +15,8 @@ var _v: VBoxContainer
 func _init(title: String = "", icon_name: String = "") -> void:
 	_box = AtlasBox.new(10.0)
 	# fond translucide : la vue 3D occupe toute la largeur de l'écran et se devine derrière les panneaux
-	_box.fill_top = Color(0.035, 0.045, 0.05, 0.78)
-	_box.fill_bottom = Color(0.02, 0.026, 0.03, 0.84)
+	_box.fill_top = Color(0.02, 0.026, 0.03, 0.9)
+	_box.fill_bottom = Color(0.02, 0.026, 0.03, 0.55)
 	_box.border = Color(Atlas.COPPER, 0.55)
 	_box.cut = 4.0
 	_box.corners = Vector4(1, 0, 1, 0)

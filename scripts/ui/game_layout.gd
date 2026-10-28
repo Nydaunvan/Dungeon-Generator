@@ -574,6 +574,13 @@ func _build_parts() -> void:
 		fb.tooltip_text = L.t("ui.game_layout.carte_en_plein_ecran_touche")
 		fb.pressed.connect(func(): menu_pressed.emit("Carte"))
 		panel_map.header_row.add_child(fb)
+		# « ‹ CARTE » : le bouton de repli passe devant le titre, sans cadre, comme sur la maquette
+		panel_map.header_row.move_child(_map_fold, 0)
+		panel_map.header_row.get_child(1).visible = false
+		for b2 in [_map_fold, fb]:
+			(b2 as Button).flat = true
+			for stn in ["normal", "hover", "pressed", "focus", "disabled"]:
+				(b2 as Button).add_theme_stylebox_override(stn, StyleBoxEmpty.new())
 	var map_inset := MinimapWrap.new()
 	_map_inset = map_inset
 	minimap = Minimap.new()
@@ -587,8 +594,11 @@ func _build_parts() -> void:
 	map_box.add_theme_constant_override("separation", 8)
 	map_box.add_child(map_inset)
 	map_box.add_child(MapLegend.new())
-	map_box.add_child(MapFooter.new())
-	panel_map.set_fill_alpha(0.28, 0.4)
+	var mfoot := MapFooter.new()
+	mfoot.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map_box.add_child(mfoot)
+	map_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel_map.set_fill_alpha(0.95, 0.0)    # noir en haut, de plus en plus transparent vers le bas
 	panel_map.body.add_child(map_box)
 	_apply_map_fold()
 	panel_bag = AtlasPanel.new(L.t("ui.atlas.inventory_title"), "chest")
@@ -783,7 +793,16 @@ func _rebuild() -> void:
 		center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		center.add_theme_constant_override("separation", int(UiMetrics.css(6.0)))
 		bottom.add_child(center)
-		center.add_child(queue)
+		# la file d'initiative n'agrandit plus la rangée du bas : elle s'affiche en bas de la vue pendant le combat, sous la barre de vie des monstres
+		safe.add_child(queue)
+		queue.anchor_left = 0.0
+		queue.anchor_right = 1.0
+		queue.anchor_top = 1.0
+		queue.anchor_bottom = 1.0
+		queue.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		queue.offset_left = 0.0
+		queue.offset_right = 0.0
+		queue.offset_bottom = -UiMetrics.css(6.0)
 		center.add_child(hud)
 		var rcol := VBoxContainer.new()
 		rcol.name = "RCol"
@@ -801,13 +820,13 @@ func _rebuild() -> void:
 		right.resized.connect(_sync_safe)
 		left.resized.connect(_sync_safe)
 		await _yield()
-		panel_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		panel_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		for p in [panel_map, panel_bag, panel_log]:
 			p.custom_minimum_size = Vector2(0, 0)
 		# l'inventaire garde la taille de son contenu ; le carnet prend tout le reste de la colonne
 		panel_bag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		panel_bag.size_flags_stretch_ratio = 1.0
-		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		panel_log.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		panel_log.size_flags_stretch_ratio = 1.0
 	v.add_child(footer)
 	footer.visible = not _portrait
@@ -838,7 +857,7 @@ func _size_widgets() -> void:
 	hud.custom_minimum_size = Vector2(0, PartyHud.wanted_height())
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
 	header.rescale()
-	var rw := UiMetrics.css(clampf(0.21 * w + 60.0, 300.0, 460.0))
+	var rw := UiMetrics.css(clampf(0.19 * w + 55.0, 270.0, 410.0))
 	var lw := UiMetrics.css(clampf(0.17 * w + 20.0, 230.0, 330.0)) if not _compact else 0.0
 	var gp := UiMetrics.css(10.0)
 	var right: Node = _root.find_child("Right", true, false)
@@ -850,7 +869,11 @@ func _size_widgets() -> void:
 		(left_col as Control).custom_minimum_size = Vector2(lw, 0)
 	var lpad: Node = _root.find_child("LPad", true, false)
 	if lpad:
-		(lpad as Control).custom_minimum_size = Vector2(lw + gp + UiMetrics.css(30.0), 0)
+		(lpad as Control).custom_minimum_size = Vector2(UiMetrics.css(30.0), 0)    # les fiches des héros s'étendent sous la carte
+	if bag != null and not _portrait:
+		bag.set_avail(rw - UiMetrics.css(36.0))
+	if panel_log != null and not _portrait:
+		panel_log.custom_minimum_size = Vector2(0, clampf(h * 0.24, 130.0, 260.0))
 	var rcol: Node = _root.find_child("RCol", true, false)
 	if rcol:
 		(rcol as Control).custom_minimum_size = Vector2(rw + gp, 0)
@@ -885,10 +908,7 @@ func _sync_safe() -> void:
 	var r := (st.global_position.x + st.size.x - right.global_position.x) + gp
 	safe.offset_left = l
 	safe.offset_right = -r
-	var lpad := _root.find_child("LPad", true, false) as Control
 	var rcol := _root.find_child("RCol", true, false) as Control
-	if lpad != null and left_col.visible:
-		lpad.custom_minimum_size.x = maxf(lpad.custom_minimum_size.x, left_col.global_position.x + left_col.size.x + gp - _root.global_position.x)
 	if rcol != null:
 		rcol.custom_minimum_size.x = maxf(rcol.custom_minimum_size.x, right.size.x + gp)
 
@@ -896,6 +916,9 @@ func _size_overlays() -> void:
 	pad.rescale()
 	pad.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_KEEP_SIZE, int(UiMetrics.css(12.0)))
 	act_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, int(UiMetrics.css(12.0)))
+	if not _portrait:
+		act_box.offset_top -= UiMetrics.css(64.0)
+		act_box.offset_bottom -= UiMetrics.css(64.0)
 	var mb := UiMetrics.css(46.0)
 	map_btn.custom_minimum_size = Vector2(mb, mb)
 	map_btn.add_theme_font_size_override("font_size", int(mb * 0.55))
@@ -1033,3 +1056,4 @@ func _process(_d: float) -> void:
 		_vignette.modulate.a = 0.85 + 0.15 * sin(Time.get_ticks_msec() / 400.0)
 	if rig != null:
 		compass.dir = rig.dir
+		compass.visible = not ctrl.in_combat()

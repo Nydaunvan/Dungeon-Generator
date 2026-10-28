@@ -16,6 +16,7 @@ var _lang: MenuButton
 var _home_mode: bool = false
 var _box: AtlasBox
 var _emblem: Emblem
+var _subtitle: Label
 
 ## Emblème : boussole à quatre pointes dans un cercle fin.
 class Emblem extends Control:
@@ -95,13 +96,23 @@ func _init() -> void:
 	_emblem = Emblem.new()
 	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hrow.add_child(_emblem)
+	# titre sur deux lignes : « DONJON » en grand, « ATLAS NOIR » en petites capitales espacées dessous
+	var tbox := VBoxContainer.new()
+	tbox.add_theme_constant_override("separation", -2)
+	tbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hrow.add_child(tbox)
 	title_label = Label.new()
-	title_label.text = L.t("common.editeur_de_donjon")
+	title_label.text = L.t("ui.atlas.title_main").to_upper()
 	title_label.clip_text = false
-	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_override("font", Atlas.title_font(true, 3))
+	title_label.add_theme_font_override("font", Atlas.title_font(true, 6))
 	title_label.add_theme_color_override("font_color", Atlas.IVORY)
-	hrow.add_child(title_label)
+	tbox.add_child(title_label)
+	_subtitle = Label.new()
+	_subtitle.text = L.t("ui.atlas.title_sub").to_upper()
+	_subtitle.add_theme_font_override("font", Atlas.title_font(false, 5))
+	_subtitle.add_theme_color_override("font_color", Atlas.COPPER)
+	tbox.add_child(_subtitle)
 	_crest = Crest.new()
 	hrow.add_child(_crest)
 	nav_row = HBoxContainer.new()
@@ -188,11 +199,12 @@ func _plain(full: String) -> String:
 	return full
 
 func rescale() -> void:
-	custom_minimum_size.y = UiMetrics.css(64.0 if not UiMetrics.portrait else 44.0)
-	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(21.0 if not UiMetrics.portrait else 13.0)))
+	custom_minimum_size.y = UiMetrics.css(76.0 if not UiMetrics.portrait else 44.0)
+	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(30.0 if not UiMetrics.portrait else 16.0)))
+	_subtitle.add_theme_font_size_override("font_size", int(UiMetrics.css(11.0 if not UiMetrics.portrait else 8.0)))
 	if _crest != null:
 		_crest.visible = not UiMetrics.portrait and _crest.num_text != ""
-	var side := UiMetrics.css(30.0 if not UiMetrics.portrait else 22.0)
+	var side := UiMetrics.css(40.0 if not UiMetrics.portrait else 22.0)
 	_box.content_margin_left = UiMetrics.css(30.0 if not UiMetrics.portrait else 12.0)
 	_box.content_margin_right = UiMetrics.css(30.0 if not UiMetrics.portrait else 10.0)
 	_box.emit_changed()

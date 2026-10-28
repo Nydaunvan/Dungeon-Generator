@@ -59,7 +59,7 @@ func _add_card(c: Dictionary) -> void:
 func _on_card_input(_ev: InputEvent, _char_id: String) -> void:
 	pass
 
-const CARD_H := 92.0
+const CARD_H := 118.0
 ## Héros seul (« Héros solitaire ») : sa fiche occupe la deuxième des quatre places, les autres restent vides.
 const SOLO_SLOT := 1
 ## La fiche de survol n'apparaît ni en combat, ni quand un sort est en cours d'application sur un personnage.

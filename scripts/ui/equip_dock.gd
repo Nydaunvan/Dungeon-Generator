@@ -40,7 +40,13 @@ func setup(state: GameState, controller: CombatController) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	_panel = PanelContainer.new()
-	_panel.add_theme_stylebox_override("panel", FrameBox.new(18.0, Vector4(8, 6, 8, 8)))
+	var pf := AtlasBox.new(16.0)       # cadre Atlas Noir (plus de bois) : fond obsidienne, filet cuivre, équerres
+	pf.fill_top = Color(0.03, 0.04, 0.045, 0.97)
+	pf.fill_bottom = Color(0.015, 0.02, 0.024, 0.97)
+	pf.border = Color(Atlas.COPPER, 0.6)
+	pf.cut = 8.0
+	pf.marks = Color(Atlas.COPPER, 0.7)
+	_panel.add_theme_stylebox_override("panel", pf)
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_panel)
 	_scroll = ScrollContainer.new()
@@ -588,7 +594,7 @@ func _build_left(c: Dictionary, _cls: Dictionary, resolved: Dictionary) -> Contr
 		stage.add_child(sb)
 	# caractéristiques
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [10, 8, 10, 8]))
+	box.add_theme_stylebox_override("panel", _inset_box(8.0))
 	col.add_child(box)
 	var bv := VBoxContainer.new()
 	bv.add_theme_constant_override("separation", 2)
@@ -690,9 +696,19 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	col.add_child(_build_detail(c, resolved))
 	return col
 
+## Encadré intérieur Atlas : fond sombre translucide et filet cuivre fin.
+func _inset_box(pad: float) -> AtlasBox:
+	var b := AtlasBox.new(pad)
+	b.fill_top = Color(0.035, 0.045, 0.05, 0.75)
+	b.fill_bottom = Color(0.02, 0.026, 0.03, 0.75)
+	b.border = Color(Atlas.COPPER_DIM, 0.8)
+	b.cut = 4.0
+	b.corners = Vector4(0, 1, 0, 1)
+	return b
+
 func _build_detail(c: Dictionary, resolved: Dictionary) -> Control:
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", UiTheme.tbox("inset", [8, 8, 8, 8], [10, 10, 10, 10]))
+	box.add_theme_stylebox_override("panel", _inset_box(10.0))
 	box.custom_minimum_size = Vector2(0, DETAIL_H)     # hauteur fixe : la grille ne bouge plus quand on change d'objet
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)

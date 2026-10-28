@@ -7,8 +7,20 @@ func _init() -> void:
 	custom_minimum_size = Vector2(0, 40)
 
 func _draw() -> void:
-	var c := size * 0.5
-	var r := minf(size.y * 0.42, 15.0)
+	# massifs très pâles en arrière-plan (simples traits), puis la rose des vents au bas du panneau
+	var mc := Color(Atlas.COPPER, 0.18)
+	var base := size.y - 26.0
+	if base > 30.0:
+		var pts := PackedVector2Array()
+		var n := 14
+		for i in n + 1:
+			var x := size.x * float(i) / n
+			var hgt := (0.55 + 0.45 * sin(float(i) * 1.7 + 0.6) * sin(float(i) * 0.6 + 1.1)) * minf(base, 90.0) * (1.0 if i % 2 == 0 else 0.55)
+			pts.append(Vector2(x, base - absf(hgt)))
+		draw_polyline(pts, mc, 1.0, true)
+		draw_line(Vector2(0, base), Vector2(size.x, base), mc, 1.0)
+	var c := Vector2(size.x * 0.5, size.y - 14.0)
+	var r := 13.0
 	draw_arc(c, r, 0.0, TAU, 40, Atlas.COPPER, 1.0, true)
 	draw_arc(c, r * 0.55, 0.0, TAU, 28, Color(Atlas.COPPER, 0.6), 1.0, true)
 	for i in 4:

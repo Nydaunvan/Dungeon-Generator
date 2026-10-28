@@ -3728,7 +3728,9 @@
   "ui.atlas.tab_keys": "Keys",
   "ui.atlas.tab_scrolls": "Scrolls",
   "ui.atlas.journal": "Event log",
-  "ui.atlas.inventory_title": "Shared inventory"
+  "ui.atlas.inventory_title": "Shared inventory",
+  "ui.atlas.title_main": "Dungeon",
+  "ui.atlas.title_sub": "Atlas Noir"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",
