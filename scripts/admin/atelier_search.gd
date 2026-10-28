@@ -33,28 +33,49 @@ static func _norm(t: String) -> String:
 		s = s.replace(pair[0], pair[1])
 	return s
 
-## Construit (hors écran) chaque page de règles et relève le libellé de ses réglages, panneau par panneau.
+## Construit (hors écran) chaque page de règles et relève le libellé de ses réglages, carte par carte.
 static func _build_index(admin: Node) -> void:
 	if _index_lang == Data.lang and not _index.is_empty():
 		return
 	_index.clear()
 	_index_lang = Data.lang
+	# la construction d'une page touche à quelques états partagés : on les remet tels quels ensuite
+	var keep_scroll = admin.get("_scroll")
+	var keep_status = admin.get("admin_status")
+	var keep_reg: Array = AdminGeneral.reg.duplicate()
+	var keep_cnt = AdminGeneral._count_lbl
+	var keep_prev: Array = AdminGeneral._preview.duplicate()
 	for page in AdminGeneral.PAGES:
-		var host := VBoxContainer.new()
+		if page == "identity" or page == "share":
+			continue
+		var host := Control.new()
 		AdminGeneral.build_page(host, admin, page)
 		_collect(host, page, "")
 		host.free()
+	admin.set("_scroll", keep_scroll)
+	admin.set("admin_status", keep_status)
+	AdminGeneral.reg = keep_reg
+	AdminGeneral._count_lbl = keep_cnt
+	AdminGeneral._preview = keep_prev
 
 static func _collect(n: Node, section: String, panel: String) -> void:
 	for ch in n.get_children():
 		var p := panel
 		if ch.has_meta("panel_title"):
 			p = str(ch.get_meta("panel_title"))
-		elif ch.has_meta("setting"):
-			_index.append({"section": section, "panel": panel, "label": str(ch.get_meta("setting"))})
-		elif ch is CheckBox and (ch as CheckBox).text != "":
-			_index.append({"section": section, "panel": panel, "label": (ch as CheckBox).text})
+		if ch.has_meta("setting"):
+			_index.append({"section": section, "panel": p, "label": str(ch.get_meta("setting")), "val": _value_of(ch)})
 		_collect(ch, section, p)
+
+## Valeur affichée d'une ligne de réglage (texte du premier champ qu'elle contient).
+static func _value_of(n: Node) -> String:
+	for ch in n.get_children():
+		if ch is LineEdit:
+			return (ch as LineEdit).text
+		var v := _value_of(ch)
+		if v != "":
+			return v
+	return ""
 
 # ------------------------------------------------------------------ fenêtre
 
@@ -68,71 +89,52 @@ func _build() -> void:
 		if e is InputEventMouseButton and e.pressed:
 			queue_free())
 	add_child(dim)
-	var box := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("16100a")
-	sb.border_color = Color("5a4526")
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(18)
-	sb.shadow_color = Color(0, 0, 0, 0.7)
-	sb.shadow_size = 30
-	box.add_theme_stylebox_override("panel", sb)
+	var box := Ax.panel(Color("16100a"), Ax.LINE3, 18, 0, 0)
+	var bs := box.get_theme_stylebox("panel") as StyleBoxFlat
+	bs.shadow_color = Color(0, 0, 0, 0.7)
+	bs.shadow_size = 30
+	bs.set_content_margin_all(0)
+	box.clip_contents = true
 	add_child(box)
 	var vw := get_viewport_rect().size
 	var w := minf(680.0, vw.x - 24.0)
 	box.position = Vector2((vw.x - w) / 2.0, minf(110.0, vw.y * 0.12))
 	box.custom_minimum_size = Vector2(w, 0)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 0)
+	var col := Ax.vbox(0)
 	box.add_child(col)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 12)
-	var tm := MarginContainer.new()
-	tm.add_theme_constant_override("margin_left", 18)
-	tm.add_theme_constant_override("margin_right", 18)
-	tm.add_theme_constant_override("margin_top", 10)
-	tm.add_theme_constant_override("margin_bottom", 10)
-	tm.add_child(top)
-	col.add_child(tm)
-	top.add_child(GameIcons.rect("search", 20, GOLD, 1.8))
+	var top := Ax.hbox(12)
+	col.add_child(Ax.margin(top, 18, 10, 18, 10))
+	top.add_child(Ax.ico("search", 20, Ax.GOLD, 1.8))
 	_edit = LineEdit.new()
 	_edit.placeholder_text = L.t("ui.atelier.search")
 	_edit.custom_minimum_size = Vector2(0, 40)
 	_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_edit.add_theme_font_override("font", Ax.inter(400))
 	_edit.add_theme_font_size_override("font_size", 17)
+	_edit.add_theme_color_override("font_color", Ax.CREAM)
+	_edit.add_theme_color_override("font_placeholder_color", Ax.DIM)
+	_edit.add_theme_color_override("caret_color", Ax.GOLD)
 	var flat := StyleBoxEmpty.new()
 	for k in ["normal", "focus", "read_only"]:
 		_edit.add_theme_stylebox_override(k, flat)
 	_edit.text_changed.connect(func(_t): _refresh())
 	_edit.gui_input.connect(_edit_key)
 	top.add_child(_edit)
-	var esc := Label.new()
-	esc.text = "Échap"
-	esc.add_theme_font_size_override("font_size", 11)
-	esc.add_theme_color_override("font_color", Color("a8977a"))
-	top.add_child(esc)
-	var line := ColorRect.new()
-	line.color = Color("3a2c18")
-	line.custom_minimum_size = Vector2(0, 1)
-	col.add_child(line)
+	top.add_child(Ax.chip("Échap", Ax.MUTED, Ax.CLEAR, Ax.LINE, 11, 5, 7, 3))
+	col.add_child(Ax.line())
 	var sc := ScrollContainer.new()
 	sc.custom_minimum_size = Vector2(0, minf(420.0, vw.y * 0.5))
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(sc)
-	_list = VBoxContainer.new()
+	_list = Ax.vbox(2)
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list.add_theme_constant_override("separation", 2)
-	sc.add_child(_list)
-	var foot := Label.new()
-	foot.text = L.t("ui.atelier.search_hint")
-	foot.add_theme_font_size_override("font_size", 12)
-	foot.add_theme_color_override("font_color", Color("9a8863"))
-	var fm := MarginContainer.new()
-	fm.add_theme_constant_override("margin_left", 18)
-	fm.add_theme_constant_override("margin_top", 8)
-	fm.add_theme_constant_override("margin_bottom", 8)
-	fm.add_child(foot)
-	col.add_child(fm)
+	sc.add_child(Ax.margin(_list, 8, 8, 8, 8))
+	_list.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(Ax.line())
+	var foot := Ax.hbox(18)
+	foot.add_child(Ax.lab(L.t("ui.atelier.search_nav"), 12, Ax.DIM))
+	foot.add_child(Ax.lab(L.t("ui.atelier.search_open"), 12, Ax.DIM))
+	col.add_child(Ax.margin(foot, 18, 10, 18, 10))
 	_build_index(_admin)
 	_edit.grab_focus()
 	_refresh()
@@ -177,7 +179,7 @@ func _refresh() -> void:
 	else:
 		for e in _index:
 			if _match(words, str(e.label) + " " + str(e.panel)):
-				_results.append({"cat": "ui.atelier.cat_rules", "label": e.label, "path": "%s › %s" % [Atelier.title_of(str(e.section)), e.panel], "section": e.section, "find": e.label})
+				_results.append({"cat": "ui.atelier.cat_rules", "label": e.label, "path": "%s › %s" % [Atelier.title_of(str(e.section)), e.panel], "section": e.section, "find": e.label, "val": e.get("val", "")})
 		for g in AtelierSide.GROUPS:
 			for it in g[1]:
 				if _match(words, L.t(str(it[1]))):
@@ -208,71 +210,38 @@ func _draw_list() -> void:
 	for ch in _list.get_children():
 		ch.queue_free()
 	if _results.is_empty():
-		var l := Label.new()
-		l.text = L.t("ui.atelier.search_none")
-		l.add_theme_color_override("font_color", Color("a8977a"))
-		var m := MarginContainer.new()
-		m.add_theme_constant_override("margin_left", 20)
-		m.add_theme_constant_override("margin_top", 16)
-		m.add_theme_constant_override("margin_bottom", 16)
-		m.add_child(l)
-		_list.add_child(m)
+		_list.add_child(Ax.margin(Ax.lab(L.t("ui.atelier.search_none"), 14, Ax.MUTED), 12, 14, 12, 14))
 		return
 	var last_cat := ""
 	for i in _results.size():
 		var r: Dictionary = _results[i]
 		if str(r.cat) != last_cat:
 			last_cat = str(r.cat)
-			var h := Label.new()
-			h.text = L.t(last_cat)
-			h.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_TITLE, 2))
-			h.add_theme_font_size_override("font_size", 11)
-			h.add_theme_color_override("font_color", Color("9a8863"))
-			var hm := MarginContainer.new()
-			hm.add_theme_constant_override("margin_left", 20)
-			hm.add_theme_constant_override("margin_top", 10)
-			hm.add_theme_constant_override("margin_bottom", 2)
-			hm.add_child(h)
-			_list.add_child(hm)
+			_list.add_child(Ax.margin(Ax.kicker(L.t(last_cat), 11), 12, 8, 12, 4))
 		_list.add_child(_row(i, r))
 
 func _row(i: int, r: Dictionary) -> Control:
-	var b := Button.new()
-	b.focus_mode = Control.FOCUS_NONE
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.custom_minimum_size = Vector2(0, 52)
 	var on := i == _sel
-	for k in ["normal", "pressed", "focus", "hover"]:
-		var sb := StyleBoxFlat.new()
-		sb.set_corner_radius_all(10)
-		sb.content_margin_left = 14
-		sb.content_margin_right = 14
-		sb.bg_color = Color(0.91, 0.71, 0.36, 0.12) if (on or k == "hover") else Color(0, 0, 0, 0)
-		sb.border_color = GOLD
-		sb.set_border_width_all(1 if on else 0)
-		b.add_theme_stylebox_override(k, sb)
-	var v := VBoxContainer.new()
-	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_theme_constant_override("separation", 0)
-	v.offset_left = 14
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var t := Label.new()
-	t.text = str(r.label)
-	t.add_theme_font_size_override("font_size", 14)
-	t.add_theme_color_override("font_color", Color("f4e6c6"))
-	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var p := Ax.panel(Ax.GOLD_BG if on else Ax.CLEAR, Ax.GOLD if on else Ax.CLEAR, 10, 12, 10)
+	var h := Ax.hbox(12)
+	p.add_child(h)
+	var v := Ax.vbox(2)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var t := Ax.lab(str(r.label), 14, Ax.CREAM, 500)
 	t.clip_text = true
 	v.add_child(t)
-	var p := Label.new()
-	p.text = str(r.path)
-	p.add_theme_font_size_override("font_size", 12)
-	p.add_theme_color_override("font_color", Color("a8977a"))
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(p)
-	b.add_child(v)
-	b.pressed.connect(func(): _pick(i))
-	return b
+	v.add_child(Ax.lab(str(r.path), 12, Ax.MUTED))
+	h.add_child(v)
+	if str(r.get("val", "")) != "":
+		var val := Ax.lab(str(r.val), 14, Ax.GOLD_L, 600)
+		val.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(val)
+	Ax.clickable(p, func(): _pick(i))
+	p.mouse_entered.connect(func():
+		if _sel != i:
+			_sel = i
+			_draw_list())
+	return p
 
 func _pick(i: int) -> void:
 	if i < 0 or i >= _results.size():
@@ -295,7 +264,8 @@ static func _flash(admin: Node, text: String) -> void:
 	var node: Control = _find(admin._content_host, text)
 	if node == null:
 		return
-	admin._scroll.ensure_control_visible(node)
+	if admin._scroll != null and is_instance_valid(admin._scroll):
+		admin._scroll.ensure_control_visible(node)
 	var tw := node.create_tween()
 	for k in 3:
 		tw.tween_property(node, "modulate", Color(1.6, 1.3, 0.6), 0.18)
@@ -304,8 +274,6 @@ static func _flash(admin: Node, text: String) -> void:
 static func _find(n: Node, text: String) -> Control:
 	for ch in n.get_children():
 		if ch.has_meta("setting") and str(ch.get_meta("setting")) == text:
-			return ch as Control
-		if ch is CheckBox and (ch as CheckBox).text == text:
 			return ch as Control
 		var f := _find(ch, text)
 		if f != null:

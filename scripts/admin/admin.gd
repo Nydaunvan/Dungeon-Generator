@@ -9,10 +9,12 @@ const LEGACY := {"general": "combat", "chars": "party", "items": "party"}
 
 var _root: VBoxContainer
 var _header: AppHeader
-var _scroll: ScrollContainer
-var _page: VBoxContainer
+var _scroll: ScrollContainer              ## défilement principal de la page courante (pages à défilement)
+var _tracked: Dictionary = {}             ## nom → ScrollContainer dont la position est conservée à la reconstruction
+var _stage: Control                       ## zone à droite du menu
+var _content_host: Control                ## racine des pages
 var _gate: Control
-var _main: VBoxContainer
+var _main: Control
 var _banner: Control
 var _banner_text: Label
 var _btn_play: Button
@@ -22,24 +24,24 @@ var _side: AtelierSide
 var _menu_row: HBoxContainer
 var _menu_title: Label
 var _side_open := false
-var _content_host: VBoxContainer
 var _tab := "home"
+var _what := ""                           ## ce qui vient d'être modifié (affiché dans « Modifié récemment »)
 var _modal_layer: CanvasLayer
 var _pw_input: LineEdit
 var _pw_error: Label
 var _footer: Label
-## « #adminStatus » de l'onglet Général (renseigné par AdminGeneral) : reçoit les messages de `say()`.
+## État de la page (« Enregistré automatiquement », « N réglages modifiés ») : renseigné par les pages de règles.
 var admin_status: Label
 
 func _ready() -> void:
 	theme = UiTheme.shared()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg := TextureRect.new()
-	bg.texture = UiTheme.tex("bg_tile")
-	bg.stretch_mode = TextureRect.STRETCH_TILE
+	var bg := ColorRect.new()
+	bg.color = Color("0a0705")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
+	add_child(Ax.backdrop())
 	_root = VBoxContainer.new()
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_theme_constant_override("separation", 0)
@@ -49,39 +51,45 @@ func _ready() -> void:
 	add_child(_modal_layer)
 	# l'original rafraîchit les données de l'administration à l'ouverture (repairEvolvedClasses + valeurs par défaut)
 	Data.ensure_defaults(Data.admin_config())
+	var hm := MarginContainer.new()
+	hm.add_theme_constant_override("margin_left", int(UiMetrics.css(14.0)))
+	hm.add_theme_constant_override("margin_right", int(UiMetrics.css(14.0)))
+	hm.add_theme_constant_override("margin_top", int(UiMetrics.css(12.0)))
+	hm.add_theme_constant_override("margin_bottom", int(UiMetrics.css(8.0)))
+	_root.add_child(hm)
 	_header = AppHeader.new()
 	_header.nav.connect(_nav)
 	_header.btn_admin.disabled = true
-	_root.add_child(_header)
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, UiMetrics.css(12.0))
-	_root.add_child(gap)
+	hm.add_child(_header)
+	_menu_row = HBoxContainer.new()
+	_menu_row.add_theme_constant_override("separation", 12)
+	_root.add_child(_menu_row)
 	_body = HBoxContainer.new()
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", int(UiMetrics.css(26.0)))
+	_body.add_theme_constant_override("separation", 0)
 	_root.add_child(_body)
 	_side = AtelierSide.new()
 	_side.picked.connect(func(id: String):
 		_side_open = false
 		_select_tab(id))
 	_side.search_pressed.connect(_open_search)
+	_side.back_pressed.connect(_attempt_home)
 	_body.add_child(_side)
-	_scroll = ScrollContainer.new()
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_body.add_child(_scroll)
-	_page = VBoxContainer.new()
-	_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_page.add_theme_constant_override("separation", 0)
-	_scroll.add_child(_page)
+	_stage = Control.new()
+	_stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_stage.clip_contents = true
+	_body.add_child(_stage)
+	_content_host = Control.new()
+	_content_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_stage.add_child(_content_host)
 	_build_gate()
 	_build_main()
 	_footer = Label.new()
-	_footer.text = L.t("common.editeur_de_donjon") + " " + AppVersion.label() + " · " + L.t("common.portage_godot") + "\nMade by Claude & Nydaunvan"
+	_footer.text = L.t("common.editeur_de_donjon") + " " + AppVersion.label() + " · " + L.t("common.portage_godot") + " · Made by Claude & Nydaunvan"
 	_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_footer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	_footer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
+	_footer.add_theme_font_override("font", Ax.inter(400))
+	_footer.add_theme_font_size_override("font_size", 10)
 	_footer.add_theme_color_override("font_color", Color("6f5e44"))
 	_footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_footer)
@@ -92,15 +100,7 @@ func _ready() -> void:
 func _layout() -> void:
 	UiMetrics.update(self)
 	_apply_side()
-	var side := UiMetrics.css(14.0)
-	var maxw := clampf(size.x * 0.82, 1440.0, 2000.0)
-	var extra := maxf(0.0, (size.x - maxw) * 0.5)
-	_root.offset_left = side + extra
-	_root.offset_right = -(side + extra)
-	_root.offset_top = UiMetrics.css(12.0)
-	_root.offset_bottom = -UiMetrics.css(10.0)
 	_header.rescale()
-	_fit_wide.call_deferred()
 
 func _nav(n: String) -> void:
 	match n:
@@ -128,7 +128,6 @@ func _game_active() -> bool:
 
 func _build_gate() -> void:
 	_gate = HBoxContainer.new()
-	_gate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var l := Control.new()
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_gate.add_child(l)
@@ -174,7 +173,8 @@ func _build_gate() -> void:
 	var c2 := CenterContainer.new()
 	c2.add_child(Form._button([L.t("admin.main.retour_au_jeu"), _back_to_game]))
 	Form._place(p.body, c2, 10.0, 0.0)
-	_page.add_child(_gate)
+	_stage.add_child(_gate)
+	_gate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 ## « ◀ Retour au jeu » (`switchView('play')`) : reprend la partie suspendue, sinon retombe à l'accueil.
 func _back_to_game() -> void:
@@ -224,28 +224,15 @@ func _pad_button(b: Button, px: float, py: float) -> void:
 		b.add_theme_stylebox_override(st, sb)
 
 func _build_main() -> void:
-	_main = VBoxContainer.new()
-	_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_main.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
-	_page.add_child(_main)
+	_main = Control.new()
+	_main.visible = false
+	add_child(_main)
 	# écran étroit : le menu latéral se range derrière un bouton
-	_menu_row = HBoxContainer.new()
-	_menu_row.add_theme_constant_override("separation", 12)
-	_main.add_child(_menu_row)
-	var mb := Button.new()
-	mb.focus_mode = Control.FOCUS_NONE
-	mb.icon = GameIcons.tex("menu", 44, Color("e8b45c"), 1.8)
-	mb.add_theme_constant_override("icon_max_width", 22)
-	mb.tooltip_text = L.t("ui.atelier.menu")
-	mb.custom_minimum_size = Vector2(44, 44)
-	mb.pressed.connect(func():
+	var mb := Ax.icon_btn("menu", func():
 		_side_open = not _side_open
-		_apply_side())
-	_menu_row.add_child(mb)
-	_menu_title = Label.new()
-	_menu_title.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_TITLE_BOLD, 2))
-	_menu_title.add_theme_font_size_override("font_size", 18)
-	_menu_title.add_theme_color_override("font_color", Color("ffd88a"))
+		_apply_side(), 40.0, Ax.GOLD, "ghost", L.t("ui.atelier.menu"))
+	_menu_row.add_child(Ax.margin(mb, 14, 4, 0, 4))
+	_menu_title = Ax.title("", 18, Ax.GOLD_L)
 	_menu_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_menu_row.add_child(_menu_title)
 	# bannière « Tester la partie / Reprendre » : dans le pied du menu latéral
@@ -255,10 +242,6 @@ func _build_main() -> void:
 	_btn_resume = _side.btn_resume
 	_btn_play.pressed.connect(_banner_primary)
 	_btn_resume.pressed.connect(Data.resume_from_admin)
-	_content_host = VBoxContainer.new()
-	_content_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content_host.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
-	_main.add_child(_content_host)
 
 ## Écran étroit (portrait) ?
 func _narrow() -> bool:
@@ -271,10 +254,11 @@ func _apply_side() -> void:
 	var narrow := _narrow()
 	_side.visible = Data.admin_unlocked and (not narrow or _side_open)
 	_menu_row.visible = narrow and Data.admin_unlocked
+	_content_host.visible = Data.admin_unlocked
 	if narrow:
-		_side.custom_minimum_size.x = minf(UiMetrics.css(300.0), size.x * 0.82)
+		_side.custom_minimum_size.x = minf(300.0, size.x * 0.82)
 	else:
-		_side.custom_minimum_size.x = UiMetrics.css(268.0)
+		_side.custom_minimum_size.x = 280.0
 
 func _open_search() -> void:
 	AtelierSearch.open(self)
@@ -291,12 +275,12 @@ func _update_banner() -> void:
 		_banner.visible = true
 		_btn_resume.visible = false
 		_banner_text.text = L.t("admin.main.une_partie_est_en_cours")
-		_btn_play.text = L.t("admin.main.reprendre_la_partie_en_cours")
+		_btn_play.text = L.t("admin.main.reprendre_la_partie_en_cours").lstrip("◀ ")
 	elif not _random_run():
 		_banner.visible = true
 		_banner_text.text = L.t("admin.main.vous_pouvez_reprendre_votre_partie") \
 			if (active and Data.own_dungeon_launched) else L.t("admin.main.vous_configurez_votre_propre")
-		_btn_play.text = L.t("admin.main.jouer_ce_donjon")
+		_btn_play.text = L.t("admin.main.jouer_ce_donjon").lstrip("▶ ")
 		_btn_resume.visible = active and Data.own_dungeon_launched
 	else:
 		_banner.visible = false
@@ -330,6 +314,7 @@ func _select_tab(id: String) -> void:
 		if id == "items":
 			AtelierParty.sub = "items"
 		id = str(LEGACY[id])
+	Ax.flush()
 	Form.flush()
 	_tab = id
 	_side.select(id)
@@ -338,24 +323,11 @@ func _select_tab(id: String) -> void:
 	for ch in _content_host.get_children():
 		ch.queue_free()
 	admin_status = null
+	_scroll = null
+	_tracked.clear()
 	Form.reg.clear()
-	if id != "home" and id != "party":
-		var hr := Atelier.page_header(_content_host, id)
-		admin_status = Label.new()
-		admin_status.text = L.t("ui.atelier.autosave")
-		admin_status.add_theme_font_size_override("font_size", 12)
-		admin_status.add_theme_color_override("font_color", Color("9a8863"))
-		admin_status.size_flags_vertical = Control.SIZE_SHRINK_END
-		hr.add_child(admin_status)
-		if AdminGeneral.PAGES.has(id) and id != "share" and id != "identity":
-			var rb := Button.new()
-			rb.text = L.t("ui.atelier.reset_page")
-			rb.focus_mode = Control.FOCUS_NONE
-			rb.size_flags_vertical = Control.SIZE_SHRINK_END
-			rb.add_theme_font_size_override("font_size", 13)
-			rb.pressed.connect(func():
-				Dialogs.confirm(_modal_layer, "", L.t("ui.atelier.reset_confirm"), func(): AdminGeneral.reset_page(self)))
-			hr.add_child(rb)
+	AdminGeneral.reg.clear()
+	Ax.bind(self, func(): save())
 	match id:
 		"home": AtelierHome.build(_content_host, self)
 		"levels": AdminLevels.build(_content_host, self)
@@ -363,8 +335,13 @@ func _select_tab(id: String) -> void:
 		"classes": AdminClasses.build(_content_host, self)
 		"spells": AdminSpells.build(_content_host, self)
 		_: AdminGeneral.build_page(_content_host, self, id)
+	_refresh_side()
 	Atelier.visited(id)
-	_fit_wide.call_deferred()
+
+## Pastilles du menu : nombre de niveaux, sections modifiées.
+func _refresh_side() -> void:
+	_side.set_count("levels", str((Data.admin_config().get("levels", []) as Array).size()))
+	_side.set_dirty(Atelier.session_count())
 
 ## Titre d'une section (clé de langue du menu).
 static func _section_title(id: String) -> String:
@@ -377,36 +354,32 @@ static func _section_title(id: String) -> String:
 ## Ouvre une section depuis une autre page (accueil, recherche).
 func go(id: String) -> void:
 	_select_tab(id)
-	_scroll.scroll_vertical = 0
 
-## Écran étroit (portrait) : une case à cocher ou un texte plus large que la page passe à la ligne au lieu de la déborder.
-func _fit_wide() -> void:
-	if _scroll == null or not is_inside_tree():
-		return
-	# la largeur du ScrollContainer suit son contenu : on part de celle de la fenêtre
-	var avail := size.x - UiMetrics.css(28.0) - UiMetrics.css(80.0)
-	_wrap_wide(_content_host, avail)
+## Défilement à conserver quand la page est reconstruite (listes des pages maître-détail).
+func track_scroll(name: String, sc: ScrollContainer) -> void:
+	_tracked[name] = sc
 
-func _wrap_wide(n: Node, avail: float) -> void:
-	for ch in n.get_children():
-		if ch is ScrollContainer:
-			continue
-		if ch is Control and (ch is CheckBox or ch is Label) and (ch as Control).get_combined_minimum_size().x > avail:
-			(ch as Control).set("autowrap_mode", TextServer.AUTOWRAP_WORD_SMART)
-			(ch as Control).custom_minimum_size.x = avail
-			if ch is CheckBox:
-				(ch as CheckBox).alignment = HORIZONTAL_ALIGNMENT_LEFT
-		_wrap_wide(ch, avail)
+## Ce que l'utilisateur est en train de modifier (« Épée de cendre ») : affiché dans « Modifié récemment ».
+func note(text: String) -> void:
+	_what = text
 
 ## Recharge l'onglet courant (après une modification qui change sa structure).
 func refresh_tab() -> void:
-	var keep := _scroll.scroll_vertical if _scroll != null else 0
+	var keep := {}
+	for k in _tracked:
+		var sc: ScrollContainer = _tracked[k]
+		if is_instance_valid(sc):
+			keep[k] = sc.scroll_vertical
+	var main_v := _scroll.scroll_vertical if _scroll != null and is_instance_valid(_scroll) else 0
 	_select_tab(_tab)
 	_update_banner()
-	if _scroll != null:
-		await get_tree().process_frame
-		await get_tree().process_frame
-		_scroll.scroll_vertical = keep
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _scroll != null and is_instance_valid(_scroll):
+		_scroll.scroll_vertical = main_v
+	for k in keep:
+		if _tracked.has(k) and is_instance_valid(_tracked[k]):
+			(_tracked[k] as ScrollContainer).scroll_vertical = keep[k]
 
 func modals() -> Node:
 	return _modal_layer
@@ -422,11 +395,16 @@ static func _now_message() -> String:
 
 ## `saveConfigNow` : enregistre la configuration éditée ; le message va dans `status` (ou dans l'état du Général).
 func save(status: Label = null) -> void:
-	Atelier.touch(_tab)
+	Atelier.touch(_tab, _what)
+	_refresh_dirty()
 	var msg := _now_message() if Data.save_config() else L.t("admin.main.echec_de_l_enregistrement")
 	if status != null and is_instance_valid(status):
 		status.text = msg
 	say(msg)
+
+func _refresh_dirty() -> void:
+	if _side != null:
+		_side.set_dirty(Atelier.session_count())
 
 ## Bouton « 💾 Enregistrer la configuration par défaut » de l'original (`confirmSaveConfigDefault`).
 func confirm_save(status: Label = null) -> void:

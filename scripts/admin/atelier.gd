@@ -10,6 +10,7 @@ const MUTED := Color("a8977a")
 const CREAM := Color("f4e6c6")
 
 static var _mem: Dictionary = {}
+static var _session: Dictionary = {}       ## sections modifiées depuis l'ouverture de l'atelier
 static var _loaded := false
 
 # ------------------------------------------------------------------ mémoire locale
@@ -43,19 +44,23 @@ static func visited(id: String) -> void:
 	_store()
 
 ## Une section vient d'être enregistrée : elle remonte en tête des modifications récentes.
-static func touch(id: String) -> void:
+static func touch(id: String, what: String = "") -> void:
 	if id == "home":
 		return
+	_session[id] = true
 	_load()
 	var list: Array = _mem.get("recent", [])
 	for i in range(list.size() - 1, -1, -1):
 		if str(list[i].get("section", "")) == id:
 			list.remove_at(i)
-	list.push_front({"section": id, "ts": Time.get_unix_time_from_system()})
+	list.push_front({"section": id, "ts": Time.get_unix_time_from_system(), "what": what})
 	while list.size() > MAX_RECENT:
 		list.pop_back()
 	_mem["recent"] = list
 	_store()
+
+static func session_count() -> int:
+	return _session.size()
 
 static func recent() -> Array:
 	_load()
