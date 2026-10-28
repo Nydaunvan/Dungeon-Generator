@@ -250,10 +250,10 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 	var right: Vector3 = Vector3.RIGHT
 	if camera != null:
 		right = camera.global_transform.basis.x
-	var feet: float = float((0.5 - (info.center.y + info.size.y * 0.5)) * h)
+	var top: float = float((0.5 - (info.center.y - info.size.y * 0.5)) * h)     # sommet visible du sprite : la barre se pose au-dessus de la tête
 	# posée juste au-dessus du sol et avancée vers la caméra : en perspective elle apparaît sous les pieds du monstre sans passer sous le sol
-	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.8
-	pos.y = maxf(at.y + feet, 0.02) + 0.13
+	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.3
+	pos.y = at.y + top + 0.04
 	var bar: MeshInstance3D = e.get("bar")
 	if bar == null:
 		bar = MeshInstance3D.new()
@@ -267,10 +267,10 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 		add_child(bar)
 		e["bar"] = bar
 	var q := bar.mesh as QuadMesh
-	q.size = Vector2(width, 0.05)
+	q.size = Vector2(width, 0.065)
 	bar.position = pos
 	var mat := bar.material_override as ShaderMaterial
-	mat.set_shader_parameter("aspect", width / 0.05)
+	mat.set_shader_parameter("aspect", width / 0.065)
 	var cur := float(mat.get_shader_parameter("frac"))
 	if absf(cur - frac) > 0.001:
 		if e.get("bar_tw") != null and (e.bar_tw as Tween).is_valid():
