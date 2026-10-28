@@ -5,6 +5,7 @@ var screen: HomeScreen
 var _modal_layer: CanvasLayer
 
 func _ready() -> void:
+	Atlas.skin = false
 	theme = UiTheme.shared()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen = HomeScreen.new()

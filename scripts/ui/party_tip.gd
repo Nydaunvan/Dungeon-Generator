@@ -58,6 +58,7 @@ static func _gauge(label: String, fill: Color, v: float, mx: float, text: String
 	var b := TextBar.new(fill, 15, 11)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.custom_minimum_size = Vector2(0, 15)
+	b.use_atlas(fill.darkened(0.15), true, 0.0)
 	b.max_value = maxf(1.0, mx)
 	b.value = v
 	b._label.text = text

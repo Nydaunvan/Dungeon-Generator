@@ -32,21 +32,15 @@ class Frame extends PanelContainer:
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color("0b0709").lerp(col.darkened(0.8), 0.55)
-		sb.border_color = col
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(6)
-		sb.shadow_color = Color(0, 0, 0, 0.7)
-		sb.shadow_size = 6
-		draw_style_box(sb, r)
-		var top := Color(col.r, col.g, col.b, 0.20)
-		var none := Color(col.r, col.g, col.b, 0.0)
-		draw_polygon(PackedVector2Array([Vector2(3, 3), Vector2(size.x - 3, 3), Vector2(size.x - 3, 90), Vector2(3, 90)]), PackedColorArray([top, top, none, none]))
-		draw_rect(r.grow(-5), Color(col.r, col.g, col.b, 0.32), false, 1.0)
-		for p in [Vector2(2, 2), Vector2(size.x - 2, 2), Vector2(2, size.y - 2), Vector2(size.x - 2, size.y - 2)]:
-			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -5), p + Vector2(5, 0), p + Vector2(0, 5), p + Vector2(-5, 0)]), col)
-
+		var ab := AtlasBox.new()
+		ab.fill_top = Color("151917").lerp(col.darkened(0.75), 0.3)
+		ab.fill_bottom = Atlas.OBSIDIAN
+		ab.border = col
+		ab.width = 1.5
+		ab.cut = 8.0
+		ab.marks = Color(col.r, col.g, col.b, 0.7)
+		ab.mark_len = 8.0
+		ab._draw(get_canvas_item(), r)
 
 ## Filet de séparation avec losange central.
 class Divider extends Control:

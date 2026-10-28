@@ -10,7 +10,7 @@ const BAD := Color("e08a7a")
 const GOOD := Color("9cc79a")
 const PANEL_W := 440.0
 const PANEL_H := 380.0
-const BTN := 46.0
+const BTN := 34.0
 const MARGIN := 10.0
 const CLOSE_DELAY := 0.45
 const CHARTER_KEYS := ["ui.chat.charte_1", "ui.chat.charte_2", "ui.chat.charte_3", "ui.chat.charte_4",
@@ -63,13 +63,13 @@ func _build_button() -> void:
 	_btn.text = "💬"
 	_btn.focus_mode = Control.FOCUS_NONE
 	_btn.tooltip_text = L.t("ui.chatdock.tip")
-	_btn.add_theme_font_size_override("font_size", 22)
+	_btn.add_theme_font_size_override("font_size", 16)
 	var st := ["normal", "hover", "pressed"]
 	for i in st.size():
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = [Color(0.06, 0.04, 0.02, 0.92), Color(0.16, 0.11, 0.05, 0.96), Color(0.24, 0.16, 0.06, 0.98)][i]
-		sb.border_color = [UiTheme.BRONZE_DARK, UiTheme.GOLD, UiTheme.GOLD][i]
-		sb.set_border_width_all(2)
+		sb.bg_color = [Color(0.03, 0.04, 0.045, 0.92), Color(0.08, 0.1, 0.1, 0.96), Color(0.12, 0.13, 0.12, 0.98)][i]
+		sb.border_color = [Atlas.COPPER_DIM, Atlas.AMBER, Atlas.AMBER][i]
+		sb.set_border_width_all(1)
 		sb.set_corner_radius_all(int(BTN / 2.0))
 		_btn.add_theme_stylebox_override(st[i], sb)
 	_btn.pressed.connect(func(): _set_open(not _open, true))

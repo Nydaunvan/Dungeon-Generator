@@ -106,12 +106,31 @@ static func _scrollbars(th: Theme) -> void:
 		sb.content_margin_top = 12.0
 		sb.content_margin_bottom = 12.0
 		return sb
+	# ascenseurs Atlas Noir : filet de piste presque invisible, petit curseur fin et lumineux (ambre pâle)
+	var atrack := StyleBoxFlat.new()
+	atrack.bg_color = Color(0.85, 0.75, 0.55, 0.07)
+	atrack.set_corner_radius_all(2)
+	atrack.content_margin_left = 3.0
+	atrack.content_margin_right = 3.0
+	atrack.content_margin_top = 3.0
+	atrack.content_margin_bottom = 3.0
+	atrack.expand_margin_left = -1.0
+	atrack.expand_margin_right = -1.0
+	var agrab := func(c: Color) -> StyleBoxFlat:
+		var g := StyleBoxFlat.new()
+		g.bg_color = c
+		g.set_corner_radius_all(2)
+		g.content_margin_left = 3.0
+		g.content_margin_right = 3.0
+		g.content_margin_top = 8.0
+		g.content_margin_bottom = 8.0
+		return g
 	for bar in ["VScrollBar", "HScrollBar"]:
-		th.set_stylebox("scroll", bar, track)
-		th.set_stylebox("scroll_focus", bar, track)
-		th.set_stylebox("grabber", bar, grab.call(Color("4a3a28"), Color("2a2119")))
-		th.set_stylebox("grabber_highlight", bar, grab.call(Color("5e4a32"), Color("352a1e")))
-		th.set_stylebox("grabber_pressed", bar, grab.call(Color("6e5638"), Color("3c2f22")))
+		th.set_stylebox("scroll", bar, atrack)
+		th.set_stylebox("scroll_focus", bar, atrack)
+		th.set_stylebox("grabber", bar, agrab.call(Color("c9a55f")))
+		th.set_stylebox("grabber_highlight", bar, agrab.call(Color("f0c56a")))
+		th.set_stylebox("grabber_pressed", bar, agrab.call(Color("ffe08a")))
 
 static func shared() -> Theme:
 	if _shared == null:

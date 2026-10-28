@@ -3730,7 +3730,9 @@
   "ui.atlas.journal": "Event log",
   "ui.atlas.inventory_title": "Shared inventory",
   "ui.atlas.title_main": "Dungeon",
-  "ui.atlas.title_sub": "Atlas Noir"
+  "ui.atlas.title_sub": "Atlas Noir",
+  "ui.atlas.guide_tip": "Game guide",
+  "ui.atlas.menu_tip": "Menu: home, account, language, quit"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

@@ -53,6 +53,8 @@ const PATHS := {
 	"puzzle": '<path d="M9 4h6v4a2 2 0 1 1 0 4v4H9v-4a2 2 0 1 0 0-4z"/>',
 	"atelier": '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',
 	"map": '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
+	"book": '<path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v13c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v13"/>',
+	"gear": '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="6.5"/>',
 	"chest": '<path d="M4 10h16v10H4z"/><path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4M12 13v3"/>',
 	"shield": '<path d="M12 3l8 3v6c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V6z"/>',
 	"trend": '<path d="M4 18l5-6 4 3 7-9M15 6h5v5"/>',

@@ -37,15 +37,17 @@ func _init(title: String = "", modal: bool = false) -> void:
 		fv.spacing_glyph = 0 if modal else 2
 		title_label.add_theme_font_override("font", fv)
 		title_label.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.15)) if modal else 13)
-		title_label.add_theme_color_override("font_color", Color("ffd88a") if modal else Color("d9b56e"))
+		title_label.add_theme_color_override("font_color", (Atlas.IVORY if Atlas.skin else Color("ffd88a")) if modal else (Atlas.IVORY if Atlas.skin else Color("d9b56e")))
+		if Atlas.skin:
+			title_label.add_theme_font_override("font", Atlas.title_font(false, 2))
 		title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if modal else TextServer.AUTOWRAP_OFF
 		title_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
 		title_label.add_theme_constant_override("outline_size", 2)
 		title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		header_row.add_child(title_label)
 		var sep := ColorRect.new()
-		sep.color = Color("070504")
-		sep.custom_minimum_size = Vector2(0, 2)
+		sep.color = Color(Atlas.COPPER, 0.5) if Atlas.skin else Color("070504")
+		sep.custom_minimum_size = Vector2(0, 1 if Atlas.skin else 2)
 		v.add_child(sep)
 		var hi := ColorRect.new()
 		hi.color = Color(1, 0.9, 0.75, 0.08)

@@ -56,6 +56,8 @@ func _rr(ci: RID, rect: Rect2, radius: float, col: Color) -> void:
 	RenderingServer.canvas_item_add_polygon(ci, p, PackedColorArray([col]))
 
 static func button_styles(glow_hover := Color("e8b45c"), variant := "iron") -> Dictionary:
+	if Atlas.skin:
+		return Atlas.button_boxes("danger" if variant == "flee" else "", UiMetrics.css(8.0))
 	var n := IronBox.new()
 	var h := IronBox.new()
 	var p := IronBox.new()
@@ -79,6 +81,8 @@ static func button_styles(glow_hover := Color("e8b45c"), variant := "iron") -> D
 
 ## Boutons de fenêtre (.modal-actions>button) : fer riveté ; « primary » = filet or et texte or vif.
 static func modal_styles(primary: bool) -> Dictionary:
+	if Atlas.skin:
+		return Atlas.button_boxes("accent" if primary else "", UiMetrics.css(10.0))
 	var n := IronBox.new()
 	var h := IronBox.new()
 	var p := IronBox.new()

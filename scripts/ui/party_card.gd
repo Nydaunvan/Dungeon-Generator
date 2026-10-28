@@ -18,6 +18,8 @@ var targetable: bool = false
 var dead: bool = false
 var ring_override: Color = Color(0, 0, 0, 0)    # filet du portrait teinté par un statut
 var f: float = 1.0
+var _hover: bool = false
+var _over: Overlay
 
 var pic: TextureRect
 var badge: Label                    # conservée pour compatibilité (remplacée par la rangée de pastilles)
@@ -87,6 +89,16 @@ func _init() -> void:
 	dead_lbl.visible = false
 	dead_lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	dead_lbl.add_theme_constant_override("outline_size", 4)
+	_over = Overlay.new(self)
+	add_child(_over)
+	mouse_entered.connect(func():
+		_hover = true
+		queue_redraw()
+		_over.queue_redraw())
+	mouse_exited.connect(func():
+		_hover = false
+		queue_redraw()
+		_over.queue_redraw())
 
 func _label(font: Font, col: Color) -> Label:
 	var l := Label.new()
@@ -119,6 +131,8 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_layout()
 		queue_redraw()
+		if _over != null:
+			_over.queue_redraw()
 
 ## Taille de police des pastilles de statut ; reconstruit la rangée si elle change.
 func _status_font(fs: int) -> void:
@@ -221,48 +235,75 @@ func _bar_at(b: TextBar, x: float, y: float, w: float, h: float, fs: float, text
 
 # ------------------------------------------------------------------ dessin
 
+## Fond de la fiche (sous le portrait) : surface noire translucide, repères des barres, surbrillance quand la souris survole une cible possible.
 func _draw() -> void:
+	if _over != null:
+		_over.queue_redraw()
+	var k := size.y / 100.0
+	var r := Rect2(Vector2.ZERO, size)
+	var cut := 22.0 * k
+	var corners := Vector4(1, 0, 0, 0) if active else Vector4(0, 0, 0, 0)
+	var top := Color(0.04, 0.05, 0.055, 0.88)
+	var bot := Color(0.025, 0.03, 0.034, 0.92)
+	if targetable and _hover:
+		top = Color(0.2, 0.15, 0.06, 0.92)
+		bot = Color(0.1, 0.075, 0.03, 0.94)
+	Atlas.draw_box(self, r, top, bot, Color(0, 0, 0, 0), 0.0, cut if active else 4.0, corners)
+	# petits repères en losange à gauche de chaque barre
+	var pr0 := _pic_rect()
+	var ix := pr0.end.x + 9.0 * k + 5.5 * k
+	for bar in [hp, sta]:
+		var c2 := Vector2(ix, bar.position.y + bar.size.y * 0.5)
+		var rr := 5.5 * k
+		draw_colored_polygon(PackedVector2Array([c2 + Vector2(0, -rr), c2 + Vector2(rr, 0), c2 + Vector2(0, rr), c2 + Vector2(-rr, 0)]), Color(0.08, 0.1, 0.1, 0.95))
+		var inner: Color = hp.get_theme_stylebox("fill").color if bar == hp else sta.get_theme_stylebox("fill").color
+		draw_colored_polygon(PackedVector2Array([c2 + Vector2(0, -rr * 0.55), c2 + Vector2(rr * 0.55, 0), c2 + Vector2(0, rr * 0.55), c2 + Vector2(-rr * 0.55, 0)]), inner.lightened(0.25))
+
+## Cadre de la fiche, dessiné AU-DESSUS du portrait : la bordure (et, pour la fiche active, le coin haut-gauche coupé en biais)
+## recouvre le coin de la photo au lieu de passer dessous.
+func _draw_top(ci: CanvasItem) -> void:
 	var k := size.y / 100.0
 	var r := Rect2(Vector2.ZERO, size)
 	var lit := active or targetable
+	var hot := targetable and _hover
 	var sk := Unlocks.skin_color()
-	var edge: Color = Atlas.AMBER if active else (Atlas.AMBER_DIM if targetable else Atlas.COPPER_DIM)
+	var edge: Color = Atlas.AMBER if (active or hot) else (Atlas.AMBER_DIM if targetable else Atlas.COPPER_DIM)
 	if sk.a > 0.0 and not lit:
 		edge = sk.darkened(0.5)
 	elif sk.a > 0.0 and active:
 		edge = sk
 	var w := maxf(1.0, 1.4 * k) if lit else maxf(1.0, k)
-	# cadre : fond noir translucide ; la fiche active a le coin haut-gauche coupé en biais et un filet ambre
-	var cut := 12.0 * k
-	var corners := Vector4(1, 0, 0, 0) if active else Vector4(0, 0, 0, 0)
-	Atlas.draw_box(self, r, Color(0.04, 0.05, 0.055, 0.88), Color(0.025, 0.03, 0.034, 0.92), edge, w, cut if active else 4.0, corners)
+	if hot:
+		w = maxf(2.0, 2.2 * k)
+	# filet du portrait (teinté par un statut, ambre si actif)
+	var pr := _pic_rect()
+	var pe: Color = ring_override if ring_override.a > 0.0 else (Atlas.AMBER if active else Atlas.COPPER_DIM)
+	ci.draw_rect(pr.grow(maxf(1.0, 1.5 * k)), pe, false, maxf(1.0, k * (1.6 if ring_override.a > 0.0 else 1.0)))
+	var cut := 22.0 * k
 	if active:
-		draw_line(Vector2(w + 1.0, cut + 5.0 * k), Vector2(cut + 5.0 * k, w + 1.0), Color(Atlas.AMBER, 0.8), 1.0, true)
+		# le coin de la photo disparaît sous le coin coupé de la fiche
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(0, 0), Vector2(cut, 0), Vector2(0, cut)]), Color("07090a"))
+		var line := PackedVector2Array([Vector2(0, cut), Vector2(cut, 0), Vector2(size.x, 0), Vector2(size.x, size.y), Vector2(0, size.y), Vector2(0, cut)])
+		ci.draw_polyline(line, edge, w, true)
+		ci.draw_line(Vector2(w + 1.0, cut + 6.0 * k), Vector2(cut + 6.0 * k, w + 1.0), Color(Atlas.AMBER, 0.8), 1.0, true)
+		Atlas.draw_diamond(ci, Vector2(0.0, size.y * 0.5), 5.0 * k, Atlas.AMBER)
 	else:
+		var line2 := PackedVector2Array([Vector2(0, 0), Vector2(size.x, 0), Vector2(size.x, size.y), Vector2(0, size.y), Vector2(0, 0)])
+		ci.draw_polyline(line2, edge, w, true)
 		# équerres intérieures aux angles (repères de cartographie)
 		var m := 4.0 * k
 		var l := 7.0 * k
 		var mc := Color(Atlas.COPPER, 0.55)
-		draw_polyline(PackedVector2Array([Vector2(size.x - m - l, m), Vector2(size.x - m, m), Vector2(size.x - m, m + l)]), mc, 1.0, true)
-		draw_polyline(PackedVector2Array([Vector2(size.x - m - l, size.y - m), Vector2(size.x - m, size.y - m), Vector2(size.x - m, size.y - m - l)]), mc, 1.0, true)
-	# petits repères en losange à gauche de chaque barre
-	var k2 := size.y / 100.0
-	var pr0 := _pic_rect()
-	var ix := pr0.end.x + 9.0 * k2 + 5.5 * k2
-	for bar in [hp, sta]:
-		var c2 := Vector2(ix, bar.position.y + bar.size.y * 0.5)
-		var rr := 5.5 * k2
-		draw_colored_polygon(PackedVector2Array([c2 + Vector2(0, -rr), c2 + Vector2(rr, 0), c2 + Vector2(0, rr), c2 + Vector2(-rr, 0)]), Color(0.08, 0.1, 0.1, 0.95))
-		var inner: Color = hp.get_theme_stylebox("fill").color if bar == hp else sta.get_theme_stylebox("fill").color
-		draw_colored_polygon(PackedVector2Array([c2 + Vector2(0, -rr * 0.55), c2 + Vector2(rr * 0.55, 0), c2 + Vector2(0, rr * 0.55), c2 + Vector2(-rr * 0.55, 0)]), inner.lightened(0.25))
-	# portrait : filet fin (teinté par un statut, ambre si actif)
-	var pr := _pic_rect()
-	var pe: Color = ring_override if ring_override.a > 0.0 else (Atlas.AMBER if active else Atlas.COPPER_DIM)
-	draw_rect(pr.grow(maxf(1.0, 1.5 * k)), Color("070908"))
-	draw_rect(pr, Atlas.OBSIDIAN_DEEP)
-	draw_rect(pr.grow(maxf(1.0, 1.5 * k)), pe, false, maxf(1.0, k * (1.6 if ring_override.a > 0.0 else 1.0)))
-	# repère de sélection : losange sur le bord gauche
-	if active:
-		Atlas.draw_diamond(self, Vector2(0.0, size.y * 0.5), 5.0 * k, Atlas.AMBER)
+		ci.draw_polyline(PackedVector2Array([Vector2(size.x - m - l, m), Vector2(size.x - m, m), Vector2(size.x - m, m + l)]), mc, 1.0, true)
+		ci.draw_polyline(PackedVector2Array([Vector2(size.x - m - l, size.y - m), Vector2(size.x - m, size.y - m), Vector2(size.x - m, size.y - m - l)]), mc, 1.0, true)
 	if dead:
-		draw_colored_polygon(Atlas.chamfer(r, 8.0 * k), Color(0.55, 0.08, 0.08, 0.45))
+		ci.draw_colored_polygon(Atlas.chamfer(r, 8.0 * k), Color(0.55, 0.08, 0.08, 0.45))
+
+class Overlay extends Control:
+	var card: PartyCard
+	func _init(c: PartyCard) -> void:
+		card = c
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	func _draw() -> void:
+		card._draw_top(self)

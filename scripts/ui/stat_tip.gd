@@ -109,7 +109,7 @@ func _card(s: Dictionary, outer: float) -> Control:
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(1, 1, 1, 0.035)
-	sb.border_color = Color("4a3a24")
+	sb.border_color = Atlas.COPPER_DIM
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(4)
 	sb.set_content_margin_all(8)

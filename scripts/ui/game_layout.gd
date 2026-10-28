@@ -808,7 +808,10 @@ func _rebuild() -> void:
 		rcol.name = "RCol"
 		rcol.alignment = BoxContainer.ALIGNMENT_END
 		bottom.add_child(rcol)
-		rcol.add_child(strip)
+		var smargin := MarginContainer.new()
+		smargin.add_theme_constant_override("margin_left", int(UiMetrics.css(28.0)))
+		rcol.add_child(smargin)
+		smargin.add_child(strip)
 		var rpad := Control.new()
 		rpad.name = "RPad"
 		rpad.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -855,10 +858,10 @@ func _size_widgets() -> void:
 	_margin("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
 	hud.custom_minimum_size = Vector2(0, PartyHud.wanted_height())
-	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
+	queue.set_target_height(44.0 if _portrait else clampf(h * 0.058, 30.0, 50.0))
 	header.rescale()
 	var rw := UiMetrics.css(clampf(0.19 * w + 55.0, 270.0, 410.0))
-	var lw := UiMetrics.css(clampf(0.17 * w + 20.0, 230.0, 330.0)) if not _compact else 0.0
+	var lw := UiMetrics.css(clampf(0.125 * w + 12.0, 190.0, 250.0)) if not _compact else 0.0
 	var gp := UiMetrics.css(10.0)
 	var right: Node = _root.find_child("Right", true, false)
 	if right:
@@ -944,7 +947,7 @@ func set_ranked_timer(text: String, color: Color) -> void:
 
 func set_level_name(text: String) -> void:
 	level_label.text = text
-	header.set_level(L.fa(L.t("ui.atlas.level_n"), gs.level_index + 1), text)
+	header.set_level(L.fa(L.t("ui.atlas.level_n"), gs.level_index + 1), str(gs.cfg.get("title", "")) if str(gs.cfg.get("title", "")) != "" else text)
 	if type_badge != null:
 		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, RankedRun.mode_label(gs.cfg))
 

@@ -31,27 +31,17 @@ class TipBox extends StyleBox:
 				p.append(c[0] + Vector2(cos(a), sin(a)) * rr)
 		RenderingServer.canvas_item_add_polygon(ci, p, PackedColorArray([col]))
 	func _draw(ci: RID, rect: Rect2) -> void:
-		for i in 7:   # ombre douce (0 8px 22px rgba(0,0,0,.7))
-			var e := 4.0 + i * 2.6
-			_rr(ci, Rect2(rect.position + Vector2(-e, -e + 6.0), rect.size + Vector2(e, e) * 2.0), 6.0 + e, Color(0, 0, 0, 0.085))
-		_rr(ci, rect.grow(3.0), 7.0, Color("3a2a12"))
-		_rr(ci, rect.grow(2.0), 6.0, Color("120c06"))
-		_rr(ci, rect, 4.0, Color("e8b45c"))
-		var inner := rect.grow(-1.0)
-		var n := 12
-		for i in n:
-			var t := float(i) / float(n - 1)
-			var c := Color("241a0f").lerp(Color("120c06"), clampf(t / 0.85, 0.0, 1.0))
-			var y0 := inner.position.y + inner.size.y * i / n
-			var y1 := inner.position.y + inner.size.y * (i + 1) / n + (0.6 if i < n - 1 else 0.0)    # pas de débordement sur le filet du bas
-			RenderingServer.canvas_item_add_rect(ci, Rect2(inner.position.x + 1.0, y0, inner.size.x - 2.0, y1 - y0), c)
-		# filet or redessiné par-dessus sur les quatre côtés (le dégradé ne doit jamais masquer celui du bas)
-		var gold := Color("e8b45c")
-		var th := 1.5
-		RenderingServer.canvas_item_add_rect(ci, Rect2(rect.position.x + 3.0, rect.position.y, rect.size.x - 6.0, th), gold)
-		RenderingServer.canvas_item_add_rect(ci, Rect2(rect.position.x + 3.0, rect.end.y - th, rect.size.x - 6.0, th), gold)
-		RenderingServer.canvas_item_add_rect(ci, Rect2(rect.position.x, rect.position.y + 3.0, th, rect.size.y - 6.0), gold)
-		RenderingServer.canvas_item_add_rect(ci, Rect2(rect.end.x - th, rect.position.y + 3.0, th, rect.size.y - 6.0), gold)
+		for i in 5:   # ombre douce
+			var e := 3.0 + i * 2.4
+			_rr(ci, Rect2(rect.position + Vector2(-e, -e + 5.0), rect.size + Vector2(e, e) * 2.0), 6.0 + e, Color(0, 0, 0, 0.09))
+		var ab := AtlasBox.new()
+		ab.fill_top = Color("151917")
+		ab.fill_bottom = Atlas.OBSIDIAN
+		ab.border = Atlas.COPPER
+		ab.cut = 7.0
+		ab.marks = Color(Atlas.COPPER_DIM, 0.9)
+		ab.mark_len = 7.0
+		ab._draw(ci, rect)
 	func _get_minimum_size() -> Vector2:
 		return Vector2(24.0, 18.0)
 

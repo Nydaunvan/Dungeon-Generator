@@ -125,6 +125,7 @@ func _exit_tree() -> void:
 	Merchant3D.clear_pool()
 
 func _ready() -> void:
+	Atlas.skin = true
 	Data.game_scale_mode = true
 	var cfg: Dictionary = Data.active()
 	print("Donjon : ", cfg.get("title", "?"))

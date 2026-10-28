@@ -30,6 +30,8 @@ const F_BODY_BOLD := "res://assets/fonts/Spectral-SemiBold.ttf"
 const F_BODY_ITALIC := "res://assets/fonts/Spectral-Italic.ttf"
 
 static var _spaced: Dictionary = {}
+## Vrai dans la scène de jeu : les cadres hérités (FrameBox, IronBox, OrnatePanel) prennent alors l'apparence Atlas Noir. Faux sur l'accueil et le hub (migrés plus tard).
+static var skin: bool = false
 
 static func font(path: String) -> Font:
 	return UiTheme.font(path)

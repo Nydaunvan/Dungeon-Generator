@@ -18,6 +18,7 @@ var inner_shadow: float = 22.0    # px CSS (0 = aucune)
 var inner_alpha: float = 0.8
 var pad_css := Vector4(10, 10, 12, 10)   # padding CSS (gauche, haut, droite, bas)
 var _tex: Texture2D
+var _atlas: bool = false
 var _b: float = 18.0               # bordure en px de conception
 
 func _init(border: float = 18.0, padding: Vector4 = Vector4(10, 10, 12, 10), fill_color: Color = Color("1d1813")) -> void:
@@ -29,6 +30,15 @@ func _init(border: float = 18.0, padding: Vector4 = Vector4(10, 10, 12, 10), fil
 
 func rescale() -> void:
 	_b = UiMetrics.css(border_css)
+	if Atlas.skin:
+		_atlas = true
+		_b = UiMetrics.css(border_css * 0.35)
+		content_margin_left = _b + UiMetrics.css(pad_css.x)
+		content_margin_top = _b + UiMetrics.css(pad_css.y)
+		content_margin_right = _b + UiMetrics.css(pad_css.z)
+		content_margin_bottom = _b + UiMetrics.css(pad_css.w)
+		emit_changed()
+		return
 	var real := maxi(4, roundi(_b * UiMetrics.s))
 	if not _cache.has(real):
 		if _base == null:
@@ -77,6 +87,9 @@ static func draw_grime(ci: RID, area: Rect2, alpha: float = 1.0) -> void:
 		y += tile
 
 func _draw(ci: RID, rect: Rect2) -> void:
+	if _atlas:
+		_draw_atlas(ci, rect)
+		return
 	var b := _b
 	var inner := Rect2(rect.position + Vector2(b, b), rect.size - Vector2(b, b) * 2.0)
 	if inner.size.x > 0.0 and inner.size.y > 0.0:
@@ -117,6 +130,26 @@ func _draw(ci: RID, rect: Rect2) -> void:
 	ci_add.call(Rect2(P + Vector2(b, S.y - b), Vector2(S.x - b * 2, b)), Rect2(tw, tw * 2, tw, tw))
 	ci_add.call(Rect2(P + Vector2(0, b), Vector2(b, S.y - b * 2)), Rect2(0, tw, tw, tw))
 	ci_add.call(Rect2(P + Vector2(S.x - b, b), Vector2(b, S.y - b * 2)), Rect2(tw * 2, tw, tw, tw))
+
+## Apparence Atlas Noir : fond obsidienne, filet cuivre à angle coupé, équerres intérieures (plus de fer ni de bois).
+func _draw_atlas(ci: RID, rect: Rect2) -> void:
+	var pts := Atlas.chamfer(rect.grow(-0.5), 9.0, Vector4(1, 0, 1, 0))
+	var cols := PackedColorArray()
+	for p in pts:
+		cols.append(Color(0.035, 0.045, 0.05, 0.97).lerp(Color(0.015, 0.02, 0.024, 0.97), clampf((p.y - rect.position.y) / maxf(1.0, rect.size.y), 0.0, 1.0)))
+	RenderingServer.canvas_item_add_polygon(ci, pts, cols)
+	var line := pts.duplicate()
+	line.append(pts[0])
+	RenderingServer.canvas_item_add_polyline(ci, line, PackedColorArray([Color(Atlas.COPPER, 0.65)]), 1.0, true)
+	var m := 4.0
+	var l := 9.0
+	var x0 := rect.position.x + m
+	var y0 := rect.position.y + m
+	var x1 := rect.end.x - m
+	var y1 := rect.end.y - m
+	var mc := PackedColorArray([Color(Atlas.COPPER, 0.7)])
+	RenderingServer.canvas_item_add_polyline(ci, PackedVector2Array([Vector2(x1 - l, y0), Vector2(x1, y0), Vector2(x1, y0 + l)]), mc, 1.0, true)
+	RenderingServer.canvas_item_add_polyline(ci, PackedVector2Array([Vector2(x0, y1 - l), Vector2(x0, y1), Vector2(x0 + l, y1)]), mc, 1.0, true)
 
 func _get_minimum_size() -> Vector2:
 	return Vector2(content_margin_left + content_margin_right, content_margin_top + content_margin_bottom)
