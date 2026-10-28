@@ -48,10 +48,10 @@ static func _build_index(admin: Node) -> void:
 static func _collect(n: Node, section: String, panel: String) -> void:
 	for ch in n.get_children():
 		var p := panel
-		if ch is OrnatePanel and (ch as OrnatePanel).title_label != null:
-			p = (ch as OrnatePanel).title_label.text
-		elif ch is HFlowContainer and ch.get_child_count() >= 2 and ch.get_child(0) is Label and (ch.get_child(0) as Label).text != "":
-			_index.append({"section": section, "panel": panel, "label": (ch.get_child(0) as Label).text})
+		if ch.has_meta("panel_title"):
+			p = str(ch.get_meta("panel_title"))
+		elif ch.has_meta("setting"):
+			_index.append({"section": section, "panel": panel, "label": str(ch.get_meta("setting"))})
 		elif ch is CheckBox and (ch as CheckBox).text != "":
 			_index.append({"section": section, "panel": panel, "label": (ch as CheckBox).text})
 		_collect(ch, section, p)
@@ -303,9 +303,10 @@ static func _flash(admin: Node, text: String) -> void:
 
 static func _find(n: Node, text: String) -> Control:
 	for ch in n.get_children():
-		if (ch is Label and (ch as Label).text == text) or (ch is CheckBox and (ch as CheckBox).text == text):
-			var par := ch.get_parent()
-			return par as Control if par is HFlowContainer else ch as Control
+		if ch.has_meta("setting") and str(ch.get_meta("setting")) == text:
+			return ch as Control
+		if ch is CheckBox and (ch as CheckBox).text == text:
+			return ch as Control
 		var f := _find(ch, text)
 		if f != null:
 			return f

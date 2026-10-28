@@ -14,6 +14,9 @@ const GAP_BASE := 4.0           # séparation native du corps d'un OrnatePanel
 
 static var _mono: Font = null
 
+## Réglages affichés sur la page courante, pour « Remettre par défaut » : [{"p": chemin pointé, "d": valeur par défaut}, …].
+static var reg: Array = []
+
 ## Pose `c` dans `parent` avec les marges CSS verticales `mt` / `mb` (px), fusionnées avec celles du frère précédent.
 static func _place(parent: Control, c: Control, mt: float, mb: float) -> void:
 	if parent is VBoxContainer:
@@ -269,11 +272,165 @@ static func sub(target: Dictionary, key: String) -> Dictionary:
 		target[key] = {}
 	return target[key]
 
-## Panneau titré ajouté à `parent` ; renvoie le corps où poser les champs.
+## Panneau titré ajouté à `parent` : carte vitrée de l'atelier, titre en capitales dorées ; renvoie le corps où poser les champs.
 static func panel(parent: Control, title: String) -> VBoxContainer:
-	var p := OrnatePanel.new(title)
-	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if p.title_label != null:
-		p.title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT      # `.panel h3` : aligné à gauche
-	parent.add_child(p)
-	return p.body
+	var card := GameScreen.glass(20, 16)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.set_meta("panel_title", title)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	card.add_child(col)
+	var h := Label.new()
+	h.text = title.to_upper()
+	h.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_TITLE_BOLD, 2))
+	h.add_theme_font_size_override("font_size", 14)
+	h.add_theme_color_override("font_color", Color("e8b45c"))
+	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(h)
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", int(GAP_BASE))
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_top", 12)
+	m.add_child(body)
+	col.add_child(m)
+	# espace entre deux cartes consécutives
+	if parent is VBoxContainer and parent.get_child_count() > 0:
+		var sp := Control.new()
+		sp.custom_minimum_size = Vector2(0, UiMetrics.css(14.0))
+		parent.add_child(sp)
+	parent.add_child(card)
+	return body
+
+# ------------------------------------------------------------------ réglages en ligne (curseur + valeur + « par défaut »)
+
+static var _dot: Texture2D = null
+
+static func _dot_tex() -> Texture2D:
+	if _dot == null:
+		var img := Image.create(22, 22, false, Image.FORMAT_RGBA8)
+		for y in 22:
+			for x in 22:
+				var d := Vector2(x + 0.5, y + 0.5).distance_to(Vector2(11, 11))
+				var a := clampf(11.0 - d, 0.0, 1.0)
+				var col := Color("e8b45c") if d < 8.0 else Color("2a1a06")
+				img.set_pixel(x, y, Color(col.r, col.g, col.b, a))
+		_dot = ImageTexture.create_from_image(img)
+	return _dot
+
+static func _slider_style(slider: HSlider) -> void:
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color("3a2c18")
+	track.set_corner_radius_all(3)
+	track.content_margin_top = 3
+	track.content_margin_bottom = 3
+	slider.add_theme_stylebox_override("slider", track)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("e8b45c")
+	fill.set_corner_radius_all(3)
+	fill.content_margin_top = 3
+	fill.content_margin_bottom = 3
+	slider.add_theme_stylebox_override("grabber_area", fill)
+	slider.add_theme_stylebox_override("grabber_area_highlight", fill)
+	for k in ["grabber", "grabber_highlight", "grabber_disabled"]:
+		slider.add_theme_icon_override(k, _dot_tex())
+
+## Réglage numérique d'une page de règles : libellé, curseur, valeur modifiable, et rappel « par défaut » dès que la valeur s'en écarte.
+## Renvoie le SpinBox (la valeur reste lue/écrite par l'appelant comme avec `num_row`).
+static func setting(parent: Control, label: String, value: float, lo: float, hi: float, step: float, def: float, unit: String = "") -> SpinBox:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
+	h.custom_minimum_size = Vector2(0, UiMetrics.css(40.0))
+	h.set_meta("setting", label)
+	var l := Label.new()
+	l.text = label
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(UiMetrics.css(150.0), 0)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.size_flags_stretch_ratio = 1.1
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color("e2d2b0"))
+	h.add_child(l)
+	var sl := HSlider.new()
+	sl.min_value = lo
+	sl.max_value = hi
+	sl.step = step
+	sl.custom_minimum_size = Vector2(UiMetrics.css(120.0), 24)
+	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sl.focus_mode = Control.FOCUS_NONE
+	sl.scrollable = false
+	_slider_style(sl)
+	h.add_child(sl)
+	var sp := SpinBox.new()
+	sp.min_value = lo
+	sp.max_value = hi
+	sp.step = step
+	sp.suffix = unit
+	sp.custom_minimum_size = Vector2(UiMetrics.css(96.0), 0)
+	sp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sp.get_line_edit().add_theme_font_size_override("font_size", int(round(UiMetrics.rem(0.85))))
+	sp.value = value
+	sl.value = value
+	h.add_child(sp)
+	var mk := Label.new()
+	mk.custom_minimum_size = Vector2(UiMetrics.css(118.0), 0)
+	mk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mk.add_theme_font_size_override("font_size", 12)
+	mk.add_theme_color_override("font_color", Color("e8b45c"))
+	mk.clip_text = true
+	var shown := str(def) if step < 1.0 else str(int(def))
+	mk.text = L.fa(L.t("ui.atelier.default_value"), shown + unit)
+	h.add_child(mk)
+	var refresh := func():
+		var mod := not is_equal_approx(sp.value, def)
+		mk.modulate.a = 1.0 if mod else 0.0
+		l.add_theme_color_override("font_color", Color("ffd88a") if mod else Color("e2d2b0"))
+	refresh.call()
+	sp.value_changed.connect(func(v: float):
+		sl.set_value_no_signal(v)
+		refresh.call())
+	sl.value_changed.connect(func(v: float): sp.value = v)
+	sp.set_meta("sl", sl)
+	sp.set_meta("refresh", refresh)
+	_place(parent, h, 0.0, 4.0)
+	return sp
+
+## Remet à jour curseur et rappel après un `set_value_no_signal` fait par l'appelant (valeur corrigée).
+static func sync_setting(sp: SpinBox, v: float) -> void:
+	sp.set_value_no_signal(v)
+	if sp.has_meta("sl"):
+		(sp.get_meta("sl") as HSlider).set_value_no_signal(v)
+	if sp.has_meta("refresh"):
+		(sp.get_meta("refresh") as Callable).call()
+
+## Enregistrement automatique : toute modification d'un champ de `root` relance `act` après une courte pause
+## (champs texte : à la validation ou en quittant le champ). Remplace les anciens boutons « Enregistrer ».
+static func autosave(root: Control, act: Callable) -> void:
+	var t := Timer.new()
+	t.one_shot = true
+	t.wait_time = 0.5
+	root.add_child(t)
+	t.timeout.connect(act)
+	_wire(root, t)
+
+static func _wire(n: Node, t: Timer) -> void:
+	for ch in n.get_children():
+		if ch is SpinBox:
+			(ch as SpinBox).value_changed.connect(func(_v): t.start())
+			continue
+		if ch is CheckBox:
+			(ch as CheckBox).toggled.connect(func(_on): t.start())
+		elif ch is OptionButton:
+			(ch as OptionButton).item_selected.connect(func(_i): t.start())
+		elif ch is LineEdit:
+			var le := ch as LineEdit
+			var last := {"v": le.text}
+			var fire := func(_x = ""):
+				if le.text != last.v:
+					last.v = le.text
+					t.start()
+			le.text_submitted.connect(fire)
+			le.focus_exited.connect(fire)
+		_wire(ch, t)

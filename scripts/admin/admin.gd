@@ -337,8 +337,24 @@ func _select_tab(id: String) -> void:
 	for ch in _content_host.get_children():
 		ch.queue_free()
 	admin_status = null
+	Form.reg.clear()
 	if id != "home" and id != "party":
-		Atelier.page_header(_content_host, id)
+		var hr := Atelier.page_header(_content_host, id)
+		admin_status = Label.new()
+		admin_status.text = L.t("ui.atelier.autosave")
+		admin_status.add_theme_font_size_override("font_size", 12)
+		admin_status.add_theme_color_override("font_color", Color("9a8863"))
+		admin_status.size_flags_vertical = Control.SIZE_SHRINK_END
+		hr.add_child(admin_status)
+		if AdminGeneral.PAGES.has(id) and id != "share" and id != "identity":
+			var rb := Button.new()
+			rb.text = L.t("ui.atelier.reset_page")
+			rb.focus_mode = Control.FOCUS_NONE
+			rb.size_flags_vertical = Control.SIZE_SHRINK_END
+			rb.add_theme_font_size_override("font_size", 13)
+			rb.pressed.connect(func():
+				Dialogs.confirm(_modal_layer, "", L.t("ui.atelier.reset_confirm"), func(): AdminGeneral.reset_page(self)))
+			hr.add_child(rb)
 	match id:
 		"home": AtelierHome.build(_content_host, self)
 		"levels": AdminLevels.build(_content_host, self)

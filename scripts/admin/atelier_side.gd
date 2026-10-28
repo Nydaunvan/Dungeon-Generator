@@ -82,7 +82,7 @@ func _init() -> void:
 func _search_field() -> Control:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
-	b.text = L.t("ui.atelier.search")
+	b.text = L.t("ui.atelier.search_short")
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.icon = GameIcons.tex("search", 32, MUTED, 1.8)
 	b.add_theme_constant_override("icon_max_width", 16)
