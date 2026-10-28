@@ -246,8 +246,8 @@ func _draw() -> void:
 	var top := Color(0.04, 0.05, 0.055, 0.88)
 	var bot := Color(0.025, 0.03, 0.034, 0.92)
 	if targetable and _hover:
-		top = Color(0.2, 0.15, 0.06, 0.92)
-		bot = Color(0.1, 0.075, 0.03, 0.94)
+		top = Color(0.42, 0.29, 0.09, 0.95)
+		bot = Color(0.22, 0.14, 0.04, 0.96)
 	Atlas.draw_box(self, r, top, bot, Color(0, 0, 0, 0), 0.0, cut if active else 4.0, corners)
 	# petits repères en losange à gauche de chaque barre
 	var pr0 := _pic_rect()
@@ -267,14 +267,22 @@ func _draw_top(ci: CanvasItem) -> void:
 	var lit := active or targetable
 	var hot := targetable and _hover
 	var sk := Unlocks.skin_color()
-	var edge: Color = Atlas.AMBER if (active or hot) else (Atlas.AMBER_DIM if targetable else Atlas.COPPER_DIM)
+	var edge: Color = Atlas.AMBER if (active or hot) else (Color(Atlas.AMBER, 0.75) if targetable else Atlas.COPPER_DIM)
 	if sk.a > 0.0 and not lit:
 		edge = sk.darkened(0.5)
 	elif sk.a > 0.0 and active:
 		edge = sk
 	var w := maxf(1.0, 1.4 * k) if lit else maxf(1.0, k)
 	if hot:
-		w = maxf(2.0, 2.2 * k)
+		w = maxf(3.0, 3.2 * k)
+		# halo ambre débordant du cadre + repères d'angle : la cible visée saute aux yeux
+		for g in 5:
+			ci.draw_rect(r.grow(1.0 + g * 1.8), Color(Atlas.AMBER, 0.34 - g * 0.06), false, 2.0)
+		var bl := 14.0 * k
+		for cp in [[Vector2(0, 0), Vector2(1, 1)], [Vector2(size.x, 0), Vector2(-1, 1)], [Vector2(0, size.y), Vector2(1, -1)], [Vector2(size.x, size.y), Vector2(-1, -1)]]:
+			var o: Vector2 = cp[0]
+			var dd: Vector2 = cp[1]
+			ci.draw_polyline(PackedVector2Array([o + Vector2(dd.x * bl, 0) + Vector2(0, dd.y * -3.0), o + Vector2(0, dd.y * -3.0) + Vector2(dd.x * -3.0, 0), o + Vector2(dd.x * -3.0, dd.y * bl)]), Color(1.0, 0.88, 0.5), 2.0, true)
 	# filet du portrait (teinté par un statut, ambre si actif)
 	var pr := _pic_rect()
 	var pe: Color = ring_override if ring_override.a > 0.0 else (Atlas.AMBER if active else Atlas.COPPER_DIM)

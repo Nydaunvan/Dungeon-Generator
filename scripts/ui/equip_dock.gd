@@ -113,7 +113,7 @@ func open_for(id: String, select_item: Dictionary = {}) -> void:
 	ctrl.select_char(id)
 	sel = {}
 	if not select_item.is_empty():
-		tab = Inventory.tab_of(select_item)
+		tab = Inventory.group_of(select_item)
 		sel = {"src": "bag", "key": _key_of(select_item)}
 	Crumbs.mark("inventaire ouvert %s" % id)
 	_slide_in()
@@ -146,7 +146,7 @@ func replay_show(id: String, bag_idx: int = -1, slot: String = "", on_tab: Strin
 		tab = on_tab
 	if bag_idx >= 0 and bag_idx < gs.inventory.size():
 		var it: Dictionary = gs.inventory[bag_idx]
-		tab = Inventory.tab_of(it)
+		tab = Inventory.group_of(it)
 		sel = {"src": "bag", "key": _key_of(it)}
 	elif slot != "":
 		sel = {"src": "slot", "slot": slot}
@@ -245,7 +245,7 @@ func _entries() -> Array:
 	var seen := {}
 	for idx in gs.inventory.size():
 		var it: Dictionary = gs.inventory[idx]
-		if Inventory.tab_of(it) != tab:
+		if Inventory.group_of(it) != tab:
 			continue
 		var sk := Inventory.stack_key(it)
 		if sk != "":
@@ -662,7 +662,7 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	var cur := 0
 	for k in TABS.size():
 		defs.append([TABS[k][1], L.t(Inventory.TAB_LABELS[TABS[k][0]])])
-		counts.append(Inventory.tab_count(gs, TABS[k][0]))
+		counts.append(Vector2i(Inventory.group_count(gs, TABS[k][0]), Inventory.group_max(TABS[k][0])))
 		if TABS[k][0] == tab:
 			cur = k
 	var rail := BagCommon.Rail.new()
@@ -680,7 +680,7 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	grid.add_theme_constant_override("v_separation", 6)
 	body.add_child(grid)
 	var entries := _entries()
-	var total := maxi(Inventory.MAX_PER_TAB, int(ceil(entries.size() / 4.0)) * 4)
+	var total := maxi(Inventory.group_max(tab), int(ceil(entries.size() / 4.0)) * 4)
 	for i in total:
 		if i < entries.size():
 			var e: Dictionary = entries[i]

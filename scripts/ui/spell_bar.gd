@@ -1,5 +1,5 @@
 class_name SpellBar
-extends HBoxContainer
+extends GridContainer
 ## Emplacements de sorts (1 à 6) du personnage actif + disque d'attaque, en bronze rivé.
 ## Grisé tant que ce n'est pas le tour du personnage ; infobulle de sort au survol / appui long.
 
@@ -17,8 +17,9 @@ var _ids: Array = []
 func setup(state: GameState, controller: CombatController) -> void:
 	gs = state
 	ctrl = controller
-	alignment = BoxContainer.ALIGNMENT_BEGIN
-	add_theme_constant_override("separation", 0)    # l'espace entre disques vient de ressorts extensibles (voir _spring) : la largeur minimale ne dépend plus de la largeur actuelle
+	columns = SLOTS + 1
+	add_theme_constant_override("h_separation", 4)
+	add_theme_constant_override("v_separation", 2)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_attack = SpellDisc.new()
 	_attack.tone = "attack"
@@ -27,15 +28,16 @@ func setup(state: GameState, controller: CombatController) -> void:
 		SpellTip.show_attack(_attack, gs.char_by_id(gs.active_char_id), cost))
 	_attack.tip_hide.connect(SpellTip.hide_tip)
 	_attack.pressed.connect(func(): attack_pressed.emit())
+	_attack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_attack.set_caption(Keybinds.text("attack").get_slice(" ", 0))
 	add_child(_attack)
 	for i in SLOTS:
-		add_child(_spring())
 		var b := SpellDisc.new()
 		var idx := i
 		b.pressed.connect(func(): _slot_pressed(idx))
 		b.tip_show.connect(func(): _show_tip(idx))
 		b.tip_hide.connect(SpellTip.hide_tip)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.set_caption(Keybinds.text("slot_%d" % (i + 1)))
 		add_child(b)
 		_slots.append(b)
@@ -43,13 +45,12 @@ func setup(state: GameState, controller: CombatController) -> void:
 	ctrl.changed.connect(_refresh)
 	_apply_size()
 
-## Espace élastique entre deux disques (« space-between » de l'original) : minimum nul, il prend le reste de la largeur.
-func _spring() -> Control:
-	var c := Control.new()
-	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	c.custom_minimum_size = Vector2(2, 0)
-	return c
+## Allume le disque de la touche pressée (0 = attaque, 1… = sorts).
+func flash(slot: int) -> void:
+	if slot == 0:
+		_attack.flash()
+	elif slot - 1 < _slots.size():
+		_slots[slot - 1].flash()
 
 func _exit_tree() -> void:
 	SpellTip.hide_tip()
@@ -68,19 +69,23 @@ func _show_tip(i: int) -> void:
 
 var _last_w := -1.0
 
-## Cotes de l'original : disques de clamp(30px, 9cqw, 46px), répartis en « space-between » sur toute la largeur.
+## Disques plus gros qu'à l'origine : sur une seule rangée quand la largeur le permet (portrait), sinon sur deux rangées
+## (attaque + 3 sorts, puis 3 sorts) pour garder des disques de 42 à 54 px dans une colonne étroite.
 func _apply_size() -> void:
 	var w := roundf(size.x)
 	if w == _last_w or w <= 0.0:
 		return
 	_last_w = w
-	var s := UiMetrics.css(clampf(w / 8.2, 30.0, 48.0))
+	var single := w >= UiMetrics.css(7.0 * 46.0)
+	columns = (SLOTS + 1) if single else 4
+	var s := UiMetrics.css(clampf((w - 24.0) / float(columns), 40.0, 64.0 if single else 48.0))
 	slot_size = s
 	var cap := floorf(clampf(minf(s, 60.0) * 0.26, 9.0, 14.0)) + 4.0    # place du numéro de touche sous le disque
 	_attack.custom_minimum_size = Vector2(s, s + cap)
 	for b in _slots:
 		b.custom_minimum_size = Vector2(s, s + cap)
-	custom_minimum_size = Vector2(0, s + cap)
+	var rows := 1 if single else 2
+	custom_minimum_size = Vector2(0, rows * (s + cap) + (rows - 1) * 2.0)
 
 func _process(_d: float) -> void:
 	if ctrl != null and ctrl.combat != null:

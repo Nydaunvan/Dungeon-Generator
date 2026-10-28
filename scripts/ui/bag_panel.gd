@@ -14,11 +14,11 @@ const GAP := 6.0
 ## [id, icône, clé de libellé, types affichés (vide = tous), catégorie de capacité]
 const TABS := [
 	["all", "floor", "ui.atlas.tab_all", [], ""],
-	["weapon", "weapon", "ui.atlas.tab_weapons", ["weapon"], "items"],
-	["armor", "shield", "ui.atlas.tab_armor", ["armor", "jewelry"], "items"],
+	["weapon", "weapon", "ui.atlas.tab_weapons", ["weapon"], "weapons"],
+	["armor", "shield", "ui.atlas.tab_armor", ["armor", "jewelry"], "armors"],
 	["potion", "potion", "ui.atlas.tab_potions", ["potion"], "potions"],
+	["scroll", "scroll", "ui.atlas.tab_scrolls", ["scroll"], "scrolls"],
 	["key", "key", "ui.atlas.tab_keys", ["key"], "keys"],
-	["scroll", "scroll", "ui.atlas.tab_scrolls", ["scroll"], "keys"],
 ]
 var gs: GameState
 var _gold: Label
@@ -171,11 +171,11 @@ func refresh() -> void:
 	_sig = sig
 	_gold.text = L.fa(L.t("ui.shop_modal.pieces_or"), gs.gold)
 	var total := 0
-	for cat in ["items", "potions", "keys"]:
+	for cat in Inventory.CATS:
 		total += Inventory.tab_count(gs, cat)
 	var cat: String = TABS[_tab][4]
 	if cat == "":
-		_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * 3])
+		_total.text = L.fa(L.t("ui.bag.total"), [total, Inventory.MAX_PER_TAB * Inventory.CATS.size()])
 	else:    # onglet filtré : possédé / maximum de sa catégorie de capacité
 		_total.text = L.fa(L.t("ui.bag.total"), [Inventory.tab_count(gs, cat), Inventory.MAX_PER_TAB])
 	for b in _tab_btns:
@@ -205,7 +205,7 @@ func refresh() -> void:
 		b.custom_minimum_size = Vector2(16, _slot)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_grid.add_child(b)
-	var min_cells := COLS * 2
+	var min_cells := COLS * 2 if _tab == 0 else CAPACITY     # onglet filtré : les 12 emplacements de la catégorie sont visibles
 	var cells := maxi(min_cells, int(ceil(tiles.size() / float(COLS))) * COLS)
 	for _i in range(tiles.size(), cells):
 		var ec := BagCommon.empty_cell_atlas(_slot)

@@ -4,15 +4,38 @@ extends RefCounted
 
 const MAX_PER_TAB := 12
 const SLOT_LABELS := {"weapon": "common.arme", "head": "rules.inventory.tete", "body": "Torse", "hands": "Mains", "feet": "Pieds", "accessory": "common.bijou"}
-const TAB_LABELS := {"items": "rules.inventory.objets", "potions": "rules.inventory.potions", "keys": "rules.inventory.cles_parchemins"}
+## Catégories de capacité : MAX_PER_TAB emplacements chacune (armes, armures et bijoux, potions, parchemins, clés).
+const CATS := ["weapons", "armors", "potions", "scrolls", "keys"]
+## Regroupements de l'interface d'équipement et du marchand : onglets « items » (armes + armures), « potions », « keys » (parchemins + clés).
+const GROUPS := {"items": ["weapons", "armors"], "potions": ["potions"], "keys": ["scrolls", "keys"]}
+const TAB_LABELS := {"items": "rules.inventory.objets", "potions": "rules.inventory.potions", "keys": "rules.inventory.cles_parchemins",
+	"weapons": "ui.atlas.tab_weapons", "armors": "ui.atlas.tab_armor", "scrolls": "ui.atlas.tab_scrolls"}
 
+## Catégorie de capacité d'un objet (12 emplacements chacune).
 static func tab_of(it: Dictionary) -> String:
-	var t := str(it.get("type", ""))
-	if t == "potion":
-		return "potions"
-	if t == "key" or t == "scroll":
-		return "keys"
+	match str(it.get("type", "")):
+		"potion": return "potions"
+		"key": return "keys"
+		"scroll": return "scrolls"
+		"weapon": return "weapons"
+	return "armors"
+
+## Onglet groupé (interface d'équipement, marchand) auquel appartient un objet.
+static func group_of(it: Dictionary) -> String:
+	var c := tab_of(it)
+	for g in GROUPS:
+		if (GROUPS[g] as Array).has(c):
+			return g
 	return "items"
+
+static func group_count(gs: GameState, group: String) -> int:
+	var n := 0
+	for c in GROUPS.get(group, []):
+		n += tab_count(gs, str(c))
+	return n
+
+static func group_max(group: String) -> int:
+	return MAX_PER_TAB * (GROUPS.get(group, []) as Array).size()
 
 ## Clé de pile : potions simples et parchemins identiques occupent un seul emplacement.
 static func stack_key(it: Dictionary) -> String:
@@ -97,7 +120,7 @@ static func sort_tab(gs: GameState, tab: String, mode: String) -> void:
 	var entries: Array = []
 	for i in gs.inventory.size():
 		var it: Dictionary = gs.inventory[i]
-		if tab_of(it) == tab:
+		if group_of(it) == tab:
 			slots.append(i)
 			entries.append({"it": it, "n": entries.size()})
 	entries.sort_custom(func(a, b):

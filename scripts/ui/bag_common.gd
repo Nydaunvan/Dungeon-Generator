@@ -69,7 +69,7 @@ static func rail_tab(icon: String, size: Vector2, tip: String) -> Button:
 	b.set_meta("badge_label", l)
 	return b
 
-static func rail_style(b: Button, count: int, active: bool) -> void:
+static func rail_style(b: Button, count: int, active: bool, cap: int = Inventory.MAX_PER_TAB) -> void:
 	var mk := func(bg: Color, bd: Color) -> StyleBoxFlat:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = bg
@@ -87,7 +87,7 @@ static func rail_style(b: Button, count: int, active: bool) -> void:
 		b.add_theme_stylebox_override(st, mk.call(bg, bd))
 	for st in ["hover", "hover_pressed"]:
 		b.add_theme_stylebox_override(st, mk.call(bg.lightened(0.05), Color("a9793a") if active else Color("5a4631")))
-	var full := count >= Inventory.MAX_PER_TAB
+	var full := count >= cap
 	var bs := StyleBoxFlat.new()
 	bs.bg_color = Color("7a2a1c") if full else Color("080604")
 	bs.border_color = Color("ff7a62") if full else Color("5a4631")
@@ -141,7 +141,11 @@ class Rail extends Control:
 
 	func update(counts: Array, active: int) -> void:
 		for i in _btns.size():
-			BagCommon.rail_style(_btns[i], int(counts[i]), i == active)
+			var cv = counts[i]       # un entier, ou Vector2i(possédé, capacité) pour un onglet groupé
+			if cv is Vector2i:
+				BagCommon.rail_style(_btns[i], cv.x, i == active, cv.y)
+			else:
+				BagCommon.rail_style(_btns[i], int(cv), i == active)
 		if active != _active:
 			_active = active
 			if _tw != null and _tw.is_valid():

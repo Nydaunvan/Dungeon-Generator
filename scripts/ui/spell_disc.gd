@@ -32,6 +32,7 @@ var badge: String = ""          ## pastille discrète : icône du statut que le 
 var badge_bad: bool = true      ## statut nuisible (anneau rouge) ou bénéfique (anneau vert)
 var caption: String = ""       ## numéro de touche affiché sous le disque
 var _hover: bool = false
+var _flash: float = 0.0          ## 1 → 0 : disque « allumé » quand sa touche du clavier vient d'être pressée
 var _down: bool = false
 var _long: bool = false
 var _timer: Timer
@@ -58,6 +59,18 @@ func _init() -> void:
 		queue_redraw()
 		tip_hide.emit())
 	resized.connect(func(): pivot_offset = size * 0.5)
+
+## Allume le disque un court instant (appui sur la touche de clavier correspondante).
+func flash() -> void:
+	_flash = 1.0
+	set_process(true)
+	queue_redraw()
+
+func _process(d: float) -> void:
+	_flash = maxf(0.0, _flash - d / 0.45)
+	queue_redraw()
+	if _flash <= 0.0:
+		set_process(false)
 
 func _cap_font() -> int:
 	return int(clampf(minf(size.x, 60.0) * 0.26, 9.0, 14.0))
@@ -114,8 +127,8 @@ func _draw() -> void:
 	var cap_h := _cap_height()
 	var area := Vector2(size.x, size.y - cap_h)
 	var c := Vector2(size.x * 0.5, area.y * 0.5)
-	var r := minf(area.x, area.y) * 0.5 - 4.0
-	var hot := (_hover or highlight) and tone != "empty"
+	var r := minf(area.x, area.y) * 0.5 - 3.0
+	var hot := (_hover or highlight or _flash > 0.0) and tone != "empty"
 	if hot and not _down:
 		r += 1.0
 	var k := clampf(r / 23.0, 0.6, 2.2)
@@ -124,8 +137,11 @@ func _draw() -> void:
 		r *= 0.94
 	var body := Color("0a0c0b") if tone == "empty" else (Color("2a1a14") if tone == "attack" else Color("151a18"))
 	if hot:    # halo ambre autour du disque survolé / sélectionné
-		for i in 4:
-			draw_arc(c, r + 1.0 + i * 1.6 * k, 0.0, TAU, 56, Color(Atlas.AMBER, (0.20 - i * 0.045) * dim), 1.6 * k, true)
+		var gl := 1.0 + _flash * 1.6      # l'éclair de la touche pressée éclaire plus fort et élargit le halo
+		for i in 6:
+			draw_arc(c, r + 1.0 + i * 1.7 * k, 0.0, TAU, 56, Color(Atlas.AMBER, clampf((0.22 - i * 0.034) * gl, 0.0, 0.8) * dim), 1.8 * k, true)
+		if _flash > 0.0:
+			draw_circle(c, r, Color(Atlas.AMBER, 0.28 * _flash * dim), true, -1.0, true)
 	draw_circle(c, r, body * mod, true, -1.0, true)
 	# anneau extérieur en dégradé (cuivre éclairé en haut à gauche, ardoise sombre en bas à droite) ; ambre quand il est chaud
 	var lit := Atlas.AMBER if hot else (Atlas.COPPER if tone != "empty" else Atlas.COPPER_DIM)

@@ -446,7 +446,7 @@ static func _bag_text(gs: GameState) -> String:
 	var parts: Array = []
 	for c in CATS:
 		var nm := L.t("common.parchemins") if c[0] == "keys" else L.t(str(c[1]))
-		parts.append("%s %d/%d" % [nm, Inventory.tab_count(gs, str(c[0])), Inventory.MAX_PER_TAB])
+		parts.append("%s %d/%d" % [nm, Inventory.group_count(gs, str(c[0])), Inventory.group_max(str(c[0]))])
 	return L.t("ui.shop_modal.besace_label") + "  ·  ".join(parts)
 
 # ------------------------------------------------------------------ fiche de l'objet
@@ -954,7 +954,7 @@ static func _groups(items: Array, cat: String) -> Array:
 	var by_key := {}
 	for i in items.size():
 		var it: Dictionary = items[i]
-		if Inventory.tab_of(it) != cat:
+		if Inventory.group_of(it) != cat:
 			continue
 		var k := Inventory.stack_key(it)
 		if k == "":

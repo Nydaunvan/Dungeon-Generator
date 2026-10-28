@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+<defs>
+  <linearGradient id="lit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c4"/><stop offset=".45" stop-color="#e9bd78"/><stop offset="1" stop-color="#b9824a"/></linearGradient>
+  <linearGradient id="drk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c58f52"/><stop offset=".5" stop-color="#8d5b30"/><stop offset="1" stop-color="#4f3019"/></linearGradient>
+  <linearGradient id="litD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2b676"/><stop offset="1" stop-color="#8d5b30"/></linearGradient>
+  <linearGradient id="drkD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a6a3a"/><stop offset="1" stop-color="#3f2814"/></linearGradient>
+  <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0c98a"/><stop offset=".5" stop-color="#986a42"/><stop offset="1" stop-color="#3a2a1c"/></linearGradient>
+  <radialGradient id="disc" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#1a1410"/><stop offset=".75" stop-color="#0d0c0a"/><stop offset="1" stop-color="#070605"/></radialGradient>
+  <radialGradient id="jewel" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#fff6d8"/><stop offset=".5" stop-color="#e5ae52"/><stop offset="1" stop-color="#7a4d1f"/></radialGradient>
+  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9" result="b"/><feColorMatrix in="b" values="0 0 0 0 .9  0 0 0 0 .65  0 0 0 0 .3  0 0 0 .5 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <!-- pointe cardinale : deux facettes (éclairée à gauche, ombrée à droite) -->
+  <g id="cardinal">
+    <polygon points="500,52 442,442 500,500" fill="url(#lit)"/>
+    <polygon points="500,52 558,442 500,500" fill="url(#drk)"/>
+    <polyline points="500,52 442,442 500,500 558,442 500,52" fill="none" stroke="#fff0c4" stroke-opacity=".55" stroke-width="1.6" stroke-linejoin="round"/>
+    <line x1="500" y1="70" x2="500" y2="480" stroke="#fff6d8" stroke-opacity=".45" stroke-width="1.5"/>
+  </g>
+  <g id="inter">
+    <polygon points="500,250 462,462 500,500" fill="url(#litD)"/>
+    <polygon points="500,250 538,462 500,500" fill="url(#drkD)"/>
+    <polyline points="500,250 462,462 500,500 538,462 500,250" fill="none" stroke="#e2b676" stroke-opacity=".5" stroke-width="1.3" stroke-linejoin="round"/>
+  </g>
+  <g id="tickset">
+    <g stroke="#b9824a" stroke-linecap="round">
+      <g id="t5"><line x1="500" y1="158" x2="500" y2="172" stroke-width="2"/></g>
+    </g>
+  </g>
+</defs>
+
+<g filter="url(#glow)">
+  <!-- disque sombre -->
+  <circle cx="500" cy="500" r="342" fill="url(#disc)"/>
+  <!-- anneaux -->
+  <circle cx="500" cy="500" r="336" fill="none" stroke="url(#ring)" stroke-width="7"/>
+  <circle cx="500" cy="500" r="314" fill="none" stroke="#986a42" stroke-opacity=".8" stroke-width="2.5" stroke-dasharray="3 7"/>
+  <circle cx="500" cy="500" r="288" fill="none" stroke="url(#ring)" stroke-width="3.5" stroke-dasharray="520 34 520 34 520 34 520 34 520 34 520 34 520 34 520 34" transform="rotate(-90 500 500)" pathLength="4400"/>
+  <circle cx="500" cy="500" r="252" fill="none" stroke="#5a4129" stroke-width="2"/>
+  <circle cx="500" cy="500" r="176" fill="none" stroke="#5a4129" stroke-opacity=".7" stroke-width="1.5"/>
+
+  <!-- graduations : 72 traits, les 8 principaux plus longs -->
+  <g stroke="#986a42" stroke-linecap="round">
+    <g id="grad">
+<line x1="527.5" y1="185.2" x2="528.4" y2="175.2" stroke-width="1.4"/>
+<line x1="554.9" y1="188.8" x2="556.6" y2="179.0" stroke-width="1.4"/>
+<line x1="581.8" y1="194.8" x2="584.4" y2="185.1" stroke-width="1.4"/>
+<line x1="608.1" y1="203.1" x2="611.5" y2="193.7" stroke-width="1.4"/>
+<line x1="633.5" y1="213.6" x2="637.8" y2="204.5" stroke-width="1.4"/>
+<line x1="658.0" y1="226.3" x2="663.0" y2="217.7" stroke-width="1.4"/>
+<line x1="681.3" y1="241.1" x2="687.0" y2="233.0" stroke-width="1.4"/>
+<line x1="703.1" y1="257.9" x2="709.5" y2="250.3" stroke-width="1.4"/>
+<line x1="719.2" y1="280.8" x2="736.2" y2="263.8" stroke-width="2.6"/>
+<line x1="742.1" y1="296.9" x2="749.7" y2="290.5" stroke-width="1.4"/>
+<line x1="758.9" y1="318.7" x2="767.0" y2="313.0" stroke-width="1.4"/>
+<line x1="773.7" y1="342.0" x2="782.3" y2="337.0" stroke-width="1.4"/>
+<line x1="786.4" y1="366.5" x2="795.5" y2="362.2" stroke-width="1.4"/>
+<line x1="796.9" y1="391.9" x2="806.3" y2="388.5" stroke-width="1.4"/>
+<line x1="805.2" y1="418.2" x2="814.9" y2="415.6" stroke-width="1.4"/>
+<line x1="811.2" y1="445.1" x2="821.0" y2="443.4" stroke-width="1.4"/>
+<line x1="814.8" y1="472.5" x2="824.8" y2="471.6" stroke-width="1.4"/>
+<line x1="814.8" y1="527.5" x2="824.8" y2="528.4" stroke-width="1.4"/>
+<line x1="811.2" y1="554.9" x2="821.0" y2="556.6" stroke-width="1.4"/>
+<line x1="805.2" y1="581.8" x2="814.9" y2="584.4" stroke-width="1.4"/>
+<line x1="796.9" y1="608.1" x2="806.3" y2="611.5" stroke-width="1.4"/>
+<line x1="786.4" y1="633.5" x2="795.5" y2="637.8" stroke-width="1.4"/>
+<line x1="773.7" y1="658.0" x2="782.3" y2="663.0" stroke-width="1.4"/>
+<line x1="758.9" y1="681.3" x2="767.0" y2="687.0" stroke-width="1.4"/>
+<line x1="742.1" y1="703.1" x2="749.7" y2="709.5" stroke-width="1.4"/>
+<line x1="719.2" y1="719.2" x2="736.2" y2="736.2" stroke-width="2.6"/>
+<line x1="703.1" y1="742.1" x2="709.5" y2="749.7" stroke-width="1.4"/>
+<line x1="681.3" y1="758.9" x2="687.0" y2="767.0" stroke-width="1.4"/>
+<line x1="658.0" y1="773.7" x2="663.0" y2="782.3" stroke-width="1.4"/>
+<line x1="633.5" y1="786.4" x2="637.8" y2="795.5" stroke-width="1.4"/>
+<line x1="608.1" y1="796.9" x2="611.5" y2="806.3" stroke-width="1.4"/>
+<line x1="581.8" y1="805.2" x2="584.4" y2="814.9" stroke-width="1.4"/>
+<line x1="554.9" y1="811.2" x2="556.6" y2="821.0" stroke-width="1.4"/>
+<line x1="527.5" y1="814.8" x2="528.4" y2="824.8" stroke-width="1.4"/>
+<line x1="472.5" y1="814.8" x2="471.6" y2="824.8" stroke-width="1.4"/>
+<line x1="445.1" y1="811.2" x2="443.4" y2="821.0" stroke-width="1.4"/>
+<line x1="418.2" y1="805.2" x2="415.6" y2="814.9" stroke-width="1.4"/>
+<line x1="391.9" y1="796.9" x2="388.5" y2="806.3" stroke-width="1.4"/>
+<line x1="366.5" y1="786.4" x2="362.2" y2="795.5" stroke-width="1.4"/>
+<line x1="342.0" y1="773.7" x2="337.0" y2="782.3" stroke-width="1.4"/>
+<line x1="318.7" y1="758.9" x2="313.0" y2="767.0" stroke-width="1.4"/>
+<line x1="296.9" y1="742.1" x2="290.5" y2="749.7" stroke-width="1.4"/>
+<line x1="280.8" y1="719.2" x2="263.8" y2="736.2" stroke-width="2.6"/>
+<line x1="257.9" y1="703.1" x2="250.3" y2="709.5" stroke-width="1.4"/>
+<line x1="241.1" y1="681.3" x2="233.0" y2="687.0" stroke-width="1.4"/>
+<line x1="226.3" y1="658.0" x2="217.7" y2="663.0" stroke-width="1.4"/>
+<line x1="213.6" y1="633.5" x2="204.5" y2="637.8" stroke-width="1.4"/>
+<line x1="203.1" y1="608.1" x2="193.7" y2="611.5" stroke-width="1.4"/>
+<line x1="194.8" y1="581.8" x2="185.1" y2="584.4" stroke-width="1.4"/>
+<line x1="188.8" y1="554.9" x2="179.0" y2="556.6" stroke-width="1.4"/>
+<line x1="185.2" y1="527.5" x2="175.2" y2="528.4" stroke-width="1.4"/>
+<line x1="185.2" y1="472.5" x2="175.2" y2="471.6" stroke-width="1.4"/>
+<line x1="188.8" y1="445.1" x2="179.0" y2="443.4" stroke-width="1.4"/>
+<line x1="194.8" y1="418.2" x2="185.1" y2="415.6" stroke-width="1.4"/>
+<line x1="203.1" y1="391.9" x2="193.7" y2="388.5" stroke-width="1.4"/>
+<line x1="213.6" y1="366.5" x2="204.5" y2="362.2" stroke-width="1.4"/>
+<line x1="226.3" y1="342.0" x2="217.7" y2="337.0" stroke-width="1.4"/>
+<line x1="241.1" y1="318.7" x2="233.0" y2="313.0" stroke-width="1.4"/>
+<line x1="257.9" y1="296.9" x2="250.3" y2="290.5" stroke-width="1.4"/>
+<line x1="280.8" y1="280.8" x2="263.8" y2="263.8" stroke-width="2.6"/>
+<line x1="296.9" y1="257.9" x2="290.5" y2="250.3" stroke-width="1.4"/>
+<line x1="318.7" y1="241.1" x2="313.0" y2="233.0" stroke-width="1.4"/>
+<line x1="342.0" y1="226.3" x2="337.0" y2="217.7" stroke-width="1.4"/>
+<line x1="366.5" y1="213.6" x2="362.2" y2="204.5" stroke-width="1.4"/>
+<line x1="391.9" y1="203.1" x2="388.5" y2="193.7" stroke-width="1.4"/>
+<line x1="418.2" y1="194.8" x2="415.6" y2="185.1" stroke-width="1.4"/>
+<line x1="445.1" y1="188.8" x2="443.4" y2="179.0" stroke-width="1.4"/>
+<line x1="472.5" y1="185.2" x2="471.6" y2="175.2" stroke-width="1.4"/>
+    </g>
+  </g>
+
+  <!-- rayons fins intercardinaux avec petites barres d'extrémité -->
+  <g stroke="#c58f52" stroke-linecap="round" fill="none">
+<line x1="584.9" y1="415.1" x2="712.1" y2="287.9" stroke-width="2.4" stroke-opacity=".85"/>
+<line x1="722.0" y1="297.8" x2="702.2" y2="278.0" stroke-width="2.4"/>
+<circle cx="712.1" cy="287.9" r="4" fill="#e9bd78" stroke="none"/>
+<line x1="584.9" y1="584.9" x2="712.1" y2="712.1" stroke-width="2.4" stroke-opacity=".85"/>
+<line x1="702.2" y1="722.0" x2="722.0" y2="702.2" stroke-width="2.4"/>
+<circle cx="712.1" cy="712.1" r="4" fill="#e9bd78" stroke="none"/>
+<line x1="415.1" y1="584.9" x2="287.9" y2="712.1" stroke-width="2.4" stroke-opacity=".85"/>
+<line x1="278.0" y1="702.2" x2="297.8" y2="722.0" stroke-width="2.4"/>
+<circle cx="287.9" cy="712.1" r="4" fill="#e9bd78" stroke="none"/>
+<line x1="415.1" y1="415.1" x2="287.9" y2="287.9" stroke-width="2.4" stroke-opacity=".85"/>
+<line x1="297.8" y1="278.0" x2="278.0" y2="297.8" stroke-width="2.4"/>
+<circle cx="287.9" cy="287.9" r="4" fill="#e9bd78" stroke="none"/>
+  </g>
+
+  <!-- pointes intercardinales (courtes) puis cardinales (longues) -->
+  <use href="#inter" transform="rotate(45 500 500)"/>
+  <use href="#inter" transform="rotate(135 500 500)"/>
+  <use href="#inter" transform="rotate(225 500 500)"/>
+  <use href="#inter" transform="rotate(315 500 500)"/>
+  <use href="#cardinal"/>
+  <use href="#cardinal" transform="rotate(90 500 500)"/>
+  <use href="#cardinal" transform="rotate(180 500 500)"/>
+  <use href="#cardinal" transform="rotate(270 500 500)"/>
+
+  <!-- nord : losange et fleuron au-dessus de la pointe -->
+  <polygon points="500,18 514,40 500,62 486,40" fill="url(#lit)" stroke="#fff0c4" stroke-opacity=".6" stroke-width="1.5"/>
+  <!-- bague + joyau central -->
+  <circle cx="500" cy="500" r="40" fill="#0d0c0a" stroke="url(#ring)" stroke-width="5"/>
+  <circle cx="500" cy="500" r="27" fill="url(#jewel)" stroke="#fff0c4" stroke-opacity=".6" stroke-width="1.5"/>
+  <circle cx="500" cy="500" r="7" fill="#2a1a0c"/>
+</g>
+</svg>

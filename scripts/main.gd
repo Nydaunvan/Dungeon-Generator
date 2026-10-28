@@ -561,6 +561,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		# en combat : 1 = attaque, 2… = sorts ; en exploration : 2… lancent les sorts du personnage sélectionné (soins, protections…), comme un clic sur la barre
 		if get_tree().get_nodes_in_group("modal").is_empty() and not gs.game_over:
 			var slot := int(act.substr(5)) - 1
+			if layout != null and layout.spell_bar != null:
+				layout.spell_bar.flash(slot)      # le disque s'allume à l'appui de sa touche
 			if not _try_slot(slot):
 				# le jeu n'était pas prêt (effet du coup précédent encore en cours, tour qui vient de passer au héros) : l'appui n'est pas perdu,
 				# il est gardé un instant et exécuté dès que le héros peut agir (avant : il fallait appuyer une seconde fois)

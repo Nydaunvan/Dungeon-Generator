@@ -23,17 +23,12 @@ var _icons := {}
 
 ## Emblème : boussole à quatre pointes dans un cercle fin.
 class Emblem extends Control:
+	static var _tex: Texture2D
 	func _draw() -> void:
-		var c := size * 0.5
-		var r := minf(size.x, size.y) * 0.5 - 2.0
-		draw_arc(c, r, 0.0, TAU, 40, Atlas.COPPER, 1.2, true)
-		draw_arc(c, r * 0.72, 0.0, TAU, 32, Atlas.COPPER_DIM, 1.0, true)
-		for i in 4:
-			var a := float(i) * PI * 0.5 - PI * 0.5
-			var d := Vector2(cos(a), sin(a))
-			var n := Vector2(-d.y, d.x)
-			var tip := c + d * r * (1.0 if i == 0 else 0.86)
-			draw_colored_polygon(PackedVector2Array([tip, c + n * r * 0.13, c - n * r * 0.13]), Atlas.AMBER if i == 0 else Atlas.IVORY)
+		if _tex == null:
+			_tex = load("res://assets/ui/compass.png")
+		var d := minf(size.x, size.y)
+		draw_texture_rect(_tex, Rect2((size - Vector2(d, d)) * 0.5, Vector2(d, d)), false)
 
 ## Centre de la bande : « NIVEAU 1 / LES CAVES SUPÉRIEURES » entre deux filets terminés par un losange (vide sur l'accueil).
 class Crest extends Control:
@@ -313,7 +308,7 @@ func rescale() -> void:
 	_box.content_margin_top = UiMetrics.css(15.0 if not UiMetrics.portrait else 0.0)    # titre et icônes descendus vers le décroché
 	_box.emit_changed()
 	if _emblem != null:
-		_emblem.custom_minimum_size = Vector2(side * 1.4, side * 1.4)
+		_emblem.custom_minimum_size = Vector2(side * 1.6, side * 1.6)
 		_emblem.queue_redraw()
 	if nav_row != null:
 		for b in nav_row.get_children():
