@@ -44,7 +44,7 @@ func set_target_height(h: float) -> void:
 func _layout() -> Dictionary:
 	var w := maxf(10.0, size.x - PAD * 2.0)
 	var h := size.y
-	var sz := minf(46.0, maxf(h, 64.0) * 0.64)
+	var sz := minf(44.0, maxf(h, 40.0) * 0.62)   # la pastille courante (×1,12) + pastilles de rang/vitesse tiennent dans la hauteur
 	var m := sz * 0.9
 	var s0 := maxi(3, int(floor((w - 2.0 * m) / (sz * 1.25))) + 1)
 	var slots := s0 if s0 % 2 == 1 else s0 - 1

@@ -802,7 +802,7 @@ func _rebuild() -> void:
 		queue.grow_vertical = Control.GROW_DIRECTION_BEGIN
 		queue.offset_left = 0.0
 		queue.offset_right = 0.0
-		queue.offset_bottom = -UiMetrics.css(6.0)
+		queue.offset_bottom = -UiMetrics.css(14.0)     # au-dessus de la piste du chronomètre de tour
 		center.add_child(hud)
 		var rcol := VBoxContainer.new()
 		rcol.name = "RCol"
@@ -858,9 +858,9 @@ func _size_widgets() -> void:
 	_margin("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
 	hud.custom_minimum_size = Vector2(0, PartyHud.wanted_height())
-	queue.set_target_height(44.0 if _portrait else clampf(h * 0.058, 30.0, 50.0))
+	queue.set_target_height(44.0 if _portrait else clampf(h * 0.066, 50.0, 62.0))
 	header.rescale()
-	var rw := UiMetrics.css(clampf(0.19 * w + 55.0, 270.0, 410.0))
+	var rw := UiMetrics.css(clampf(0.15 * w + 40.0, 235.0, 330.0))
 	var lw := UiMetrics.css(clampf(0.125 * w + 12.0, 190.0, 250.0)) if not _compact else 0.0
 	var gp := UiMetrics.css(10.0)
 	var right: Node = _root.find_child("Right", true, false)

@@ -267,10 +267,10 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 		add_child(bar)
 		e["bar"] = bar
 	var q := bar.mesh as QuadMesh
-	q.size = Vector2(width, 0.13)
+	q.size = Vector2(width, 0.085)
 	bar.position = pos
 	var mat := bar.material_override as ShaderMaterial
-	mat.set_shader_parameter("aspect", width / 0.13)
+	mat.set_shader_parameter("aspect", width / 0.085)
 	var cur := float(mat.get_shader_parameter("frac"))
 	if absf(cur - frac) > 0.001:
 		if e.get("bar_tw") != null and (e.bar_tw as Tween).is_valid():
@@ -296,24 +296,25 @@ float rbox(vec2 p, vec2 b, float r) {
 	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 void fragment() {
-	vec2 p = (UV - 0.5) * vec2(aspect, 1.0);
-	vec2 half_size = vec2(aspect, 1.0) * 0.5;
-	float d = rbox(p, half_size, 0.5);
-	if (d > 0.0) { discard; }
-	vec3 col = vec3(0.05, 0.02, 0.02);
-	float a = 0.92;
-	float edge = smoothstep(-0.14, -0.02, d);                    // liseré sombre extérieur
-	float ix = (UV.x * aspect - 0.18) / max(aspect - 0.36, 0.001);   // position 0..1 le long de la jauge
-	float iy = (UV.y - 0.18) / 0.64;
-	vec2 pi = (UV - 0.5) * vec2(aspect, 1.0);
-	float di = rbox(pi, half_size - vec2(0.12), 0.38);
-	if (di < 0.0 && ix <= frac && ix >= 0.0) {
-		vec3 hi = frac > 0.5 ? mix(vec3(0.95, 0.78, 0.22), vec3(0.42, 0.80, 0.32), (frac - 0.5) * 2.0) : mix(vec3(0.85, 0.18, 0.12), vec3(0.95, 0.78, 0.22), frac * 2.0);
-		float g = 1.0 - 0.35 * smoothstep(0.0, 1.0, iy);              // léger dégradé vertical
-		col = hi * g;
-		if (iy < 0.28) { col += 0.18; }                                // reflet en haut
+	// parallélogramme Atlas (bout droit en biais), fond creux, filet cuivre, remplissage rouge comme les fiches des héros
+	float x = UV.x * aspect;
+	float y = UV.y;
+	float sl = 0.45;
+	float edge = aspect - sl * y;
+	float bw = 0.11;
+	if (x < 0.0 || x > edge) { discard; }
+	vec3 col = vec3(0.60, 0.42, 0.26);
+	float a = 0.95;
+	float ex = aspect - sl * y - bw * 1.25;
+	if (x > bw && x < ex && y > bw && y < 1.0 - bw) {
+		col = vec3(0.02, 0.025, 0.028);
+		float ix = (x - bw) / max(ex - bw, 0.001);
+		if (ix <= frac) {
+			vec3 hp = mix(vec3(0.72, 0.22, 0.18), vec3(0.50, 0.13, 0.10), y);
+			col = hp;
+			if (y < 0.4) { col += 0.07; }
+		}
 	}
-	col = mix(col, vec3(0.0), edge);
 	ALBEDO = col;
 	ALPHA = a;
 }

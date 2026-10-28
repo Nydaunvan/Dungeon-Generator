@@ -12,15 +12,15 @@ func setup(h: Node) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_pill = PanelContainer.new()
 	_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.08, 0.06, 0.05, 0.82)
-	sb.border_color = Color(0.96, 0.9, 0.75, 0.7)
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(14)
-	sb.content_margin_left = 14
-	sb.content_margin_right = 14
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
+	var sb := AtlasBox.new(0.0)
+	sb.fill_top = Color(Atlas.OBSIDIAN, 0.92)
+	sb.fill_bottom = Color(Atlas.OBSIDIAN, 0.92)
+	sb.border = Atlas.AMBER
+	sb.cut = 5.0
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 3
+	sb.content_margin_bottom = 3
 	_pill.add_theme_stylebox_override("panel", sb)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -33,14 +33,15 @@ func setup(h: Node) -> void:
 	row.add_child(bars)
 	for i in 2:
 		var bar := ColorRect.new()
-		bar.color = Color(0.96, 0.9, 0.75, 0.95)
-		bar.custom_minimum_size = Vector2(6, 18)
+		bar.color = Atlas.AMBER
+		bar.custom_minimum_size = Vector2(4, 12)
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bars.add_child(bar)
 	var lab := Label.new()
 	lab.text = L.t("ui.pause.label")
-	lab.add_theme_font_size_override("font_size", 15)
-	lab.add_theme_color_override("font_color", Color(0.96, 0.9, 0.75, 0.95))
+	lab.add_theme_font_size_override("font_size", 13)
+	lab.add_theme_font_override("font", Atlas.title_font())
+	lab.add_theme_color_override("font_color", Atlas.IVORY)
 	lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(lab)
 	_pill.visible = false
@@ -51,9 +52,6 @@ func _process(_d: float) -> void:
 	if _pill.visible != on:
 		_pill.visible = on
 	if on:
-		# centrée sur la zone du donjon (vue 3D), pas sur la fenêtre entière
-		var r := Rect2(Vector2.ZERO, host.get_viewport().get_visible_rect().size)
-		var lay = host.get("layout")
-		if lay != null and is_instance_valid(lay) and lay.sub_container != null:
-			r = (lay.sub_container as Control).get_global_rect()
-		_pill.position = Vector2(r.position.x + (r.size.x - _pill.size.x) * 0.5, r.position.y + 8.0)
+		# tout en haut de l'écran, au centre, au-dessus du titre du donjon
+		var vw: float = host.get_viewport().get_visible_rect().size.x
+		_pill.position = Vector2((vw - _pill.size.x) * 0.5, 3.0)
