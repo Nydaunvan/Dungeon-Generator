@@ -237,6 +237,7 @@ func _ready() -> void:
 	wand.paused_if = is_game_paused
 	wand.settled_if = settled
 	inter.wand = wand
+	wand.inter = inter
 	inter.message.connect(func(t): show_message(t))
 	inter.bag_changed.connect(layout.bag.refresh)
 	layout.item_pressed.connect(_on_bag_item)

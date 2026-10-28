@@ -19,6 +19,7 @@ const ARRIVAL_CALM_TICKS := 24
 
 var gs: GameState
 var ctrl: CombatController
+var inter: Interactions        # hache pendulaire : elle frappe encore le groupe qui reste sur sa case
 var rig: PlayerRig
 var level: Dictionary = {}
 var grid: DungeonGrid
@@ -221,6 +222,10 @@ func _apart_fast(n: Vector2i, except_id: String, from: Vector2i) -> bool:
 
 func _tick() -> void:
 	RunLog.trace.append("w t=%d p=%d,%d st=%s lvl=%s" % [GameClock.ms, rig.gx, rig.gy, GameRng.export_state().states.get("wander", "?"), str(level.id)])
+	if inter != null:
+		inter.pendulum_idle_tick()
+	if gs.game_over:
+		return
 	var ls := gs.level_state(level)
 	var player := Vector2i(rig.gx, rig.gy)
 	var movers: Array = []

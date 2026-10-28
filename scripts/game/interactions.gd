@@ -475,6 +475,7 @@ func _trigger_switch(it: Dictionary) -> void:
 ## Le piège reste actif à chaque passage tant que le levier de contrepoids (`leverId`) n'a pas été tiré. Aucune fenêtre : tout est tiré dans
 ## le flux « trap », donc rejouable à l'identique.
 func _cross_pendulum(it: Dictionary) -> void:
+	gs.stats["pendulumTicks"] = 0
 	var s := _trap_cfg()
 	var st := gs.item_state(_lid(), str(it.id))
 	_log(L.t("game.interactions.pendule_balaie"))
@@ -483,6 +484,7 @@ func _cross_pendulum(it: Dictionary) -> void:
 	for c in gs.alive_party():
 		if GameRng.f("trap") * 100.0 < float(TrapRules.pendulum_dodge(c, s)):
 			dodged.append(str(c.name))
+			ctrl.popup.emit(L.t("rules.combat.esquive"), Color("9fd8ff"), "char:" + str(c.id))
 		else:
 			hits.append(_hit_for(it, c, float(s.pendulumDmgPct) / 100.0))
 	if not st.get("known", false):       # première fois : les gravures des fentes mettent sur la piste du levier
@@ -499,6 +501,26 @@ func _cross_pendulum(it: Dictionary) -> void:
 	if not dodged.is_empty():
 		_log(L.fa(L.t("game.interactions.pendule_esquive"), ", ".join(PackedStringArray(dodged))))
 	_apply_trap_hits(it, hits)
+
+## Appelé à chaque pas de monstres (0,5 s) : tant que le groupe reste sur la case d'une hache encore armée, la lame repasse
+## toutes les PENDULUM_REPEAT_TICKS pas et chaque héros retente son esquive (même jet que lors de la traversée).
+const PENDULUM_REPEAT_TICKS := 4
+func pendulum_idle_tick() -> void:
+	if gs.game_over or gs.won:
+		return
+	for it in level.get("items", []):
+		if str(it.get("type", "")) != "pendulum" or int(it.x) != rig.gx or int(it.y) != rig.gy:
+			continue
+		var st := gs.item_state(_lid(), str(it.id))
+		if st.get("taken", false) or st.get("disarmed", false) or st.get("hidden", bool(it.get("startHidden", false))):
+			continue
+		var n := int(gs.stats.get("pendulumTicks", 0)) + 1
+		if n >= PENDULUM_REPEAT_TICKS:
+			_cross_pendulum(it)      # remet le compteur à zéro
+		else:
+			gs.stats["pendulumTicks"] = n
+		return
+	gs.stats["pendulumTicks"] = 0
 
 func _find_item(id: String) -> Dictionary:
 	for d in level.get("items", []):

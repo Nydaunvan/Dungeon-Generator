@@ -88,7 +88,7 @@ func _init() -> void:
 	var hp0 := 0
 	for c in m.gs.party:
 		hp0 += int(c.hp)
-	var log0: int = m.gs.log.size() if "log" in m.gs else 0
+	var log0: int = m.gs.full_log.size()
 	m.rig.place(m.grid, int(pend.x), int(pend.y), 1)
 	m.inter.step_items()
 	await create_timer(0.5).timeout
@@ -97,6 +97,21 @@ func _init() -> void:
 		hp1 += int(c.hp)
 	var swung := true
 	print("PV avant %d après %d" % [hp0, hp1])
+	# rester sur la case : la lame repasse toutes les 4 pas (2 s), chaque passage relance les jets d'esquive
+	var t0: int = int(m.gs.stats.get("trapsTriggered", 0))
+	var logn: int = m.gs.full_log.size()
+	for k in 12:
+		m.inter.pendulum_idle_tick()
+	var swings := 0
+	for k in range(logn, m.gs.full_log.size()):
+		var tx := str(m.gs.full_log[k].get("text", "")).to_lower()
+		if "hache" in tx or "axe" in tx:
+			swings += 1
+	print("rester sur la case : %d lignes de journal « hache » (attendu au moins 3, une par passage), coups encaissés %d" % [swings, int(m.gs.stats.get("trapsTriggered", 0)) - t0])
+	var repeated := swings >= 3
+	hp1 = 0
+	for c in m.gs.party:
+		hp1 += int(c.hp)
 	# le levier bloque la hache
 	m.rig.place(m.grid, int(lever.x), int(lever.y), 1)
 	m.inter.step_items()
@@ -116,5 +131,5 @@ func _init() -> void:
 	for c in m.gs.party:
 		hp2 += int(c.hp)
 	print("levier : hache désarmée %s, lame bloquée %s · PV après nouveau passage %d (inchangés : %s)" % [disarmed, locked, hp2, hp2 == hp1])
-	print("RESULTAT en jeu -> ", "OK" if disarmed and locked and hp2 == hp1 else "ECHEC")
+	print("RESULTAT en jeu -> ", "OK" if disarmed and locked and hp2 == hp1 and repeated else "ECHEC")
 	quit()
