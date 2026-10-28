@@ -433,6 +433,7 @@ func _trigger_switch(it: Dictionary) -> void:
 	if st.get("triggered", false):
 		return
 	st["triggered"] = true
+	view.entities.pull_switch(str(it.id))
 	ctrl.fx.emit("switch")
 	_log(L.fa(L.t("game.interactions.actionne"), it.get("name", "Levier")))
 	var did := str(it.get("switchOpensDoorId", ""))

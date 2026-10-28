@@ -102,6 +102,19 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			add_child(pn)
 			_register(items, Vector2i(int(it.x), int(it.y)), pn, it)
 			continue
+		if type == "switch":      # interrupteur mural à levier (manche de bois) ; sans mur voisin (plein air), l'icône plate
+			var swd := Vector2i.ZERO
+			if grid != null and not bool(level.get("outdoor", false)):
+				swd = LevelBuilder.dart_wall_dir(grid, level, int(it.x), int(it.y), str(it.id))
+			if swd != Vector2i.ZERO:
+				var lv3 := WallLever.make()
+				lv3.name = "Switch_" + str(it.id)
+				lv3.position = Vector3((int(it.x) + swd.x * 0.5) * LevelBuilder.CELL, WallLever.HEIGHT, (int(it.y) + swd.y * 0.5) * LevelBuilder.CELL)
+				lv3.rotation.y = TrapDart.yaw_for(swd)
+				lv3.visible = not bool(it.get("startHidden", false))
+				add_child(lv3)
+				_register(items, Vector2i(int(it.x), int(it.y)), lv3, it)
+				continue
 		if type == "fountain":
 			var f := Fountain3D.new()
 			var nd: Vector2i = Vector2i.ZERO
@@ -556,6 +569,13 @@ func _die(n: MeshInstance3D) -> void:
 	tw.chain().tween_callback(n.queue_free)
 
 ## Piège désamorcé : les pointes rentrent dans leur plaque, la vapeur cesse (le piège reste en place, inoffensif) ; les autres objets disparaissent.
+## Bascule le levier mural `id` vers le bas (avec animation, ou directement au chargement du niveau).
+func pull_switch(id: String, animate: bool = true) -> void:
+	for p in items.keys():
+		for e in items[p]:
+			if str(e.def.id) == id and is_instance_valid(e.node) and e.node.has_meta("wall_lever"):
+				WallLever.pull(e.node, animate)
+
 func disarm_item(id: String, animate: bool = true) -> void:
 	var done := false
 	for p in items.keys():

@@ -390,6 +390,8 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		level_node.open_door(str(id), true)
 	for it in level.get("items", []):
 		var ist := gs.item_state(str(level.id), str(it.id))
+		if str(it.get("type", "")) == "switch" and ist.get("triggered", false):
+			level_node.entities.pull_switch(str(it.id), false)     # levier déjà actionné : manche en bas dès le chargement
 		if ist.get("disarmed", false) and not ist.get("taken", false):
 			level_node.entities.disarm_item(str(it.id), false)     # pointes rentrées dès le chargement
 		elif ist.get("taken", false):

@@ -1152,7 +1152,10 @@ func _place_pendulums(lvls: Array) -> void:
 					free.append(Vector2i(x, y))
 		if free.is_empty():
 			continue
-		var lever: Vector2i = free[rng.randi_range(0, free.size() - 1)]
+		var on_wall: Array = free.filter(func(c: Vector2i) -> bool:      # interrupteur mural : de préférence une case qui touche un mur
+			return _wall_at(rows, c.x + 1, c.y) or _wall_at(rows, c.x - 1, c.y) or _wall_at(rows, c.x, c.y + 1) or _wall_at(rows, c.x, c.y - 1))
+		var lever_pool: Array = on_wall if not on_wall.is_empty() else free
+		var lever: Vector2i = lever_pool[rng.randi_range(0, lever_pool.size() - 1)]
 		var pid := "pend_gen_%d" % i
 		lv.items.append({"id": pid, "name": L.t("rules.dungeon_generator.hache_pendulaire"), "icon": "🪓", "x": int(spot.x), "y": int(spot.y), "type": "pendulum",
 			"axis": str(spot.axis), "permanent": true, "leverId": "pend_lever_%d" % i,
