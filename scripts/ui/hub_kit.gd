@@ -128,8 +128,13 @@ static func facts(parent: Control, rows: Array, columns: int) -> void:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
 		h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var ic := label(str(r[0]), UiTheme.PARCH, 18, false, false, HORIZONTAL_ALIGNMENT_CENTER)
-		ic.custom_minimum_size = Vector2(26, 0)
+		var ic: Control
+		if GameIcons.has(str(r[0])):     # icône dessinée (écrans « jeu vidéo »), sinon l'emoji historique
+			ic = GameIcons.rect(str(r[0]), 20, r[3] if r.size() > 3 and r[3] is Color else UiTheme.GOLD)
+			ic.custom_minimum_size = Vector2(26, 22)
+		else:
+			ic = label(str(r[0]), UiTheme.PARCH, 18, false, false, HORIZONTAL_ALIGNMENT_CENTER)
+			ic.custom_minimum_size = Vector2(26, 0)
 		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		h.add_child(ic)
 		var v := vbox(0)

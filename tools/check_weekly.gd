@@ -102,7 +102,7 @@ func _ready() -> void:
 	check("règle de la semaine affichée", t.any(func(x): return str(x).contains("Héros solitaire")))
 	check("semaine numérotée", t.any(func(x): return str(x).contains("41")))
 	check("règle suivante annoncée", t.any(func(x): return str(x).contains("Verre brisé")))
-	check("bouton jouer", t.any(func(x): return str(x).contains(L.t("ui.hub.weekly_play"))))
+	check("bouton jouer", t.any(func(x): return str(x).to_upper().contains(L.t("ui.hub.weekly_play").to_upper())))
 	h._src = "weekly"
 	h._show("boards")
 	for i in 40:

@@ -133,8 +133,10 @@ func _ready() -> void:
 	await get_tree().create_timer(0.6).timeout
 	var texts: Array = []
 	_collect(layer, texts)
-	check("fenêtre : trois modes proposés", texts.any(func(t): return "Partie libre" in t) and texts.any(func(t): return "Parties classées" in t or "Partie classée" in t) and texts.any(func(t): return "Hardcore" in t))
-	check("fenêtre : onglets", texts.any(func(t): return "Classements" in t) or texts.any(func(t): return "🏆" in t))
+	# titres en capitales dans l'écran « jeu vidéo » : comparaison sans casse
+	var up: Array = texts.map(func(t): return str(t).to_upper())
+	check("fenêtre : trois modes proposés", up.any(func(t): return "PARTIE LIBRE" in t) and up.any(func(t): return "PARTIES CLASSÉES" in t or "PARTIE CLASSÉE" in t) and up.any(func(t): return "HARDCORE" in t))
+	check("fenêtre : onglets", up.any(func(t): return "CLASSEMENTS" in t))
 	m._show("boards")
 	await get_tree().create_timer(0.8).timeout
 	texts.clear()
@@ -158,5 +160,7 @@ func _ready() -> void:
 func _collect(n: Node, out: Array) -> void:
 	if n is Label:
 		out.append((n as Label).text)
+	elif n is Button:
+		out.append((n as Button).text)
 	for c in n.get_children():
 		_collect(c, out)

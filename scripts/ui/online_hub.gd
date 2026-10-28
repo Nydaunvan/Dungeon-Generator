@@ -1,17 +1,20 @@
 class_name OnlineHub
 extends RefCounted
-## Fenêtre unique du mode en ligne, dans le cadre habituel : un bandeau « mon compte » toujours visible, cinq onglets
-##  🎮 Jouer (choix du mode : partie libre, partie classée, Hardcore du mois — avec ce que chacun implique),
-##  🏆 Classements, 🏅 Récompenses, 📜 Mes parties, 👥 Amis.
-## Rien ne défile en usage normal : chaque onglet tient dans la fenêtre (les lignes des classements s'adaptent à la hauteur disponible).
+## Écran unique du mode en ligne (style « jeu vidéo », GameScreen) : barre du haut (compte, onglets, actions) toujours visible, cinq onglets
+##  Jouer (choix du mode : partie libre, classée, défis du jour / de la semaine, Hardcore du mois — avec ce que chacun implique),
+##  Classements, Récompenses, Mes parties, Amis. Les icônes sont dessinées (GameIcons), plus d'emojis.
+## Rien ne défile en usage normal : chaque onglet tient à l'écran (les lignes des classements s'adaptent à la hauteur disponible).
 
-const TABS := [["play", "ui.hub.tab_play", "🎮"], ["boards", "ui.hub.tab_boards", "🏆"], ["rewards", "ui.hub.tab_rewards", "🏅"], ["runs", "ui.hub.tab_runs", "📜"], ["friends", "ui.hub.tab_friends", "👥"]]
+const TABS := [["play", "ui.hub.tab_play", "swords"], ["boards", "ui.hub.tab_boards", "bars"], ["rewards", "ui.hub.tab_rewards", "medal"], ["runs", "ui.hub.tab_runs", "scroll"], ["friends", "ui.hub.tab_friends", "friends"]]
 const MODES := ["free", "ranked", "weekly", "hardcore"]
 ## Ce que mesure le classement de certaines règles du Défi de la semaine (les autres comptent des niveaux).
 const RULE_METRIC := {"richest": "gold", "bossrush": "bosses"}
 ## Modes de l'onglet « Jouer » : les classements (MODES) n'incluent pas le Défi du jour, qui n'a pas de classement.
 const PLAY_MODES := ["free", "ranked", "daily", "weekly", "hardcore"]
 const MODE_ICON := {"free": "🎲", "ranked": "🏆", "weekly": "📅", "daily": "🌅", "hardcore": "🔥"}
+## Icônes dessinées (GameIcons) et couleur de chaque mode de l'onglet Jouer.
+const MODE_GLYPH := {"free": "dice", "ranked": "trophy", "weekly": "calendar", "daily": "sunrise", "hardcore": "flame"}
+const MODE_COLOR := {"free": Color("8fbf5a"), "ranked": Color("f0c45c"), "weekly": Color("5fc3d0"), "daily": Color("f0883a"), "hardcore": Color("e2553a")}
 const MODE_NAME := {"free": "ui.hub.mode_free", "ranked": "ui.hub.mode_ranked", "weekly": "ui.hub.mode_weekly", "daily": "ui.hub.mode_daily", "hardcore": "ui.hub.mode_hardcore"}
 const MODE_TAG := {"free": "ui.hub.tag_free", "ranked": "ui.hub.tag_ranked", "weekly": "ui.hub.tag_weekly", "daily": "ui.hub.tag_daily", "hardcore": "ui.hub.tag_hardcore"}
 const XP_MULT := {"easy": "×1", "normal": "×1,5", "hard": "×2", "hardcore": "×3"}
@@ -20,7 +23,7 @@ const STATUS_KEYS := {"started": "ui.hub.st_started", "submitted": "ui.hub.st_su
 const GOLD := Color("e8b45c")
 
 var _host: Node
-var _modal: Modal
+var _modal: GameScreen
 var _on_launch: Callable
 var _tab := "play"
 var _mode := "free"
@@ -42,6 +45,11 @@ var _run_busy := false
 var _wk_clocks: Array = []
 var _runs_ok := false
 var _width := 760.0
+var _notice_box: VBoxContainer
+var _glass: PanelContainer
+var _glass_style: StyleBox
+var _play_btn: Button = null     ## bouton de lancement du mode affiché (touche Entrée)
+var _rules_open := false         ## « Règles et détails » déplié ou non (garde son état d'un mode à l'autre)
 
 ## `on_launch` : appelé quand le joueur lance une partie libre (la fenêtre est alors fermée) ; `tab` : onglet affiché d'abord.
 static func open(host: Node, on_launch: Callable = Callable(), tab: String = "play") -> OnlineHub:
@@ -50,9 +58,9 @@ static func open(host: Node, on_launch: Callable = Callable(), tab: String = "pl
 	h._on_launch = on_launch
 	h._tab = tab
 	var vp: Vector2 = host.get_viewport().get_visible_rect().size if host.is_inside_tree() else Vector2(1280, 720)
-	h._width = clampf(vp.x * 0.94, 340.0, 940.0)
-	h._modal = Modal.open(host, L.t("ui.hub.title"), h._width)
-	h._modal.fit_ratio = 0.74
+	var narrow := UiMetrics.portrait or vp.x < 760.0
+	h._width = clampf(vp.x - (28.0 if narrow else 72.0), 300.0, 1500.0)
+	h._modal = GameScreen.open(host, narrow)
 	h._modal.closed.connect(h._on_closed)
 	Cloud.session_changed.connect(h._on_session)
 	h._build()
@@ -89,37 +97,151 @@ func _signed() -> bool:
 func _build() -> void:
 	var c := _modal.content
 	c.add_theme_constant_override("separation", 8)
-	_strip_box = HubKit.vbox(0)
-	c.add_child(_strip_box)
+	_strip_box = _modal.player_box as VBoxContainer
+	_notice_box = HubKit.vbox(0)
+	c.add_child(_notice_box)
+	_glass = GameScreen.glass(14, 14)
+	_glass_style = _glass.get_theme_stylebox("panel")
+	_glass.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	c.add_child(_glass)
+	_body = HubKit.vbox(8)
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_glass.add_child(_body)
 	_fill_strip()
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 6)
-	c.add_child(tabs)
 	for t in TABS:
 		var id: String = t[0]
-		var b := HubKit.toggle("%s %s" % [t[2], L.t(t[1])] if not _narrow() else str(t[2]), id == _tab, func(): _show(id), 15, 10, 8)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var b := _nav_button(L.t(t[1]).to_upper(), str(t[2]), id == _tab, func(): _show(id))
 		b.tooltip_text = L.t(t[1])
-		tabs.add_child(b)
+		_modal.nav_box.add_child(b)
 		_tab_buttons[id] = b
 		if id == "friends":
 			_friend_dot = NotifDot.attach(b, func(): return _friend_requests, true)
 			var blink := _friend_dot.create_tween().set_loops()
 			blink.tween_property(_friend_dot, "modulate:a", 0.15, 0.55)
 			blink.tween_property(_friend_dot, "modulate:a", 1.0, 0.55)
-	_body = HubKit.vbox(8)
-	c.add_child(_body)
 	_modal.set_buttons([{"text": L.t("ui.hub.back"), "cb": func(): _modal.close()}])
+	_modal.key_handler = _on_key
 	_show(_tab)
+
+## Onglet de la barre du haut : texte en capitales, icône, filet doré lumineux sous l'onglet actif.
+func _nav_button(text: String, icon: String, active: bool, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.toggle_mode = true
+	b.button_pressed = active
+	b.focus_mode = Control.FOCUS_NONE
+	b.icon = GameIcons.tex(icon, 40, Color.WHITE)
+	b.add_theme_constant_override("icon_max_width", 20)
+	b.add_theme_constant_override("h_separation", 8)
+	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+	b.add_theme_font_size_override("font_size", 15)
+	b.add_theme_color_override("font_color", GameScreen.MUTED)
+	b.add_theme_color_override("font_hover_color", GameScreen.TEXT)
+	b.add_theme_color_override("font_pressed_color", GameScreen.GOLD)
+	b.add_theme_color_override("font_hover_pressed_color", GameScreen.GOLD)
+	b.add_theme_color_override("icon_normal_color", GameScreen.MUTED)
+	b.add_theme_color_override("icon_hover_color", GameScreen.TEXT)
+	b.add_theme_color_override("icon_pressed_color", GameScreen.GOLD)
+	b.add_theme_color_override("icon_hover_pressed_color", GameScreen.GOLD)
+	for k in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0, 0, 0, 0)
+		sb.border_width_bottom = 3
+		sb.border_color = GameScreen.GOLD if k.contains("pressed") else Color(0.94, 0.77, 0.36, 0.22 if k == "hover" else 0.0)
+		sb.content_margin_left = 6
+		sb.content_margin_right = 6
+		sb.content_margin_top = 12
+		sb.content_margin_bottom = 9
+		if k.contains("pressed"):
+			sb.shadow_color = Color(0.94, 0.77, 0.36, 0.14)
+			sb.shadow_size = 5
+			sb.shadow_offset = Vector2(0, 3)
+		b.add_theme_stylebox_override(k, sb)
+	b.pressed.connect(func(): cb.call())
+	return b
+
+## Pastille à bascule précédée d'une icône dessinée (sous-onglets des classements).
+func _icon_toggle(icon: String, text: String, active: bool, cb: Callable) -> Button:
+	var b := HubKit.toggle(text, active, cb, 14, 12, 7)
+	b.icon = GameIcons.tex(icon, 40, Color.WHITE)
+	b.add_theme_constant_override("icon_max_width", 17)
+	b.add_theme_constant_override("h_separation", 7)
+	b.add_theme_color_override("icon_normal_color", Color("e2d2b0"))
+	b.add_theme_color_override("icon_hover_color", Color("f4e6c6"))
+	b.add_theme_color_override("icon_pressed_color", Color("ffd88a"))
+	b.add_theme_color_override("icon_hover_pressed_color", Color("ffe6a8"))
+	return b
+
+## Bouton rond à icône (tchat, compte, aide) de la barre du haut.
+func _round_button(icon: String, tip: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.tooltip_text = tip
+	b.focus_mode = Control.FOCUS_NONE
+	b.icon = GameIcons.tex(icon, 48, Color.WHITE)
+	b.expand_icon = true
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.add_theme_constant_override("icon_max_width", 22)
+	b.custom_minimum_size = Vector2(44, 44)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.add_theme_color_override("icon_normal_color", GameScreen.GOLD_DEEP)
+	b.add_theme_color_override("icon_hover_color", Color("fff0c8"))
+	b.add_theme_color_override("icon_pressed_color", Color("fff0c8"))
+	for k in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.14, 0.1, 0.06, 0.85) if k == "normal" or k == "focus" else Color(0.3, 0.21, 0.09, 0.9)
+		sb.border_color = Color(0.94, 0.77, 0.36, 0.45 if k == "normal" or k == "focus" else 0.9)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(22)
+		b.add_theme_stylebox_override(k, sb)
+	b.pressed.connect(func(): cb.call())
+	return b
+
+## Touches : ↑↓ (Haut/Bas) changent de mode, Entrée lance, ←→ changent d'onglet.
+func _on_key(ev: InputEventKey) -> bool:
+	match ev.keycode:
+		KEY_UP, KEY_DOWN:
+			if _tab != "play":
+				return false
+			var i := PLAY_MODES.find(_mode)
+			i = clampi(i + (1 if ev.keycode == KEY_DOWN else -1), 0, PLAY_MODES.size() - 1)
+			if PLAY_MODES[i] != _mode:
+				_mode = PLAY_MODES[i]
+				_show("play")
+			return true
+		KEY_ENTER, KEY_KP_ENTER:
+			if _tab == "play" and _play_btn != null and is_instance_valid(_play_btn) and not _play_btn.disabled:
+				_play_btn.pressed.emit()
+				return true
+		KEY_LEFT, KEY_RIGHT:
+			var ids: Array = TABS.map(func(t): return t[0])
+			var j := clampi(ids.find(_tab) + (1 if ev.keycode == KEY_RIGHT else -1), 0, ids.size() - 1)
+			if ids[j] != _tab:
+				_show(ids[j])
+			return true
+	return false
 
 func _show(tab: String) -> void:
 	_tab = tab
 	_gen += 1
+	_play_btn = null
 	for t in _tab_buttons:
 		(_tab_buttons[t] as Button).button_pressed = t == tab
 	for ch in _body.get_children():
 		_body.remove_child(ch)
 		ch.queue_free()
+	# l'onglet Jouer se pose directement sur le décor ; les autres sont dans un panneau de verre
+	if tab == "play":
+		_glass.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	else:
+		_glass.add_theme_stylebox_override("panel", _glass_style)
+	_modal.clear_hints("right")
+	if not _narrow():
+		if tab == "play":
+			_modal.add_hint(L.t("ui.screen.key_updown"), L.t("ui.screen.hint_choose"))
+			_modal.add_hint(L.t("ui.screen.key_enter"), L.t("ui.screen.hint_play"), "right", func():
+				if _play_btn != null and is_instance_valid(_play_btn) and not _play_btn.disabled:
+					_play_btn.pressed.emit())
+		_modal.add_hint(L.t("ui.screen.key_leftright"), L.t("ui.screen.hint_tab"))
 	match tab:
 		"play": _show_play()
 		"boards": _show_boards()
@@ -127,15 +249,10 @@ func _show(tab: String) -> void:
 		"runs": _show_runs()
 		"friends": _show_friends()
 	_stabilize_height()
-	_modal.call_deferred("_fit")
 
-## Hauteur de la fenêtre FIXE d'un onglet à l'autre et pendant le chargement du contenu : le corps réserve la place restante jusqu'à la
-## hauteur maximale de la fenêtre (au-delà, il défile). Sans cela, la fenêtre rétrécissait sur « Chargement… » puis regrandissait.
+## La fenêtre occupe tout l'écran : le corps prend la place restante (et défile au-delà), la hauteur ne change donc pas d'un onglet à l'autre.
 func _stabilize_height() -> void:
 	_body.custom_minimum_size.y = 0
-	var vp_h := _host.get_viewport().get_visible_rect().size.y if _host.is_inside_tree() else 720.0
-	var other := _modal.content.get_combined_minimum_size().y - _body.get_combined_minimum_size().y
-	_body.custom_minimum_size.y = maxf(0.0, vp_h * _modal.fit_ratio - other)
 
 ## Onglet « Amis » : tout est dans HubFriends. La pastille (demandes reçues) du bouton de l'onglet suit la liste.
 var _friends: HubFriends
@@ -155,8 +272,7 @@ func _set_friend_badge(n: int) -> void:
 		_friend_dot._update()
 	if _tab_buttons.has("friends"):
 		var b: Button = _tab_buttons["friends"]
-		var base := L.t("ui.hub.tab_friends")
-		b.text = ("👥 %s" % base if not _narrow() else "👥") + (" (%d)" % n if n > 0 else "")
+		b.text = L.t("ui.hub.tab_friends").to_upper() + (" (%d)" % n if n > 0 else "")
 
 var _friend_requests := 0
 var _friend_dot: NotifDot = null   ## point rouge clignotant sur l'onglet Amis tant que des demandes attendent
@@ -195,59 +311,75 @@ func _fill_strip() -> void:
 	for ch in _strip_box.get_children():
 		_strip_box.remove_child(ch)
 		ch.queue_free()
-	var card := HubKit.card(UiTheme.BRONZE, Color(0.1, 0.07, 0.04, 0.6), 10)
+	for ch in _notice_box.get_children():
+		_notice_box.remove_child(ch)
+		ch.queue_free()
+	for ch in _modal.actions_box.get_children():
+		_modal.actions_box.remove_child(ch)
+		ch.queue_free()
+	var card := GameScreen.glass(10, 40)
 	_strip_box.add_child(card)
-	var h := HFlowContainer.new()
-	h.add_theme_constant_override("h_separation", 10)
-	h.add_theme_constant_override("v_separation", 6)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
 	card.add_child(h)
+	var av := PanelContainer.new()
+	var asb := StyleBoxFlat.new()
+	asb.bg_color = Color("3a2a16")
+	asb.border_color = GameScreen.GOLD_DEEP
+	asb.set_border_width_all(2)
+	asb.set_corner_radius_all(26)
+	av.add_theme_stylebox_override("panel", asb)
+	av.custom_minimum_size = Vector2(52, 52)
+	var ic := GameIcons.rect("user", 26, Color("f1deb0"))
+	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	av.add_child(ic)
+	h.add_child(av)
 	var left := HubKit.vbox(2)
-	left.custom_minimum_size.x = 200
+	left.custom_minimum_size.x = 170
+	left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(left)
 	if _signed():
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
-		top.add_child(HubKit.label("👤 " + _role_mark(Cloud.user_id()) + Cloud.pseudo(), GOLD, 17, true, false))
+		var nm := HubKit.label(_role_mark(Cloud.user_id()) + Cloud.pseudo(), Color("f6e7bd"), 17, true, false)
+		nm.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+		top.add_child(nm)
 		var lv := HubKit.label("", UiTheme.DIM, 13, false, false)
 		lv.name = "Level"
 		top.add_child(lv)
 		left.add_child(top)
-		var bar := HubKit.progress(0, 0, 1, 8)
+		var bar := HubKit.progress(0, 0, 1, 7)
 		bar.name = "XpBar"
 		left.add_child(bar)
-		var xl := HubKit.label("", UiTheme.DIM, 12, false, false)
+		var xl := HubKit.label("", GameScreen.MUTED, 12, false, false)
 		xl.name = "XpText"
 		left.add_child(xl)
 		_load_xp()
 	else:
-		left.add_child(HubKit.label(L.t("ui.hub.offline_title") if _online() else L.t("ui.hub.unavailable_title"), GOLD, 16, true, false))
+		left.add_child(HubKit.label(L.t("ui.hub.offline_title") if _online() else L.t("ui.hub.unavailable_title"), GameScreen.GOLD, 16, true, false))
 		left.add_child(HubKit.label(L.t("ui.hub.offline_text") if _online() else L.t("ui.challenges.not_configured"), UiTheme.DIM, 12))
-	var right := HFlowContainer.new()
-	right.add_theme_constant_override("h_separation", 6)
-	right.add_theme_constant_override("v_separation", 6)
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.alignment = FlowContainer.ALIGNMENT_END
-	h.add_child(right)
+	var right := _modal.actions_box
 	if _online() and not _signed():
-		right.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 34))
+		right.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 40))
 	if _signed():
-		var cbtn := HubKit.button("💬 " + L.t("ui.chat.header"), func():
+		var cbtn := _round_button("chat", L.t("ui.chat.header"), func():
 			_modal.close()
-			ChatDock.open_panel(), false, 34)
+			ChatDock.open_panel())
 		NotifDot.attach(cbtn)
 		right.add_child(cbtn)
-		var acc := HubKit.button("👤 " + L.t("ui.cloud.header"), func(): AccountModal.open(_host), false, 34)
+		var acc := _round_button("user", L.t("ui.cloud.header"), func(): AccountModal.open(_host))
 		NotifDot.attach(acc, SuperAdmin.pending, false, SuperAdmin.refresh_pending)
 		right.add_child(acc)
-	right.add_child(HubKit.button(L.t("ui.help.how"), func(): DocModal.guide(_host, "defis"), false, 34))
+	right.add_child(_round_button("help", L.t("ui.help.how"), func(): DocModal.guide(_host, "defis")))
 	var notice := ServerNotice.banner_text()
 	if notice != "":
 		var nl := HubKit.label(notice, Color("e0b87a"), 13, false, true)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var nm := MarginContainer.new()
-		nm.add_theme_constant_override("margin_top", 4)
-		nm.add_child(nl)
-		_strip_box.add_child(nm)
+		var nmg := MarginContainer.new()
+		nmg.add_theme_constant_override("margin_bottom", 4)
+		nmg.add_child(nl)
+		_notice_box.add_child(nmg)
 
 func _load_xp() -> void:
 	var r: Dictionary = await RankedRun.my_xp()
@@ -274,23 +406,25 @@ func _load_xp() -> void:
 # ------------------------------------------------------------------ onglet Jouer
 
 func _show_play() -> void:
-	# Disposition : liste des modes à gauche (icône, nom, accroche, chevron), fiche du mode choisi à droite. Écran étroit : liste puis fiche.
+	# Disposition « jeu vidéo » : liste des modes à gauche (gemme, nom, accroche), fiche du mode choisi à droite (titre géant,
+	# bouton de lancement, règles repliables). Écran étroit : liste puis fiche.
 	var side_by_side := not _narrow() and _width >= 820.0
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)
 	for m in PLAY_MODES:
 		list.add_child(_tile(m))
-	var detail := HubKit.card(UiTheme.BRONZE_DARK, HubKit.CARD_BG, 16)
+	var detail := GameScreen.glass(22 if not _narrow() else 14, 14)
 	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var box := HubKit.vbox(10)
+	var box := HubKit.vbox(12)
 	detail.add_child(box)
 	if side_by_side:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
+		row.add_theme_constant_override("separation", 22)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_body.add_child(row)
-		list.custom_minimum_size.x = clampf(_width * 0.4, 300.0, 460.0)
+		list.custom_minimum_size.x = clampf(_width * 0.36, 300.0, 440.0)
 		list.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		row.add_child(list)
 		row.add_child(detail)
@@ -301,81 +435,173 @@ func _show_play() -> void:
 	if (_mode == "hardcore" or _mode == "ranked" or _mode == "weekly" or _mode == "daily") and _signed() and not _runs_ok:
 		_load_runs_for_play()
 
-## Ligne de la liste des modes : icône, nom, accroche et chevron ; le mode choisi est en or.
+## Ligne de la liste des modes : gemme (losange) à l'icône du mode, nom en capitales et accroche ; le mode choisi a un fond doré,
+## une barre dorée à gauche et se décale vers la droite.
 func _tile(m: String) -> Button:
+	var sel := m == _mode
 	var b := Button.new()
 	b.toggle_mode = true
-	b.button_pressed = m == _mode
+	b.button_pressed = sel
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 62 if _narrow() else 78)
-	HubKit.style_toggle(b, 10, 6)
+	b.custom_minimum_size = Vector2(0, 64 if _narrow() else 80)
+	var col: Color = MODE_COLOR[m]
+	for k in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		var sb := StyleBoxFlat.new()
+		var on: bool = k.contains("pressed")
+		sb.bg_color = Color(0.94, 0.77, 0.36, 0.2) if on else (Color(0.3, 0.21, 0.09, 0.55) if k == "hover" else Color(0.133, 0.094, 0.055, 0.6))
+		sb.border_width_left = 4
+		sb.border_color = GameScreen.GOLD if on else Color(0.94, 0.77, 0.36, 0.0)
+		sb.set_corner_radius_all(4)
+		b.add_theme_stylebox_override(k, sb)
 	b.pressed.connect(func():
 		_mode = m
 		_show("play"))
 	var h := HBoxContainer.new()
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	h.offset_left = 12
+	h.offset_left = 26 if sel else 14
 	h.offset_right = -12
-	h.add_theme_constant_override("separation", 12)
+	h.add_theme_constant_override("separation", 14)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ic := HubKit.label(str(MODE_ICON[m]), UiTheme.PARCH, 34, false, false, HORIZONTAL_ALIGNMENT_CENTER)
-	ic.custom_minimum_size = Vector2(44, 0)
-	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.add_child(ic)
+	var gem := _Gem.new()
+	gem.tex = GameIcons.tex(MODE_GLYPH[m], 48, Color("fff0c8") if sel else col.lightened(0.35))
+	gem.col = col
+	gem.lit = sel
+	gem.custom_minimum_size = Vector2(46, 46) if _narrow() else Vector2(54, 54)
+	h.add_child(gem)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var t1 := HubKit.label(L.t(MODE_NAME[m]), GOLD if m == _mode else UiTheme.PARCH, 18, true)
+	var t1 := HubKit.label(L.t(MODE_NAME[m]).to_upper(), GameScreen.GOLD if sel else GameScreen.TEXT, 16 if _narrow() else 18, true, false)
+	t1.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
 	t1.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(t1)
-	var t2 := HubKit.label(L.t(MODE_TAG[m]), UiTheme.DIM, 12)
+	var t2 := HubKit.label(L.t(MODE_TAG[m]), GameScreen.MUTED, 12)
 	t2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(t2)
 	h.add_child(v)
-	var chev := HubKit.label("›", GOLD if m == _mode else UiTheme.DIM, 30, false, false, HORIZONTAL_ALIGNMENT_CENTER)
-	chev.custom_minimum_size = Vector2(18, 0)
-	chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.add_child(chev)
+	if sel:
+		var chev := GameIcons.rect("chevrons", 22, GameScreen.GOLD)
+		chev.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(chev)
 	b.add_child(h)
 	return b
 
-## Titre de la fiche : grande icône, nom du mode et filet doré dessous.
-func _mode_head(box: VBoxContainer, icon: String, text: String, color: Color) -> void:
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 14)
-	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_child(head)
-	head.add_child(HubKit.label(icon, UiTheme.PARCH, 44, false, false, HORIZONTAL_ALIGNMENT_CENTER))
-	var t := HubKit.vbox(2)
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	t.alignment = BoxContainer.ALIGNMENT_CENTER
-	head.add_child(t)
-	t.add_child(HubKit.label(text, color, 30, true, false))
-	var line := ColorRect.new()
-	line.color = Color(0.72, 0.55, 0.25, 0.65)
-	line.custom_minimum_size = Vector2(0, 2)
-	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	t.add_child(line)
+## Gemme de la liste : losange sombre cerclé de la couleur du mode, icône au centre.
+class _Gem extends Control:
+	var tex: Texture2D
+	var col := Color.WHITE
+	var lit := false
 
-## Bouton de lancement : centré, large, avec les épées croisées.
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var c := size / 2.0
+		var r := minf(size.x, size.y) * 0.5 - 2.0
+		var pts := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
+		draw_colored_polygon(pts, col.darkened(0.55) if not lit else col.darkened(0.2))
+		var closed := pts.duplicate()
+		closed.append(pts[0])
+		draw_polyline(closed, col if not lit else Color("fff0c8"), 2.0, true)
+		if tex != null:
+			var q := r * 0.95
+			draw_texture_rect(tex, Rect2(c - Vector2(q, q) / 2.0 * 1.0, Vector2(q, q)), false)
+
+## Titre de la fiche : accroche en petites capitales, nom du mode en très grand (Cinzel, halo orangé) et filet doré.
+func _mode_head(box: VBoxContainer, icon: String, text: String, color: Color) -> void:
+	var kick := HBoxContainer.new()
+	kick.add_theme_constant_override("separation", 8)
+	var mc: Color = MODE_COLOR.get(_mode, GameScreen.GOLD)
+	kick.add_child(GameIcons.rect(icon, 18, mc.lightened(0.2)))
+	var kt := HubKit.label(L.t(MODE_TAG[_mode]).to_upper(), mc.lightened(0.25), 13, true, false)
+	kt.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+	kick.add_child(kt)
+	box.add_child(kick)
+	var t := HubKit.label(text.to_upper(), Color("fff0c8") if color == GOLD else color.lightened(0.4), 30 if _narrow() else (44 if _width < 1100.0 else 56), true)
+	t.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	t.add_theme_color_override("font_shadow_color", Color(color.r, color.g * 0.7, color.b * 0.3, 0.22) if color != GOLD else Color(0.95, 0.5, 0.12, 0.2))
+	t.add_theme_constant_override("shadow_offset_x", 0)
+	t.add_theme_constant_override("shadow_offset_y", 0)
+	t.add_theme_constant_override("shadow_outline_size", 22)
+	box.add_child(t)
+	var line := ColorRect.new()
+	line.color = Color(0.94, 0.77, 0.36, 0.75)
+	line.custom_minimum_size = Vector2(90, 3)
+	line.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	box.add_child(line)
+
+## Bouton de lancement : doré, incliné, qui pulse (halo orangé) ; chevrons à droite du texte.
 func _play_button(text: String, cb: Callable) -> Control:
-	var wrap := CenterContainer.new()
+	var wrap := HBoxContainer.new()
 	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var b := HubKit.button("⚔  " + text, cb, true, 54)
-	b.custom_minimum_size.x = 380.0
-	b.add_theme_font_size_override("font_size", 17)
+	var b := Button.new()
+	b.text = text.to_upper()
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0 if _narrow() else 380, 60 if _narrow() else 70)
+	if _narrow():
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.icon = GameIcons.tex("chevrons", 48, Color.WHITE)
+	b.expand_icon = true
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	b.add_theme_constant_override("icon_max_width", 24)
+	b.add_theme_constant_override("h_separation", 14)
+	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	b.add_theme_font_size_override("font_size", 20)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_hover_pressed_color"]:
+		b.add_theme_color_override(c, Color("2a1604"))
+	b.add_theme_color_override("font_disabled_color", Color("8a7a60"))
+	b.add_theme_color_override("icon_disabled_color", Color("8a7a60"))
+	var glow := StyleBoxFlat.new()
+	for k in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		var sb := StyleBoxFlat.new()
+		var off: bool = k == "disabled"
+		sb.bg_color = Color("4a3d2a") if off else (Color("ffd26e") if k.contains("hover") else Color("f0c45c"))
+		sb.border_color = Color("6a5a40") if off else Color("fff0c8")
+		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(4)
+		sb.skew = Vector2(0.0 if off else -0.12, 0.0)
+		sb.content_margin_left = 30
+		sb.content_margin_right = 30
+		if not off:
+			sb.shadow_color = Color(1.0, 0.55, 0.1, 0.5)
+			sb.shadow_size = 16
+		b.add_theme_stylebox_override(k, sb)
+		if k == "normal":
+			glow = sb
+	var pulse := b.create_tween().set_loops()
+	pulse.tween_property(glow, "shadow_size", 28, 0.9)
+	pulse.tween_property(glow, "shadow_size", 12, 0.9)
+	b.pressed.connect(func():
+		if cb.is_valid():
+			cb.call())
 	wrap.add_child(b)
 	wrap.set_meta("button", b)
+	_play_btn = b
 	return wrap
+
+## Règles et détails du mode : repliés par défaut sous un bouton (l'état est conservé d'un mode à l'autre).
+func _facts(box: VBoxContainer, rows: Array, columns: int) -> void:
+	var inner := HubKit.vbox(8)
+	inner.visible = _rules_open
+	var t := HubKit.toggle(L.t("ui.hub.rules"), _rules_open, func(): pass, 14, 14, 8)
+	t.icon = GameIcons.tex("chevron", 40, Color.WHITE)
+	t.add_theme_constant_override("icon_max_width", 16)
+	t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	t.pressed.connect(func():
+		_rules_open = t.button_pressed
+		inner.visible = _rules_open)
+	box.add_child(t)
+	box.add_child(inner)
+	HubKit.facts(inner, rows, columns)
 
 func _fill_mode(box: VBoxContainer) -> void:
 	var cols := 1 if (_narrow() or _width < 1100.0) else 2   # la fiche est à droite de la liste : une colonne si la place manque
 	match _mode:
 		"free":
-			_mode_head(box, "🎲", L.t("ui.hub.mode_free"), GOLD)
+			_mode_head(box, "dice", L.t("ui.hub.mode_free"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.free_desc"), UiTheme.PARCH, 14))
 			if _on_launch.is_valid():
 				box.add_child(_play_button(L.t("ui.hub.free_play"), func():
@@ -383,15 +609,15 @@ func _fill_mode(box: VBoxContainer) -> void:
 					_on_launch.call()))
 			else:
 				box.add_child(HubKit.label(L.t("ui.hub.free_home"), UiTheme.DIM, 13, false, true, HORIZONTAL_ALIGNMENT_CENTER))
-			HubKit.facts(box, [
-				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.free_board")],
-				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.free_quit")],
-				["💾", L.t("ui.hub.f_save"), L.t("ui.hub.free_save")],
-				["🛠", L.t("ui.hub.f_editor"), L.t("ui.hub.free_editor")],
-				["🔓", L.t("ui.hub.f_unlock"), L.t("ui.hub.free_unlock")],
+			_facts(box, [
+				["bars", L.t("ui.hub.f_board"), L.t("ui.hub.free_board")],
+				["stop", L.t("ui.hub.f_quit"), L.t("ui.hub.free_quit")],
+				["save", L.t("ui.hub.f_save"), L.t("ui.hub.free_save")],
+				["tools", L.t("ui.hub.f_editor"), L.t("ui.hub.free_editor")],
+				["unlock", L.t("ui.hub.f_unlock"), L.t("ui.hub.free_unlock")],
 			], cols)
 		"ranked":
-			_mode_head(box, "🏆", L.t("ui.hub.mode_ranked"), GOLD)
+			_mode_head(box, "trophy", L.t("ui.hub.mode_ranked"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.ranked_desc"), UiTheme.PARCH, 14))
 			var chips := HFlowContainer.new()
 			chips.add_theme_constant_override("h_separation", 6)
@@ -403,61 +629,61 @@ func _fill_mode(box: VBoxContainer) -> void:
 					_show("play"), 14, 12, 7))
 			_cta(box, "ranked")
 			box.add_child(HubKit.label(L.t("ui.hub.ranked_dungeon"), UiTheme.DIM, 12))
-			HubKit.facts(box, [
-				["⚖", L.t("ui.hub.f_fair"), L.t("ui.hub.ranked_fair")],
-				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.ranked_board")],
-				["⏳", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
-				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.ranked_quit")],
-				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.ranked_reward")],
-				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
-				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.ranked_tries")],
+			_facts(box, [
+				["scale", L.t("ui.hub.f_fair"), L.t("ui.hub.ranked_fair")],
+				["bars", L.t("ui.hub.f_board"), L.t("ui.hub.ranked_board")],
+				["hourglass", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
+				["stop", L.t("ui.hub.f_quit"), L.t("ui.hub.ranked_quit")],
+				["star", L.t("ui.hub.f_reward"), L.t("ui.hub.ranked_reward")],
+				["forbidden", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
+				["repeat", L.t("ui.hub.f_tries"), L.t("ui.hub.ranked_tries")],
 			], cols)
 		"weekly":
-			_mode_head(box, "📅", L.t("ui.hub.mode_weekly"), GOLD)
+			_mode_head(box, "calendar", L.t("ui.hub.mode_weekly"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.weekly_desc"), UiTheme.PARCH, 14))
 			var rule_box := HubKit.card(Color("7a5a2c"), Color(0.2, 0.14, 0.05, 0.45), 12)
 			rule_box.name = "RuleCard"
 			box.add_child(rule_box)
 			_cta(box, "weekly")
-			HubKit.facts(box, [
-				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.weekly_dungeon")],
-				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.weekly_tries")],
-				["⏳", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
-				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
-				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.weekly_board")],
-				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.weekly_reward")],
-				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
+			_facts(box, [
+				["target", L.t("ui.hub.f_dungeon"), L.t("ui.hub.weekly_dungeon")],
+				["repeat", L.t("ui.hub.f_tries"), L.t("ui.hub.weekly_tries")],
+				["hourglass", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
+				["stop", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
+				["bars", L.t("ui.hub.f_board"), L.t("ui.hub.weekly_board")],
+				["star", L.t("ui.hub.f_reward"), L.t("ui.hub.weekly_reward")],
+				["forbidden", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 			], cols)
 			_load_weekly(rule_box, _gen)
 		"daily":
-			_mode_head(box, "🌅", L.t("ui.hub.mode_daily"), GOLD)
+			_mode_head(box, "sunrise", L.t("ui.hub.mode_daily"), GOLD)
 			box.add_child(HubKit.label(L.t("ui.hub.daily_desc"), UiTheme.PARCH, 14))
 			var day_box := HubKit.card(Color("7a5a2c"), Color(0.2, 0.14, 0.05, 0.45), 12)
 			day_box.name = "DailyCard"
 			box.add_child(day_box)
 			_cta(box, "daily")
-			HubKit.facts(box, [
-				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.daily_dungeon")],
-				["🔁", L.t("ui.hub.f_tries"), L.t("ui.hub.daily_tries")],
-				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
-				["⭐", L.t("ui.hub.f_reward"), L.t("ui.hub.daily_reward")],
-				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
+			_facts(box, [
+				["target", L.t("ui.hub.f_dungeon"), L.t("ui.hub.daily_dungeon")],
+				["repeat", L.t("ui.hub.f_tries"), L.t("ui.hub.daily_tries")],
+				["stop", L.t("ui.hub.f_quit"), L.t("ui.hub.weekly_quit")],
+				["star", L.t("ui.hub.f_reward"), L.t("ui.hub.daily_reward")],
+				["forbidden", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 			], cols)
 			_load_daily(day_box, _gen)
 		"hardcore":
 			var key := _month_key()
-			_mode_head(box, "🔥", L.t("ui.hub.mode_hardcore"), HubKit.FIRE)
+			_mode_head(box, "flame", L.t("ui.hub.mode_hardcore"), HubKit.FIRE)
 			box.add_child(HubKit.label(key.substr(5) + "/" + key.substr(0, 4), HubKit.FIRE, 18, true, false))      # la date du mois, sous le titre
 			box.add_child(HubKit.label(L.t("ui.hub.hc_desc"), UiTheme.PARCH, 14))
 			_cta(box, "hardcore")
-			HubKit.facts(box, [
-				["🎯", L.t("ui.hub.f_dungeon"), L.t("ui.hub.hc_dungeon")],
-				["⏳", L.t("ui.hub.f_tries"), L.t("ui.hub.hc_tries"), HubKit.WARN],
-				["⏳", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
-				["⏹", L.t("ui.hub.f_quit"), L.t("ui.hub.hc_quit")],
-				["📊", L.t("ui.hub.f_board"), L.t("ui.hub.hc_board")],
-				["🎖", L.t("ui.hub.f_reward"), L.t("ui.hub.hc_reward")],
-				["🚫", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
+			_facts(box, [
+				["target", L.t("ui.hub.f_dungeon"), L.t("ui.hub.hc_dungeon")],
+				["hourglass", L.t("ui.hub.f_tries"), L.t("ui.hub.hc_tries"), HubKit.WARN],
+				["hourglass", L.t("ui.hub.f_time"), L.t("ui.hub.ranked_time"), HubKit.WARN],
+				["stop", L.t("ui.hub.f_quit"), L.t("ui.hub.hc_quit")],
+				["bars", L.t("ui.hub.f_board"), L.t("ui.hub.hc_board")],
+				["medal", L.t("ui.hub.f_reward"), L.t("ui.hub.hc_reward")],
+				["forbidden", L.t("ui.hub.f_forbidden"), L.t("ui.hub.ranked_forbidden"), HubKit.WARN],
 			], cols)
 
 ## Lit (une fois) le Défi du jour et remplit sa carte : règle, temps restant, état du joueur.
@@ -630,7 +856,7 @@ func _month_key() -> String:
 
 ## Bas de fiche : état (essai du jour, partie en attente…) et bouton de lancement.
 func _cta(box: VBoxContainer, mode: String) -> void:
-	var status := HubKit.label("", UiTheme.DIM, 13, true, true, HORIZONTAL_ALIGNMENT_CENTER)
+	var status := HubKit.label("", UiTheme.DIM, 13, true, true, HORIZONTAL_ALIGNMENT_LEFT)
 	status.name = "CtaStatus"
 	box.add_child(status)
 	if not _online():
@@ -736,12 +962,12 @@ func _show_boards() -> void:
 	srcs.add_theme_constant_override("v_separation", 6)
 	_body.add_child(srcs)
 	for s in MODES:
-		srcs.add_child(HubKit.toggle("%s %s" % [MODE_ICON[s], L.t(MODE_NAME[s])], s == _src, func():
+		srcs.add_child(_icon_toggle(MODE_GLYPH[s], L.t(MODE_NAME[s]), s == _src, func():
 			_src = s
-			_show("boards"), 14, 12, 7))
-	srcs.add_child(HubKit.toggle("🏛 " + L.t("ui.hub.legends"), _src == "legends", func():
+			_show("boards")))
+	srcs.add_child(_icon_toggle("crown", L.t("ui.hub.legends"), _src == "legends", func():
 		_src = "legends"
-		_show("boards"), 14, 12, 7))
+		_show("boards")))
 	if _src == "ranked":
 		var ds := HFlowContainer.new()
 		ds.add_theme_constant_override("h_separation", 6)
