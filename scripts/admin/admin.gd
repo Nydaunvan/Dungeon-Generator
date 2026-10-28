@@ -330,6 +330,7 @@ func _select_tab(id: String) -> void:
 		if id == "items":
 			AtelierParty.sub = "items"
 		id = str(LEGACY[id])
+	Form.flush()
 	_tab = id
 	_side.select(id)
 	_menu_title.text = _section_title(id)

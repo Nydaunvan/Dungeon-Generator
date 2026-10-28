@@ -305,6 +305,16 @@ static func panel(parent: Control, title: String) -> VBoxContainer:
 # ------------------------------------------------------------------ réglages en ligne (curseur + valeur + « par défaut »)
 
 static var _dot: Texture2D = null
+static var _pending: Array = []
+
+## Exécute tout de suite les enregistrements automatiques en attente (avant de quitter ou de reconstruire une page).
+static func flush() -> void:
+	for e in _pending:
+		var t: Timer = e.t
+		if is_instance_valid(t) and not t.is_stopped():
+			t.stop()
+			(e.act as Callable).call()
+	_pending.clear()
 
 static func _dot_tex() -> Texture2D:
 	if _dot == null:
@@ -382,9 +392,10 @@ static func setting(parent: Control, label: String, value: float, lo: float, hi:
 	mk.clip_text = true
 	var shown := str(def) if step < 1.0 else str(int(def))
 	mk.text = L.fa(L.t("ui.atelier.default_value"), shown + unit)
-	h.add_child(mk)
+	if not is_nan(def):
+		h.add_child(mk)
 	var refresh := func():
-		var mod := not is_equal_approx(sp.value, def)
+		var mod := not is_nan(def) and not is_equal_approx(sp.value, def)
 		mk.modulate.a = 1.0 if mod else 0.0
 		l.add_theme_color_override("font_color", Color("ffd88a") if mod else Color("e2d2b0"))
 	refresh.call()
@@ -409,6 +420,7 @@ static func sync_setting(sp: SpinBox, v: float) -> void:
 ## (champs texte : à la validation ou en quittant le champ). Remplace les anciens boutons « Enregistrer ».
 static func autosave(root: Control, act: Callable) -> void:
 	var t := Timer.new()
+	_pending.append({"t": t, "act": act})
 	t.one_shot = true
 	t.wait_time = 0.5
 	root.add_child(t)

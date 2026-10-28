@@ -115,6 +115,123 @@ static func page_header(host: Control, id: String, title: String = "") -> HBoxCo
 	col.add_child(t)
 	return row
 
+# ------------------------------------------------------------------ composants communs
+
+static func box(bg: Color, line: Color, radius: int = 10, px: int = 12, py: int = 8, border: int = 1) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = line
+	sb.set_border_width_all(border)
+	sb.set_corner_radius_all(radius)
+	sb.content_margin_left = px
+	sb.content_margin_right = px
+	sb.content_margin_top = py
+	sb.content_margin_bottom = py
+	return sb
+
+## Pastille-bouton (filtres, sorts, paliers) : `on` = fond et liseré teintés de `tint`.
+static func pill(text: String, on: bool, cb: Callable, tint: Color = Color("e8b45c"), height: float = 34.0, size: int = 13) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, height)
+	b.add_theme_font_size_override("font_size", size)
+	var bg := Color(tint.r, tint.g, tint.b, 0.14) if on else Color(0.12, 0.09, 0.05, 0.7)
+	var line := tint if on else Color("3a2c18")
+	for k in ["normal", "pressed", "focus"]:
+		b.add_theme_stylebox_override(k, box(bg, line, int(height / 2.0), 14, 4))
+	b.add_theme_stylebox_override("hover", box(Color(tint.r, tint.g, tint.b, 0.2) if on else Color(0.2, 0.15, 0.08, 0.8), line if on else Color("6b5430"), int(height / 2.0), 14, 4))
+	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+		b.add_theme_color_override(c, Color("ffd88a") if on else Color("b8a781"))
+	if cb.is_valid():
+		b.pressed.connect(cb)
+	return b
+
+## Bouton plein (principal : doré) ou discret ; `danger` : rouge.
+static func button(text: String, cb: Callable, primary: bool = false, danger: bool = false, height: float = 40.0) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, height)
+	b.add_theme_font_size_override("font_size", 13)
+	var bg := Color(0.16, 0.12, 0.07, 0.7)
+	var line := Color("4a3920")
+	var fg := Color("e2d2b0")
+	if primary:
+		bg = Color(0.91, 0.71, 0.36, 0.14)
+		line = Color("e8b45c")
+		fg = Color("ffd88a")
+	elif danger:
+		bg = Color(0.31, 0.09, 0.07, 0.35)
+		line = Color("6b2a22")
+		fg = Color("ff8a78")
+	for k in ["normal", "pressed", "focus"]:
+		b.add_theme_stylebox_override(k, box(bg, line, 10, 16, 6))
+	b.add_theme_stylebox_override("hover", box(bg.lightened(0.12), line.lightened(0.15), 10, 16, 6))
+	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+		b.add_theme_color_override(c, fg)
+	if cb.is_valid():
+		b.pressed.connect(cb)
+	return b
+
+## Carte cliquable (bordure dorée si sélectionnée) : renvoie le conteneur, à remplir par l'appelant, puis `clickable()`.
+static func card(selected: bool, pad: int = 14, radius: int = 14) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", box(Color(0.91, 0.71, 0.36, 0.1) if selected else Color(0.1, 0.075, 0.043, 0.85),
+		Color("e8b45c") if selected else Color("3a2c18"), radius, pad, pad))
+	return p
+
+static func ignore_mouse(n: Node) -> void:
+	for ch in n.get_children():
+		if ch is Control:
+			(ch as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ignore_mouse(ch)
+
+## Rend `c` cliquable : ses enfants laissent passer la souris.
+static func clickable(c: Control, cb: Callable) -> void:
+	ignore_mouse(c)
+	c.mouse_filter = Control.MOUSE_FILTER_STOP
+	c.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	c.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			cb.call())
+
+static func muted(text: String, size: int = 12) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", MUTED)
+	return l
+
+## Intertitre de section en capitales dorées (Cinzel).
+static func section(text: String) -> Label:
+	var l := Label.new()
+	l.text = text.to_upper()
+	l.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_TITLE_BOLD, 2))
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color("e8b45c"))
+	return l
+
+## Barre fine dorée (caractéristiques) : valeur sur `max_v`.
+static func bar(value: float, max_v: float) -> ProgressBar:
+	var b := ProgressBar.new()
+	b.show_percentage = false
+	b.min_value = 0.0
+	b.max_value = max_v
+	b.value = minf(value, max_v)
+	b.custom_minimum_size = Vector2(60, 8)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color("2a2014")
+	bg.set_corner_radius_all(4)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("e8b45c")
+	fill.set_corner_radius_all(4)
+	b.add_theme_stylebox_override("background", bg)
+	b.add_theme_stylebox_override("fill", fill)
+	return b
+
 # ------------------------------------------------------------------ contrôles du donjon
 
 ## Contrôles de cohérence du donjon en cours d'édition : [{"state": "ok"|"warn"|"bad", "title", "text"}, …].

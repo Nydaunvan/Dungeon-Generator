@@ -74,7 +74,10 @@ func _init() -> void:
 	# onglet Personnages
 	adm._select_tab("chars")
 	await create_timer(1.0).timeout
-	ok(find_all(adm, func(n): return n is Label and str(n.text) == "APERÇU").size() == 1, "tableau Personnages : en-tête Aperçu")
+	ok(find_all(adm, func(n): return n is Label and str(n.text) == "CARACTÉRISTIQUES").size() == 1, "fiche du héros : titre Caractéristiques")
+	ok(find_all(adm, func(n): return n is Button and str(n.text) == "Choisir un portrait").size() == 1, "fiche du héros : bouton Choisir un portrait")
+	var hero_names := find_all(adm, func(n): return n is Label and ["Thane", "Sable", "Mira", "Zael"].has(str(n.text)))
+	ok(hero_names.size() == 4, "une carte par héros du groupe (%d)" % hero_names.size())
 	data.set_lang("fr")
 	print("fails=", fails)
 	quit(1 if fails > 0 else 0)
