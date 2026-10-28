@@ -26,6 +26,10 @@ func _ready() -> void:
 	var h = load("res://scripts/ui/online_hub.gd").open(host, func(): pass, "play")
 	await get_tree().create_timer(1.2).timeout
 	_shot(pre + "_play_free.png")
+	h._mode = "daily"
+	h._show("play")
+	await get_tree().create_timer(0.8).timeout
+	_shot(pre + "_play_daily.png")
 	h._mode = "hardcore"
 	h._rules_open = true
 	h._show("play")
