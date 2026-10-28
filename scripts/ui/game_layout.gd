@@ -33,7 +33,7 @@ var stage: Control
 var popup_layer: Control
 var message_label: Label
 var level_label: Label
-var compass_letters: Array[Label] = []
+var compass: AtlasCompass
 var pad: TouchControls
 var map_btn: Button
 var act_box: VBoxContainer
@@ -47,12 +47,13 @@ var hud: PartyHud
 var minimap: Minimap
 var bag: BagPanel
 var log_panel: LogPanel
-var panel_map: OrnatePanel
-var panel_bag: OrnatePanel
-var panel_log: OrnatePanel
+var panel_map: AtlasPanel
+var panel_bag: AtlasPanel
+var panel_log: AtlasPanel
 var save_menu: SaveMenu      # « 💾 Sauvegarde ▾ » : hébergé par le menu du haut (`header`)
 var _map_inset: Control
 var _map_fold: Button
+var map_box: VBoxContainer
 static var map_folded := false   # carte repliée (état de la session : ne fait partie ni des sauvegardes ni des configurations)
 
 var _root: Control
@@ -68,7 +69,6 @@ var view_controls: HBoxContainer
 var keys_panel: PanelContainer
 var sound_panel: PanelContainer
 var _comp: Control
-var _plaque_lvl: Control
 var _vignette: TextureRect
 var _ring: Panel
 var _timer_track: ColorRect
@@ -104,21 +104,6 @@ func setup(state: GameState, controller: CombatController, r: PlayerRig) -> void
 
 # ------------------------------------------------------------------ pièces
 
-func _plaque(text: String, font_size: float = 12.6) -> PanelContainer:
-	var p := PanelContainer.new()
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var fb := FrameBox.new(8.0, Vector4(2, 0, 2, 0), Color("140f0b"))
-	fb.inner_shadow = 0.0
-	p.add_theme_stylebox_override("panel", fb)
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
-	l.add_theme_font_size_override("font_size", int(UiMetrics.css(font_size)))
-	l.add_theme_color_override("font_color", Color("d9b56e"))
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	p.add_child(l)
-	return p
-
 ## Boutons carrés 📊 ⌨️ 🔊 en haut à droite de la vue (« .sound-controls ») + panneaux déroulants Commandes / Son.
 func _build_view_controls() -> void:
 	view_controls = HBoxContainer.new()
@@ -129,18 +114,14 @@ func _build_view_controls() -> void:
 	view_controls.offset_top = UiMetrics.css(8.0)
 	view_controls.offset_right = -UiMetrics.css(10.0)
 	stage.add_child(view_controls)
-	for n in [["Stats", "📊", L.t("ui.game_layout.statistiques_de_l_aventure")], ["Clavier", "⌨️", L.t("ui.game_layout.commandes_du_jeu")], ["Son", "🔊", L.t("ui.game_layout.reglages_du_son")]]:
+	for n in [["Stats", "bars", L.t("ui.game_layout.statistiques_de_l_aventure")], ["Clavier", "keyboard", L.t("ui.game_layout.commandes_du_jeu")], ["Son", "sound", L.t("ui.game_layout.reglages_du_son")]]:
 		var b := Button.new()
-		b.text = n[1]
+		b.icon = Atlas.icon(n[1], 18, Atlas.IVORY, 1.7)
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.tooltip_text = n[2]
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = UiMetrics.design_size(Vector2(32, 32))
-		b.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-		b.add_theme_font_size_override("font_size", int(UiMetrics.rem(1.05)))
-		b.add_theme_color_override("font_color", Color("e2d2b0"))
-		var ist := IronBox.button_styles()
-		for k in ist:
-			b.add_theme_stylebox_override(k, ist[k])
+		Atlas.style_button(b, "", 2.0)
 		var nn: String = n[0]
 		b.pressed.connect(func(): _view_btn(nn))
 		view_controls.add_child(b)
@@ -195,9 +176,7 @@ func _pause_button() -> Button:
 	b.tooltip_text = L.t("ui.pause.tip")
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = UiMetrics.design_size(Vector2(32, 32))
-	var ist := IronBox.button_styles()
-	for k in ist:
-		b.add_theme_stylebox_override(k, ist[k])
+	Atlas.style_button(b, "", 2.0)
 	var c := CenterContainer.new()
 	c.set_anchors_preset(Control.PRESET_FULL_RECT)
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -263,6 +242,27 @@ func _slots_follow() -> bool:
 		prev = int(k[0])
 	return true
 
+## Onglets du mobile (Besace / Journal) au style Atlas : étiquettes en capitales fines, filet ambre sous l'onglet actif.
+func _style_tabs_atlas(tabs: TabContainer) -> void:
+	var mk := func(border: Color, lift: float) -> AtlasBox:
+		var b := AtlasBox.new(UiMetrics.css(6.0))
+		b.fill_top = Color("1f2521").lightened(lift)
+		b.fill_bottom = Color("151a17").lightened(lift)
+		b.border = border
+		b.cut = 5.0
+		b.corners = Vector4(1, 0, 0, 0)
+		return b
+	tabs.add_theme_stylebox_override("tab_selected", mk.call(Atlas.AMBER, 0.0))
+	tabs.add_theme_stylebox_override("tab_unselected", mk.call(Atlas.COPPER_DIM, 0.0))
+	tabs.add_theme_stylebox_override("tab_hovered", mk.call(Atlas.AMBER_DIM, 0.05))
+	tabs.add_theme_stylebox_override("tab_focus", StyleBoxEmpty.new())
+	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	tabs.add_theme_font_override("font", Atlas.title_font(false, 1))
+	tabs.add_theme_font_size_override("font_size", int(UiMetrics.css(12.0)))
+	tabs.add_theme_color_override("font_selected_color", Atlas.AMBER)
+	tabs.add_theme_color_override("font_unselected_color", Atlas.IVORY)
+	tabs.add_theme_color_override("font_hovered_color", Atlas.AMBER)
+
 func _rebuild_keys() -> void:
 	for ch in _keys_box.get_children().slice(1):   # le premier enfant est le titre
 		_keys_box.remove_child(ch)
@@ -319,11 +319,8 @@ func _view_btn(n: String) -> void:
 			keys_panel.visible = false
 			sound_panel.visible = not sound_panel.visible
 
-func _small_iron(b: Button) -> void:
-	var st := IronBox.button_styles()
-	for k in st:
-		(st[k] as IronBox).rivets = false
-		b.add_theme_stylebox_override(k, st[k])
+func _small_atlas(b: Button) -> void:
+	Atlas.style_button(b, "", 2.0)
 	b.custom_minimum_size = UiMetrics.design_size(Vector2(26, 26))
 	b.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -336,9 +333,12 @@ func _build_parts() -> void:
 
 	# cadre de la vue 3D
 	frame = PanelContainer.new()
-	var vfb := FrameBox.new(24.0, Vector4(0, 0, 0, 0), Color("0a0705"))
-	vfb.use_grime = false
-	vfb.inner_shadow = 0.0
+	var vfb := AtlasBox.new(2.0)
+	vfb.fill_top = Color("0a0c0b")
+	vfb.fill_bottom = Color("0a0c0b")
+	vfb.border = Atlas.COPPER_DIM
+	vfb.cut = 10.0
+	vfb.corners = Vector4(1, 0, 1, 0)
 	frame.add_theme_stylebox_override("panel", vfb)
 	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -359,33 +359,30 @@ func _build_parts() -> void:
 	world = Node3D.new()
 	sub_viewport.add_child(world)
 
-	# plaque du niveau (haut gauche)
-	var lp := _plaque("")
-	lp.position = Vector2(UiMetrics.css(8.0), UiMetrics.css(6.0))
-	level_label = lp.get_child(0) as Label
-	stage.add_child(lp)
-	_plaque_lvl = lp
-	# pastille du type de donjon sous la plaque du niveau (.dungeon-type-badge)
+	# le nom du niveau vit dans l'en-tête (header.set_level) ; ici seulement la pastille du type de donjon et le minuteur classé
+	level_label = Label.new()      # reçoit le nom du niveau (non affiché : l'en-tête le montre)
+	var tb := AtlasBox.new(0.0)
+	tb.fill_top = Color(Atlas.OBSIDIAN, 0.82)
+	tb.fill_bottom = Color(Atlas.OBSIDIAN, 0.82)
+	tb.border = Atlas.COPPER_DIM
+	tb.cut = 4.0
+	tb.content_margin_left = UiMetrics.css(9.0)
+	tb.content_margin_right = UiMetrics.css(9.0)
+	tb.content_margin_top = UiMetrics.css(3.0)
+	tb.content_margin_bottom = UiMetrics.css(3.0)
+	# pastille du type de donjon (haut gauche de la vue)
 	type_badge = Label.new()
-	type_badge.position = Vector2(UiMetrics.css(12.0), UiMetrics.css(48.0))
-	type_badge.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
-	type_badge.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.6)))
-	type_badge.add_theme_color_override("font_color", Color("ffd88a"))
-	var tb := StyleBoxFlat.new()
-	tb.bg_color = Color(0.03, 0.02, 0.01, 0.72)
-	tb.border_color = Color("070504")
-	tb.set_border_width_all(maxi(1, roundi(UiMetrics.css(1.0))))
-	tb.content_margin_left = UiMetrics.css(8.0)
-	tb.content_margin_right = UiMetrics.css(8.0)
-	tb.content_margin_top = UiMetrics.css(2.0)
-	tb.content_margin_bottom = UiMetrics.css(2.0)
+	type_badge.position = Vector2(UiMetrics.css(12.0), UiMetrics.css(10.0))
+	type_badge.add_theme_font_override("font", Atlas.font(Atlas.F_BODY_MED))
+	type_badge.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.62)))
+	type_badge.add_theme_color_override("font_color", Atlas.IVORY)
 	type_badge.add_theme_stylebox_override("normal", tb)
 	type_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(type_badge)
 	# temps restant d'une partie classée (2 h maximum) : sous la pastille du type, visible seulement en partie classée
 	ranked_timer = Label.new()
-	ranked_timer.position = Vector2(UiMetrics.css(12.0), UiMetrics.css(72.0))
-	ranked_timer.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
+	ranked_timer.position = Vector2(UiMetrics.css(12.0), UiMetrics.css(36.0))
+	ranked_timer.add_theme_font_override("font", Atlas.font(Atlas.F_BODY_BOLD))
 	ranked_timer.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.78)))
 	ranked_timer.add_theme_stylebox_override("normal", tb)
 	ranked_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -393,37 +390,17 @@ func _build_parts() -> void:
 	ranked_timer.visible = false
 	stage.add_child(ranked_timer)
 
-	# boussole (haut centre) : N E ☠ S O, la direction actuelle est en or
-	var comp := PanelContainer.new()
-	comp.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var cfb := FrameBox.new(8.0, Vector4(8, 0, 8, 0), Color("140f0b"))
-	cfb.inner_shadow = 0.0
-	comp.add_theme_stylebox_override("panel", cfb)
-	comp.anchor_left = 0.5
-	comp.anchor_right = 0.5
-	comp.offset_top = UiMetrics.css(6.0)
-	comp.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	var crow := HBoxContainer.new()
-	crow.add_theme_constant_override("separation", int(UiMetrics.css(10.0)))
-	comp.add_child(crow)
-	var letters := ["N", "E", "☠", "S", "O"]
-	for l in letters:
-		if l == "☠":
-			var sk := TextureRect.new()
-			sk.texture = UiTheme.tex("medallion")
-			sk.custom_minimum_size = UiMetrics.design_size(Vector2(22, 22))
-			sk.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			sk.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			crow.add_child(sk)
-			continue
-		var lb := Label.new()
-		lb.text = l
-		lb.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-		lb.add_theme_font_size_override("font_size", int(UiMetrics.css(12.0)))
-		crow.add_child(lb)
-		compass_letters.append(lb)
-	stage.add_child(comp)
-	_comp = comp
+	# repère d'orientation (bas centre de la vue)
+	compass = AtlasCompass.new()
+	compass.anchor_left = 0.5
+	compass.anchor_right = 0.5
+	compass.anchor_top = 1.0
+	compass.anchor_bottom = 1.0
+	compass.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	compass.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	compass.offset_bottom = -UiMetrics.css(8.0)
+	stage.add_child(compass)
+	_comp = compass
 
 	# file d'initiative : chaîne sous la vue 3D (placée par _rebuild)
 	queue = QueueBar.new()
@@ -538,9 +515,7 @@ func _build_parts() -> void:
 	map_btn.tooltip_text = L.t("ui.game_layout.carte_en_plein_ecran_touche")
 	map_btn.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY))
 	map_btn.add_theme_color_override("font_color", Color("ffd98a"))
-	var mst := IronBox.button_styles()
-	for k in mst:
-		map_btn.add_theme_stylebox_override(k, mst[k])
+	Atlas.style_button(map_btn, "", 2.0)
 	map_btn.pressed.connect(func(): menu_pressed.emit("Carte"))
 	stage.add_child(map_btn)
 
@@ -548,7 +523,7 @@ func _build_parts() -> void:
 	act_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn_flee = Button.new()
 	btn_flee.focus_mode = Control.FOCUS_NONE
-	btn_flee.text = "🏃 FUITE"
+	btn_flee.text = L.t("ui.atlas.flee")
 	act_box.add_child(btn_flee)
 	_style_flee()
 	btn_flee.pressed.connect(func(): command.emit("flee"))
@@ -570,21 +545,20 @@ func _build_parts() -> void:
 	hud.chest_pressed.connect(func(id): chest_pressed.emit(id))
 
 	# panneaux latéraux
-	panel_map = OrnatePanel.new(L.t("common.carte"))
+	panel_map = AtlasPanel.new(L.t("common.carte"), "map")
 	panel_map.name = "Carte"
 	if panel_map.header_row != null:
-		# bouton de repli à gauche, bouton « plein écran » à droite : le titre reste centré
+		# bouton de repli à gauche, bouton « plein écran » à droite
 		_map_fold = Button.new()
-		_small_iron(_map_fold)
+		_small_atlas(_map_fold)
 		_map_fold.focus_mode = Control.FOCUS_NONE
 		_map_fold.pressed.connect(func():
 			map_folded = not map_folded
 			_apply_map_fold())
 		panel_map.header_row.add_child(_map_fold)
-		panel_map.header_row.move_child(_map_fold, 0)
 		var fb := Button.new()
-		fb.text = "🗺️"
-		_small_iron(fb)
+		fb.icon = Atlas.icon("map", 16, Atlas.IVORY, 1.7)
+		_small_atlas(fb)
 		fb.focus_mode = Control.FOCUS_NONE
 		fb.tooltip_text = L.t("ui.game_layout.carte_en_plein_ecran_touche")
 		fb.pressed.connect(func(): menu_pressed.emit("Carte"))
@@ -596,10 +570,15 @@ func _build_parts() -> void:
 	minimap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map_inset.minimap = minimap
 	map_inset.add_child(minimap)
-	panel_map.body.add_child(map_inset)
+	map_inset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map_inset.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	map_box = VBoxContainer.new()
+	map_box.add_theme_constant_override("separation", 8)
+	map_box.add_child(map_inset)
+	map_box.add_child(MapLegend.new())
+	panel_map.body.add_child(map_box)
 	_apply_map_fold()
-	panel_bag = OrnatePanel.new(L.t("ui.game_layout.besace_commune_du_groupe"))
+	panel_bag = AtlasPanel.new(L.t("ui.atlas.inventory_title"), "chest")
 	panel_bag.name = "Besace"
 	bag = BagPanel.new()
 	bag.setup(gs)
@@ -607,12 +586,12 @@ func _build_parts() -> void:
 	bag.item_quick.connect(func(i): item_quick.emit(i))
 	bag.inventory_pressed.connect(func(): inventory_pressed.emit())
 	panel_bag.body.add_child(bag)
-	panel_log = OrnatePanel.new(L.t("ui.game_layout.grimoire_des_evenements"))
+	panel_log = AtlasPanel.new(L.t("ui.game_layout.grimoire_des_evenements"), "scroll")
 	panel_log.name = "Journal"
 	if panel_log.header_row != null:
 		var lb := Button.new()
-		lb.text = "📖"
-		_small_iron(lb)
+		lb.icon = Atlas.icon("scroll", 16, Atlas.IVORY, 1.7)
+		_small_atlas(lb)
 		lb.focus_mode = Control.FOCUS_NONE
 		lb.tooltip_text = L.t("ui.game_layout.historique_complet_du_journal")
 		lb.pressed.connect(func(): menu_pressed.emit("Journal"))
@@ -630,10 +609,10 @@ func _build_parts() -> void:
 
 ## Carte repliée : il ne reste que son titre, le grimoire occupe la place libérée.
 func _apply_map_fold() -> void:
-	if _map_inset != null:
-		_map_inset.visible = not map_folded
+	if map_box != null:
+		map_box.visible = not map_folded
 	if _map_fold != null:
-		_map_fold.text = "▸" if map_folded else "▾"
+		_map_fold.icon = Atlas.icon("chevron" if map_folded else "chevdown", 16, Atlas.IVORY, 1.8)
 		_map_fold.tooltip_text = L.t("ui.game_layout.deplier_la_carte") if map_folded else L.t("ui.game_layout.replier_la_carte")
 
 # ------------------------------------------------------------------ dispositions
@@ -720,6 +699,7 @@ func _rebuild() -> void:
 		tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		tabs.size_flags_stretch_ratio = 1.0
 		tabs.custom_minimum_size = Vector2(0, 110)
+		_style_tabs_atlas(tabs)
 		v.add_child(tabs)
 		# la carte quitte l'écran mobile (la vue 3D gagne la place) : le bouton 🗺 de la vue l'ouvre en plein écran
 		panel_map.visible = false
@@ -741,35 +721,37 @@ func _rebuild() -> void:
 		h.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		h.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
 		v.add_child(h)
+		# colonne de gauche : la carte
 		var left := VBoxContainer.new()
-		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		left.name = "Left"
 		left.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
+		left.visible = not _compact
 		h.add_child(left)
-		left.add_child(frame)
+		# centre : la vue 3D, la file d'initiative et les fiches des héros
+		var center := VBoxContainer.new()
+		center.name = "Center"
+		center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		center.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
+		h.add_child(center)
+		center.add_child(frame)
 		await _yield()
-		left.add_child(queue)
-		left.add_child(strip)
+		center.add_child(queue)
+		center.add_child(hud)
 		await _yield()
-		left.add_child(hud)
-		await _yield()
+		# colonne de droite : inventaire commun, carnet, raccourcis
 		var right := VBoxContainer.new()
 		right.name = "Right"
-		right.add_theme_constant_override("separation", int(UiMetrics.css(18.0)))
-		var spc := Control.new()
-		spc.custom_minimum_size = Vector2(0, 0)
-		right.add_child(spc)
-		for pm in [panel_map, panel_bag, panel_log]:
-			pm.medal = true
-		panel_log.hooks = true
-		panel_bag.hooks = true
+		right.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
 		h.add_child(right)
-		for p in [panel_map, panel_bag, panel_log]:
-			right.add_child(p)
+		left.add_child(panel_map)
+		right.add_child(panel_bag)
+		right.add_child(panel_log)
+		right.add_child(strip)
 		await _yield()
 		panel_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		for p in [panel_map, panel_bag, panel_log]:
 			p.custom_minimum_size = Vector2(0, 0)
-		# la besace garde la taille de son contenu ; le grimoire prend tout le reste de la colonne (carte repliée : encore plus)
+		# l'inventaire garde la taille de son contenu ; le carnet prend tout le reste de la colonne
 		panel_bag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		panel_bag.size_flags_stretch_ratio = 1.0
 		panel_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -805,21 +787,16 @@ func _size_widgets() -> void:
 	header.rescale()
 	var right: Node = _root.get_node_or_null("Main/Right")
 	if right:
-		var wreal := w
-		(right as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.175 * wreal + 56.0, 260.0, 460.0)), 0)
+		(right as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.21 * w + 60.0, 300.0, 460.0)), 0)
+	var left_col: Node = _root.get_node_or_null("Main/Left")
+	if left_col:
+		(left_col as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.17 * w + 20.0, 230.0, 330.0)), 0)
 	_size_overlays()
 
 func _size_overlays() -> void:
 	pad.rescale()
 	pad.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_KEEP_SIZE, int(UiMetrics.css(12.0)))
 	act_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, int(UiMetrics.css(12.0)))
-	# boussole : en haut au centre en paysage ; sur mobile elle descend au bas de la vue (le haut est pris par la plaque et les boutons)
-	if _comp != null:
-		_comp.anchor_top = 1.0 if _portrait else 0.0
-		_comp.anchor_bottom = 1.0 if _portrait else 0.0
-		_comp.grow_vertical = Control.GROW_DIRECTION_BEGIN if _portrait else Control.GROW_DIRECTION_END
-		_comp.offset_top = -UiMetrics.css(10.0) if _portrait else UiMetrics.css(6.0)
-		_comp.offset_bottom = -UiMetrics.css(10.0) if _portrait else UiMetrics.css(6.0)
 	var mb := UiMetrics.css(46.0)
 	map_btn.custom_minimum_size = Vector2(mb, mb)
 	map_btn.add_theme_font_size_override("font_size", int(mb * 0.55))
@@ -845,6 +822,7 @@ func set_ranked_timer(text: String, color: Color) -> void:
 
 func set_level_name(text: String) -> void:
 	level_label.text = text
+	header.set_level(L.fa(L.t("ui.atlas.level_n"), gs.level_index + 1), text)
 	if type_badge != null:
 		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, RankedRun.mode_label(gs.cfg))
 
@@ -916,11 +894,9 @@ func _pouch_button(tex: Texture2D, glyph: String, detail: String, count: int, ti
 	return b
 
 func _style_flee() -> void:
-	var st := IronBox.button_styles(Color("d0452e"), "flee")
-	for k in st:
-		btn_flee.add_theme_stylebox_override(k, st[k])
-	btn_flee.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	btn_flee.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.85)))
+	Atlas.style_button(btn_flee, "danger", 8.0)
+	btn_flee.add_theme_font_override("font", Atlas.title_font(true, 2))
+	btn_flee.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.8)))
 	btn_flee.add_theme_color_override("font_color", Color("f0c9a0"))
 	btn_flee.add_theme_color_override("font_hover_color", Color("ffe0b8"))
 	btn_flee.custom_minimum_size = Vector2(UiMetrics.css(130.0), UiMetrics.css(40.0))
@@ -946,7 +922,6 @@ func _process(_d: float) -> void:
 	if on:
 		keys_panel.visible = false
 		sound_panel.visible = false
-	_plaque_lvl.visible = not on
 	type_badge.visible = not on
 	btn_flee.visible = on
 	_vignette.visible = on
@@ -958,6 +933,4 @@ func _process(_d: float) -> void:
 		_timer_fill.color = Color("e8b45c") if tf > 0.3 else Color("d8452e")
 		_vignette.modulate.a = 0.85 + 0.15 * sin(Time.get_ticks_msec() / 400.0)
 	if rig != null:
-		for i in compass_letters.size():
-			# ordre affiché : N E S O = directions 0 1 2 3
-			compass_letters[i].add_theme_color_override("font_color", UiTheme.GOLD if i == rig.dir else Color("6f5e44"))
+		compass.dir = rig.dir

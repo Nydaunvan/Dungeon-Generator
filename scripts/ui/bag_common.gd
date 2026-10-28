@@ -281,6 +281,73 @@ static func _corner_label(text: String, col: Color, top_right: bool) -> Label:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
 
+## Fond d'une case Atlas : ardoise sombre, filet cuivre ; filet de la couleur de rareté pour les armes et armures rares ; ambre si sélectionnée.
+static func style_tile_atlas(b: Button, it: Dictionary, selected: bool) -> void:
+	var mk := func(lift: float) -> AtlasBox:
+		var sb := AtlasBox.new(UiMetrics.css(4.0))
+		sb.fill_top = Color("1f2521").lightened(lift)
+		sb.fill_bottom = Color("151a17").lightened(lift)
+		sb.cut = 5.0
+		sb.corners = Vector4(0, 1, 0, 1)
+		if selected:
+			sb.border = Atlas.AMBER
+		elif Rarity.is_special(it) and ["weapon", "armor", "jewelry"].has(str(it.get("type", ""))):
+			sb.border = Color(Rarity.color(it), 0.85)
+		else:
+			sb.border = Atlas.COPPER_DIM
+		return sb
+	b.add_theme_stylebox_override("normal", mk.call(0.0))
+	b.add_theme_stylebox_override("pressed", mk.call(0.0))
+	b.add_theme_stylebox_override("hover", mk.call(0.06))
+	b.add_theme_stylebox_override("hover_pressed", mk.call(0.06))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+
+## Case vide Atlas.
+static func empty_cell_atlas(min_size: float) -> Control:
+	var p := Panel.new()
+	var sb := AtlasBox.new(0.0)
+	sb.fill_top = Atlas.OBSIDIAN_DEEP
+	sb.fill_bottom = Atlas.OBSIDIAN_DEEP
+	sb.border = Color(Atlas.COPPER_DIM, 0.45)
+	sb.cut = 5.0
+	sb.corners = Vector4(0, 1, 0, 1)
+	p.add_theme_stylebox_override("panel", sb)
+	p.custom_minimum_size = Vector2(min_size, min_size)
+	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return p
+
+## Case d'objet Atlas : quantité toujours visible en bas à droite, repère ▲ / ▼ en haut à droite.
+static func make_tile_atlas(gs: GameState, it: Dictionary, idx: int, count: int, selected: bool, min_size: float, char_id: String) -> Tile:
+	var b := Tile.new()
+	b.gs = gs
+	b.it = it
+	b.idx = idx
+	b.char_id = char_id
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(min_size, min_size)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	b.icon = IconResolver.texture(str(it.get("icon", "")))
+	b.expand_icon = true
+	b.add_theme_constant_override("icon_max_width", int(min_size * 0.72))
+	if b.icon == null:
+		b.text = str(it.get("icon", ""))
+		b.add_theme_font_size_override("font_size", int(min_size * 0.42))
+	style_tile_atlas(b, it, selected)
+	var q := _corner_label(str(count), Atlas.IVORY, false)
+	q.add_theme_font_override("font", Atlas.font(Atlas.F_BODY_BOLD))
+	q.add_theme_font_size_override("font_size", maxi(10, int(min_size * 0.2)))
+	q.add_theme_constant_override("outline_size", 3)
+	b.add_child(q)
+	var c := gs.char_by_id(char_id)
+	var up := Inventory.upgrade(c, it)
+	if up != 0:
+		b.add_child(_corner_label("▲" if up > 0 else "▼", UP if up > 0 else DOWN, true))
+	return b
+
 ## Contenu de l'infobulle d'un objet : voir `ItemTip` (en-tête, bloc principal, bonus avec écart, pouvoirs, pied).
 static func tooltip_for(gs: GameState, it: Dictionary, char_id: String) -> Control:
 	return ItemTip.build(gs, it, char_id)

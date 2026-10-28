@@ -31,6 +31,53 @@ class Emblem extends Control:
 			var tip := c + d * r * (1.0 if i == 0 else 0.86)
 			draw_colored_polygon(PackedVector2Array([tip, c + n * r * 0.13, c - n * r * 0.13]), Atlas.AMBER if i == 0 else Atlas.IVORY)
 
+## Centre de la bande : « NIVEAU 1 / LES CAVES SUPÉRIEURES » entre deux filets terminés par un losange (vide sur l'accueil).
+class Crest extends Control:
+	var num_text := ""
+	var name_text := ""
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		custom_minimum_size = Vector2(0, 20)
+	func _draw() -> void:
+		if num_text == "" and name_text == "":
+			return
+		var f := Atlas.title_font(false, 3)
+		var fs := maxi(9, int(size.y * 0.3))
+		var a := num_text.to_upper()
+		var b := name_text.to_upper()
+		var wa := f.get_string_size(a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var wb := f.get_string_size(b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var sep := 26.0
+		var total := wa + wb + sep
+		if total > size.x - 70.0:
+			b = ""
+			wb = 0.0
+			total = wa
+			sep = 0.0
+		var x0 := (size.x - total) * 0.5
+		var y := size.y * 0.5
+		draw_string(f, Vector2(x0, y + fs * 0.36), a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Atlas.IVORY)
+		if b != "":
+			draw_string(f, Vector2(x0 + wa + sep, y + fs * 0.36), b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Atlas.IVORY_DIM)
+			draw_line(Vector2(x0 + wa + sep * 0.5, y - fs * 0.6), Vector2(x0 + wa + sep * 0.5 - 4.0, y + fs * 0.6), Atlas.COPPER, 1.0, true)
+		# filets de part et d'autre
+		var gap := 16.0
+		var lx1 := x0 - gap
+		var rx0 := x0 + total + gap
+		draw_line(Vector2(maxf(4.0, lx1 - size.x * 0.28), y), Vector2(lx1, y), Color(Atlas.COPPER, 0.8), 1.0, true)
+		draw_line(Vector2(rx0, y), Vector2(minf(size.x - 4.0, rx0 + size.x * 0.28), y), Color(Atlas.COPPER, 0.8), 1.0, true)
+		Atlas.draw_diamond(self, Vector2(lx1 + 4.0, y), 3.0, Atlas.AMBER)
+		Atlas.draw_diamond(self, Vector2(rx0 - 4.0, y), 3.0, Atlas.AMBER)
+
+var _crest: Crest
+
+func set_level(num_text: String, name_text: String) -> void:
+	_crest.num_text = num_text
+	_crest.name_text = name_text
+	_crest.visible = not UiMetrics.portrait and num_text != ""
+	_crest.queue_redraw()
+
 func _init() -> void:
 	clip_contents = false
 	_box = AtlasBox.new(0.0)
@@ -47,12 +94,13 @@ func _init() -> void:
 	hrow.add_child(_emblem)
 	title_label = Label.new()
 	title_label.text = L.t("common.editeur_de_donjon")
-	title_label.clip_text = true
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_label.clip_text = false
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_override("font", Atlas.title_font(true, 3))
 	title_label.add_theme_color_override("font_color", Atlas.IVORY)
 	hrow.add_child(title_label)
+	_crest = Crest.new()
+	hrow.add_child(_crest)
 	nav_row = HBoxContainer.new()
 	nav_row.add_theme_constant_override("separation", 0)
 	nav_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -139,6 +187,8 @@ func _plain(full: String) -> String:
 func rescale() -> void:
 	custom_minimum_size.y = UiMetrics.css(48.0 if not UiMetrics.portrait else 44.0)
 	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(17.0 if not UiMetrics.portrait else 13.0)))
+	if _crest != null:
+		_crest.visible = not UiMetrics.portrait and _crest.num_text != ""
 	var side := UiMetrics.css(22.0)
 	_box.content_margin_left = UiMetrics.css(16.0)
 	_box.content_margin_right = UiMetrics.css(10.0)

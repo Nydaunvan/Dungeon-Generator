@@ -293,38 +293,19 @@ func _draw() -> void:
 	if h < 4.0:
 		return
 	var cy := h * 0.5
-	# chaîne (SVG chainH défilant, recadrée entre les deux crânes)
-	var chain := SvgArt.tex("chainH", maxf(2.0, h / 12.0 * 0.0 + 2.0))
-	if chain != null:
-		var ch := 12.0 * (h / 44.0 if h < 44.0 else 1.0)
-		ch = clampf(ch, 9.0, 12.0)
-		var x0 := PAD
-		var x1 := w - PAD
-		var off := fposmod(_chain_pos, LINK * ch / 12.0)
-		var lw := LINK * ch / 12.0
-		var x := x0 - off
-		while x < x1:
-			var dx0 := maxf(x, x0)
-			var dx1 := minf(x + lw, x1)
-			if dx1 > dx0:
-				var u0 := (dx0 - x) / lw
-				var u1 := (dx1 - x) / lw
-				var tw := chain.get_size().x
-				draw_texture_rect_region(chain, Rect2(dx0, cy - ch * 0.5, dx1 - dx0, ch), Rect2(u0 * tw, 0, (u1 - u0) * tw, chain.get_size().y))
-			x += lw
-	# médaillons-crânes
-	var r := clampf(h * 0.3, 9.0, 13.0)
-	for cx in [3.0 + r, w - 3.0 - r]:
-		var c := Vector2(cx, cy)
-		draw_circle(c, r + 4.0, Color("070504"))
-		draw_circle(c, r + 3.0, Color("5a4630"))
-		draw_circle(c, r + 2.0, Color("070504"))
-		draw_circle(c, r, Color("1a120c"))
-		draw_circle(c - Vector2(0, r * 0.24), r * 0.8, Color("2c2217"))
-		var sk := SvgArt.tex("skull", maxf(1.0, r * 1.28 / 40.0 * 2.0))
-		if sk != null:
-			var ss := r * 2.0 * 0.64
-			draw_texture_rect(sk, Rect2(c - Vector2(ss, ss) * 0.5, Vector2(ss, ss)), false)
+	# filet fin cuivre entre deux losanges d'extrémité (graduations qui défilent avec la file)
+	var x0 := PAD
+	var x1 := w - PAD
+	draw_line(Vector2(x0, cy), Vector2(x1, cy), Color(Atlas.COPPER_DIM, 0.8), 1.0, true)
+	var tick := 24.0
+	var off := fposmod(_chain_pos, tick)
+	var tx := x0 - off + tick
+	while tx < x1:
+		if tx > x0:
+			draw_line(Vector2(tx, cy - 2.0), Vector2(tx, cy + 2.0), Color(Atlas.COPPER_DIM, 0.7), 1.0)
+		tx += tick
+	Atlas.draw_diamond(self, Vector2(x0 - 8.0, cy), 4.0, Atlas.COPPER)
+	Atlas.draw_diamond(self, Vector2(x1 + 8.0, cy), 4.0, Atlas.COPPER)
 	# curseur (lames croisées + anneau) sous la pastille courante
 	if _cursor_x >= 0.0 and in_combat():
 		_draw_cursor(Vector2(_cursor_x, cy), float(_layout().size) * 1.12 + 16.0)

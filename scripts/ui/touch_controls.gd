@@ -11,17 +11,12 @@ var cell: float = 28.0
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiMetrics.register(self)
-	var st := IronBox.button_styles()
 	for item in _cells:
 		var b := Button.new()
 		b.text = item[2]
 		b.focus_mode = Control.FOCUS_NONE
 		b.add_theme_font_size_override("font_size", 16)
-		b.add_theme_color_override("font_color", Color("e2d2b0"))
-		b.add_theme_color_override("font_hover_color", Color("ffd88a"))
-		b.add_theme_color_override("font_pressed_color", Color("ffd88a"))
-		for k in st:
-			b.add_theme_stylebox_override(k, st[k])
+		Atlas.style_button(b, "", 2.0)
 		var cmd: String = item[3]
 		b.pressed.connect(func(): command.emit(cmd))
 		add_child(b)
@@ -43,8 +38,8 @@ func set_side(px: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	# fond en croix (inset -5 px), bords droits comme le clip-path de l'original
-	var e := UiMetrics.css(5.0)
+	# fond en croix discret, derrière les quatre boutons
+	var e := UiMetrics.css(4.0)
 	var s := size
 	var a := s.x * 0.3
 	var b := s.x * 0.7
@@ -53,4 +48,4 @@ func _draw() -> void:
 	var c := s * 0.5
 	for p in pts:
 		big.append(p + (p - c).normalized() * e * 1.2)
-	draw_colored_polygon(big, Color(0.05, 0.03, 0.02, 0.9))
+	draw_colored_polygon(big, Color(Atlas.OBSIDIAN, 0.78))

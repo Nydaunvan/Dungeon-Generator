@@ -98,3 +98,47 @@ static func draw_ticks(ci: CanvasItem, from: Vector2, to: Vector2, count: int, h
 	for i in count + 1:
 		var x := lerpf(from.x, to.x, float(i) / float(maxi(1, count)))
 		ci.draw_line(Vector2(x, from.y), Vector2(x, from.y - (h if i % 5 == 0 else h * 0.5)), col, 1.0)
+
+# --- composants communs ----------------------------------------------------------------------------------------------
+## Icône de la famille de traits GameIcons, dans la couleur voulue (ivoire par défaut).
+static func icon(name: String, px: int, col: Color = IVORY, stroke: float = 1.6) -> Texture2D:
+	return GameIcons.tex(name, px, col, stroke)
+
+## Les cinq styles d'un bouton Atlas (normal, hover, pressed, focus, disabled) : fond sombre, filet fin, angles coupés.
+## `kind` : "" (neutre), "accent" (ambre, action importante), "danger" (rouge, fuite).
+static func button_boxes(kind: String = "", pad: float = 6.0) -> Dictionary:
+	var out := {}
+	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var b := AtlasBox.new(pad)
+		b.cut = 5.0
+		b.width = 1.0
+		var edge := COPPER_DIM
+		var top := Color("1b201d")
+		var bot := Color("111513")
+		match kind:
+			"accent":
+				edge = AMBER_DIM
+			"danger":
+				edge = Color("8a3a2a")
+				top = Color("2a1511")
+				bot = Color("1a0d0a")
+		if st == "hover" or st == "pressed":
+			edge = AMBER if kind != "danger" else Color("d0452e")
+			top = top.lightened(0.08)
+			bot = bot.lightened(0.05)
+		if st == "disabled":
+			edge = Color(edge, 0.4)
+		b.border = edge
+		b.fill_top = top
+		b.fill_bottom = bot
+		out[st] = b
+	return out
+
+## Applique `button_boxes` à un bouton.
+static func style_button(b: Button, kind: String = "", pad: float = 6.0) -> void:
+	var st := button_boxes(kind, pad)
+	for k in st:
+		b.add_theme_stylebox_override(k, st[k])
+	b.add_theme_color_override("font_color", IVORY)
+	b.add_theme_color_override("font_hover_color", AMBER)
+	b.add_theme_color_override("font_pressed_color", AMBER)

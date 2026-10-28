@@ -30,6 +30,7 @@ var disabled: bool = false
 var gray: bool = false
 var badge: String = ""          ## pastille discrète : icône du statut que le sort inflige (vide = aucun)
 var badge_bad: bool = true      ## statut nuisible (anneau rouge) ou bénéfique (anneau vert)
+var caption: String = ""       ## numéro de touche affiché sous le disque
 var _hover: bool = false
 var _down: bool = false
 var _long: bool = false
@@ -57,6 +58,18 @@ func _init() -> void:
 		queue_redraw()
 		tip_hide.emit())
 	resized.connect(func(): pivot_offset = size * 0.5)
+
+func _cap_font() -> int:
+	return int(clampf(minf(size.x, 60.0) * 0.26, 9.0, 14.0))
+
+func _cap_height() -> float:
+	return float(_cap_font()) + 4.0 if caption != "" else 0.0
+
+func set_caption(t: String) -> void:
+	if t == caption:
+		return
+	caption = t
+	queue_redraw()
 
 func set_state(g: String, t: Texture2D, cd: String, dimmed: float, hl: bool = false, grayed: bool = false) -> void:
 	if g == glyph and t == tex and cd == cd_text and is_equal_approx(dimmed, dim) and hl == highlight and grayed == gray:
@@ -97,54 +110,45 @@ func _gui_input(e: InputEvent) -> void:
 		accept_event()
 
 func _draw() -> void:
-	var c := size * 0.5
-	var r := minf(size.x, size.y) * 0.5 - 3.0
+	# Style Atlas : disque sombre, filet cuivre (ambre au survol / sélection), pas de rivets ; légende (numéro de touche) dessous.
+	var cap_h := _cap_height()
+	var area := Vector2(size.x, size.y - cap_h)
+	var c := Vector2(size.x * 0.5, area.y * 0.5)
+	var r := minf(area.x, area.y) * 0.5 - 2.0
 	if _hover and not _down and tone != "empty":
 		r += 1.0
 	var k := clampf(r / 23.0, 0.6, 2.2)
 	var mod := Color(1, 1, 1, dim)
 	if _down:
 		r *= 0.94
-	# anneaux extérieurs : noir, bronze, noir
-	draw_circle(c, r + 3.0 * k, Color("070504") * mod, true, -1.0, true)
-	draw_circle(c, r + 2.0 * k, (Color("e8b45c") if (_hover or highlight) else Color("5a4630")) * mod, true, -1.0, true)
-	draw_circle(c, r + 1.0 * k, Color("070504") * mod, true, -1.0, true)
-	# corps : dégradé radial (lumière en haut à gauche)
-	var hi := Color("4a4034") if tone == "empty" else (Color("6e6252") if tone == "attack" else Color("8a7c66"))
-	var mid := Color("2a2119") if tone == "empty" else (Color("3a2f24") if tone == "attack" else Color("4a3f30"))
-	var lo := Color("120d09") if tone == "empty" else Color("0c0906")
-	var steps := 18
-	for i in steps:
-		var t := float(i) / float(steps - 1)
-		var rr := r * (1.0 - t * 0.92)
-		var off := Vector2(-0.16, -0.24) * r * t
-		var col: Color
-		if t < 0.5:
-			col = lo.lerp(mid, t / 0.5)
-		else:
-			col = mid.lerp(hi, (t - 0.5) / 0.5)
-		draw_circle(c + off, rr, col * mod, true, -1.0, true)
-	# rivets aux quatre points cardinaux
+	var ring := Atlas.COPPER_DIM
+	if tone == "empty":
+		ring = Color(Atlas.COPPER_DIM, 0.5)
+	elif _hover or highlight:
+		ring = Atlas.AMBER
+	elif tone == "attack":
+		ring = Atlas.COPPER
+	var body := Color("0a0c0b") if tone == "empty" else (Color("2a1a14") if tone == "attack" else Color("1b201d"))
+	draw_circle(c, r, body * mod, true, -1.0, true)
+	draw_arc(c, r - 0.5, 0.0, TAU, 48, ring * mod, maxf(1.2, 1.4 * k), true)
 	if tone != "empty":
-		for a in [Vector2(0, -1), Vector2(0, 1), Vector2(-1, 0), Vector2(1, 0)]:
-			var p: Vector2 = c + a * r * 0.84
-			draw_circle(p, 2.4 * k, Color("070504") * mod, true, -1.0, true)
-			draw_circle(p, 1.6 * k, Color("8a7a62") * mod, true, -1.0, true)
-	# cuvette centrale
-	var well := Color("120d09") if tone == "empty" else (Color("3a1210") if tone == "attack" else Color("3a2f22"))
-	draw_circle(c, r * 0.6, Color("070504") * mod, true, -1.0, true)
-	draw_circle(c, r * 0.54, well * mod, true, -1.0, true)
+		draw_arc(c, r - 3.0 * k, 0.0, TAU, 48, Color(Atlas.COPPER_DIM, 0.5 * dim), 1.0, true)
+	if caption != "":
+		var cf := Atlas.font(Atlas.F_BODY_BOLD)
+		var cs := _cap_font()
+		var ct := cf.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, cs)
+		draw_string(cf, Vector2(c.x - ct.x * 0.5, area.y + cap_h - 3.0), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, cs, Color(Atlas.IVORY_DIM, dim))
 	# contenu
 	var inner := r * 1.08
 	if tex != null and tone != "empty":
 		var s := inner * 0.92
 		draw_texture_rect(tex, Rect2(c - Vector2(s, s) * 0.5, Vector2(s, s)), false, Color(1.25, 1.25, 1.25, dim))
 	elif glyph != "":
-		var font: Font = UiTheme.font(UiTheme.F_TITLE_BOLD)
+		var font: Font = Atlas.font(Atlas.F_BODY_BOLD)
 		var fs := int(r * (0.8 if tone == "empty" else 1.0))
 		if tone == "empty":
 			font = UiTheme.font(UiTheme.F_TITLE_BOLD)
-		var col2 := Color(0.78, 0.7, 0.59, 0.5 * dim) if tone == "empty" else (Color("f0c8b8") if tone == "attack" else Color("f5ecd8")) * mod
+		var col2 := Color(Atlas.IVORY_DIM, 0.35 * dim) if tone == "empty" else (Atlas.AMBER if tone == "attack" else Atlas.IVORY) * mod
 		var ts := font.get_string_size(glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		var asc := font.get_ascent(fs)
 		var ds := font.get_descent(fs)

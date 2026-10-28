@@ -158,7 +158,7 @@ func _draw() -> void:
 	_o_cs = cs
 	_o_ox = ox
 	_o_oy = oy
-	draw_rect(Rect2(origin, Vector2(vw, vh) * cs), Color("080604"))
+	draw_rect(Rect2(origin, Vector2(vw, vh) * cs), Atlas.OBSIDIAN_DEEP)
 	for y in range(oy, oy + vh):
 		for x in range(ox, ox + vw):
 			var key := _k(x, y)
@@ -166,9 +166,9 @@ func _draw() -> void:
 			if not vis and not seen.has(key):
 				continue
 			var ch := grid.cell(x, y)
-			var col := Color("2b2620") if ch == "#" else (Color("c9a86a") if vis else Color("6e5a3e"))
+			var col := Color("171c19") if ch == "#" else (Color("55605a") if vis else Color("2c3430"))
 			if ch == "D":
-				col = Color("5a3712") if vis else Color("3a2a18")
+				col = Color("7a5230") if vis else Color("4a3320")
 			elif ch == "S":
 				col = Color("8a5f16") if vis else Color("5a4212")
 			var pos := origin + Vector2(x - ox, y - oy) * cs
@@ -234,12 +234,10 @@ func _draw() -> void:
 		var tip := pc + f * r2
 		var bl := pc - f * r2 * 0.75 + side * r2 * 0.8
 		var br := pc - f * r2 * 0.75 - side * r2 * 0.8
-		for i in 4:
-			draw_circle(pc, r2 * (1.7 - i * 0.22), Color(1.0, 0.85, 0.54, 0.09))
 		var tri := PackedVector2Array([tip, bl, br])
 		var ol := PackedVector2Array([tip, bl, br, tip])
-		draw_polyline(ol, Color(0, 0, 0, 0.95), maxf(3.5, r2 * 0.45), true)
-		draw_colored_polygon(tri, Color("ffd88a"))
+		draw_polyline(ol, Color(0.03, 0.04, 0.035, 0.95), maxf(2.5, r2 * 0.32), true)
+		draw_colored_polygon(tri, Atlas.AMBER)
 	_draw_zoom_ui()
 
 ## Indication de zoom (grande carte seulement) : un petit texte discret en bas de la carte, sans bouton ni changement de taille.
@@ -249,14 +247,14 @@ func _zoom_available() -> bool:
 func _draw_zoom_ui() -> void:
 	if not _zoom_available():
 		return
-	var font := UiTheme.font(UiTheme.F_BODY_ITALIC)
+	var font := Atlas.font(Atlas.F_BODY_ITALIC)
 	var fs := int(UiMetrics.css(11.0))
 	var txt := L.t("ui.minimap.zoom_hint")
 	var tw := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var m := UiMetrics.css(3.0)
 	var pos := Vector2(size.x - tw - m * 2.0, size.y - m * 1.5)
 	draw_rect(Rect2(pos + Vector2(-m, -fs - m * 0.2), Vector2(tw + m * 2.0, fs + m * 1.6)), Color(0.04, 0.03, 0.02, 0.6))
-	draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1.0, 0.85, 0.54, 0.9))
+	draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(Atlas.IVORY, 0.85))
 
 ## Proportions du canevas de l'original (cases visibles en largeur / hauteur) : le cadre s'y adapte.
 func view_aspect() -> float:

@@ -27,6 +27,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 		SpellTip.show_attack(_attack, gs.char_by_id(gs.active_char_id), cost))
 	_attack.tip_hide.connect(SpellTip.hide_tip)
 	_attack.pressed.connect(func(): attack_pressed.emit())
+	_attack.set_caption(Keybinds.text("attack").get_slice(" ", 0))
 	add_child(_attack)
 	for i in SLOTS:
 		add_child(_spring())
@@ -35,6 +36,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 		b.pressed.connect(func(): _slot_pressed(idx))
 		b.tip_show.connect(func(): _show_tip(idx))
 		b.tip_hide.connect(SpellTip.hide_tip)
+		b.set_caption(Keybinds.text("slot_%d" % (i + 1)))
 		add_child(b)
 		_slots.append(b)
 	resized.connect(_apply_size)
@@ -72,12 +74,13 @@ func _apply_size() -> void:
 	if w == _last_w or w <= 0.0:
 		return
 	_last_w = w
-	var s := UiMetrics.css(clampf(0.09 * w, 30.0, 46.0))
+	var s := UiMetrics.css(clampf(w / 8.2, 30.0, 48.0))
 	slot_size = s
-	_attack.custom_minimum_size = Vector2(s, s)
+	var cap := floorf(clampf(minf(s, 60.0) * 0.26, 9.0, 14.0)) + 4.0    # place du numéro de touche sous le disque
+	_attack.custom_minimum_size = Vector2(s, s + cap)
 	for b in _slots:
-		b.custom_minimum_size = Vector2(s, s)
-	custom_minimum_size = Vector2(0, s)
+		b.custom_minimum_size = Vector2(s, s + cap)
+	custom_minimum_size = Vector2(0, s + cap)
 
 func _process(_d: float) -> void:
 	if ctrl != null and ctrl.combat != null:
@@ -97,7 +100,7 @@ func _refresh() -> void:
 		if c.is_empty() or i >= _ids.size() or ctrl.combat == null:
 			b.tone = "empty"
 			b.disabled = true
-			b.set_state(str(i + 1), null, "", 1.0)
+			b.set_state("", null, "", 1.0)
 			continue
 		b.tone = "spell"
 		var sid := str(_ids[i])

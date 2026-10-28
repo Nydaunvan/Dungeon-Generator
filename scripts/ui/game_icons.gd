@@ -67,6 +67,8 @@ const PATHS := {
 	"search": '<circle cx="11" cy="11" r="6.5"/><path d="M21 21l-5.2-5.2"/>',
 	"sliders": '<path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/>',
 	"skull": '<path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3z"/><path d="M9.5 11h.1M14.5 11h.1M10 19v2M14 19v2"/>',
+	"keyboard": '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.1M11 10h.1M15 10h.1M7 14h10"/>',
+	"sound": '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
 	"crown": '<path d="M3 18L2 7l5 4 5-7 5 7 5-4-1 11z"/><path d="M3 21h18"/>',
 }
 
