@@ -16,80 +16,108 @@ const BOOST_FIELDS := ["bonusForce", "bonusDex", "bonusCon", "bonusInt", "bonusS
 static var _isel := ""
 static var _ifilter := "all"
 
-static func build(host: VBoxContainer, admin: Node) -> void:
+static func build(host: Control, admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	var lib: Array = cfg.get("itemLibrary", [])
 	var narrow: bool = admin.size.x < 1000.0
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 16)
-	host.add_child(gap)
-	# ---- recherche, filtres de type, nouvel objet
-	var bar := BoxContainer.new()
-	bar.vertical = narrow
-	bar.add_theme_constant_override("separation", 10)
-	host.add_child(bar)
-	var q := AdminChars.line_edit("", 240.0, 0.9, 12.0, 9.0, L.t("ui.atelier.i_search"))
-	q.custom_minimum_size.y = 38
-	q.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(q)
-	var chips := HFlowContainer.new()
-	chips.add_theme_constant_override("h_separation", 6)
-	chips.add_theme_constant_override("v_separation", 6)
-	chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(chips)
-	for f in [["all", L.t("ui.atelier.i_all")]] + TYPES.map(func(t): return [t[0], L.t(str(t[1]))]):
-		var fid: String = f[0]
-		chips.add_child(Atelier.pill(str(f[1]), _ifilter == fid, func():
-			_ifilter = fid
-			admin.refresh_tab()))
-	var add := Atelier.button("+ " + L.t("ui.atelier.i_new"), func(): _add(admin), true, false, 38.0)
-	add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(add)
-	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(0, 14)
-	host.add_child(gap2)
-	# ---- grille des objets + fiche
-	var visible_items: Array = []
+	var shown: Array = []
 	for it in lib:
 		if _ifilter == "all" or str(it.get("type", "")) == _ifilter:
-			visible_items.append(it)
+			shown.append(it)
 	var sel: Dictionary = {}
 	for it in lib:
 		if str(it.get("id", "")) == _isel:
 			sel = it
-	if sel.is_empty() or not visible_items.has(sel):
-		sel = visible_items[0] if not visible_items.is_empty() else {}
+	if sel.is_empty() or not shown.has(sel):
+		sel = shown[0] if not shown.is_empty() else {}
 		_isel = str(sel.get("id", ""))
-	var body := BoxContainer.new()
-	body.vertical = narrow
-	body.add_theme_constant_override("separation", 18)
-	host.add_child(body)
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_child(left)
+	var main := Ax.vbox(18)
+	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var top := HFlowContainer.new()
+	top.add_theme_constant_override("h_separation", 16)
+	top.add_theme_constant_override("v_separation", 10)
+	main.add_child(top)
+	var t := Ax.title(Atelier.title_of("party"), 28 if not narrow else 22)
+	t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(t)
+	var right := Ax.hbox(16)
+	top.add_child(right)
+	right.add_child(AtelierParty.switcher(admin))
+	right.add_child(Ax.btn("+ " + L.t("ui.atelier.i_new"), func(): _add(admin), "gold", 40.0, 16, 13))
+	var q := Ax.field("", Callable(), 38.0, 13, L.t("ui.atelier.i_search"))
+	q.custom_minimum_size.x = 260
+	q.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	main.add_child(q)
+	var chips := HFlowContainer.new()
+	chips.add_theme_constant_override("h_separation", 6)
+	chips.add_theme_constant_override("v_separation", 6)
+	main.add_child(chips)
+	for f in [["all", L.t("ui.atelier.i_all")]] + TYPES.map(func(x): return [x[0], L.t(str(x[1]))]):
+		var fid: String = f[0]
+		chips.add_child(Ax.pill(str(f[1]), _ifilter == fid, func():
+			Ax.flush()
+			_ifilter = fid
+			admin.refresh_tab()))
 	var grid := GridContainer.new()
-	grid.columns = 1 if admin.size.x < 700.0 else (3 if admin.size.x > 1700.0 else 2)
+	var main_w: float = admin.size.x - (0.0 if narrow else 280.0 + 380.0) - 64.0
+	grid.columns = 1 if main_w < 430.0 else (2 if main_w < 700.0 else 3)
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_child(grid)
 	var cards: Array = []
-	for it in visible_items:
+	for it in shown:
 		var c := _card(it, str(it.get("id", "")) == _isel, func():
-			Form.flush()
+			Ax.flush()
 			_isel = str(it.get("id", ""))
 			admin.refresh_tab())
 		grid.add_child(c)
 		cards.append([c, it])
-	if visible_items.is_empty():
-		left.add_child(Atelier.muted(L.t("ui.atelier.i_none"), 14))
-	q.text_changed.connect(func(t: String):
-		var w := IconPicker.normalize(t)
+	if shown.is_empty():
+		main.add_child(Ax.lab(L.t("ui.atelier.i_none"), 14, Ax.MUTED))
+	q.text_changed.connect(func(tx: String):
+		var w := IconPicker.normalize(tx)
 		for e in cards:
 			e[0].visible = w == "" or IconPicker.normalize(str((e[1] as Dictionary).get("name", ""))).contains(w))
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sc.add_child(grid)
+	main.add_child(sc)
+	admin.track_scroll("items", sc)
+	var px := 16 if narrow else 32
+	var wrapped := Ax.margin(main, px, 28 if not narrow else 18, px, 20)
+	wrapped.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrapped.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if narrow:
+		sc.size_flags_vertical = Control.SIZE_FILL
+		sc.custom_minimum_size.y = 320
+		if not sel.is_empty():
+			var box := Ax.panel(Color(0.063, 0.047, 0.031, 0.7), Ax.LINE, 16, 18, 18)
+			var col := Ax.vbox(16)
+			box.add_child(col)
+			main.add_child(box)
+			_inspector(admin, sel, col)
+		var page := ScrollContainer.new()
+		page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		page.add_child(wrapped)
+		host.add_child(page)
+		admin.set("_scroll", page)
+		return
+	var root := HBoxContainer.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_theme_constant_override("separation", 0)
+	host.add_child(root)
+	root.add_child(wrapped)
 	if not sel.is_empty():
-		body.add_child(_inspector(admin, sel, narrow))
+		_inspector(admin, sel, Ax.aside(root, 380.0, 16))
+
+## Retire l'émoji qui précède un libellé (« ✨ Légendaire » → « Légendaire »).
+static func _plain(t: String) -> String:
+	var rx := RegEx.new()
+	rx.compile("^[^\\p{L}]+")
+	return rx.sub(t, "").strip_edges()
 
 static func _type_label(t: String) -> String:
 	for x in TYPES:
@@ -121,103 +149,84 @@ static func _summary(it: Dictionary) -> String:
 			return str(AdminChars.spell_by_id(Data.admin_config(), str(it.get("spellId", ""))).get("name", ""))
 	return ""
 
-## Carte d'un objet : pastille d'icône à la couleur de sa rareté, nom, palier et résumé.
+## Carte d'un objet (maquette) : pastille d'icône à la couleur de sa rareté, nom, palier et résumé.
 static func _card(it: Dictionary, selected: bool, cb: Callable) -> Control:
 	var col := Rarity.color(it)
-	var p := Atelier.card(selected, 14, 14)
-	p.custom_minimum_size = Vector2(0, 100)
+	var p := Ax.panel(Color(0.91, 0.706, 0.361, 0.1) if selected else Ax.CARD, Ax.GOLD if selected else Ax.LINE, 14, 14, 14)
+	p.custom_minimum_size = Vector2(0, 116)
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	var v := Ax.vbox(0)
 	p.add_child(v)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 10)
-	var sw := PanelContainer.new()
+	var top := Ax.hbox(10)
+	var sw := Ax.panel(Color(1, 1, 1, 0.04), col, 10, 0, 0)
 	sw.custom_minimum_size = Vector2(40, 40)
-	sw.add_theme_stylebox_override("panel", Atelier.box(Color(1, 1, 1, 0.04), col, 10, 0, 0))
 	var ic := IconPicker.icon_control(str(it.get("icon", "")), 26.0)
 	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sw.add_child(ic)
 	top.add_child(sw)
-	var n := Label.new()
-	n.text = str(it.get("name", "?"))
+	var n := Ax.lab(str(it.get("name", "?")), 14, Ax.CREAM, 600)
 	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	n.clip_text = true
-	n.add_theme_font_size_override("font_size", 14)
-	n.add_theme_color_override("font_color", Color("f4e6c6"))
 	top.add_child(n)
 	v.add_child(top)
-	var bot := HBoxContainer.new()
-	bot.add_theme_constant_override("separation", 8)
-	var tier := PanelContainer.new()
-	tier.add_theme_stylebox_override("panel", Atelier.box(Color(0, 0, 0, 0), col, 10, 10, 2))
-	var tl := Label.new()
-	tl.text = L.t(str(Rarity.DEF[Rarity.of(it)].key))
-	tl.add_theme_font_size_override("font_size", 12)
-	tl.add_theme_color_override("font_color", col)
-	tier.add_child(tl)
-	bot.add_child(tier)
-	bot.add_child(Atelier.muted(_type_label(str(it.get("type", "")))))
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bot.add_child(spacer)
-	bot.add_child(Atelier.muted(_summary(it)))
+	var sp := Control.new()
+	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(sp)
+	var bot := Ax.hbox(8)
+	bot.add_child(Ax.chip(_plain(L.t(str(Rarity.DEF[Rarity.of(it)].key))), col, Ax.CLEAR, col, 12, 10, 10, 3))
+	var s2 := Control.new()
+	s2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bot.add_child(s2)
+	var sm := Ax.lab(_summary(it), 12, Ax.MUTED)
+	bot.add_child(sm)
 	v.add_child(bot)
-	Atelier.clickable(p, cb)
+	Ax.clickable(p, cb)
 	return p
 
-## Fiche de l'objet choisi : icône, nom, type, rareté et capacités, caractéristiques propres au type, suppression.
-static func _inspector(admin: Node, it: Dictionary, narrow: bool) -> Control:
-	var panel := GameScreen.glass(22, 18)
-	panel.custom_minimum_size = Vector2(0 if narrow else 380, 0)
-	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	panel.add_child(col)
-	var save := func(): admin.save()
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 14)
+## Fiche de l'objet choisi : icône, nom, type, rareté et capacité, caractéristiques propres au type, suppression.
+static func _inspector(admin: Node, it: Dictionary, col: Control) -> void:
+	var refresh := func():
+		Ax.changed()
+		admin.refresh_tab()
+	var head := Ax.hbox(14)
 	col.add_child(head)
-	var ib := IconPicker.button(admin.modals(), it, "icon", func():
-		save.call()
-		admin.refresh_tab(), 56.0)
-	head.add_child(ib)
-	var hv := VBoxContainer.new()
+	head.add_child(IconPicker.button(admin.modals(), it, "icon", refresh, 56.0))
+	var hv := Ax.vbox(2)
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hv.add_theme_constant_override("separation", 6)
+	hv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hv)
-	var name_edit := AdminChars.line_edit(str(it.get("name", "")), 0.0, 1.0, 10.0, 8.0)
-	name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_edit.text_changed.connect(func(t: String): it["name"] = t)
+	var name_edit := Ax.text_field(it, "name", 36.0, 20, "", func(tx: String): admin.note(tx))
+	name_edit.add_theme_font_override("font", Ax.cinzel())
+	name_edit.add_theme_color_override("font_color", Ax.CREAM)
+	name_edit.add_theme_stylebox_override("normal", Ax.sb(Ax.CLEAR, Ax.CLEAR, 6, 0, 6, 0))
+	name_edit.add_theme_stylebox_override("focus", Ax.sb(Ax.FIELD, Ax.GOLD, 8, 1, 6, 0))
 	hv.add_child(name_edit)
-	var type_sel := AdminChars.select(TYPES.map(func(t): return [t[0], L.t(str(t[1]))]), it.get("type", ""), func(v):
+	hv.add_child(Ax.lab(_type_label(str(it.get("type", ""))), 12, Ax.MUTED))
+	var typ := Ax.vbox(6)
+	typ.add_child(Ax.cap(L.t("ui.atelier.i_type")))
+	typ.add_child(Ax.select(TYPES.map(func(t): return [t[0], L.t(str(t[1]))]), it.get("type", ""), func(v):
 		it["type"] = v
-		save.call()
-		admin.refresh_tab(), 0.0, 0.85, 10.0, 6.0, true)
-	hv.add_child(type_sel)
-	var gear: bool = ["weapon", "armor", "jewelry"].has(str(it.get("type", "")))
-	if gear:
-		col.add_child(_rarity(admin, it, save))
-	col.add_child(_details(it, admin, false))
-	var del := Atelier.button(L.t("ui.atelier.i_delete"), func(): _remove(admin, it), false, true, 38.0)
-	col.add_child(del)
-	Form.autosave(panel, save)
-	return panel
+		refresh.call(), 40.0))
+	col.add_child(typ)
+	var kind := str(it.get("type", ""))
+	if ["weapon", "armor", "jewelry"].has(kind):
+		_rarity(col, it, refresh)
+	var g := Ax.grid2(col)
+	_details(col, g, it, admin)
+	col.add_child(Ax.spacer())
+	col.add_child(Ax.btn(L.t("ui.atelier.i_delete"), func(): _remove(admin, it), "danger", 38.0))
 
-## Paliers de rareté (pastille de couleur + nom) puis, selon le palier, les capacités (liste + valeur en %).
-static func _rarity(admin: Node, it: Dictionary, save: Callable) -> Control:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 8)
-	var cap := Label.new()
-	cap.text = L.t("ui.rarity.rarete").to_upper()
-	cap.add_theme_font_size_override("font_size", 12)
-	cap.add_theme_color_override("font_color", Color("9a8863"))
-	v.add_child(cap)
+## Paliers de rareté (pastille + nom) puis, selon le palier, la ou les capacités (choix + valeur en %).
+static func _rarity(col: Control, it: Dictionary, refresh: Callable) -> void:
+	# objet légendaire d'avant les raretés : ses capacités deviennent explicites dès qu'on le modifie ici
+	if not (it.get("perks") is Array) and not Rarity.perks_of(it).is_empty():
+		it["perks"] = Rarity.perks_of(it).duplicate(true)
 	var cur := Rarity.of(it)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 4)
+	var v := Ax.vbox(8)
+	v.add_child(Ax.cap(L.t("ui.rarity.rarete")))
+	var row := Ax.hbox(4)
 	v.add_child(row)
 	for id in Rarity.ORDER:
 		var tid: String = id
@@ -229,62 +238,64 @@ static func _rarity(admin: Node, it: Dictionary, save: Callable) -> Control:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.tooltip_text = L.t(str(Rarity.DEF[tid].key))
 		for k in ["normal", "pressed", "focus"]:
-			b.add_theme_stylebox_override(k, Atelier.box(Color(tc.r, tc.g, tc.b, 0.14) if on else Color("14100a"), tc if on else Color("3a2c18"), 9, 2, 4))
-		b.add_theme_stylebox_override("hover", Atelier.box(Color(tc.r, tc.g, tc.b, 0.2), tc, 9, 2, 4))
-		var inner := VBoxContainer.new()
+			b.add_theme_stylebox_override(k, Ax.sb(Color(tc.r, tc.g, tc.b, 0.14) if on else Ax.FIELD, tc if on else Ax.LINE, 9, 1, 4, 0))
+		b.add_theme_stylebox_override("hover", Ax.sb(Color(tc.r, tc.g, tc.b, 0.2), tc, 9, 1, 4, 0))
+		var inner := Ax.vbox(4)
 		inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		inner.alignment = BoxContainer.ALIGNMENT_CENTER
-		inner.add_theme_constant_override("separation", 4)
 		inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var dot := Panel.new()
+		var dot := Ax.panel(tc, Ax.CLEAR, 5, 0, 0, 0)
 		dot.custom_minimum_size = Vector2(10, 10)
 		dot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var ds := StyleBoxFlat.new()
-		ds.bg_color = tc
-		ds.set_corner_radius_all(5)
-		dot.add_theme_stylebox_override("panel", ds)
 		inner.add_child(dot)
-		var tl := Label.new()
-		tl.text = L.t(str(Rarity.DEF[tid].key))
+		var name_s := _plain(L.t(str(Rarity.DEF[tid].key)))
+		var tl := Ax.lab(name_s if name_s.length() <= 9 else name_s.substr(0, 5).strip_edges() + ".", 11, Ax.TEXT)
 		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		tl.add_theme_font_size_override("font_size", 10)
-		tl.add_theme_color_override("font_color", Color("e2d2b0"))
 		tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inner.add_child(tl)
 		b.add_child(inner)
 		b.pressed.connect(func():
 			AdminRarity._set_tier(it, tid)
-			save.call()
-			admin.refresh_tab())
+			refresh.call())
 		row.add_child(b)
-	# capacités du palier
-	if cur != "common":
-		var perks: Array = it.get("perks", [])
-		var box := PanelContainer.new()
-		box.add_theme_stylebox_override("panel", Atelier.box(Color(0.12, 0.086, 0.05, 0.85), Color("4a3920"), 12, 14, 12))
-		var bv := VBoxContainer.new()
-		bv.add_theme_constant_override("separation", 10)
+	var slots: int = int(AdminRarity.SLOTS[cur])
+	v.add_child(Ax.lab("%s : %s" % [_plain(L.t(str(Rarity.DEF[cur].key))), L.t("ui.atelier.i_perks_%d" % slots)], 12, Ax.MUTED))
+	col.add_child(v)
+	if cur == "common":
+		return
+	var perks: Array = it.get("perks", [])
+	for k in slots:
+		var p: Dictionary = perks[k] if k < perks.size() else {"id": "crit", "value": 5}
+		var slot := k
+		var box := Ax.panel(Ax.CARD2, Ax.LINE2, 12, 14, 12)
+		var bv := Ax.vbox(10)
 		box.add_child(bv)
-		var bc := Label.new()
-		bc.text = L.t("rules.rarity.capacite").to_upper()
-		bc.add_theme_font_size_override("font_size", 12)
-		bc.add_theme_color_override("font_color", Color("9a8863"))
-		bv.add_child(bc)
-		for k in int(AdminRarity.SLOTS[cur]):
-			var p: Dictionary = perks[k] if k < perks.size() else {"id": "crit", "value": 5}
-			var slot := k
-			var opts: Array = []
-			for pid in Rarity.PERK_NAMES.keys():
-				opts.append([pid, L.t(str(Rarity.PERK_NAMES[pid]))])
-			bv.add_child(AdminChars.select(opts, str(p.id), func(x):
-				AdminRarity._edit(it, slot, "id", str(x))
-				save.call(), 0.0, 0.85, 10.0, 6.0, true))
-			var sp := Form.setting(bv, L.t("rules.rarity.valeur_pct"), float(p.get("value", 5)), 1, 100, 1, NAN, " %")
-			sp.value_changed.connect(func(x: float): AdminRarity._edit(it, slot, "value", int(x)))
-		v.add_child(box)
-	return v
+		bv.add_child(Ax.cap(L.t("rules.rarity.capacite")))
+		var gp := GridContainer.new()
+		gp.columns = 3
+		gp.add_theme_constant_override("h_separation", 6)
+		gp.add_theme_constant_override("v_separation", 6)
+		bv.add_child(gp)
+		var tint := Color("ff9a4a")
+		for pid in Rarity.PERK_NAMES.keys():
+			var perk_id: String = pid
+			gp.add_child(Ax.choice(L.t(str(Rarity.PERK_NAMES[pid])), perk_id == str(p.id), func():
+				AdminRarity._edit(it, slot, "id", perk_id)
+				refresh.call(), tint))
+		var vr := Ax.hbox(8)
+		vr.add_child(Ax.lab(L.t("rules.rarity.valeur_pct").replace(" (%)", ""), 13, Ax.TEXT))
+		vr.add_child(Ax.spacer())
+		var vl := Ax.lab("%d %%" % int(p.get("value", 5)), 13, Ax.GOLD_L, 600)
+		vr.add_child(vl)
+		bv.add_child(vr)
+		var sl := Ax.slider(float(p.get("value", 5)), 1, 100, 1)
+		sl.value_changed.connect(func(x: float):
+			AdminRarity._edit(it, slot, "value", int(x))
+			vl.text = "%d %%" % int(x)
+			Ax.changed())
+		bv.add_child(sl)
+		col.add_child(box)
 
 ## `clampItemStat` de l'original : bornage selon le champ, sans troncature (les décimales sont acceptées).
 static func clamp_value(it: Dictionary, field: String, value: float) -> float:
@@ -298,78 +309,49 @@ static func clamp_value(it: Dictionary, field: String, value: float) -> float:
 		return maxf(0.0, value)
 	return value
 
-## Champ numérique d'un objet : bornage `clampItemStat` puis la valeur bornée est renvoyée dans le champ.
-static func _stat(it: Dictionary, key: String, w: float, tip: String, default_value: float = 0.0, or_default: bool = true) -> LineEdit:
-	var o := {"w": w, "tip": tip, "or": or_default, "echo": true, "fix": func(v: float) -> float: return clamp_value(it, key, v)}
-	if BOOST_FIELDS.has(key):
-		o["lo"] = 0
-		o["hi"] = 100
-	return AdminCells.num(it, key, default_value, o)
+## Champ numérique d'un objet, borné comme `clampItemStat`.
+static func _stat(g: Control, it: Dictionary, key: String, label: String, def: float = 0.0) -> void:
+	var lo := clamp_value(it, key, -1.0e9)
+	var hi := 100.0 if BOOST_FIELDS.has(key) else 9999.0
+	g.add_child(Ax.num(it, key, def, lo, hi, label))
 
-static func _line() -> HFlowContainer:
-	var f := HFlowContainer.new()
-	f.add_theme_constant_override("h_separation", 4)
-	f.add_theme_constant_override("v_separation", 4)
-	f.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	return f
-
-## Colonne « Détails » selon le type (`libItemDetailsHtml`).
-static func _details(it: Dictionary, admin: Node, with_rarity: bool = true) -> Control:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 3)
-	var refresh := func(): admin.refresh_tab()
+## Caractéristiques selon le type (`libItemDetailsHtml`).
+static func _details(col: Control, g: GridContainer, it: Dictionary, admin: Node) -> void:
 	match str(it.get("type", "")):
 		"potion":
-			var f := _line()
-			f.add_child(_stat(it, "heal", 48, L.t("common.soin")))
-			f.add_child(AdminCells.inline(L.t("admin.items.pv_soin")))
-			var e := AdminCells.num(it, "staminaRestore", 0, {"w": 48, "or": true, "tip": L.t("common.endurance")})
-			f.add_child(e)
-			f.add_child(AdminCells.inline(L.t("common.end")))
-			v.add_child(f)
+			_stat(g, it, "heal", L.t("common.soin"), 5.0)
+			_stat(g, it, "staminaRestore", L.t("common.endurance"))
 		"weapon":
 			var wt: Array = []
 			for w in AdminUtil.weapon_types():
 				wt.append([w.id, w.label])
-			var sel := AdminCells.option(wt, it.get("weaponType", ""), func(x): it["weaponType"] = x)
-			sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			v.add_child(sel)
-			var f := _line()
-			f.add_child(_stat(it, "bonusAtkMin", 36, ""))
-			f.add_child(AdminCells.inline("-"))
-			f.add_child(_stat(it, "bonusAtkMax", 36, ""))
-			v.add_child(f)
-			_boosts(v, it)
-			if with_rarity:
-				_legendary(v, it, refresh)
+			_before(g, Ax.labeled(L.t("ui.atelier.i_weapon_type"), Ax.select(wt, it.get("weaponType", ""), func(x):
+				it["weaponType"] = x
+				Ax.changed())))
+			_stat(g, it, "bonusAtkMin", L.t("common.degats_min"))
+			_stat(g, it, "bonusAtkMax", L.t("common.degats_max"))
+			_boosts(g, it)
 		"armor":
 			var slots: Array = []
 			for sl in Data.constants.get("SLOT_TYPES", []):
 				if sl.id != "weapon" and sl.id != "accessory":
 					slots.append([sl.id, sl.label])
-			var sel := AdminCells.option(slots, it.get("slot", ""), func(x): it["slot"] = x)
-			sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			v.add_child(sel)
-			_gear_line(v, it, L.t("common.bonus_pv_tank"), L.t("common.bonus_attaque_min_guerrier_archer"), L.t("common.bonus_attaque_max"), L.t("common.bonus_degats_de_sort_mage"))
-			_boosts(v, it)
-			if with_rarity:
-				_legendary(v, it, refresh)
+			_before(g, Ax.labeled(L.t("admin.items.emplacement"), Ax.select(slots, it.get("slot", ""), func(x):
+				it["slot"] = x
+				Ax.changed())))
+			_gear(g, it)
+			_boosts(g, it)
 		"jewelry":
-			_gear_line(v, it, L.t("common.bonus_pv"), L.t("common.bonus_attaque_min"), L.t("common.bonus_attaque_max"), L.t("common.bonus_degats_de_sort"))
-			_boosts(v, it)
-			if with_rarity:
-				_legendary(v, it, refresh)
+			_gear(g, it)
+			_boosts(g, it)
 		"trap":
-			var f := _line()
-			f.add_child(_stat(it, "trapDmgMin", 36, "", 1.0))
-			f.add_child(AdminCells.inline("-"))
-			f.add_child(_stat(it, "trapDmgMax", 36, "", 4.0))
-			f.add_child(AdminCells.inline(L.t("admin.items.degats")))
-			var cb := AdminCells.check(L.t("admin.items.permanent_pointes"), bool(it.get("permanent", false)), func(on: bool): it["permanent"] = on)
-			f.add_child(cb)
-			v.add_child(f)
+			_stat(g, it, "trapDmgMin", L.t("common.degats_min"), 1.0)
+			_stat(g, it, "trapDmgMax", L.t("common.degats_max"), 4.0)
+			Ax.switch_row(col, L.t("admin.items.permanent_pointes"), bool(it.get("permanent", false)), func(on: bool):
+				it["permanent"] = on
+				Ax.changed())
 		"key":
-			v.add_child(AdminCells.inline(L.t("admin.items.se_lie_a_une_porte"), true, 0.74, true))
+			col.add_child(Ax.para(L.t("admin.items.se_lie_a_une_porte"), 13, Ax.MUTED))
 		"scroll":
 			var cfg: Dictionary = Data.admin_config()
 			var so: Array = []
@@ -377,60 +359,38 @@ static func _details(it: Dictionary, admin: Node, with_rarity: bool = true) -> C
 				so.append([s.id, AdminUtil.spell_label(s)])
 			if so.is_empty():
 				so.append(["", L.t("common.aucun_sort_defini_2")])
-			var sel := AdminCells.option(so, it.get("spellId", ""), func(x):
+			_before(g, Ax.labeled(L.t("admin.items.sort_enseigne"), Ax.select(so, it.get("spellId", ""), func(x):
 				it["spellId"] = x
-				refresh.call())
-			sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			v.add_child(sel)
+				Ax.changed()
+				admin.refresh_tab())))
 			var sid := str(it.get("spellId", ""))
-			var txt := "—"
-			if sid != "":
-				var names: Array = []
-				for c in cfg.get("classes", []):
-					if (c.get("allowedSpellIds", []) as Array).has(sid):
-						names.append(str(c.get("name", "")))
-				txt = ", ".join(names) if not names.is_empty() else "aucune"
-			v.add_child(AdminCells.inline(L.t("admin.items.classes_compatibles") + txt, true, 0.74, true))
-		_:
-			v.add_child(AdminCells.inline("—", true, 0.7))
-	return v
+			var names: Array = []
+			for c in cfg.get("classes", []):
+				if sid != "" and (c.get("allowedSpellIds", []) as Array).has(sid):
+					names.append(str(c.get("name", "")))
+			_before(g, Ax.para(L.t("admin.items.classes_compatibles") + (", ".join(names) if not names.is_empty() else "—"), 12, Ax.MUTED))
 
-## PV / Atq min-max / Sort (armures et bijoux).
-static func _gear_line(v: Control, it: Dictionary, t_hp: String, t_min: String, t_max: String, t_sp: String) -> void:
-	var f := _line()
-	f.add_child(_stat(it, "bonusHp", 34, t_hp))
-	f.add_child(AdminCells.inline(L.t("common.pv")))
-	f.add_child(_stat(it, "bonusAtkMin", 30, t_min))
-	f.add_child(AdminCells.inline("-"))
-	f.add_child(_stat(it, "bonusAtkMax", 30, t_max))
-	f.add_child(AdminCells.inline(L.t("common.atq")))
-	f.add_child(_stat(it, "bonusSpellDmg", 30, t_sp))
-	f.add_child(AdminCells.inline(L.t("common.sort")))
-	v.add_child(f)
+## Place `ctl` juste avant la grille de caractéristiques et le renvoie (pour l'ajouter à la fiche à la bonne position).
+static func _before(g: Control, ctl: Control) -> Control:
+	var col := g.get_parent()
+	if col != null:
+		col.add_child(ctl)
+		col.move_child(ctl, g.get_index())
+		return ctl
+	return ctl
 
-## `statBoostFieldsHtml` : For / Dex / Con / Int / Vit sur une ligne (libellés 0,62 rem, grisés).
-static func _boosts(v: Control, it: Dictionary) -> void:
-	var f := _line()
-	for x in [[L.t("common.for"), "bonusForce", L.t("common.bonus_force")], ["Dex", "bonusDex", L.t("common.bonus_dexterite")], ["Con", "bonusCon", L.t("common.bonus_constitution")],
-			["Int", "bonusInt", L.t("common.bonus_intelligence")], ["Vit", "bonusSpeed", L.t("common.bonus_vitesse_initiative")]]:
-		var pair := HBoxContainer.new()
-		pair.add_theme_constant_override("separation", 2)
-		pair.add_child(AdminCells.inline(x[0], true, 0.62))
-		pair.add_child(_stat(it, x[1], 26, x[2]))
-		f.add_child(pair)
-	v.add_child(f)
+static func _gear(g: Control, it: Dictionary) -> void:
+	_stat(g, it, "bonusHp", L.t("common.bonus_pv"))
+	_stat(g, it, "bonusSpellDmg", L.t("common.bonus_degats_de_sort"))
+	_stat(g, it, "bonusAtkMin", L.t("common.bonus_attaque_min"))
+	_stat(g, it, "bonusAtkMax", L.t("common.bonus_attaque_max"))
 
-## `legendaryFieldsHtml` : filet pointillé, case « ✨ Légendaire » ; si cochée : bonus (liste) + valeur en %. Comme l'original, le
-## bonus n'est mémorisé que lorsqu'on le choisit dans la liste (la coche seule ne l'écrit pas).
-static func _legendary(v: Control, it: Dictionary, refresh: Callable) -> void:
-	var sp := Control.new()
-	sp.custom_minimum_size = Vector2(0, UiMetrics.css(3.0))
-	v.add_child(sp)
-	AdminCells.dash_line(v)
-	var sp2 := Control.new()
-	sp2.custom_minimum_size = Vector2(0, UiMetrics.css(3.0))
-	v.add_child(sp2)
-	AdminRarity.build(v, it, refresh)
+static func _boosts(g: Control, it: Dictionary) -> void:
+	_stat(g, it, "bonusForce", L.t("common.bonus_force"))
+	_stat(g, it, "bonusDex", L.t("common.bonus_dexterite"))
+	_stat(g, it, "bonusCon", L.t("common.bonus_constitution"))
+	_stat(g, it, "bonusInt", L.t("common.bonus_intelligence"))
+	_stat(g, it, "bonusSpeed", L.t("common.bonus_vitesse_initiative"))
 
 
 ## --- API historique (onglet « Niveaux » : fiche d'objet placé dans un niveau) ---

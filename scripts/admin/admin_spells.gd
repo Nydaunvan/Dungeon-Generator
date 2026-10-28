@@ -56,42 +56,10 @@ static func _value(s: Dictionary) -> String:
 		return str(lo) if lo == hi else "%d – %d" % [lo, hi]
 	return "—"
 
-static func build(host: VBoxContainer, admin: Node) -> void:
+static func build(host: Control, admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	var spells: Array = cfg.get("spells", [])
 	var narrow: bool = admin.size.x < 1000.0
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 12)
-	host.add_child(gap)
-	Form.hint(host, L.t("admin.spells.utilisable_par_n_importe_quelle"))
-	Form.hint(host, L.t("admin.spells.un_personnage_ne_peut_jamais"))
-	# ---- recherche, filtres, nouveau sort
-	var bar := BoxContainer.new()
-	bar.vertical = narrow
-	bar.add_theme_constant_override("separation", 10)
-	host.add_child(bar)
-	var q := AdminChars.line_edit("", 240.0, 0.9, 12.0, 9.0, L.t("ui.atelier.s_search"))
-	q.custom_minimum_size.y = 38
-	q.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(q)
-	var chips := HFlowContainer.new()
-	chips.add_theme_constant_override("h_separation", 6)
-	chips.add_theme_constant_override("v_separation", 6)
-	chips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(chips)
-	for f in [["all", "ui.atelier.i_all"], ["damage", "ui.atelier.s_damage"], ["heal", "ui.atelier.s_heal"], ["support", "ui.atelier.s_support"], ["zone", "ui.atelier.s_zone"]]:
-		var fid: String = f[0]
-		chips.add_child(Atelier.pill(L.t(str(f[1])), _sfilter == fid, func():
-			_sfilter = fid
-			admin.refresh_tab()))
-	var add := Atelier.button("+ " + L.t("ui.atelier.s_new"), func(): _add(admin), true, false, 38.0)
-	add.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(add)
-	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(0, 14)
-	host.add_child(gap2)
-	# ---- liste + fiche
 	var shown: Array = []
 	for s in spells:
 		var mode := str(s.get("mode", "damage")) if str(s.get("mode", "")) != "" else "damage"
@@ -104,199 +72,209 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 	if sel.is_empty() or not shown.has(sel):
 		sel = shown[0] if not shown.is_empty() else {}
 		_ssel = str(sel.get("id", ""))
-	var body := BoxContainer.new()
-	body.vertical = narrow
-	body.add_theme_constant_override("separation", 18)
-	host.add_child(body)
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 6)
-	body.add_child(list)
-	var compact: bool = admin.size.x < 1700.0
+	# ---- colonne principale : titre, recherche + filtres, tableau
+	var main := Ax.vbox(16)
+	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var top := Ax.hbox(16)
+	main.add_child(top)
+	var t := Ax.title(Atelier.title_of("spells"), 28 if not narrow else 22)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.clip_text = true
+	top.add_child(t)
+	top.add_child(Ax.btn("+ " + L.t("ui.atelier.s_new"), func(): _add(admin), "gold", 40.0, 16, 13))
+	var bar := HFlowContainer.new()
+	bar.add_theme_constant_override("h_separation", 10)
+	bar.add_theme_constant_override("v_separation", 8)
+	main.add_child(bar)
+	var q := Ax.field("", Callable(), 38.0, 13, L.t("ui.atelier.s_search"))
+	q.custom_minimum_size.x = 240
+	q.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	bar.add_child(q)
+	var chips := HBoxContainer.new()
+	chips.add_theme_constant_override("separation", 6)
+	bar.add_child(chips)
+	for f in [["all", "ui.atelier.i_all"], ["damage", "ui.atelier.s_damage"], ["heal", "ui.atelier.s_heal"], ["support", "ui.atelier.s_support"], ["zone", "ui.atelier.s_zone"]]:
+		var fid: String = f[0]
+		chips.add_child(Ax.pill(L.t(str(f[1])), _sfilter == fid, func():
+			Ax.flush()
+			_sfilter = fid
+			admin.refresh_tab()))
+	var compact: bool = admin.size.x < 1340.0
+	var table := Ax.vbox(6)
+	table.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if not compact:
-		list.add_child(_list_head())
+		table.add_child(_list_head())
 	var rows: Array = []
 	for s in shown:
 		var r := _list_row(s, str(s.get("id", "")) == _ssel, compact, func():
-			Form.flush()
+			Ax.flush()
 			_ssel = str(s.get("id", ""))
 			admin.refresh_tab())
-		list.add_child(r)
+		table.add_child(r)
 		rows.append([r, s])
 	if shown.is_empty():
-		list.add_child(Atelier.muted(L.t("ui.atelier.s_none"), 14))
-	q.text_changed.connect(func(t: String):
-		var w := IconPicker.normalize(t)
+		table.add_child(Ax.lab(L.t("ui.atelier.s_none"), 14, Ax.MUTED))
+	q.text_changed.connect(func(tx: String):
+		var w := IconPicker.normalize(tx)
 		for e in rows:
 			e[0].visible = w == "" or IconPicker.normalize(str((e[1] as Dictionary).get("name", ""))).contains(w))
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sc.add_child(table)
+	main.add_child(sc)
+	admin.track_scroll("spells", sc)
+	var px := 16 if narrow else 32
+	var wrapped := Ax.margin(main, px, 28 if not narrow else 18, px, 20)
+	wrapped.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrapped.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if narrow:
+		# petit écran : la page entière défile, la fiche passe sous le tableau
+		sc.size_flags_vertical = Control.SIZE_FILL
+		sc.custom_minimum_size.y = 260
+		if not sel.is_empty():
+			var box := Ax.panel(Color(0.063, 0.047, 0.031, 0.7), Ax.LINE, 16, 18, 18)
+			var col := Ax.vbox(14)
+			box.add_child(col)
+			main.add_child(box)
+			_inspector(admin, sel, col)
+		var page := ScrollContainer.new()
+		page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		page.add_child(wrapped)
+		host.add_child(page)
+		admin.set("_scroll", page)
+		return
+	var root := HBoxContainer.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_theme_constant_override("separation", 0)
+	host.add_child(root)
+	root.add_child(wrapped)
 	if not sel.is_empty():
-		body.add_child(_inspector(admin, sel, narrow))
-	var gap3 := Control.new()
-	gap3.custom_minimum_size = Vector2(0, 8)
-	host.add_child(gap3)
-	Form.hint(host, L.t("admin.spells.le_temps_de_recharge_limite"))
-	Form.hint(host, L.t("admin.spells.effets_hint"))
+		_inspector(admin, sel, Ax.aside(root, 360.0))
 
-const COLS := [44, 0, 110, 150, 80, 90, 90]
+const COLS := [44, 0, 120, 150, 90, 90, 90]
 
 static func _list_head() -> Control:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
-	h.custom_minimum_size = Vector2(0, 20)
+	var h := Ax.hbox(12)
 	var titles := ["", "common.nom", "ui.atelier.s_school", "admin.spells.mode", "ui.atelier.s_value", "common.endurance", "admin.spells.recharge"]
 	for i in titles.size():
-		var l := Label.new()
-		l.text = L.t(str(titles[i])).to_upper() if titles[i] != "" else ""
-		l.add_theme_font_size_override("font_size", 11)
-		l.add_theme_color_override("font_color", Color("9a8863"))
+		var l := Ax.lab(L.t(str(titles[i])).to_upper().replace(" (S)", "") if titles[i] != "" else "", 11, Ax.DIM, 600)
+		l.add_theme_font_override("font", Ax.inter(600, 1))
 		l.clip_text = true
 		if COLS[i] == 0:
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			l.size_flags_stretch_ratio = 1.3
 		else:
 			l.custom_minimum_size = Vector2(COLS[i], 0)
 		h.add_child(l)
-	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_left", 14)
-	m.add_child(h)
-	return m
+	return Ax.margin(h, 14, 0, 14, 0)
 
-static func _list_row(s: Dictionary, selected: bool, narrow: bool, cb: Callable) -> Control:
+static func _cell(text: String, w: float, color: Color = Ax.TEXT, weight: int = 400, size: int = 13) -> Label:
+	var l := Ax.lab(text, size, color, weight)
+	l.custom_minimum_size.x = w
+	l.clip_text = true
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+static func _list_row(s: Dictionary, selected: bool, compact: bool, cb: Callable) -> Control:
 	var col := _school_color(s)
-	var p := Atelier.card(selected, 10, 12)
-	p.custom_minimum_size = Vector2(0, 52)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
+	var p := Ax.panel(Color(0.91, 0.706, 0.361, 0.1) if selected else Color(0.102, 0.075, 0.043, 0.8), Ax.GOLD if selected else Color("2a2014"), 12, 14, 0)
+	p.custom_minimum_size.y = 52
+	var h := Ax.hbox(12)
 	p.add_child(h)
-	var sw := PanelContainer.new()
-	sw.custom_minimum_size = Vector2(44, 36)
-	sw.add_theme_stylebox_override("panel", Atelier.box(Color(1, 1, 1, 0.04), col, 9, 0, 0))
+	var sw := Ax.panel(Color(1, 1, 1, 0.04), col, 9, 0, 0)
+	sw.custom_minimum_size = Vector2(36, 36)
+	sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var ic := IconPicker.icon_control(str(s.get("icon", "")), 22.0)
 	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	sw.add_child(ic)
-	sw.custom_minimum_size = Vector2(36, 36)
-	h.add_child(sw)
-	var n := Label.new()
-	n.text = str(s.get("name", "?"))
+	var sw_wrap := HBoxContainer.new()
+	sw_wrap.custom_minimum_size = Vector2(44, 36)
+	sw_wrap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sw_wrap.add_child(sw)
+	h.add_child(sw_wrap)
+	var n := _cell(str(s.get("name", "?")), 40.0, Ax.CREAM, 600, 14)
 	n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	n.clip_text = true
-	n.add_theme_font_size_override("font_size", 14)
-	n.add_theme_color_override("font_color", Color("f4e6c6"))
+	n.size_flags_stretch_ratio = 1.3
 	h.add_child(n)
 	var tier := HBoxContainer.new()
-	tier.custom_minimum_size = Vector2(0 if narrow else 110, 0)
+	tier.custom_minimum_size = Vector2(120, 0)
 	tier.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var tw := tier
-	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", Atelier.box(Color(0, 0, 0, 0), col, 10, 10, 2))
-	var tl := Label.new()
-	tl.text = _school_name(s)
-	tl.add_theme_font_size_override("font_size", 12)
-	tl.add_theme_color_override("font_color", col)
-	chip.add_child(tl)
-	tw.add_child(chip)
+	tier.add_child(Ax.chip(_school_name(s), col, Ax.CLEAR, col, 12, 10, 10, 3))
 	h.add_child(tier)
-	var v := Label.new()
-	v.text = _value(s)
-	v.add_theme_font_size_override("font_size", 13)
-	v.add_theme_color_override("font_color", Color("ffd88a"))
-	v.custom_minimum_size = Vector2(70, 0)
-	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if narrow:
-		h.add_child(v)
-	if not narrow:
-		var mode := str(s.get("mode", "damage")) if str(s.get("mode", "")) != "" else "damage"
-		var cd := int(s.get("cooldownSec", 0))
-		for e in [[_mode_label(mode), 150, Color("e2d2b0")], [_value(s), 80, Color("ffd88a")], [str(int(s.get("staminaCost", 0))), 90, Color("e2d2b0")], [("%d s" % cd) if cd > 0 else "—", 90, Color("e2d2b0")]]:
-			var l := Label.new()
-			l.text = str(e[0])
-			l.custom_minimum_size = Vector2(e[1], 0)
-			l.clip_text = true
-			l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			l.add_theme_font_size_override("font_size", 13)
-			l.add_theme_color_override("font_color", e[2])
-			h.add_child(l)
-	Atelier.clickable(p, cb)
+	var mode := str(s.get("mode", "damage")) if str(s.get("mode", "")) != "" else "damage"
+	var cd := int(s.get("cooldownSec", 0))
+	if compact:
+		h.add_child(_cell(_value(s), 70.0, Ax.GOLD_L, 600))
+	else:
+		h.add_child(_cell(_mode_label(mode), 150.0))
+		h.add_child(_cell(_value(s), 90.0, Ax.GOLD_L, 600))
+		h.add_child(_cell(str(int(s.get("staminaCost", 0))), 90.0))
+		h.add_child(_cell(("%d s" % cd) if cd > 0 else "—", 90.0))
+	Ax.clickable(p, cb)
 	return p
 
-static func _cap(text: String) -> Label:
-	var c := Label.new()
-	c.text = text.to_upper()
-	c.add_theme_font_size_override("font_size", 12)
-	c.add_theme_color_override("font_color", Color("9a8863"))
-	return c
-
-## Fiche du sort choisi : icône, nom, école, mode, valeurs, endurance / recharge, statut, effet visuel, suppression.
-static func _inspector(admin: Node, s: Dictionary, narrow: bool) -> Control:
-	var panel := GameScreen.glass(22, 18)
-	panel.custom_minimum_size = Vector2(0 if narrow else 380, 0)
-	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
-	panel.add_child(col)
-	var save := func(): admin.save()
+## Fiche du sort choisi (volet de droite) : icône, nom, mode, valeurs, statut, effet visuel, suppression.
+static func _inspector(admin: Node, s: Dictionary, col: Control) -> void:
 	var refresh := func():
-		save.call()
+		Ax.flush()
 		admin.refresh_tab()
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 14)
+	var head := Ax.hbox(14)
 	col.add_child(head)
-	head.add_child(IconPicker.button(admin.modals(), s, "icon", refresh, 52.0))
-	var hv := VBoxContainer.new()
+	head.add_child(IconPicker.button(admin.modals(), s, "icon", func():
+		Ax.changed()
+		refresh.call(), 52.0))
+	var hv := Ax.vbox(2)
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hv.add_theme_constant_override("separation", 6)
+	hv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(hv)
-	var name_edit := AdminChars.line_edit(str(s.get("name", "")), 0.0, 1.0, 10.0, 8.0)
-	name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_edit.text_changed.connect(func(t: String): s["name"] = t)
+	var name_edit := Ax.text_field(s, "name", 36.0, 20, "", func(tx: String): admin.note(tx))
+	name_edit.add_theme_font_override("font", Ax.cinzel())
+	name_edit.add_theme_color_override("font_color", Ax.CREAM)
+	name_edit.add_theme_stylebox_override("normal", Ax.sb(Ax.CLEAR, Ax.CLEAR, 6, 0, 6, 0))
+	name_edit.add_theme_stylebox_override("focus", Ax.sb(Ax.FIELD, Ax.GOLD, 8, 1, 6, 0))
 	hv.add_child(name_edit)
 	var mode := str(s.get("mode", "damage"))
 	if mode == "":
 		mode = "damage"
-	col.add_child(_cap(L.t("admin.spells.mode")))
-	col.add_child(AdminChars.select(MODES.map(func(m): return [m[0], L.t(str(m[1]))]), mode, func(v):
+	hv.add_child(Ax.lab("%s · %s" % [_school_name(s), _mode_label(mode)], 12, Ax.MUTED))
+	col.add_child(_group(L.t("admin.spells.mode"), Ax.select(MODES.map(func(m): return [m[0], L.t(str(m[1]))]), mode, func(v):
 		s["mode"] = v
-		refresh.call(), 0.0, 0.85, 10.0, 7.0, true))
-	col.add_child(_cap(L.t("admin.spells.valeurs")))
-	col.add_child(_stats(s, mode))
-	var f := HFlowContainer.new()
-	f.add_theme_constant_override("h_separation", 6)
-	f.add_theme_constant_override("v_separation", 6)
-	f.add_child(AdminCells.inline(L.t("common.endurance"), true, 0.74))
-	f.add_child(AdminCells.num(s, "staminaCost", 15, {"w": 44, "lo": 0, "hi": 50, "tip": L.t("admin.spells.cout_en_endurance"),
-		"fix": func(v: float) -> float: return maxf(0.0, minf(50.0, v))}))
-	f.add_child(AdminCells.inline(L.t("admin.spells.recharge"), true, 0.74))
-	f.add_child(AdminCells.num(s, "cooldownSec", 6, {"w": 44, "lo": 0, "hi": 60, "tip": L.t("admin.spells.temps_de_recharge_secondes"),
-		"fix": func(v: float) -> float: return maxf(0.0, minf(60.0, v))}))
+		Ax.changed()
+		refresh.call())))
+	var g := Ax.grid2(col)
+	_stats(g, s, mode)
+	g.add_child(Ax.num(s, "staminaCost", 15, 0, 50, L.t("common.endurance")))
+	g.add_child(Ax.num(s, "cooldownSec", 6, 0, 60, L.t("admin.spells.recharge")))
 	if mode == "damage":
-		f.add_child(AdminCells.inline(L.t("admin.spells.vol_de_vie"), true, 0.74))
-		f.add_child(AdminCells.num(s, "spellLifestealPct", 0, {"w": 44, "or": true, "lo": 0, "hi": 100, "tip": L.t("admin.spells.vol_de_vie_immediat_des")}))
-	col.add_child(f)
-	if mode == "damage":
-		col.add_child(_cap(L.t("admin.spells.effet_de_statut")))
-		col.add_child(_status(s, refresh))
-	col.add_child(_cap(L.t("admin.spells.style_animation")))
-	col.add_child(_style_cell(s, admin, refresh))
-	var del := Atelier.button(L.t("ui.atelier.s_delete"), func(): _remove(admin, s), false, true, 38.0)
-	col.add_child(del)
-	Form.autosave(panel, save)
-	return panel
+		g.add_child(Ax.num(s, "spellLifestealPct", 0, 0, 100, L.t("admin.spells.vol_de_vie").lstrip("🩸 ")))
+		Ax.switch_row(col, L.t("admin.spells.ignore_resist"), bool(s.get("ignoreAllResist", false)), func(on: bool):
+			s["ignoreAllResist"] = on
+			Ax.changed(), L.t("admin.spells.degats_vrais_ignore_toute_resistance"))
+		col.add_child(_group(L.t("admin.spells.effet_de_statut"), _status(s, refresh)))
+	_style_block(col, s, admin, refresh)
+	col.add_child(Ax.spacer())
+	col.add_child(Ax.btn(L.t("ui.atelier.s_delete"), func(): _remove(admin, s), "danger", 38.0))
 
-## Colonne « Style (animation) » : le style (école du sort, qui décide aussi de la logique de combat) et, dessous, l'effet visuel.
-## Changer de style remet l'effet par défaut du nouveau style. La teinte et l'intensité n'apparaissent que pour un effet avancé.
-static func _style_cell(s: Dictionary, admin: Node, refresh: Callable) -> Control:
+static func _group(title_text: String, ctl: Control) -> VBoxContainer:
+	var v := Ax.vbox(6)
+	v.add_child(Ax.cap(title_text))
+	v.add_child(ctl)
+	return v
+
+## Style (école) puis effet visuel (pastilles) ; teinte et intensité pour un effet avancé ; aperçu.
+static func _style_block(col: Control, s: Dictionary, admin: Node, refresh: Callable) -> void:
 	var styles: Array = []
 	for st in Data.constants.get("SPELL_STYLES", []):
 		styles.append([st.id, st.label])
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	var style_opt := AdminCells.option(styles, s.get("style", ""), func(v):
+	col.add_child(_group(L.t("admin.spells.style_animation"), Ax.select(styles, s.get("style", ""), func(v):
 		s["style"] = v
 		s["fx"] = ""
-		refresh.call(), 90.0)
-	style_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_child(style_opt)
+		Ax.changed()
+		refresh.call())))
 	var style := str(s.get("style", "arcane"))
 	if style == "":
 		style = "arcane"
@@ -305,87 +283,80 @@ static func _style_cell(s: Dictionary, admin: Node, refresh: Callable) -> Contro
 		mode = "damage"
 	var fxs := SpellFxLibrary.options(style, mode)
 	if fxs.size() <= 1:
-		return box     # ce style n'a pas encore d'effet avancé : seul l'effet d'origine existe
+		return
 	var cur := SpellFxLibrary.resolve(s)
-	var fx_opt := AdminCells.option(fxs, cur, func(v):
-		s["fx"] = v
-		refresh.call(), 90.0, L.t("admin.spells.effet_tip"))
-	fx_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_child(fx_opt)
+	var v := Ax.vbox(6)
+	var cap := Ax.cap(L.t("ui.atelier.s_fx"))
+	cap.tooltip_text = L.t("admin.spells.effets_hint")
+	cap.mouse_filter = Control.MOUSE_FILTER_PASS
+	v.add_child(cap)
+	var fl := HFlowContainer.new()
+	fl.add_theme_constant_override("h_separation", 6)
+	fl.add_theme_constant_override("v_separation", 6)
+	for f in fxs:
+		var fid = f[0]
+		var b := Ax.pill(str(f[1]), fid == cur, func():
+			s["fx"] = fid
+			Ax.changed()
+			refresh.call(), Ax.GOLD, 36.0, 13, 12)
+		b.tooltip_text = L.t("admin.spells.effet_tip")
+		fl.add_child(b)
+	v.add_child(fl)
+	col.add_child(v)
 	if cur != SpellFxLibrary.CLASSIC:
+		var g := Ax.grid2(col)
 		var tints: Array = []
 		for t in SpellFxLibrary.TINTS:
 			tints.append([t[0], L.t(str(t[1]))])
-		var tint_opt := AdminCells.option(tints, str(s.get("fxTint", "")), func(v): s["fxTint"] = v, 90.0, L.t("admin.spells.teinte"))
-		tint_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		box.add_child(tint_opt)
+		g.add_child(Ax.labeled(L.t("admin.spells.teinte"), Ax.select(tints, str(s.get("fxTint", "")), func(x):
+			s["fxTint"] = x
+			Ax.changed(), 36.0, 13)))
 		var powers: Array = []
-		for p in SpellFxLibrary.POWERS:
-			powers.append([p[0], L.t(str(p[1]))])
-		var power_opt := AdminCells.option(powers, float(s.get("fxPower", 1.0)), func(v): s["fxPower"] = float(v), 90.0, L.t("admin.spells.intensite"))
-		power_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		box.add_child(power_opt)
-	var preview := Button.new()
-	preview.text = L.t("admin.spells.apercu")
-	preview.focus_mode = Control.FOCUS_NONE
-	preview.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.72)))
-	preview.pressed.connect(func(): SpellFxPreview.open(admin.modals(), s))
-	box.add_child(preview)
-	return box
+		for pw in SpellFxLibrary.POWERS:
+			powers.append([pw[0], L.t(str(pw[1]))])
+		g.add_child(Ax.labeled(L.t("admin.spells.intensite"), Ax.select(powers, float(s.get("fxPower", 1.0)), func(x):
+			s["fxPower"] = float(x)
+			Ax.changed(), 36.0, 13)))
+	col.add_child(Ax.btn(L.t("admin.spells.apercu"), func(): SpellFxPreview.open(admin.modals(), s), "ghost", 36.0, 14, 13))
 
-## Colonne « Valeurs » selon le mode (`spellStatsHtml`).
-static func _stats(s: Dictionary, mode: String) -> Control:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 3)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 3)
-	v.add_child(h)
+## Cases « valeurs » selon le mode (`spellStatsHtml`) : placées dans la grille de la fiche.
+static func _stats(g: Control, s: Dictionary, mode: String) -> void:
 	match mode:
 		"damage", "damageGroup":
-			_pair(h, s, "dmgMin", "dmgMax", L.t("common.degats_min"), L.t("common.degats_max"))
-			v.add_child(AdminCells.check(L.t("admin.spells.ignore_resist"), bool(s.get("ignoreAllResist", false)),
-					func(on: bool): s["ignoreAllResist"] = on, 0.65,
-					L.t("admin.spells.degats_vrais_ignore_toute_resistance")))
+			g.add_child(Ax.num(s, "dmgMin", 0, 0, 999, L.t("common.degats_min")))
+			g.add_child(Ax.num(s, "dmgMax", 0, 0, 999, L.t("common.degats_max")))
 		"staminaRestoreSingle":
-			_pair(h, s, "staminaMin", "staminaMax", L.t("admin.spells.endurance_restauree_min"), L.t("admin.spells.endurance_restauree_max"))
+			g.add_child(Ax.num(s, "staminaMin", 0, 0, 999, L.t("admin.spells.endurance_restauree_min")))
+			g.add_child(Ax.num(s, "staminaMax", 0, 0, 999, L.t("admin.spells.endurance_restauree_max")))
 		"shieldSingle":
-			_pair(h, s, "shieldMin", "shieldMax", L.t("admin.spells.bouclier_min"), L.t("admin.spells.bouclier_max"))
+			g.add_child(Ax.num(s, "shieldMin", 0, 0, 999, L.t("admin.spells.bouclier_min")))
+			g.add_child(Ax.num(s, "shieldMax", 0, 0, 999, L.t("admin.spells.bouclier_max")))
 		"partyUtility":
-			h.add_child(AdminCells.num(s, "cooldownReductionSec", 0, {"w": 48, "or": true,
-					"tip": L.t("admin.spells.reduction_du_temps_de_recharge")}))
-			h.add_child(AdminCells.inline("sec."))
-			h.add_child(AdminCells.inline(L.t("admin.spells.vigueur"), true, 0.74, true))
+			g.add_child(Ax.num(s, "cooldownReductionSec", 0, 0, 999, L.t("admin.spells.reduction_du_temps_de_recharge"), 1.0, " s"))
 		"dispelSingle", "sleepGroup", "selfBuff":
-			h.add_child(AdminCells.inline("—", true, 0.74, true))
+			pass
 		_:
-			_pair(h, s, "healMin", "healMax", L.t("admin.spells.soin_min"), L.t("admin.spells.soin_max"))
-	return v
+			g.add_child(Ax.num(s, "healMin", 0, 0, 999, L.t("admin.spells.soin_min")))
+			g.add_child(Ax.num(s, "healMax", 0, 0, 999, L.t("admin.spells.soin_max")))
 
-static func _pair(h: Control, s: Dictionary, k1: String, k2: String, t1: String, t2: String) -> void:
-	h.add_child(AdminCells.num(s, k1, 0, {"w": 48, "or": true, "tip": t1}))
-	h.add_child(AdminCells.inline("-"))
-	h.add_child(AdminCells.num(s, k2, 0, {"w": 48, "or": true, "tip": t2}))
-
-## Colonne « Effet de statut » (`statusEffectHtml`) : liste + chance / durée / dégâts par tour.
+## Statut infligé (`statusEffectHtml`) : liste puis chance / durée / dégâts par tour.
 static func _status(s: Dictionary, refresh: Callable) -> Control:
 	var defs: Dictionary = Data.constants.get("STATUS_DEFS", {})
 	var opts: Array = [["", L.t("common.aucun")]]
 	for id in defs:
 		opts.append([id, "%s %s" % [defs[id].get("icon", ""), defs[id].get("label", id)]])
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
-	var sel := AdminCells.option(opts, s.get("statusEffect", ""), func(v):
+	var box := Ax.vbox(8)
+	box.add_child(Ax.select(opts, s.get("statusEffect", ""), func(v):
 		s["statusEffect"] = v
-		refresh.call(), 85.0, "", 0.6)
-	box.add_child(sel)
+		Ax.changed()
+		refresh.call(), 44.0))
 	var cur := str(s.get("statusEffect", ""))
 	if cur != "" and defs.has(cur):
-		var r := HBoxContainer.new()
-		r.add_theme_constant_override("separation", 3)
-		r.add_child(AdminCells.num(s, "statusChance", 30, {"w": 38, "lo": 0, "hi": 100, "tip": L.t("admin.spells.chance")}))
-		r.add_child(AdminCells.num(s, "statusDuration", 3, {"w": 34, "lo": 1, "hi": 10, "tip": L.t("admin.spells.duree_tours")}))
+		var r := Ax.hbox(8)
+		r.add_child(Ax.num(s, "statusChance", 30, 0, 100, L.t("admin.spells.chance"), 1.0, " %"))
+		r.add_child(Ax.num(s, "statusDuration", 3, 1, 10, L.t("admin.spells.duree_tours")))
 		if bool(defs[cur].get("dot", false)):
-			r.add_child(AdminCells.num(s, "statusPower", 3, {"w": 34, "lo": 1, "hi": 20, "tip": L.t("admin.spells.degats_par_tour")}))
+			r.add_child(Ax.num(s, "statusPower", 3, 1, 20, L.t("admin.spells.degats_par_tour")))
 		box.add_child(r)
 	return box
 

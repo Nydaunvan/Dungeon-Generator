@@ -522,6 +522,8 @@ static func select(options: Array, current: Variant, on_pick: Callable, h: float
 	o.add_theme_constant_override("icon_max_width", 16)
 	o.custom_minimum_size.y = h
 	o.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	o.clip_text = true
+	o.fit_to_longest_item = false
 	var pop := o.get_popup()
 	pop.add_theme_font_override("font", inter(400))
 	pop.add_theme_font_size_override("font_size", size)
@@ -737,3 +739,87 @@ static func flush() -> void:
 		_timer.stop()
 		if _act.is_valid():
 			_act.call()
+
+# ------------------------------------------------------------------ champs liés à un dictionnaire, volets
+
+## Entier si la valeur est ronde, sinon décimal (comme l'original écrit les nombres).
+static func num_value(v: float) -> Variant:
+	return int(v) if is_equal_approx(v, roundf(v)) else v
+
+## Champ « − 12 + » lié à `target[key]` (valeur par défaut `def` si la clé manque), avec son libellé ; enregistre automatiquement.
+static func num(target: Dictionary, key: String, def: float, lo: float, hi: float, label: String, step: float = 1.0, unit: String = "", on_change: Callable = Callable(), h: float = 36.0) -> VBoxContainer:
+	var st := stepper(float(target.get(key, def)), lo, hi, step, func(v: float):
+		target[key] = num_value(v)
+		changed()
+		if on_change.is_valid():
+			on_change.call(v), h, unit)
+	return labeled(label, st)
+
+## Texte lié à `target[key]` ; enregistre automatiquement.
+static func text_field(target: Dictionary, key: String, h: float = 40.0, size: int = 14, placeholder: String = "", on_change: Callable = Callable()) -> LineEdit:
+	var f := field(str(target.get(key, "")), Callable(), h, size, placeholder)
+	f.text_changed.connect(func(t: String):
+		target[key] = t
+		changed()
+		if on_change.is_valid():
+			on_change.call(t))
+	return f
+
+## Volet latéral (maquettes Sorts / Objets) : bordure gauche, fond sombre, défilement propre. Renvoie la colonne de contenu.
+static func aside(parent: Control, width: float, gap: int = 14) -> VBoxContainer:
+	var p := PanelContainer.new()
+	var s := sb(Color(0.063, 0.047, 0.031, 0.7), CLEAR, 0, 0, 22, 24)
+	s.border_width_left = 1
+	s.border_color = LINE
+	p.add_theme_stylebox_override("panel", s)
+	if width > 0.0:
+		p.custom_minimum_size.x = width
+	p.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	parent.add_child(p)
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	p.add_child(sc)
+	var v := vbox(gap)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(v)
+	return v
+
+## Intitulé de rubrique en petites capitales (« MODE », « STATUT INFLIGÉ »).
+static func cap(text: String) -> Label:
+	var l := kicker(text, 12)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 40
+	return l
+
+## Grille de deux colonnes égales.
+static func grid2(parent: Control, gap: int = 10) -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = 2
+	g.add_theme_constant_override("h_separation", gap)
+	g.add_theme_constant_override("v_separation", gap)
+	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(g)
+	return g
+
+## Bouton de choix rectangulaire (rayon 9, 36 px) : « Vol de vie / Critique / Renvoi », « Explosion / Pluie »…
+static func choice(text: String, on: bool, cb: Callable, tint: Color = GOLD, h: float = 36.0, size: int = 13) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	b.clip_text = true
+	b.custom_minimum_size = Vector2(0, h)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.add_theme_font_override("font", inter(600 if on else 400))
+	b.add_theme_font_size_override("font_size", size)
+	var bg := Color(tint.r, tint.g, tint.b, 0.14) if on else FIELD
+	var ln := tint if on else LINE
+	for k in ["normal", "pressed", "focus"]:
+		b.add_theme_stylebox_override(k, sb(bg, ln, 9, 1, 8, 0))
+	b.add_theme_stylebox_override("hover", sb(_lighter(bg), ln if on else Color("6b5430"), 9, 1, 8, 0))
+	var fg := _lighter(tint, 0.2) if on else MUTED
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(c, fg)
+	if cb.is_valid():
+		b.pressed.connect(cb)
+	return b

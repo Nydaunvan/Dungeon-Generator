@@ -320,12 +320,12 @@ static func eff_weapons(cfg: Dictionary, cls: Dictionary) -> Array:
 			out.append(w)
 	return out
 
-# ------------------------------------------------------------------ page « Groupe de départ »
+# ------------------------------------------------------------------ page « Groupe de départ » (maquette « Groupe »)
 
 ## Héros affiché dans la fiche (indice dans `party`).
 static var _sel := 0
 
-static func build(host: VBoxContainer, admin: Node) -> void:
+static func build(host: Control, admin: Node) -> void:
 	var cfg: Dictionary = Data.admin_config()
 	# réparation à chaque affichage : sorts connus non autorisés par la classe ou appris automatiquement plus tard
 	for p in cfg.get("party", []):
@@ -337,59 +337,58 @@ static func build(host: VBoxContainer, admin: Node) -> void:
 				keep.append(sid)
 		p["spellsKnown"] = keep
 	var party: Array = cfg.get("party", [])
+	var narrow: bool = admin.size.x < 1000.0
+	var page := Ax.scroll_page(host, admin, 40, 28, 20)
+	# ---- titre + sélecteur Groupe / Objets
+	var top := HFlowContainer.new()
+	top.add_theme_constant_override("h_separation", 16)
+	top.add_theme_constant_override("v_separation", 12)
+	page.add_child(top)
+	var head := Ax.head(Atelier.kicker_of("party"), Atelier.title_of("party"), 30 if not narrow else 24)
+	top.add_child(head)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(sp)
+	var sw := AtelierParty.switcher(admin)
+	sw.size_flags_vertical = Control.SIZE_SHRINK_END
+	top.add_child(sw)
 	if party.is_empty():
-		host.add_child(Atelier.muted(L.t("ui.atelier.p_empty"), 14))
+		page.add_child(Ax.lab(L.t("ui.atelier.p_empty"), 14, Ax.MUTED))
 		return
 	_sel = clampi(_sel, 0, party.size() - 1)
-	var narrow: bool = admin.size.x < 1000.0
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 16)
-	host.add_child(gap)
 	# ---- cartes des héros
 	var cards := GridContainer.new()
 	cards.columns = 2 if narrow else clampi(party.size(), 1, 4)
 	cards.add_theme_constant_override("h_separation", 16)
 	cards.add_theme_constant_override("v_separation", 16)
-	host.add_child(cards)
+	page.add_child(cards)
 	for i in party.size():
 		var idx := i
 		cards.add_child(_hero_card(cfg, party[i], i == _sel, func():
-			Form.flush()
+			Ax.flush()
 			_sel = idx
 			admin.refresh_tab()))
-	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(0, 16)
-	host.add_child(gap2)
 	# ---- fiche du héros choisi
-	var sheet := GameScreen.glass(24, 18)
+	var c: Dictionary = party[_sel]
+	var cur := class_by_id(cfg, str(c.get("classId", "")))
+	var sheet := Ax.panel(Ax.CARD, Ax.LINE2, 18, 24, 24)
 	sheet.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host.add_child(sheet)
+	page.add_child(sheet)
 	var cols := GridContainer.new()
 	cols.columns = 1 if narrow else 3
 	cols.add_theme_constant_override("h_separation", 28)
 	cols.add_theme_constant_override("v_separation", 24)
 	sheet.add_child(cols)
-	var c: Dictionary = party[_sel]
-	var cur := class_by_id(cfg, str(c.get("classId", "")))
-	var save := func(): admin.save()
-	cols.add_child(_identity(admin, cfg, c, cur, save, narrow))
-	cols.add_child(_stats(c, cur, save))
-	cols.add_child(_gear(admin, cfg, c, cur, save))
-	Form.autosave(sheet, save)
+	cols.add_child(_identity(admin, cfg, c, cur, narrow))
+	cols.add_child(_stats(c, cur))
+	cols.add_child(_gear(admin, cfg, c, cur, admin.size.x < 1300.0))
 
-## Carte d'un héros dans la rangée du haut : pastille (portrait ou initiale), nom, classe.
-static func _hero_card(cfg: Dictionary, c: Dictionary, selected: bool, cb: Callable) -> Control:
-	var p := Atelier.card(selected, 16, 16)
-	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var v := VBoxContainer.new()
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_theme_constant_override("separation", 6)
-	p.add_child(v)
-	var av := PanelContainer.new()
-	av.custom_minimum_size = Vector2(56, 56)
+## Pastille d'un héros : portrait recadré ou initiale (Cinzel).
+static func _avatar(c: Dictionary, selected: bool, px: float) -> Control:
+	var av := Ax.panel(Ax.GOLD if selected else Color("241a0e"), Ax.CLEAR, 14, 0, 0, 0)
+	av.custom_minimum_size = Vector2(px, px)
 	av.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	av.clip_contents = true
-	av.add_theme_stylebox_override("panel", Atelier.box(Color("e8b45c") if selected else Color("241a0e"), Color(0, 0, 0, 0), 14, 0, 0, 0))
 	var path := str(c.get("portrait", ""))
 	if path != "" and ResourceLoader.exists(path):
 		var tr := TextureRect.new()
@@ -398,46 +397,36 @@ static func _hero_card(cfg: Dictionary, c: Dictionary, selected: bool, cb: Calla
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		av.add_child(tr)
 	else:
-		var l := Label.new()
-		l.text = str(c.get("name", "?")).substr(0, 1).to_upper()
+		var l := Ax.title(str(c.get("name", "?")).substr(0, 1).to_upper(), 26, Color("2a1a06") if selected else Ax.MUTED)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		l.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-		l.add_theme_font_size_override("font_size", 26)
-		l.add_theme_color_override("font_color", Color("2a1a06") if selected else Color("b8a781"))
 		av.add_child(l)
-	v.add_child(av)
-	var n := Label.new()
-	n.text = str(c.get("name", ""))
+	return av
+
+static func _hero_card(cfg: Dictionary, c: Dictionary, selected: bool, cb: Callable) -> Control:
+	var p := Ax.panel(Color(0.91, 0.706, 0.361, 0.1) if selected else Ax.CARD, Ax.GOLD if selected else Ax.LINE, 16, 16, 16)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var v := Ax.vbox(6)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	p.add_child(v)
+	v.add_child(_avatar(c, selected, 56.0))
+	var n := Ax.title(str(c.get("name", "")), 18)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	n.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
-	n.add_theme_font_size_override("font_size", 18)
-	n.add_theme_color_override("font_color", Color("f4e6c6"))
 	n.clip_text = true
 	v.add_child(n)
-	var k := Atelier.muted(str(class_by_id(cfg, str(c.get("classId", ""))).get("name", "?")))
+	var k := Ax.lab(str(class_by_id(cfg, str(c.get("classId", ""))).get("name", "?")), 12, Ax.MUTED)
 	k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(k)
-	Atelier.clickable(p, cb)
+	Ax.clickable(p, cb)
 	return p
 
-static func _field(parent: Control, label: String, ctl: Control) -> void:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
-	v.add_child(Atelier.muted(label))
-	v.add_child(ctl)
-	parent.add_child(v)
-
 ## Colonne 1 : portrait, nom, classe, icône.
-static func _identity(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary, save: Callable, narrow: bool) -> Control:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
+static func _identity(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary, narrow: bool) -> Control:
+	var col := Ax.vbox(14)
 	col.custom_minimum_size = Vector2(0 if narrow else 260, 0)
-	# portrait
-	var frame := PanelContainer.new()
+	var frame := Ax.panel(Color("2a1d10"), Ax.LINE3, 18, 0, 0)
 	frame.custom_minimum_size = Vector2(0, 150)
 	frame.clip_contents = true
-	frame.add_theme_stylebox_override("panel", Atelier.box(Color("2a1d10"), Color("5a4526"), 18, 0, 0))
 	var inner := Control.new()
 	inner.custom_minimum_size = Vector2(0, 150)
 	frame.add_child(inner)
@@ -450,55 +439,36 @@ static func _identity(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictiona
 		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		inner.add_child(tr)
 	else:
-		var ic := GameIcons.rect("user", 64, Color("5a4526"), 1.4)
-		ic.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		var ic := GameIcons.rect("user", 96, Color(0.1, 0.07, 0.04, 0.85), 1.4)
+		ic.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+		ic.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		ic.grow_vertical = Control.GROW_DIRECTION_BEGIN
 		inner.add_child(ic)
-	var tag := Label.new()
-	tag.text = L.t("ui.atelier.p_portrait")
-	tag.add_theme_font_size_override("font_size", 11)
-	tag.add_theme_color_override("font_color", Color("e2d2b0"))
-	var tagbox := PanelContainer.new()
-	tagbox.add_theme_stylebox_override("panel", Atelier.box(Color(0, 0, 0, 0.55), Color(0, 0, 0, 0), 9, 9, 3, 0))
-	tagbox.add_child(tag)
+	var tagbox := Ax.panel(Color(0, 0, 0, 0.55), Ax.CLEAR, 9, 9, 3, 0)
+	tagbox.add_child(Ax.lab(L.t("ui.atelier.p_portrait"), 11, Ax.TEXT))
 	tagbox.position = Vector2(10, 10)
 	inner.add_child(tagbox)
 	col.add_child(frame)
-	var btns := HBoxContainer.new()
-	btns.add_theme_constant_override("separation", 8)
-	var choose := Atelier.button(L.t("ui.atelier.p_choose"), func():
-		IconPicker.open_portrait(admin.modals(), str(c.get("portrait", "")), func(v: String):
-			if v == "":
-				c.erase("portrait")
-			else:
-				c["portrait"] = v
-			save.call()
-			admin.refresh_tab()), true, false, 38.0)
+	var btns := Ax.hbox(8)
+	var choose := Ax.btn(L.t("ui.atelier.p_choose"), func():
+		_portrait_picker(admin, c), "gold", 38.0)
 	choose.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btns.add_child(choose)
-	var rm := Atelier.button("", func():
+	var rm := Ax.icon_btn("close", func():
 		c.erase("portrait")
-		save.call()
-		admin.refresh_tab(), false, false, 38.0)
-	rm.icon = GameIcons.tex("close", 32, Color("b8a781"), 2.0)
-	rm.add_theme_constant_override("icon_max_width", 16)
-	rm.tooltip_text = L.t("ui.atelier.p_remove")
-	rm.custom_minimum_size = Vector2(38, 38)
+		Ax.changed()
+		admin.refresh_tab(), 38.0, Ax.MUTED, "ghost", L.t("ui.atelier.p_remove"))
 	rm.disabled = path == ""
 	btns.add_child(rm)
 	col.add_child(btns)
-	# nom
-	var name_edit := line_edit(str(c.get("name", "")), 0.0, 0.95, 12.0, 9.0)
-	name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_edit.text_changed.connect(func(t: String): c["name"] = t)
-	_field(col, L.t("common.nom"), name_edit)
-	# classe : classes de base (la classe évoluée actuelle reste listée en tête)
+	col.add_child(Ax.labeled(L.t("common.nom"), Ax.text_field(c, "name", 40.0, 14, "", func(t: String): admin.note(t)), 6))
 	var opts: Array = []
 	if cur.get("id", "") != "" and not AdminUtil.is_base(cur):
 		opts.append([cur.id, L.fa(L.t("admin.chars.evoluee_en_jeu"), [AdminUtil.icon_text_fallback(str(cur.get("icon", ""))), cur.name])])
 	for cl in cfg.get("classes", []):
 		if AdminUtil.is_base(cl):
 			opts.append([cl.id, "%s %s" % [AdminUtil.icon_text_fallback(str(cl.get("icon", ""))), cl.name]])
-	var on_class := func(v):
+	col.add_child(Ax.labeled(L.t("admin.chars.classe"), Ax.select(opts, c.get("classId", ""), func(v):
 		c["classId"] = v
 		var allowed: Array = AdminUtil.eff_spells(class_by_id(cfg, str(v)))
 		var keep: Array = []
@@ -506,109 +476,174 @@ static func _identity(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictiona
 			if allowed.has(sid):
 				keep.append(sid)
 		c["spellsKnown"] = keep
-		save.call()
-		admin.refresh_tab()
-	_field(col, L.t("admin.chars.classe"), select(opts, c.get("classId", ""), on_class, 0.0, 0.95, 12.0, 9.0, true))
-	# icône
-	var ib := icon_btn(admin, c, "icon", func():
-		save.call()
-		admin.refresh_tab())
+		Ax.changed()
+		admin.refresh_tab()), 6))
+	var ib := IconPicker.button(admin.modals(), c, "icon", func():
+		Ax.changed()
+		admin.refresh_tab(), 40.0)
 	ib.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	_field(col, L.t("common.icone"), ib)
+	col.add_child(Ax.labeled(L.t("common.icone"), ib, 6))
 	return col
 
+## Fenêtre « Choisir un portrait » (maquette) : grille de 4, portrait courant cerclé d'or, Annuler / Valider.
+static func _portrait_picker(admin: Node, c: Dictionary) -> void:
+	var paths: Array = []
+	for pc in IconPicker.PORTRAIT_CLASSES:
+		var i := 0
+		while ResourceLoader.exists("res://assets/portraits/%s_%d.webp" % [pc[1], i]):
+			paths.append("res://assets/portraits/%s_%d.webp" % [pc[1], i])
+			i += 1
+	var m := AxModal.open(admin.modals(), L.t("ui.icon_picker.choisir_un_portrait"), L.fa(L.t("ui.atelier.p_images"), paths.size()), 460.0, 420.0)
+	var pick := {"v": str(c.get("portrait", ""))}
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	m.body.add_child(grid)
+	var tiles: Dictionary = {}
+	var paint := func():
+		for k in tiles:
+			var on: bool = k == pick.v
+			(tiles[k] as Button).add_theme_stylebox_override("normal", Ax.sb(Color("2a1d10"), Ax.GOLD if on else Ax.LINE2, 12, 2 if on else 1, 0, 0))
+	for path in paths:
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 84)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.clip_contents = true
+		for k in ["hover", "pressed", "focus"]:
+			b.add_theme_stylebox_override(k, Ax.sb(Color("2a1d10"), Ax.GOLD_L, 12, 1, 0, 0))
+		var tr := TextureRect.new()
+		tr.texture = load(path)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tr.offset_left = 2
+		tr.offset_top = 2
+		tr.offset_right = -2
+		tr.offset_bottom = -2
+		b.add_child(tr)
+		var pth: String = path
+		b.pressed.connect(func():
+			pick.v = pth
+			paint.call())
+		tiles[path] = b
+		grid.add_child(b)
+	paint.call()
+	m.set_buttons([
+		{"text": L.t("common.annuler"), "cb": func(): pass},
+		{"text": L.t("ui.atelier.p_validate"), "primary": true, "cb": func():
+			if str(pick.v) == "":
+				c.erase("portrait")
+			else:
+				c["portrait"] = pick.v
+			Ax.changed()
+			admin.refresh_tab()}])
+
 ## Colonne 2 : caractéristiques (barre + valeur). Les PV sont calculés, le reste se règle ici.
-static func _stats(c: Dictionary, cur: Dictionary, save: Callable) -> Control:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
+static func _stats(c: Dictionary, cur: Dictionary) -> Control:
+	var col := Ax.vbox(14)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(Atelier.section(L.t("ui.atelier.p_stats")))
-	var bars: Dictionary = {}
-	# PV (calculés à partir de la Constitution)
-	var hp_row := _stat_row(L.t("ui.atelier.p_hp"), 0.0, 150.0, bars, "hp")
-	var hp_box: LineEdit = hp_row[1]
-	hp_box.editable = false
-	hp_box.tooltip_text = L.t("admin.chars.les_pv_et_l_attaque")
-	col.add_child(hp_row[0])
+	col.add_child(Ax.gold_cap(L.t("ui.atelier.p_stats")))
+	var hp := _stat_row(col, L.t("ui.atelier.p_hp"), 0.0, 60.0, Callable())
+	(hp.edit as LineEdit).editable = false
+	(hp.edit as LineEdit).tooltip_text = L.t("admin.chars.les_pv_et_l_attaque")
 	var refresh_hp := func():
 		var d := c.duplicate()
 		d["level"] = 1
 		var b := Stats.char_base(d)
-		hp_box.text = str(int(b.maxHp))
-		(bars["hp"] as ProgressBar).value = minf(float(b.maxHp), (bars["hp"] as ProgressBar).max_value)
-	# Endurance
-	var on_sta := func(v):
+		(hp.edit as LineEdit).text = str(int(b.maxHp))
+		hp.set_fill.call(float(b.maxHp))
+	var sta := _stat_row(col, L.t("ui.atelier.p_sta"), float(c.get("maxStamina", 100)), 60.0, func(v):
 		var n = clampf(float(v), 1.0, 205.0)
-		c["maxStamina"] = int(n) if is_equal_approx(n, roundf(n)) else n
-		(bars["sta"] as ProgressBar).value = minf(float(c["maxStamina"]), 205.0)
-		return c["maxStamina"]
-	var sta_row := _stat_row(L.t("ui.atelier.p_sta"), float(c.get("maxStamina", 100)), 205.0, bars, "sta", on_sta)
-	sta_row[1].tooltip_text = L.t("admin.chars.endurance_maximale")
-	col.add_child(sta_row[0])
+		c["maxStamina"] = Ax.num_value(n)
+		Ax.changed()
+		return c["maxStamina"])
+	(sta.edit as LineEdit).tooltip_text = L.t("admin.chars.endurance_maximale")
 	for f in [["force", "ui.atelier.p_str"], ["dex", "ui.atelier.p_dex"], ["con", "ui.atelier.p_con"], ["int", "ui.atelier.p_int"]]:
 		var key: String = f[0]
-		var on_stat := func(v):
+		_stat_row(col, L.t(str(f[1])), float(c.get(key, 10)), 20.0, func(v):
 			var n = clampf(float(v), 1.0, 100.0)
-			c[key] = int(n) if is_equal_approx(n, roundf(n)) else n
-			(bars[key] as ProgressBar).value = minf(float(c[key]), 20.0)
+			c[key] = Ax.num_value(n)
+			Ax.changed()
 			refresh_hp.call()
-			return c[key]
-		col.add_child(_stat_row(L.t(str(f[1])), float(c.get(key, 10)), 20.0, bars, key, on_stat)[0])
+			return c[key])
 	# vitesse : celle de la classe par défaut (case vide), ou propre à ce personnage ; elle décide de l'ordre d'initiative
 	var cls_speed := int(cur.get("baseSpeed", 10))
-	var on_speed := func(v):
-		var n = clampf(float(v), 0.0, 40.0)
-		if n < 1.0:
-			c.erase("baseSpeed")
-			(bars["speed"] as ProgressBar).value = minf(float(cls_speed), 20.0)
-			return null
-		c["baseSpeed"] = int(roundf(n))
-		(bars["speed"] as ProgressBar).value = minf(float(c["baseSpeed"]), 20.0)
-		return c["baseSpeed"]
-	var sp_row := _stat_row(L.t("ui.atelier.p_speed"), float(c.get("baseSpeed", cls_speed)), 20.0, bars, "speed", on_speed)
-	var sp_edit: LineEdit = sp_row[1]
+	var sp := _stat_row(col, L.t("ui.atelier.p_speed"), float(c.get("baseSpeed", cls_speed)), 20.0, Callable())
+	var sp_edit: LineEdit = sp.edit
 	sp_edit.text = num_text(c.get("baseSpeed", 0), true)
 	sp_edit.placeholder_text = str(cls_speed)
 	sp_edit.tooltip_text = L.fa(L.t("admin.chars.vitesse_aide"), cls_speed)
-	col.add_child(sp_row[0])
+	on_commit(sp_edit, func(t: String):
+		var n := clampf(float(parse_num(t)), 0.0, 40.0)
+		if n < 1.0:
+			c.erase("baseSpeed")
+			sp_edit.text = ""
+			sp.set_fill.call(float(cls_speed))
+		else:
+			c["baseSpeed"] = int(roundf(n))
+			sp_edit.text = str(c["baseSpeed"])
+			sp.set_fill.call(n)
+		Ax.changed())
 	refresh_hp.call()
 	return col
 
-## Ligne « libellé · barre · valeur » : renvoie [ligne, champ].
-static func _stat_row(label: String, value: float, max_v: float, bars: Dictionary, key: String, on_change: Callable = Callable()) -> Array:
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
-	var l := Label.new()
-	l.text = label
-	l.custom_minimum_size = Vector2(110, 0)
-	l.add_theme_font_size_override("font_size", 13)
-	l.add_theme_color_override("font_color", Color("f4e6c6"))
+## Ligne « libellé · barre · valeur » : renvoie {edit, set_fill}. `on_change(valeur)` renvoie la valeur normalisée réécrite dans le champ.
+static func _stat_row(parent: Control, label: String, value: float, max_v: float, on_change: Callable) -> Dictionary:
+	var h := Ax.hbox(12)
+	var l := Ax.lab(label, 13, Ax.CREAM)
+	l.custom_minimum_size.x = 110
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	l.clip_text = true
 	h.add_child(l)
-	var b := Atelier.bar(value, max_v)
-	bars[key] = b
-	h.add_child(b)
-	var e: LineEdit
-	if on_change.is_valid():
-		e = num_edit(value, 56.0, 0.9, on_change, 4.0, 6.0)
-	else:
-		e = line_edit(num_text(value), 56.0, 0.9, 4.0, 6.0)
+	var track := Ax.panel(Ax.TRACK, Ax.CLEAR, 4, 0, 0, 0)
+	track.custom_minimum_size = Vector2(40, 8)
+	track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var fill := Ax.panel(Color("d9a444"), Ax.CLEAR, 4, 0, 0, 0)
+	fill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fill.anchor_right = clampf(value / max_v, 0.0, 1.0)
+	fill.offset_right = 0
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var holder := Control.new()
+	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	holder.add_child(fill)
+	track.add_child(holder)
+	h.add_child(track)
+	var box := Ax.panel(Ax.FIELD, Ax.LINE2, 8, 0, 0)
+	box.custom_minimum_size = Vector2(56, 32)
+	var e := LineEdit.new()
+	e.text = num_text(value)
 	e.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	e.custom_minimum_size.x = 56
-	h.add_child(e)
-	return [h, e]
+	e.add_theme_font_override("font", Ax.inter(600))
+	e.add_theme_font_size_override("font_size", 14)
+	e.add_theme_color_override("font_color", Ax.CREAM)
+	e.add_theme_color_override("caret_color", Ax.GOLD)
+	for k in ["normal", "focus", "read_only"]:
+		e.add_theme_stylebox_override(k, Ax.sb(Ax.CLEAR, Ax.CLEAR, 4, 0, 2, 0))
+	box.add_child(e)
+	h.add_child(box)
+	parent.add_child(h)
+	var set_fill := func(v: float):
+		fill.anchor_right = clampf(v / max_v, 0.0, 1.0)
+	if on_change.is_valid():
+		on_commit(e, func(t: String):
+			var norm = on_change.call(parse_num(t))
+			if norm != null:
+				e.text = num_text(norm)
+				set_fill.call(float(norm)))
+	return {"edit": e, "set_fill": set_fill}
 
 ## Colonne 3 : équipement de départ (une carte par emplacement) et sorts connus (pastilles).
-static func _gear(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary, save: Callable) -> Control:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
+static func _gear(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary, one_col: bool) -> Control:
+	var col := Ax.vbox(14)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(Atelier.section(L.t("ui.atelier.p_equip")))
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	col.add_child(grid)
+	col.add_child(Ax.gold_cap(L.t("ui.atelier.p_equip")))
+	var grid := Ax.grid2(col, 8)
+	grid.columns = 1 if one_col else 2
 	var se := Form.sub(c, "startEquipment")
 	var weapons := eff_weapons(cfg, cur)
 	for slot in Data.constants.get("SLOT_TYPES", []):
@@ -624,34 +659,35 @@ static func _gear(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary, 
 				ok = it.get("type") == "armor" and it.get("slot") == sid
 			if ok:
 				options.append([it.id, AdminUtil.item_label(it)])
-		var cell := PanelContainer.new()
+		var cell := Ax.panel(Ax.FIELD, Ax.LINE, 10, 12, 10)
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cell.add_theme_stylebox_override("panel", Atelier.box(Color("14100a"), Color("3a2c18"), 10, 10, 8))
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 4)
+		var v := Ax.vbox(4)
 		cell.add_child(v)
-		var cap := Label.new()
-		cap.text = L.c(str(slot.get("label", sid))).to_upper()
-		cap.add_theme_font_size_override("font_size", 11)
-		cap.add_theme_color_override("font_color", Color("9a8863"))
-		v.add_child(cap)
-		var on_eq := func(x): se[sid] = x
-		v.add_child(select(options, se.get(sid, ""), on_eq, 0.0, 0.8, 4.0, 4.0, true))
+		v.add_child(Ax.cap(L.c(str(slot.get("label", sid)))))
+		v.add_child(Ax.select(options, se.get(sid, ""), func(x):
+			se[sid] = x
+			Ax.changed(), 32.0, 13))
 		grid.add_child(cell)
-	col.add_child(Atelier.section(L.t("ui.atelier.p_spells")))
-	col.add_child(_spell_chips(admin, cfg, c, cur, save))
+	var sp := Ax.margin(Ax.gold_cap(L.t("ui.atelier.p_spells")), 0, 6, 0, 0)
+	col.add_child(sp)
+	_spell_chips(col, admin, cfg, c, cur)
 	return col
 
-## Sorts connus : une pastille par sort de la classe ; les sorts appris automatiquement sont verrouillés (🔒 niv. n).
-static func _spell_chips(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary, save: Callable) -> Control:
+## Sorts connus : une pastille par sort connu (× pour le retirer), les sorts appris automatiquement sont verrouillés (🔒 niv. n),
+## et « + Ajouter » propose les sorts de la classe qui restent.
+static func _spell_chips(col: Control, admin: Node, cfg: Dictionary, c: Dictionary, cur: Dictionary) -> void:
 	var eff: Array = AdminUtil.eff_spells(cur)
 	if eff.is_empty():
-		return Atelier.muted(L.t("ui.atelier.p_spells_none"), 13)
+		col.add_child(Ax.lab(L.t("ui.atelier.p_spells_none"), 13, Ax.MUTED))
+		return
 	var max_sp := int(Data.constants.get("MAX_SPELLS_PER_CHARACTER", 6))
 	var f := HFlowContainer.new()
 	f.add_theme_constant_override("h_separation", 8)
 	f.add_theme_constant_override("v_separation", 8)
 	f.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(f)
+	var known: Array = c.get("spellsKnown", [])
+	var free: Array = []
 	for sid in eff:
 		var s := spell_by_id(cfg, str(sid))
 		if s.is_empty():
@@ -659,25 +695,49 @@ static func _spell_chips(admin: Node, cfg: Dictionary, c: Dictionary, cur: Dicti
 		var label := "%s %s" % [AdminUtil.icon_text_fallback(str(s.get("icon", ""))), s.get("name", "?")]
 		var lock := AdminUtil.locked_level(cur, str(sid))
 		var spell_id := str(sid)
-		var known: bool = (c.get("spellsKnown", []) as Array).has(sid)
-		var b: Button
 		if lock > 0:
-			b = Atelier.pill("🔒 " + L.fa(L.t("admin.chars.label_niv"), [L.c(label), lock]), false, Callable(), Color("e8b45c"), 32, 12)
-			b.modulate.a = 0.55
-			b.tooltip_text = L.fa(T(L.t("admin.chars.apprend_automatiquement_au_niveau")), lock)
-		else:
-			b = Atelier.pill(label, known, Callable(), Color("e8b45c"), 32, 12)
-			b.pressed.connect(func():
+			var ch := Ax.chip("🔒 " + L.fa(L.t("admin.chars.label_niv"), [L.c(label), lock]), Ax.MUTED, Color("241a0e"), Ax.LINE2, 13, 14, 12, 6)
+			ch.tooltip_text = L.fa(T(L.t("admin.chars.apprend_automatiquement_au_niveau")), lock)
+			f.add_child(ch)
+		elif known.has(sid):
+			var ch := Ax.chip(label + "  ×", Ax.TEXT, Color("241a0e"), Ax.LINE2, 13, 14, 12, 6)
+			Ax.clickable(ch, func():
 				var list: Array = c.get("spellsKnown", [])
-				if list.has(spell_id):
-					list.erase(spell_id)
-				elif list.size() >= max_sp:
-					admin.say(L.fa(T(L.t("admin.chars.competences_maximum_par_personnage")), [c.get("name", ""), max_sp]))
-					return
-				else:
-					list.append(spell_id)
+				list.erase(spell_id)
 				c["spellsKnown"] = list
-				save.call()
+				Ax.changed()
 				admin.refresh_tab())
-		f.add_child(b)
-	return f
+			f.add_child(ch)
+		else:
+			free.append([spell_id, label])
+	var add := AxDashed.new()
+	add.add_child(Ax.margin(Ax.lab("+ " + L.t("ui.atelier.p_add"), 13, Ax.GOLD), 12, 6, 12, 6))
+	Ax.clickable(add, func():
+		if known.size() >= max_sp:
+			alert(admin, L.fa(T(L.t("admin.chars.competences_maximum_par_personnage")), [c.get("name", ""), max_sp]))
+			return
+		var pm := PopupMenu.new()
+		for i in free.size():
+			pm.add_item(str(free[i][1]), i)
+		if free.is_empty():
+			pm.add_item(L.t("ui.atelier.p_spells_none"), 0)
+			pm.set_item_disabled(0, true)
+		pm.id_pressed.connect(func(i: int):
+			if i < free.size():
+				var list: Array = c.get("spellsKnown", [])
+				list.append(free[i][0])
+				c["spellsKnown"] = list
+				Ax.changed()
+				admin.refresh_tab())
+		admin.add_child(pm)
+		pm.popup(Rect2i(Vector2i(add.get_screen_position()) + Vector2i(0, int(add.size.y)), Vector2i(0, 0)))
+		pm.popup_hide.connect(func(): pm.queue_free()))
+	f.add_child(add)
+
+## Champ avec son libellé (ancienne mise en page, encore utilisée par l'écran Classes).
+static func _field(parent: Control, label: String, ctl: Control) -> void:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	v.add_child(Atelier.muted(label))
+	v.add_child(ctl)
+	parent.add_child(v)

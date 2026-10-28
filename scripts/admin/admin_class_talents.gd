@@ -43,40 +43,35 @@ static func ensure_all(cfg: Dictionary) -> void:
 static func effect_label(key: String) -> String:
 	for d in EFFECT_DEFS:
 		if d[0] == key:
-			return str(d[2]) if Data.lang == "en" else str(d[1])
+			return L.t(str(d[2])) if Data.lang == "en" else L.t(str(d[1]))
 	return key
 
-static func _block(n: Node) -> void:
-	if n is Control:
-		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
-		(n as Control).focus_mode = Control.FOCUS_NONE
-	for ch in n.get_children():
-		_block(ch)
+## Option dont la fiche est ouverte (identifiant) : les deux autres options du palier restent en lecture.
+static var _open := ""
 
-static func _rich(bb: String, rem: float) -> RichTextLabel:
-	var r := RichTextLabel.new()
-	r.bbcode_enabled = true
-	r.fit_content = true
-	r.scroll_active = false
-	r.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	r.custom_minimum_size.x = 120.0
-	r.add_theme_font_size_override("normal_font_size", AdminChars.fpx(rem))
-	r.add_theme_font_size_override("bold_font_size", AdminChars.fpx(rem))
-	r.add_theme_color_override("default_color", AdminChars.GOLD_DIM)
-	r.text = bb
-	return r
+## Valeur signée d'un effet : « +10 » / « −3 ».
+static func _signed(v: Variant) -> String:
+	var f := float(v)
+	var t := Ax.fmt(absf(f), 1.0 if is_equal_approx(f, roundf(f)) else 0.1)
+	return ("+" if f >= 0.0 else "−") + t
 
-## Dessine la section (libellé + un cadre par palier) dans `parent` (la carte de la classe).
+## Nom et description affichés dans la langue courante (l'autre langue se règle dans la fiche ouverte).
+static func _name_of(o: Dictionary) -> String:
+	var n := str(o.get("labelEn" if Data.lang == "en" else "labelFr", ""))
+	return n if n != "" else str(o.get("labelFr", o.get("labelEn", "")))
+
+static func _desc_of(o: Dictionary) -> String:
+	var n := str(o.get("descEn" if Data.lang == "en" else "descFr", ""))
+	return n if n != "" else str(o.get("descFr", o.get("descEn", "")))
+
+## Onglet « Talents » (maquette « Classes ») : un palier par ligne — pastille de niveau, option A, « ou », option B.
 static func section(parent: Control, admin: Node, cfg: Dictionary, cls: Dictionary) -> void:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", int(AdminChars.cpx(6.0)))
-	parent.add_child(box)
-	box.add_child(AdminChars.csection_label(L.t("admin.class_talents.talents_choix_a_un_palier")))
+	parent.add_child(Ax.para(AdminItems._plain(L.t("admin.class_talents.talents_choix_a_un_palier")), 13, Ax.MUTED))
 	var tracks := ensure_track(cfg, str(cls.id))
 	var evolve_at := int(cls.get("evolveLevel", 0))
 	var evo_to: Array = cls.get("evolvesTo", [])
 	var base_with_evo: bool = AdminUtil.is_base(cls) and evo_to.any(func(x): return x != null and x != "") and evolve_at != 0
+	var narrow: bool = admin.size.x < 1000.0
 	for lvl in levels():
 		var track: Dictionary = {}
 		for t in tracks:
@@ -85,56 +80,86 @@ static func section(parent: Control, admin: Node, cfg: Dictionary, cls: Dictiona
 		if track.is_empty():
 			continue
 		var unreachable: bool = base_with_evo and int(lvl) > evolve_at
-		var frame := PanelContainer.new()
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0, 0, 0, 0)
-		sb.border_color = AdminChars.BORDER
-		sb.set_border_width_all(1)
-		sb.set_corner_radius_all(6)
-		sb.content_margin_left = AdminChars.cpx(8.0)
-		sb.content_margin_right = AdminChars.cpx(8.0)
-		sb.content_margin_top = AdminChars.cpx(6.0)
-		sb.content_margin_bottom = AdminChars.cpx(6.0)
-		frame.add_theme_stylebox_override("panel", sb)
+		var wrap := Ax.vbox(6)
 		if unreachable:
-			frame.modulate.a = 0.4
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", int(AdminChars.cpx(3.0)))
-		frame.add_child(v)
-		var title := L.fa(AdminChars.T(L.t("common.niveau")), int(lvl))
-		var bb := "[color=#a9793a]%s[/color]" % title
+			wrap.modulate.a = 0.45
+		var row := BoxContainer.new()
+		row.vertical = narrow
+		row.add_theme_constant_override("separation", 12)
+		wrap.add_child(row)
+		var lv := Ax.panel(Ax.FIELD, Ax.LINE2, 14, 0, 10)
+		lv.custom_minimum_size = Vector2(0 if narrow else 84, 0)
+		var lc := Ax.vbox(2)
+		lc.alignment = BoxContainer.ALIGNMENT_CENTER
+		lv.add_child(lc)
+		var k := Ax.kicker(L.t("ui.atelier.c_level"), 11)
+		k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lc.add_child(k)
+		var n := Ax.title(str(int(lvl)), 28, Ax.GOLD_L)
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lc.add_child(n)
+		row.add_child(lv)
+		var opts: Array = track.get("options", [])
+		for i in opts.size():
+			if i == 1:
+				var ou := Ax.lab(L.t("ui.atelier.c_or"), 12, Ax.DIM)
+				ou.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				ou.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				ou.custom_minimum_size.x = 40
+				row.add_child(ou)
+			row.add_child(_option_card(admin, opts[i], unreachable))
 		if unreachable:
-			var warn := L.fa(AdminChars.T(L.t("admin.class_talents.inaccessible_evolue_au_niveau")), [str(cls.get("name", "")), evolve_at])
-			bb += " [color=#ffd88a]%s[/color]" % warn.replace("[", "[lb]")
-		v.add_child(_rich(bb, 0.68))
-		var opts_box := VBoxContainer.new()
-		opts_box.add_theme_constant_override("separation", int(AdminChars.cpx(4.0)))
-		v.add_child(opts_box)
-		for o in track.get("options", []):
-			_option_row(opts_box, admin, o)
-		if unreachable:
-			_block(opts_box)
-		box.add_child(frame)
+			wrap.add_child(Ax.lab(AdminItems._plain(L.fa(AdminChars.T(L.t("admin.class_talents.inaccessible_evolue_au_niveau")), [str(cls.get("name", "")), evolve_at])), 12, Ax.GOLD_L))
+		parent.add_child(wrap)
 
-static func _option_row(parent: Control, admin: Node, o: Dictionary) -> void:
-	var row := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(1, 1, 1, 0.03)
-	sb.set_corner_radius_all(5)
-	sb.content_margin_left = AdminChars.cpx(6.0)
-	sb.content_margin_right = AdminChars.cpx(6.0)
-	sb.content_margin_top = AdminChars.cpx(4.0)
-	sb.content_margin_bottom = AdminChars.cpx(4.0)
-	row.add_theme_stylebox_override("panel", sb)
-	parent.add_child(row)
-	var f := AdminChars.flow(row, 4.0, 4.0)
-	f.add_child(AdminChars.icon_btn(admin, o, "icon", admin.refresh_tab))
-	for spec in [[L.t("admin.class_talents.nom_fr"), "labelFr", 80.0, 0.66], [L.t("admin.class_talents.name_en"), "labelEn", 80.0, 0.66], ["Desc. FR", "descFr", 100.0, 0.62], [L.t("admin.class_talents.desc_en"), "descEn", 100.0, 0.62]]:
-		var key: String = spec[1]
-		var e := AdminChars.line_edit(str(o.get(key, "")), float(spec[2]), float(spec[3]), 4.0, 2.0, str(spec[0]))
-		e.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		e.text_changed.connect(func(t: String): o[key] = t)
-		f.add_child(e)
+## Carte d'une option : lecture (nom, texte, effets) ; ouverte, elle devient la fiche d'édition (icône, noms et textes FR/EN, effets chiffrés).
+static func _option_card(admin: Node, o: Dictionary, locked: bool) -> Control:
+	var oid := str(o.get("id", ""))
+	var on := _open == oid and not locked
+	var p := Ax.panel(Color(0.91, 0.706, 0.361, 0.1) if on else Ax.CARD2, Ax.GOLD if on else Ax.LINE2, 14, 14, 14)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p.size_flags_stretch_ratio = 1.0
+	p.custom_minimum_size.x = 120
+	var v := Ax.vbox(8)
+	p.add_child(v)
+	if not on:
+		var h := Ax.hbox(10)
+		var ic := IconPicker.icon_control(str(o.get("icon", "")), 24.0)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(ic)
+		var nm := Ax.lab(_name_of(o), 14, Ax.CREAM, 600)
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.clip_text = true
+		h.add_child(nm)
+		v.add_child(h)
+		var d := _desc_of(o)
+		if d != "":
+			v.add_child(Ax.para(d, 12, Ax.MUTED))
+		var fl := HFlowContainer.new()
+		fl.add_theme_constant_override("h_separation", 6)
+		fl.add_theme_constant_override("v_separation", 6)
+		for key in (o.get("effects", {}) as Dictionary).keys():
+			fl.add_child(Ax.chip("%s %s" % [_signed(o.effects[key]), effect_label(str(key))], Ax.GOLD_L, Color("241a0e"), Ax.CLEAR, 12, 8, 9, 3))
+		v.add_child(fl)
+		if not locked:
+			Ax.clickable(p, func():
+				Ax.flush()
+				_open = oid
+				admin.refresh_tab())
+		return p
+	# ---- fiche d'édition
+	var top := Ax.hbox(10)
+	top.add_child(IconPicker.button(admin.modals(), o, "icon", func():
+		Ax.changed()
+		admin.refresh_tab(), 40.0))
+	var nf := Ax.text_field(o, "labelFr", 40.0, 14, L.t("admin.class_talents.nom_fr"))
+	nf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(nf)
+	v.add_child(top)
+	v.add_child(Ax.text_field(o, "descFr", 36.0, 13, "Desc. FR"))
+	v.add_child(Ax.text_field(o, "labelEn", 36.0, 13, L.t("admin.class_talents.name_en")))
+	v.add_child(Ax.text_field(o, "descEn", 36.0, 13, L.t("admin.class_talents.desc_en")))
+	v.add_child(Ax.cap(L.t("ui.atelier.c_effects")))
 	var fx: Dictionary = Form.sub(o, "effects")
 	var used: Array = fx.keys()
 	var defs: Array = []
@@ -142,38 +167,39 @@ static func _option_row(parent: Control, admin: Node, o: Dictionary) -> void:
 		defs.append([d[0], effect_label(str(d[0]))])
 	for k in used:
 		var key2: String = str(k)
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", int(AdminChars.cpx(2.0)))
-		h.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var others: Array = used.filter(func(u): return u != k)
-		var on_key := func(nk):
+		var r := Ax.hbox(6)
+		var sel := Ax.select(defs, key2, func(nk):
 			if nk == key2:
 				return
 			if fx.has(nk):
-				admin.refresh_tab()   # déjà utilisé sur une autre ligne : on réaffiche l'ancienne valeur
+				admin.refresh_tab()      # déjà utilisé sur une autre ligne : on réaffiche l'ancienne valeur
 				return
 			var val = fx[key2]
 			fx.erase(key2)
 			fx[nk] = val
-			admin.refresh_tab()
-		h.add_child(AdminChars.select(defs, key2, on_key, 90.0, 0.62, 2.0, 2.0, false, others))
-		var on_val := func(val):
-			fx[key2] = val
-			return val
-		h.add_child(AdminChars.num_edit(fx[key2], 42.0, 0.65, on_val, 2.0, 2.0, false, L.t("admin.class_talents.valeur_libre_positive_ou_negative")))
-		var del := AdminChars.small_btn("🗑", 0.65, 4.0, 1.0, L.t("admin.class_talents.retirer_cet_effet"))
-		del.pressed.connect(func():
+			Ax.changed()
+			admin.refresh_tab(), 34.0, 12)
+		r.add_child(sel)
+		var stp := Ax.stepper(float(fx[key2]), -999.0, 999.0, 1.0, func(x: float):
+			fx[key2] = Ax.num_value(x)
+			Ax.changed(), 34.0)
+		stp.custom_minimum_size.x = 96
+		r.add_child(stp)
+		r.add_child(Ax.icon_btn("close", func():
 			fx.erase(key2)
-			admin.refresh_tab())
-		h.add_child(del)
-		f.add_child(h)
+			Ax.changed()
+			admin.refresh_tab(), 34.0, Ax.MUTED, "ghost", L.t("admin.class_talents.retirer_cet_effet")))
+		v.add_child(r)
 	if used.size() < EFFECT_DEFS.size():
-		var plus := AdminChars.small_btn("+", 0.65, 6.0, 2.0, L.t("admin.class_talents.ajouter_un_effet"))
-		plus.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		plus.pressed.connect(func():
+		v.add_child(Ax.btn("+ " + L.t("ui.atelier.c_effect_add"), func():
 			for d in EFFECT_DEFS:
 				if not fx.has(d[0]):
 					fx[d[0]] = 1
 					break
-			admin.refresh_tab())
-		f.add_child(plus)
+			Ax.changed()
+			admin.refresh_tab(), "ghost", 34.0, 12, 12))
+	v.add_child(Ax.btn(L.t("common.fermer"), func():
+		Ax.flush()
+		_open = ""
+		admin.refresh_tab(), "flat", 32.0, 12, 12))
+	return p
