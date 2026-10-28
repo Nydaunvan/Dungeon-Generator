@@ -158,7 +158,13 @@ func _draw() -> void:
 	_o_cs = cs
 	_o_ox = ox
 	_o_oy = oy
-	draw_rect(Rect2(origin, Vector2(vw, vh) * cs), Atlas.OBSIDIAN_DEEP)
+	# fond transparent (la vue 3D se devine derrière) : seule une grille très fine rappelle le papier millimétré d'un atlas
+	var gcol := Color(Atlas.IVORY, 0.035)
+	if cs >= 6.0:
+		for gx in range(0, vw + 1, 2):
+			draw_line(origin + Vector2(gx, 0) * cs, origin + Vector2(gx, vh) * cs, gcol, 1.0)
+		for gy in range(0, vh + 1, 2):
+			draw_line(origin + Vector2(0, gy) * cs, origin + Vector2(vw, gy) * cs, gcol, 1.0)
 	for y in range(oy, oy + vh):
 		for x in range(ox, ox + vw):
 			var key := _k(x, y)
@@ -166,13 +172,22 @@ func _draw() -> void:
 			if not vis and not seen.has(key):
 				continue
 			var ch := grid.cell(x, y)
-			var col := Color("171c19") if ch == "#" else (Color("55605a") if vis else Color("2c3430"))
+			if ch == "#":
+				continue
+			var col := Color("3c4140") if vis else Color("252a29")
+			var edge := Color("626967") if vis else Color("353b39")
 			if ch == "D":
-				col = Color("7a5230") if vis else Color("4a3320")
+				col = Color("4a3a28") if vis else Color("30261b")
+				edge = Atlas.AMBER if vis else Atlas.AMBER_DIM
 			elif ch == "S":
-				col = Color("8a5f16") if vis else Color("5a4212")
+				col = Color("4d3b18") if vis else Color("30250f")
+				edge = Atlas.AMBER_DIM
 			var pos := origin + Vector2(x - ox, y - oy) * cs
-			draw_rect(Rect2(pos, Vector2(cs, cs) * (1.0 - 1.0 / float(cpx))), col)
+			var inset := 1.0 if cs >= 6.0 else 0.0
+			var tile := Rect2(pos + Vector2(inset, inset), Vector2(cs - inset * 2.0, cs - inset * 2.0))
+			draw_rect(tile, col)
+			if cs >= 6.0:
+				draw_rect(tile, edge, false, 1.0)
 			if ch == "S" and cs >= 5.0:
 				var c := pos + Vector2(cs, cs) * 0.5
 				var r := cs * 0.36
@@ -181,7 +196,19 @@ func _draw() -> void:
 				else:                      # ▼ bleu : redescend vers le niveau précédent
 					draw_colored_polygon(PackedVector2Array([c + Vector2(0, r), c + Vector2(r, -r * 0.8), c + Vector2(-r, -r * 0.8)]), Color("7ec8ff"))
 			elif ch == "D" and cs >= 5.0:
-				draw_rect(Rect2(pos + Vector2(cs, cs) * 0.3, Vector2(cs, cs) * 0.4), Color("e8b45c"))
+				draw_rect(Rect2(pos + Vector2(cs, cs) * 0.34, Vector2(cs, cs) * 0.32), Atlas.AMBER)
+	# chemin parcouru : filet ambre qui relie les cases visitées voisines, un point par case (comme la trace de la maquette)
+	if cs >= 6.0:
+		var tcol := Color(Atlas.AMBER, 0.85)
+		for y in range(oy, oy + vh):
+			for x in range(ox, ox + vw):
+				if not visited.has(_k(x, y)):
+					continue
+				var a := origin + (Vector2(x - ox, y - oy) + Vector2(0.5, 0.5)) * cs
+				if x + 1 < ox + vw and visited.has(_k(x + 1, y)):
+					draw_line(a, a + Vector2(cs, 0), tcol, 1.0, true)
+				if y + 1 < oy + vh and visited.has(_k(x, y + 1)):
+					draw_line(a, a + Vector2(0, cs), tcol, 1.0, true)
 	for it in grid.level.get("items", []):
 		var ity := str(it.get("type", ""))
 		if ity != "fountain" and ity != "chest":

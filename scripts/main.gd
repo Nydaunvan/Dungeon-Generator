@@ -175,9 +175,8 @@ func _ready() -> void:
 	await Loader.step(0.32, L.t("loading.etape_interface"))
 	var ui := CanvasLayer.new()
 	add_child(ui)
-	var bg := TextureRect.new()
-	bg.texture = UiTheme.tex("bg_tile")
-	bg.stretch_mode = TextureRect.STRETCH_TILE
+	var bg := ColorRect.new()    # fond noir de l'interface Atlas Noir (plus de texture brune)
+	bg.color = Color("07090a")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(bg)

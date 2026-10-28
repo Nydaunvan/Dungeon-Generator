@@ -29,6 +29,8 @@ var sub_container: SubViewportContainer
 # éléments partagés
 var header: AppHeader
 var frame: PanelContainer
+var view_rule: ViewRule
+var safe: Control      # partie de la vue non recouverte par les panneaux latéraux
 var stage: Control
 var popup_layer: Control
 var message_label: Label
@@ -113,7 +115,7 @@ func _build_view_controls() -> void:
 	view_controls.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	view_controls.offset_top = UiMetrics.css(8.0)
 	view_controls.offset_right = -UiMetrics.css(10.0)
-	stage.add_child(view_controls)
+	safe.add_child(view_controls)
 	for n in [["Stats", "bars", L.t("ui.game_layout.statistiques_de_l_aventure")], ["Clavier", "keyboard", L.t("ui.game_layout.commandes_du_jeu")], ["Son", "sound", L.t("ui.game_layout.reglages_du_son")]]:
 		var b := Button.new()
 		b.icon = Atlas.icon(n[1], 18, Atlas.IVORY, 1.7)
@@ -301,7 +303,7 @@ func _drop_panel(w: float) -> PanelContainer:
 	p.offset_right = -UiMetrics.css(10.0)
 	p.z_index = 10
 	p.visible = false
-	stage.add_child(p)
+	safe.add_child(p)
 	return p
 
 func _view_btn(n: String) -> void:
@@ -333,12 +335,12 @@ func _build_parts() -> void:
 
 	# cadre de la vue 3D
 	frame = PanelContainer.new()
-	var vfb := AtlasBox.new(2.0)
+	var vfb := AtlasBox.new(0.0)
 	vfb.fill_top = Color("0a0c0b")
 	vfb.fill_bottom = Color("0a0c0b")
-	vfb.border = Atlas.COPPER_DIM
-	vfb.cut = 10.0
-	vfb.corners = Vector4(1, 0, 1, 0)
+	vfb.border = Color(0, 0, 0, 0)
+	vfb.width = 0.0
+	vfb.cut = 0.0
 	frame.add_theme_stylebox_override("panel", vfb)
 	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -346,11 +348,17 @@ func _build_parts() -> void:
 	stage = Control.new()
 	stage.clip_contents = true
 	frame.add_child(stage)
+	# zone « utile » de la vue : entre la colonne de la carte et celle de l'inventaire (la vue 3D, elle, prend toute la largeur)
+	safe = Control.new()
+	safe.name = "Safe"
+	safe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	safe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sub_container = SubViewportContainer.new()
 	sub_container.stretch = true
 	sub_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sub_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(sub_container)
+	stage.add_child(safe)
 	sub_viewport = SubViewport.new()
 	sub_viewport.own_world_3d = true
 	sub_viewport.handle_input_locally = false
@@ -378,7 +386,7 @@ func _build_parts() -> void:
 	type_badge.add_theme_color_override("font_color", Atlas.IVORY)
 	type_badge.add_theme_stylebox_override("normal", tb)
 	type_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stage.add_child(type_badge)
+	safe.add_child(type_badge)
 	# temps restant d'une partie classée (2 h maximum) : sous la pastille du type, visible seulement en partie classée
 	ranked_timer = Label.new()
 	ranked_timer.position = Vector2(UiMetrics.css(12.0), UiMetrics.css(36.0))
@@ -388,7 +396,7 @@ func _build_parts() -> void:
 	ranked_timer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ranked_timer.tooltip_text = L.t("ui.ranked.timer_tip")
 	ranked_timer.visible = false
-	stage.add_child(ranked_timer)
+	safe.add_child(ranked_timer)
 
 	# repère d'orientation (bas centre de la vue)
 	compass = AtlasCompass.new()
@@ -399,7 +407,7 @@ func _build_parts() -> void:
 	compass.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	compass.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	compass.offset_bottom = -UiMetrics.css(8.0)
-	stage.add_child(compass)
+	safe.add_child(compass)
 	_comp = compass
 
 	# file d'initiative : chaîne sous la vue 3D (placée par _rebuild)
@@ -471,7 +479,7 @@ func _build_parts() -> void:
 	pouch.grow_horizontal = Control.GROW_DIRECTION_END
 	pouch.grow_vertical = Control.GROW_DIRECTION_BOTH
 	pouch.visible = false
-	stage.add_child(pouch)
+	safe.add_child(pouch)
 
 	banner = CombatBanner.new()
 	banner.setup(ctrl)
@@ -480,7 +488,7 @@ func _build_parts() -> void:
 	banner.offset_top = 0
 	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	banner.pressed.connect(func(d, s): monster_pressed.emit(d, s))
-	stage.add_child(banner)
+	safe.add_child(banner)
 
 	fx_layer = FxLayer.new()
 	stage.add_child(fx_layer)
@@ -502,11 +510,11 @@ func _build_parts() -> void:
 	message_label.add_theme_constant_override("outline_size", 6)
 	message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	message_label.modulate.a = 0.0
-	stage.add_child(message_label)
+	safe.add_child(message_label)
 
 	pad = TouchControls.new()
 	pad.command.connect(func(c): command.emit(c))
-	stage.add_child(pad)
+	safe.add_child(pad)
 
 	# mobile : bouton 🗺 sous le pouce (en bas à droite de la vue), ouvre la carte en plein écran ; un second appui la referme
 	map_btn = Button.new()
@@ -517,7 +525,7 @@ func _build_parts() -> void:
 	map_btn.add_theme_color_override("font_color", Color("ffd98a"))
 	Atlas.style_button(map_btn, "", 2.0)
 	map_btn.pressed.connect(func(): menu_pressed.emit("Carte"))
-	stage.add_child(map_btn)
+	safe.add_child(map_btn)
 
 	act_box = VBoxContainer.new()
 	act_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -527,7 +535,7 @@ func _build_parts() -> void:
 	act_box.add_child(btn_flee)
 	_style_flee()
 	btn_flee.pressed.connect(func(): command.emit("flee"))
-	stage.add_child(act_box)
+	safe.add_child(act_box)
 	frame.resized.connect(_size_overlays)
 
 	# bandeau des sorts + rail, puis cartes
@@ -548,6 +556,9 @@ func _build_parts() -> void:
 	panel_map = AtlasPanel.new(L.t("common.carte"), "map")
 	panel_map.name = "Carte"
 	if panel_map.header_row != null:
+		var north := MapFooter.North.new()
+		panel_map.header_row.add_child(north)
+		panel_map.header_row.move_child(north, 2)
 		# bouton de repli à gauche, bouton « plein écran » à droite
 		_map_fold = Button.new()
 		_small_atlas(_map_fold)
@@ -576,6 +587,8 @@ func _build_parts() -> void:
 	map_box.add_theme_constant_override("separation", 8)
 	map_box.add_child(map_inset)
 	map_box.add_child(MapLegend.new())
+	map_box.add_child(MapFooter.new())
+	panel_map.set_fill_alpha(0.28, 0.4)
 	panel_map.body.add_child(map_box)
 	_apply_map_fold()
 	panel_bag = AtlasPanel.new(L.t("ui.atlas.inventory_title"), "chest")
@@ -716,37 +729,77 @@ func _rebuild() -> void:
 	else:
 		panel_map.visible = not _compact
 		frame.size_flags_stretch_ratio = 1.0
-		var h := HBoxContainer.new()
-		h.name = "Main"
-		h.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		h.add_theme_constant_override("separation", int(UiMetrics.css(14.0)))
-		v.add_child(h)
-		# colonne de gauche : la carte
+		var main := VBoxContainer.new()
+		main.name = "Main"
+		main.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		main.add_theme_constant_override("separation", int(UiMetrics.css(8.0)))
+		v.add_child(main)
+		# la vue 3D prend toute la largeur ; la carte (gauche) et l'inventaire / carnet (droite) sont posés par-dessus, fonds translucides
+		var stack := Control.new()
+		stack.name = "Stack"
+		stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		main.add_child(stack)
+		stack.add_child(frame)
+		frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var over := HBoxContainer.new()
+		over.name = "Over"
+		over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, int(UiMetrics.css(30.0)))
+		over.add_theme_constant_override("separation", 0)
+		stack.add_child(over)
+		view_rule = ViewRule.new()
+		view_rule.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		stack.add_child(view_rule)
+		stack.move_child(view_rule, over.get_index())
 		var left := VBoxContainer.new()
 		left.name = "Left"
+		left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		left.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
 		left.visible = not _compact
-		h.add_child(left)
-		# centre : la vue 3D, la file d'initiative et les fiches des héros
+		over.add_child(left)
+		var gap := Control.new()
+		gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		over.add_child(gap)
+		var right := VBoxContainer.new()
+		right.name = "Right"
+		right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		right.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
+		over.add_child(right)
+		await _yield()
+		# rangée du bas : file d'initiative + fiches des héros au centre, raccourcis sous la colonne de droite
+		var bottom := HBoxContainer.new()
+		bottom.name = "Bottom"
+		bottom.add_theme_constant_override("separation", 0)
+		main.add_child(bottom)
+		var lpad := Control.new()
+		lpad.name = "LPad"
+		lpad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lpad.visible = not _compact
+		bottom.add_child(lpad)
 		var center := VBoxContainer.new()
 		center.name = "Center"
 		center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		center.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
-		h.add_child(center)
-		center.add_child(frame)
-		await _yield()
+		center.add_theme_constant_override("separation", int(UiMetrics.css(6.0)))
+		bottom.add_child(center)
 		center.add_child(queue)
 		center.add_child(hud)
+		var rcol := VBoxContainer.new()
+		rcol.name = "RCol"
+		rcol.alignment = BoxContainer.ALIGNMENT_END
+		bottom.add_child(rcol)
+		rcol.add_child(strip)
+		var rpad := Control.new()
+		rpad.name = "RPad"
+		rpad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bottom.add_child(rpad)
 		await _yield()
-		# colonne de droite : inventaire commun, carnet, raccourcis
-		var right := VBoxContainer.new()
-		right.name = "Right"
-		right.add_theme_constant_override("separation", int(UiMetrics.css(12.0)))
-		h.add_child(right)
 		left.add_child(panel_map)
 		right.add_child(panel_bag)
 		right.add_child(panel_log)
-		right.add_child(strip)
+		right.resized.connect(_sync_safe)
+		left.resized.connect(_sync_safe)
 		await _yield()
 		panel_map.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		for p in [panel_map, panel_bag, panel_log]:
@@ -776,22 +829,68 @@ func _size_widgets() -> void:
 	if sig == _sig:
 		return
 	_sig = sig
-	var m_side := UiMetrics.css(30.0 if not _portrait else 6.0)
+	var m_side := UiMetrics.css(0.0 if not _portrait else 6.0)
 	_margin("margin_left", int(m_side))
 	_margin("margin_right", int(m_side))
-	_margin("margin_top", int(UiMetrics.css(12.0 if not _portrait else 4.0)))
+	_margin("margin_top", int(UiMetrics.css(6.0 if not _portrait else 4.0)))
 	_margin("margin_bottom", int(UiMetrics.css(10.0 if not _portrait else 4.0)))
 	var hh := clampf(h * 0.225, 120.0, 330.0)
 	hud.custom_minimum_size = Vector2(0, PartyHud.wanted_height())
 	queue.set_target_height(44.0 if _portrait else clampf(h * 0.08, 36.0, 70.0))
 	header.rescale()
-	var right: Node = _root.get_node_or_null("Main/Right")
+	var rw := UiMetrics.css(clampf(0.21 * w + 60.0, 300.0, 460.0))
+	var lw := UiMetrics.css(clampf(0.17 * w + 20.0, 230.0, 330.0)) if not _compact else 0.0
+	var gp := UiMetrics.css(10.0)
+	var right: Node = _root.find_child("Right", true, false)
 	if right:
-		(right as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.21 * w + 60.0, 300.0, 460.0)), 0)
-	var left_col: Node = _root.get_node_or_null("Main/Left")
+		(right as Control).custom_minimum_size = Vector2(rw, 0)
+		(right as Control).add_theme_constant_override("margin_right", 0)
+	var left_col: Node = _root.find_child("Left", true, false)
 	if left_col:
-		(left_col as Control).custom_minimum_size = Vector2(UiMetrics.css(clampf(0.17 * w + 20.0, 230.0, 330.0)), 0)
+		(left_col as Control).custom_minimum_size = Vector2(lw, 0)
+	var lpad: Node = _root.find_child("LPad", true, false)
+	if lpad:
+		(lpad as Control).custom_minimum_size = Vector2(lw + gp + UiMetrics.css(30.0), 0)
+	var rcol: Node = _root.find_child("RCol", true, false)
+	if rcol:
+		(rcol as Control).custom_minimum_size = Vector2(rw + gp, 0)
+		var rpad: Node = _root.find_child("RPad", true, false)
+		if rpad:
+			(rpad as Control).custom_minimum_size = Vector2(UiMetrics.css(30.0), 0)
+	var ins := UiMetrics.css(30.0)
+	if view_rule != null:
+		view_rule.step_x = (lw + gp + ins) if (not _portrait and not _compact) else 0.0
+		view_rule.step_h = UiMetrics.css(14.0)
+		view_rule.queue_redraw()
+	if not _portrait:
+		safe.offset_left = lw + gp + ins
+		safe.offset_right = -(rw + gp + ins)
+	else:
+		safe.offset_left = 0.0
+		safe.offset_right = 0.0
 	_size_overlays()
+	call_deferred("_sync_safe")
+
+## La zone utile de la vue suit les colonnes réellement affichées (leur largeur peut dépasser le minimum demandé).
+func _sync_safe() -> void:
+	if _root == null or safe == null or _portrait:
+		return
+	var left_col := _root.find_child("Left", true, false) as Control
+	var right := _root.find_child("Right", true, false) as Control
+	var st := safe.get_parent() as Control
+	if st == null or right == null or left_col == null:
+		return
+	var gp := UiMetrics.css(10.0)
+	var l := (left_col.global_position.x + left_col.size.x - st.global_position.x) + gp if left_col.visible else UiMetrics.css(30.0)
+	var r := (st.global_position.x + st.size.x - right.global_position.x) + gp
+	safe.offset_left = l
+	safe.offset_right = -r
+	var lpad := _root.find_child("LPad", true, false) as Control
+	var rcol := _root.find_child("RCol", true, false) as Control
+	if lpad != null and left_col.visible:
+		lpad.custom_minimum_size.x = maxf(lpad.custom_minimum_size.x, left_col.global_position.x + left_col.size.x + gp - _root.global_position.x)
+	if rcol != null:
+		rcol.custom_minimum_size.x = maxf(rcol.custom_minimum_size.x, right.size.x + gp)
 
 func _size_overlays() -> void:
 	pad.rescale()

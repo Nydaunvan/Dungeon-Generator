@@ -56,8 +56,8 @@ func _init() -> void:
 	status_row.z_index = 60                    # au-dessus de CardFxOverlay (z 50) : les flammes et le givre ne les cachent pas
 	status_row.z_as_relative = false
 	add_child(status_row)
-	name_lbl = _label(Atlas.title_font(false, 1), Atlas.IVORY)
-	cls_lbl = _label(Atlas.font(Atlas.F_BODY_ITALIC), Atlas.IVORY_DIM)
+	name_lbl = _label(Atlas.title_font(false, 2), Atlas.IVORY)
+	cls_lbl = _label(Atlas.font(Atlas.F_BODY), Atlas.IVORY_DIM)
 	lvl_lbl = _label(Atlas.font(Atlas.F_BODY_MED), Atlas.IVORY_DIM)
 	cls_ico = TextureRect.new()
 	cls_ico.visible = false
@@ -78,8 +78,8 @@ func _init() -> void:
 	chest.add_theme_color_override("icon_hover_color", Color(1.25, 1.15, 0.95))
 	chest.pressed.connect(func(): chest_pressed.emit())
 	add_child(chest)
-	hp = _bar(Atlas.HP, true)
-	sta = _bar(Atlas.MANA, true)
+	hp = _bar(Atlas.HP, true, 1.0)
+	sta = _bar(Atlas.MANA, true, 1.0)
 	xp = _bar(Atlas.IVORY_DIM, false)
 	gauge = _bar(Atlas.AMBER, false)
 	dead_lbl = _label(Atlas.title_font(true, 1), Color.WHITE)
@@ -99,10 +99,12 @@ func _label(font: Font, col: Color) -> Label:
 	add_child(l)
 	return l
 
-func _bar(col: Color, with_text: bool) -> TextBar:
+func _bar(col: Color, with_text: bool, text_w: float = 0.0) -> TextBar:
 	var b := TextBar.new(col, 10, 10)
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.use_atlas(col, with_text)
+	b.use_atlas(col, with_text, 0.0)
+	if text_w > 0.0:
+		b.set_meta("outside", true)
 	add_child(b)
 	return b
 
@@ -169,7 +171,7 @@ func _layout() -> void:
 	var right := size.x - 9.0 * k
 	var bw := maxf(10.0, right - x0)
 	# rangée haute : nom à gauche, niveau à droite
-	var lfs := maxi(7, int(14.0 * k))
+	var lfs := maxi(7, int(13.0 * k))
 	lvl_lbl.add_theme_font_size_override("font_size", lfs)
 	var lw := lvl_lbl.get_theme_font("font").get_string_size(lvl_lbl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs).x + 2.0
 	lvl_lbl.size = Vector2(lw, 19.0 * k)
@@ -181,11 +183,15 @@ func _layout() -> void:
 	chest.size = Vector2(ch, ch)
 	chest.position = Vector2(right - ch, 27.0 * k + (16.0 * k - ch) * 0.5)
 	_put(cls_lbl, x0, 27.0 * k, maxf(10.0, chest.position.x - x0 - 4.0 * k), 16.0 * k, 12.5 * k)
-	# barres
-	_bar_at(hp, x0, 47.0 * k, bw, 19.0 * k, 13.5 * k)
-	_bar_at(sta, x0, 69.0 * k, bw, 14.0 * k, 11.0 * k)
-	_bar_at(xp, x0, 87.0 * k, bw, 2.5 * k, 1.0)
-	_bar_at(gauge, x0, 91.0 * k, bw, 2.5 * k, 1.0)
+	# barres : petit repère à gauche, barre en biais, chiffre à droite (hors de la barre)
+	var ico := 11.0 * k
+	var tw := 46.0 * k
+	var bx := x0 + ico + 4.0 * k
+	var bbw := maxf(10.0, right - tw - bx)
+	_bar_at(hp, bx, 49.0 * k, bbw, 13.0 * k, 12.0 * k, tw)
+	_bar_at(sta, bx, 71.0 * k, bbw, 13.0 * k, 12.0 * k, tw)
+	_bar_at(xp, x0, 90.0 * k, bw, 2.0 * k, 1.0, 0.0)
+	_bar_at(gauge, x0, 93.0 * k, bw, 2.0 * k, 1.0, 0.0)
 	status_row.position = Vector2(pr.position.x + 2.0 * k, pr.end.y - 13.0 * k)
 	_status_font(maxi(8, int(12.0 * k)))
 	dead_lbl.size = Vector2(size.x, 30.0 * k)
@@ -205,8 +211,10 @@ func _put(l: Label, x: float, y: float, w: float, h: float, fs: float) -> void:
 	l.size = Vector2(w, h)
 	l.add_theme_font_size_override("font_size", maxi(7, int(fs)))
 
-func _bar_at(b: TextBar, x: float, y: float, w: float, h: float, fs: float) -> void:
+func _bar_at(b: TextBar, x: float, y: float, w: float, h: float, fs: float, text_w: float) -> void:
 	b.position = Vector2(x, y)
+	if text_w > 0.0:
+		b.use_atlas(b.get_theme_stylebox("fill").color, true, text_w)
 	b.size = Vector2(w, h)
 	b.custom_minimum_size = Vector2(0, h)
 	b.set_font_size(maxi(1, int(fs)), 0.12)
@@ -224,9 +232,29 @@ func _draw() -> void:
 	elif sk.a > 0.0 and active:
 		edge = sk
 	var w := maxf(1.0, 1.4 * k) if lit else maxf(1.0, k)
-	Atlas.draw_box(self, r, Color("1d221f"), Color("111513"), edge, w, 8.0 * k)
-	# liseré de classe : petit repère vertical sur le bord gauche
-	draw_rect(Rect2(0.0, size.y * 0.34, maxf(2.0, 2.2 * k), size.y * 0.32), accent)
+	# cadre : fond noir translucide ; la fiche active a le coin haut-gauche coupé en biais et un filet ambre
+	var cut := 12.0 * k
+	var corners := Vector4(1, 0, 0, 0) if active else Vector4(0, 0, 0, 0)
+	Atlas.draw_box(self, r, Color(0.04, 0.05, 0.055, 0.88), Color(0.025, 0.03, 0.034, 0.92), edge, w, cut if active else 4.0, corners)
+	if active:
+		draw_line(Vector2(w + 1.0, cut + 5.0 * k), Vector2(cut + 5.0 * k, w + 1.0), Color(Atlas.AMBER, 0.8), 1.0, true)
+	else:
+		# équerres intérieures aux angles (repères de cartographie)
+		var m := 4.0 * k
+		var l := 7.0 * k
+		var mc := Color(Atlas.COPPER, 0.55)
+		draw_polyline(PackedVector2Array([Vector2(size.x - m - l, m), Vector2(size.x - m, m), Vector2(size.x - m, m + l)]), mc, 1.0, true)
+		draw_polyline(PackedVector2Array([Vector2(size.x - m - l, size.y - m), Vector2(size.x - m, size.y - m), Vector2(size.x - m, size.y - m - l)]), mc, 1.0, true)
+	# petits repères en losange à gauche de chaque barre
+	var k2 := size.y / 100.0
+	var pr0 := _pic_rect()
+	var ix := pr0.end.x + 9.0 * k2 + 5.5 * k2
+	for bar in [hp, sta]:
+		var c2 := Vector2(ix, bar.position.y + bar.size.y * 0.5)
+		var rr := 5.5 * k2
+		draw_colored_polygon(PackedVector2Array([c2 + Vector2(0, -rr), c2 + Vector2(rr, 0), c2 + Vector2(0, rr), c2 + Vector2(-rr, 0)]), Color(0.08, 0.1, 0.1, 0.95))
+		var inner: Color = hp.get_theme_stylebox("fill").color if bar == hp else sta.get_theme_stylebox("fill").color
+		draw_colored_polygon(PackedVector2Array([c2 + Vector2(0, -rr * 0.55), c2 + Vector2(rr * 0.55, 0), c2 + Vector2(0, rr * 0.55), c2 + Vector2(-rr * 0.55, 0)]), inner.lightened(0.25))
 	# portrait : filet fin (teinté par un statut, ambre si actif)
 	var pr := _pic_rect()
 	var pe: Color = ring_override if ring_override.a > 0.0 else (Atlas.AMBER if active else Atlas.COPPER_DIM)

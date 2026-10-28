@@ -9,6 +9,8 @@ var border: Color = Atlas.COPPER_DIM
 var width: float = 1.0
 var cut: float = 6.0
 var corners := Vector4(1, 0, 1, 0)
+var marks: Color = Color(0, 0, 0, 0)   ## si l'alpha > 0 : petits repères d'angle doublés (équerres) à l'intérieur du cadre
+var mark_len: float = 9.0
 
 func _init(pad: float = 8.0) -> void:
 	content_margin_left = pad
@@ -31,3 +33,16 @@ func _draw(ci: RID, rect: Rect2) -> void:
 		var line := pts.duplicate()
 		line.append(pts[0])
 		RenderingServer.canvas_item_add_polyline(ci, line, PackedColorArray([border]), width, true)
+	if marks.a > 0.0:
+		var m := width + 3.0
+		var l := mark_len
+		var x0 := rect.position.x + m
+		var y0 := rect.position.y + m
+		var x1 := rect.end.x - m
+		var y1 := rect.end.y - m
+		var col := PackedColorArray([marks])
+		for q in [[Vector2(x0, y0), 1.0, 1.0], [Vector2(x1, y0), -1.0, 1.0], [Vector2(x1, y1), -1.0, -1.0], [Vector2(x0, y1), 1.0, -1.0]]:
+			var o: Vector2 = q[0]
+			var sx: float = q[1]
+			var sy: float = q[2]
+			RenderingServer.canvas_item_add_polyline(ci, PackedVector2Array([o + Vector2(sx * l, 0), o, o + Vector2(0, sy * l)]), col, 1.0, true)

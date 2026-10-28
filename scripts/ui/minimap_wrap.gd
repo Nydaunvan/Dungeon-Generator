@@ -12,12 +12,11 @@ func _init() -> void:
 	rescale()
 
 func rescale() -> void:
-	var sb := AtlasBox.new(UiMetrics.css(5.0))
-	sb.fill_top = Atlas.OBSIDIAN_DEEP
-	sb.fill_bottom = Atlas.OBSIDIAN_DEEP
-	sb.border = Atlas.COPPER_DIM
-	sb.cut = 6.0
-	sb.corners = Vector4(0, 1, 0, 1)
+	var sb := StyleBoxEmpty.new()    # aucun cadre ni fond : la carte flotte sur la vue, comme sur la maquette
+	sb.content_margin_left = UiMetrics.css(5.0)
+	sb.content_margin_right = UiMetrics.css(5.0)
+	sb.content_margin_top = UiMetrics.css(5.0)
+	sb.content_margin_bottom = UiMetrics.css(5.0)
 	add_theme_stylebox_override("panel", sb)
 	_pad = UiMetrics.css(5.0)
 

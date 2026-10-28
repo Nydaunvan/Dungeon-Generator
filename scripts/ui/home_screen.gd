@@ -10,7 +10,7 @@ const SW := 1280.0
 const SH := 800.0
 const HOME := "res://assets/home/"
 
-var _wall: TextureRect
+var _wall: ColorRect
 var _header: AppHeader
 var _title_label: Label
 var _stage: Control
@@ -55,9 +55,8 @@ func _label(text: String, size: int, color: Color, font_path: String = UiTheme.F
 	return l
 
 func _build() -> void:
-	_wall = TextureRect.new()
-	_wall.texture = UiTheme.tex("bg_tile")
-	_wall.stretch_mode = TextureRect.STRETCH_TILE
+	_wall = ColorRect.new()
+	_wall.color = Color("07090a")
 	_wall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_wall)

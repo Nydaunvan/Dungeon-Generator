@@ -38,12 +38,12 @@ class Crest extends Control:
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		custom_minimum_size = Vector2(0, 20)
+		custom_minimum_size = Vector2(0, 28)
 	func _draw() -> void:
 		if num_text == "" and name_text == "":
 			return
 		var f := Atlas.title_font(false, 3)
-		var fs := maxi(9, int(size.y * 0.3))
+		var fs := int(UiMetrics.css(13.0))
 		var a := num_text.to_upper()
 		var b := name_text.to_upper()
 		var wa := f.get_string_size(a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -65,9 +65,12 @@ class Crest extends Control:
 		var gap := 16.0
 		var lx1 := x0 - gap
 		var rx0 := x0 + total + gap
-		draw_line(Vector2(maxf(4.0, lx1 - size.x * 0.28), y), Vector2(lx1, y), Color(Atlas.COPPER, 0.8), 1.0, true)
-		draw_line(Vector2(rx0, y), Vector2(minf(size.x - 4.0, rx0 + size.x * 0.28), y), Color(Atlas.COPPER, 0.8), 1.0, true)
-		Atlas.draw_diamond(self, Vector2(lx1 + 4.0, y), 3.0, Atlas.AMBER)
+		var yl := y + fs * 0.1
+		Atlas.draw_taper(self, Vector2(4.0, yl), Vector2(lx1, yl), 0.4, 2.0, Color(Atlas.COPPER, 0.9))
+		Atlas.draw_taper(self, Vector2(size.x - 4.0, yl), Vector2(rx0, yl), 0.4, 2.0, Color(Atlas.COPPER, 0.9))
+		Atlas.draw_diamond(self, Vector2(lx1 + 7.0, yl), 5.0, Atlas.COPPER)
+		Atlas.draw_diamond(self, Vector2(lx1 + 7.0, yl), 2.5, Atlas.AMBER)
+		Atlas.draw_diamond(self, Vector2(rx0 - 7.0, yl), 4.0, Atlas.COPPER)
 		Atlas.draw_diamond(self, Vector2(rx0 - 4.0, y), 3.0, Atlas.AMBER)
 
 var _crest: Crest
@@ -81,10 +84,10 @@ func set_level(num_text: String, name_text: String) -> void:
 func _init() -> void:
 	clip_contents = false
 	_box = AtlasBox.new(0.0)
-	_box.fill_top = Color("151a18")
-	_box.fill_bottom = Atlas.OBSIDIAN
-	_box.cut = 10.0
-	_box.corners = Vector4(0, 0, 1, 1)
+	_box.fill_top = Color(0, 0, 0, 0)     # bande sans fond : le noir de l'écran, des filets et rien d'autre
+	_box.fill_bottom = Color(0, 0, 0, 0)
+	_box.border = Color(0, 0, 0, 0)
+	_box.cut = 0.0
 	add_theme_stylebox_override("panel", _box)
 	var hrow := HBoxContainer.new()
 	hrow.add_theme_constant_override("separation", 12)
@@ -185,13 +188,13 @@ func _plain(full: String) -> String:
 	return full
 
 func rescale() -> void:
-	custom_minimum_size.y = UiMetrics.css(48.0 if not UiMetrics.portrait else 44.0)
-	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(17.0 if not UiMetrics.portrait else 13.0)))
+	custom_minimum_size.y = UiMetrics.css(64.0 if not UiMetrics.portrait else 44.0)
+	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(21.0 if not UiMetrics.portrait else 13.0)))
 	if _crest != null:
 		_crest.visible = not UiMetrics.portrait and _crest.num_text != ""
-	var side := UiMetrics.css(22.0)
-	_box.content_margin_left = UiMetrics.css(16.0)
-	_box.content_margin_right = UiMetrics.css(10.0)
+	var side := UiMetrics.css(30.0 if not UiMetrics.portrait else 22.0)
+	_box.content_margin_left = UiMetrics.css(30.0 if not UiMetrics.portrait else 12.0)
+	_box.content_margin_right = UiMetrics.css(30.0 if not UiMetrics.portrait else 10.0)
 	_box.emit_changed()
 	if _emblem != null:
 		_emblem.custom_minimum_size = Vector2(side * 1.4, side * 1.4)

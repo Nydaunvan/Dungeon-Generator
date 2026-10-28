@@ -34,22 +34,30 @@ func _init(fill: Color = Color.WHITE, height: int = 18, font_size: int = 12) -> 
 
 var _tween: Tween
 
-## Style Atlas Noir : barre plate à angles vifs, chiffres alignés à droite en Spectral. Les autres barres du jeu gardent l'ancien style.
-func use_atlas(fill: Color, show_text: bool = true) -> void:
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Atlas.OBSIDIAN_DEEP
-	bg.border_color = Color(Atlas.COPPER_DIM, 0.7)
-	bg.set_border_width_all(1)
-	var fg := StyleBoxFlat.new()
-	fg.bg_color = fill
+## Style Atlas Noir : barre en parallélogramme (bout droit en biais) ; le chiffre s'écrit à droite de la barre, hors de celle-ci
+## (`text_w` px lui sont réservés au-delà du bord droit du contrôle). Les autres barres du jeu gardent l'ancien style.
+func use_atlas(fill: Color, show_text: bool = true, text_w: float = 0.0) -> void:
+	var bg := SlantBox.new()
+	bg.color = Color(0.02, 0.025, 0.028, 0.9)
+	bg.border = Color(Atlas.COPPER_DIM, 0.6)
+	var fg := SlantBox.new()
+	fg.color = fill
 	add_theme_stylebox_override("background", bg)
 	add_theme_stylebox_override("fill", fg)
 	_label.visible = show_text
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_label.offset_right = -4.0
-	_label.add_theme_font_override("font", Atlas.font(Atlas.F_BODY_BOLD))
-	_label.add_theme_color_override("font_color", Color("f3ead2"))
-	_label.add_theme_color_override("font_outline_color", Color(0.03, 0.04, 0.035, 0.9))
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	if text_w > 0.0:
+		_label.anchor_left = 1.0
+		_label.anchor_right = 1.0
+		_label.offset_left = 6.0
+		_label.offset_right = text_w
+		_label.clip_text = false
+	else:
+		_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_label.offset_right = -4.0
+	_label.add_theme_font_override("font", Atlas.font(Atlas.F_BODY_MED))
+	_label.add_theme_color_override("font_color", Atlas.IVORY)
+	_label.add_theme_constant_override("outline_size", 0)
 
 ## Met à jour la barre ; la valeur glisse doucement vers la cible (comme la transition CSS du HTML).
 func set_values(v: float, max_v: float, text: String) -> void:

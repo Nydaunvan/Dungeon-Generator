@@ -93,6 +93,12 @@ static func draw_rule(ci: CanvasItem, from: Vector2, to: Vector2, col: Color, wi
 	if diamond:
 		draw_diamond(ci, (from + to) * 0.5, 3.0, col)
 
+## Filet effilé : l'épaisseur passe de `w0` (au point `from`) à `w1` (au point `to`), comme les traits de la maquette autour du titre.
+static func draw_taper(ci: CanvasItem, from: Vector2, to: Vector2, w0: float, w1: float, col: Color) -> void:
+	var d := (to - from).normalized()
+	var n := Vector2(-d.y, d.x)
+	ci.draw_colored_polygon(PackedVector2Array([from + n * w0 * 0.5, to + n * w1 * 0.5, to - n * w1 * 0.5, from - n * w0 * 0.5]), col)
+
 ## Graduations régulières le long d'un segment horizontal (repères de cartographie).
 static func draw_ticks(ci: CanvasItem, from: Vector2, to: Vector2, count: int, h: float, col: Color) -> void:
 	for i in count + 1:
