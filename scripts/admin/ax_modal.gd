@@ -12,8 +12,8 @@ var _scroll: ScrollContainer
 
 static func open(host: Node, title_text: String, info: String = "", width: float = 420.0, scroll_h: float = 0.0) -> AxModal:
 	var m := AxModal.new()
-	m._build(title_text, info, width, scroll_h)
 	host.add_child(m)
+	m._build(title_text, info, width, scroll_h)
 	return m
 
 func _build(title_text: String, info: String, width: float, scroll_h: float) -> void:

@@ -25,34 +25,6 @@ static func fpx(rem: float) -> int:
 static func cpx(px: float) -> float:
 	return UiMetrics.css(px)
 
-static func field_box(focus: bool = false, pad_h: float = 5.0, pad_v: float = 5.0) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = Color("150f08")
-	s.border_color = GOLD_DIM if focus else BORDER
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(5)
-	s.content_margin_left = cpx(pad_h)
-	s.content_margin_right = cpx(pad_h)
-	s.content_margin_top = cpx(pad_v)
-	s.content_margin_bottom = cpx(pad_v)
-	return s
-
-## Champ texte compact (`input[type=text]`) : largeur et police en rem de l'original.
-static func line_edit(text: String, width_css: float, rem: float, pad_h: float = 5.0, pad_v: float = 5.0, placeholder: String = "") -> LineEdit:
-	var e := LineEdit.new()
-	e.text = text
-	e.placeholder_text = placeholder
-	e.add_theme_constant_override("minimum_character_width", 1)
-	if width_css > 0.0:
-		e.custom_minimum_size.x = cpx(width_css)
-	e.add_theme_font_size_override("font_size", fpx(rem))
-	e.add_theme_stylebox_override("normal", field_box(false, pad_h, pad_v))
-	e.add_theme_stylebox_override("focus", field_box(true, pad_h, pad_v))
-	e.add_theme_stylebox_override("read_only", field_box(false, pad_h, pad_v))
-	e.add_theme_color_override("font_color", PARCH2)
-	e.add_theme_color_override("font_placeholder_color", Color(0.72, 0.66, 0.5, 0.45))
-	return e
-
 ## Appelle `cb(texte)` quand la saisie est validée (Entrée ou perte du focus) ET a changé : l'évènement `change` du HTML.
 static func on_commit(e: LineEdit, cb: Callable) -> void:
 	var st := {"last": e.text}
@@ -77,16 +49,6 @@ static func num_text(v: Variant, blank_zero: bool = false) -> String:
 	if v is float and is_equal_approx(v, roundf(v)):
 		return str(int(v))
 	return str(v)
-
-## Champ nombre (`input[type=number]`) : `on_change(valeur)` renvoie la valeur normalisée (bornée) réécrite dans le champ.
-static func num_edit(value: Variant, width_css: float, rem: float, on_change: Callable, pad_h: float = 5.0, pad_v: float = 5.0, blank_zero: bool = false, tip: String = "") -> LineEdit:
-	var e := line_edit(num_text(value, blank_zero), width_css, rem, pad_h, pad_v)
-	e.tooltip_text = tip
-	on_commit(e, func(t: String):
-		var norm = on_change.call(parse_num(t))
-		if norm != null:
-			e.text = num_text(norm, blank_zero))
-	return e
 
 static func plate_box(hover: bool = false, pad_h: float = 6.0, pad_v: float = 3.0, radius: float = 6.0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
@@ -135,150 +97,6 @@ static func select(options: Array, current: Variant, on_pick: Callable, width_cs
 		o.select(sel)
 	o.item_selected.connect(func(i: int): on_pick.call(options[i][0]))
 	return o
-
-static func _check_tex(on: bool, disabled: bool, px: int) -> Texture2D:
-	var key := "%s|%s|%d" % [on, disabled, px]
-	if not _chk_cache.has(key):
-		var img: Image = UiTheme._check_icon(on, disabled).get_image()
-		img.resize(px, px, Image.INTERPOLATE_LANCZOS)
-		_chk_cache[key] = ImageTexture.create_from_image(img)
-	return _chk_cache[key]
-
-## Case à cocher compacte : libellé en rem de l'original ; `wrap` = retour à la ligne dans la largeur donnée (`label`).
-static func chk(text: String, rem: float, checked: bool, on_toggle: Callable, wrap_w_css: float = 0.0, disabled: bool = false) -> CheckBox:
-	var c := CheckBox.new()
-	c.focus_mode = Control.FOCUS_NONE
-	c.text = text
-	c.disabled = disabled
-	c.button_pressed = checked
-	var px := int(cpx(15.0))
-	c.add_theme_icon_override("checked", _check_tex(true, false, px))
-	c.add_theme_icon_override("unchecked", _check_tex(false, false, px))
-	c.add_theme_icon_override("checked_disabled", _check_tex(true, true, px))
-	c.add_theme_icon_override("unchecked_disabled", _check_tex(false, true, px))
-	c.add_theme_font_size_override("font_size", fpx(rem))
-	c.add_theme_constant_override("h_separation", int(cpx(5.0)))
-	if wrap_w_css > 0.0:
-		c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		c.custom_minimum_size.x = cpx(wrap_w_css)
-		c.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	if on_toggle.is_valid():
-		c.toggled.connect(on_toggle)
-	return c
-
-## Bouton « .icon-pick-btn » : carré, fond #1c1610, liseré, survol doré.
-static func pick_box(hover: bool = false) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = Color("1c1610")
-	s.border_color = GOLD_DIM if hover else BORDER
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(6)
-	s.set_content_margin_all(0)
-	return s
-
-static func style_pick_btn(b: Button, size_css: float) -> void:
-	b.custom_minimum_size = Vector2(cpx(size_css), cpx(size_css))
-	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.add_theme_stylebox_override("normal", pick_box(false))
-	b.add_theme_stylebox_override("hover", pick_box(true))
-	b.add_theme_stylebox_override("pressed", pick_box(true))
-	b.add_theme_stylebox_override("focus", pick_box(true))
-	b.add_theme_color_override("font_color", PDIM)
-
-## Bouton-icône 38×38 (sélecteur d'icônes du jeu) : l'icône occupe 1,3 rem comme `.icon-pick-btn`. `changed` recharge l'onglet.
-static func icon_btn(admin: Node, target: Dictionary, key: String, changed: Callable) -> Button:
-	var b := IconPicker.button(admin.modals(), target, key, changed, 26.0)
-	b.tooltip_text = ""
-	style_pick_btn(b, 38.0)
-	b.add_theme_font_size_override("font_size", fpx(1.3))
-	b.add_theme_constant_override("icon_max_width", int(cpx(24.0)))
-	return b
-
-## Petit bouton (🗑, +, ×…) : police en rem, marges en px de l'original.
-static func small_btn(text: String, rem: float, pad_h: float, pad_v: float, tip: String = "") -> Button:
-	var b := Button.new()
-	b.text = text
-	b.tooltip_text = tip
-	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_size_override("font_size", fpx(rem))
-	b.add_theme_stylebox_override("normal", plate_box(false, pad_h, pad_v))
-	b.add_theme_stylebox_override("hover", plate_box(true, pad_h, pad_v))
-	b.add_theme_stylebox_override("pressed", plate_box(true, pad_h, pad_v))
-	b.add_theme_stylebox_override("focus", plate_box(true, pad_h, pad_v))
-	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
-	return b
-
-## Bouton d'action `.admin-actions` : `primary` = liseré/texte dorés comme `button.primary`.
-static func action_btn(text: String, cb: Callable, primary: bool = false) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.focus_mode = Control.FOCUS_NONE
-	if primary:
-		b.add_theme_color_override("font_color", GOLD_BRIGHT)
-	b.pressed.connect(cb)
-	return b
-
-## Ligne « .admin-actions » (marge haute 14, espacement 8).
-static func actions_row(parent: Control, buttons: Array) -> void:
-	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_top", int(cpx(10.0)))
-	var h := HFlowContainer.new()
-	h.add_theme_constant_override("h_separation", int(cpx(8.0)))
-	h.add_theme_constant_override("v_separation", int(cpx(8.0)))
-	for b in buttons:
-		h.add_child(b)
-	m.add_child(h)
-	parent.add_child(m)
-
-## `.save-status` : 0,7 rem, #7a6a52.
-static func status_label() -> Label:
-	var l := Label.new()
-	l.add_theme_font_size_override("font_size", fpx(0.7))
-	l.add_theme_color_override("font_color", STATUS_COL)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.custom_minimum_size = Vector2(120, cpx(13.0))
-	return l
-
-## `.csection-label` : 0,62 rem, doré atténué, capitales espacées (.08em), marge basse 5.
-static func csection_label(text: String) -> Control:
-	var m := MarginContainer.new()
-	m.add_theme_constant_override("margin_bottom", int(cpx(5.0)))
-	var l := Label.new()
-	l.text = L.u(text)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.custom_minimum_size.x = 120.0
-	var fv := FontVariation.new()
-	fv.base_font = UiTheme.font(UiTheme.F_BODY)
-	fv.spacing_glyph = int(roundf(cpx(0.08 * 0.62 * 18.0)))
-	l.add_theme_font_override("font", fv)
-	l.add_theme_font_size_override("font_size", fpx(0.62))
-	l.add_theme_color_override("font_color", GOLD_DIM)
-	m.add_child(l)
-	return m
-
-## Texte « .hint » sans marge (0,74 rem, italique, atténué).
-static func dim_hint(text: String, rem: float = 0.74) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.custom_minimum_size = Vector2(120, 0)
-	l.add_theme_font_size_override("font_size", fpx(rem))
-	l.add_theme_font_override("font", UiTheme.font(UiTheme.F_BODY_ITALIC))
-	l.add_theme_color_override("font_color", PDIM)
-	return l
-
-static func flow(parent: Control, h_css: float, v_css: float) -> HFlowContainer:
-	var f := HFlowContainer.new()
-	f.add_theme_constant_override("h_separation", int(cpx(h_css)))
-	f.add_theme_constant_override("v_separation", int(cpx(v_css)))
-	f.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if parent != null:
-		parent.add_child(f)
-	return f
 
 ## Alerte modale (`showAlert`) : sans titre, bouton « OK » principal.
 static func alert(admin: Node, text: String) -> Modal:
@@ -733,11 +551,3 @@ static func _spell_chips(col: Control, admin: Node, cfg: Dictionary, c: Dictiona
 		pm.popup(Rect2i(Vector2i(add.get_screen_position()) + Vector2i(0, int(add.size.y)), Vector2i(0, 0)))
 		pm.popup_hide.connect(func(): pm.queue_free()))
 	f.add_child(add)
-
-## Champ avec son libellé (ancienne mise en page, encore utilisée par l'écran Classes).
-static func _field(parent: Control, label: String, ctl: Control) -> void:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
-	v.add_child(Atelier.muted(label))
-	v.add_child(ctl)
-	parent.add_child(v)

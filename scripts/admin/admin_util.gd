@@ -7,22 +7,6 @@ const BASE_ARCHETYPES := ["Guerrier", "Archer", "Roublard", "Mage", "Prêtre", "
 static func is_base(cls: Dictionary) -> bool:
 	return BASE_ARCHETYPES.has(str(cls.get("name", "")))
 
-static func base_of(cls: Dictionary) -> Dictionary:
-	var from := str(cls.get("evolvesFrom", ""))
-	if from == "":
-		return {}
-	for c in Data.config.get("classes", []):
-		if str(c.get("name", "")) == from and is_base(c):
-			return c
-	return {}
-
-static func eff_weapons(cls: Dictionary) -> Array:
-	var out: Array = (cls.get("allowedWeaponTypes", []) as Array).duplicate()
-	for w in base_of(cls).get("allowedWeaponTypes", []):
-		if not out.has(w):
-			out.append(w)
-	return out
-
 static func eff_spells(cls: Dictionary) -> Array:
 	return cls.get("allowedSpellIds", [])
 
@@ -34,16 +18,6 @@ static func locked_level(cls: Dictionary, spell_id: String) -> int:
 			if lvl == 0 or int(p.level) < lvl:
 				lvl = int(p.level)
 	return lvl
-
-static func classes_allowing(spell_id: String) -> Array:
-	var out: Array = []
-	for c in Data.config.get("classes", []):
-		if eff_spells(c).has(spell_id):
-			out.append(c)
-	return out
-
-static func is_emoji_icon(icon: String) -> bool:
-	return icon != "" and not icon.begins_with("@icon:")
 
 ## `iconTextFallback` de l'original : emoji déduit de l'identifiant d'une icône illustrée (« @icon:sword_short » → ⚔️).
 const _ICON_FALLBACKS := [
@@ -89,20 +63,6 @@ static func label(text: String, size: int = 14, color: Color = UiTheme.PARCH) ->
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
 	return l
-
-## Petit champ numérique compact (libellé au-dessus non affiché : le libellé est fourni dans la rangée).
-static func mini_number(target: Dictionary, key: String, lo: float, hi: float, default_value: float = 0.0, changed: Callable = Callable(), width: float = 84.0, step: float = 1.0) -> SpinBox:
-	var s := SpinBox.new()
-	s.min_value = lo
-	s.max_value = hi
-	s.step = step
-	s.custom_minimum_size = Vector2(width, 0)
-	s.value = float(target.get(key, default_value))
-	s.value_changed.connect(func(v: float):
-		target[key] = int(v) if step >= 1.0 else v
-		if changed.is_valid():
-			changed.call())
-	return s
 
 ## Rangée horizontale « libellé + champ » pour ranger plusieurs champs sur une ligne.
 static func chip(parent: Control, text: String, field: Control) -> HBoxContainer:

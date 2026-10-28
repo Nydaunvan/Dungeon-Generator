@@ -49,14 +49,12 @@ func _init() -> void:
 	ac.set("_ctab", "spells")
 	adm._select_tab("classes")
 	await create_timer(0.8).timeout
-	var boxes := find_all(adm, func(n): return n is CheckBox and not n.button_pressed and not n.disabled and str(n.text).contains(str(cfg.spells[7].name)))
-	ok(boxes.size() > 0, "case du 8e sort trouvée")
-	if boxes.size() > 0:
-		(boxes[0] as CheckBox).button_pressed = true
+	var pills := find_all(adm, func(n): return n is Button and str(n.text).contains(str(cfg.spells[7].name)))
+	ok(pills.size() > 0, "pastille du 8e sort trouvée")
+	if pills.size() > 0:
+		(pills[0] as Button).pressed.emit()
 		await process_frame
-		var msgs := find_all(adm, func(n): return n is Label and str(n.text).begins_with("❌"))
-		ok(msgs.size() == 1, "message de plafond visible")
-		ok((warrior.allowedSpellIds as Array).size() == 6 and not (boxes[0] as CheckBox).button_pressed, "plafond respecté, case décochée")
+		ok((warrior.allowedSpellIds as Array).size() == 6 and not (warrior.allowedSpellIds as Array).has(cfg.spells[7].id), "plafond respecté, sort non ajouté")
 	# ajout d'une classe via la fenêtre
 	var n0: int = (cfg.classes as Array).size()
 	var add_btn := find_all(adm, func(n): return n is Button and str(n.text).to_upper().contains("NOUVELLE"))

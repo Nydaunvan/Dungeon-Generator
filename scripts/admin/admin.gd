@@ -22,6 +22,7 @@ var _btn_resume: Button
 var _body: HBoxContainer
 var _side: AtelierSide
 var _menu_row: HBoxContainer
+var _head_margin: MarginContainer         ## en-tête de l'application (masqué dans l'éditeur de niveaux, plein écran)
 var _menu_title: Label
 var _side_open := false
 var _tab := "home"
@@ -57,6 +58,7 @@ func _ready() -> void:
 	hm.add_theme_constant_override("margin_top", int(UiMetrics.css(12.0)))
 	hm.add_theme_constant_override("margin_bottom", int(UiMetrics.css(8.0)))
 	_root.add_child(hm)
+	_head_margin = hm
 	_header = AppHeader.new()
 	_header.nav.connect(_nav)
 	_header.btn_admin.disabled = true
@@ -252,8 +254,12 @@ func _apply_side() -> void:
 	if _side == null:
 		return
 	var narrow := _narrow()
-	_side.visible = Data.admin_unlocked and (not narrow or _side_open)
-	_menu_row.visible = narrow and Data.admin_unlocked
+	var full := _tab == "levels"            # l'éditeur de niveaux occupe tout l'écran
+	_side.visible = Data.admin_unlocked and not full and (not narrow or _side_open)
+	_menu_row.visible = narrow and Data.admin_unlocked and not full
+	_head_margin.visible = not full
+	if _footer != null:
+		_footer.visible = not full
 	_content_host.visible = Data.admin_unlocked
 	if narrow:
 		_side.custom_minimum_size.x = minf(300.0, size.x * 0.82)
