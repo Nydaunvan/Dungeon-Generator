@@ -394,7 +394,7 @@ static func _own_pose(id: String, kind: String) -> Material:
 	var key := "O|%s|%s" % [id, suffix]
 	if not _mats.has(key):
 		var path := "res://assets/monsters/%s_%s.webp" % [id, suffix]
-		_mats[key] = _base_material(load(path)) if ResourceLoader.exists(path) else null
+		_mats[key] = _lit_material(load(path)) if ResourceLoader.exists(path) else null
 	return _mats[key]
 
 ## Réaction courte sur un sprite précis (salle de combat).
@@ -755,7 +755,7 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 	mi.set_meta("h", h)
 	if not is_item and not is_boss:
 		mi.set_meta("pose_id", _icon_id(icon))
-		if ResourceLoader.exists("res://assets/monsters/%s_attack.webp" % _icon_id(icon)):
+		if is_atlas_id(_icon_id(icon)):
 			mi.set_meta("atlas", true)
 	return mi
 
@@ -796,7 +796,7 @@ func _material_for(icon: String, is_boss: bool, is_item: bool) -> StandardMateri
 	elif remake.has(id) and not is_boss:
 		mat = _monster_cell(int(remake[id]))
 	elif ResourceLoader.exists(hd):
-		mat = _base_material(load(hd))      # vignette individuelle agrandie ×2 (Lanczos + netteté)
+		mat = _lit_material(load(hd)) if (is_atlas_id(id) and not is_boss) else _base_material(load(hd))      # vignette individuelle (les monstres Atlas Noir sont éclairés)
 	elif legacy.has(id):
 		mat = _sheet_material(ITEM_SHEET, int(legacy[id]), ITEM_COLS, ITEM_ROWS)
 	elif id.begins_with("spr_") and id.substr(4).is_valid_int() and not ResourceLoader.exists(single):
@@ -812,6 +812,22 @@ static func _monster_cell(index: int) -> StandardMaterial3D:
 	if ResourceLoader.exists(path):
 		return _base_material(load(path))
 	return _sheet_material(MONSTER_SHEET, index, MONSTER_COLS, 1)
+
+## Monstre « Atlas Noir » (illustrations haute définition à cinq poses) : sprite ÉCLAIRÉ — il reçoit la lumière d'ambiance du niveau, la torche
+## du groupe et les lampes proches au lieu d'être plaqué en pleine lumière, ce qui l'ancre dans le décor.
+static func _lit_material(tex: Texture2D) -> StandardMaterial3D:
+	var m := _base_material(tex)
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	m.roughness = 1.0
+	m.metallic = 0.0
+	m.metallic_specular = 0.0
+	m.emission_enabled = true                      # un soupçon d'auto-éclairage : les zones sombres restent lisibles dans les couloirs noirs
+	m.emission_texture = tex
+	m.emission_energy_multiplier = 0.22
+	return m
+
+static func is_atlas_id(id: String) -> bool:
+	return ResourceLoader.exists("res://assets/monsters/%s_attack.webp" % id)
 
 static func _base_material(tex: Texture2D) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()

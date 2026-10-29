@@ -251,6 +251,12 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 	if camera != null:
 		right = camera.global_transform.basis.x
 	var top: float = float((0.5 - (info.center.y - info.size.y * 0.5)) * h)     # sommet visible du sprite : la barre se pose au-dessus de la tête
+	var pose_id := str(e.node.get_meta("pose_id", ""))
+	if e.node.has_meta("atlas") and pose_id != "":
+		# monstre à plusieurs poses : la barre se cale au-dessus de sa position la plus haute (arme levée…) et ne bouge plus, quelle que soit la pose affichée
+		var env := _pose_envelope(pose_id)
+		top = (0.5 - float(env.top)) * h
+		info = {"center": Vector2(float(env.cx), 0.5), "size": info.size}
 	# posée juste au-dessus du sol et avancée vers la caméra : en perspective elle apparaît sous les pieds du monstre sans passer sous le sol
 	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.3
 	pos.y = at.y + top + 0.04
@@ -280,6 +286,39 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 		e["bar_tw"] = tw
 
 static var _bar_sh: Shader
+static var _envelopes: Dictionary = {}
+
+## Enveloppe d'un monstre à poses multiples : fraction du haut de l'image occupée au plus haut par toutes ses poses debout
+## (repos, attaques, coup reçu ; pas la pose à terre) et centre horizontal du repos.
+static func _pose_envelope(id: String) -> Dictionary:
+	if _envelopes.has(id):
+		return _envelopes[id]
+	var top := 1.0
+	var cx := 0.5
+	for suf in ["", "_attack", "_attack2", "_hit"]:
+		var path := "res://assets/monsters/%s%s.webp" % [id, suf]
+		if not ResourceLoader.exists(path):
+			continue
+		var img: Image = (load(path) as Texture2D).get_image()
+		if img.is_compressed():
+			img.decompress()
+		var sc := 256.0 / float(maxi(img.get_width(), img.get_height()))
+		img.resize(int(img.get_width() * sc), int(img.get_height() * sc), Image.INTERPOLATE_BILINEAR)
+		var miny := img.get_height()
+		var minx := img.get_width()
+		var maxx := 0
+		for y in img.get_height():
+			for x in img.get_width():
+				if img.get_pixel(x, y).a > 0.35:
+					miny = mini(miny, y)
+					minx = mini(minx, x)
+					maxx = maxi(maxx, x)
+		top = minf(top, float(miny) / float(img.get_height()))
+		if suf == "":
+			cx = float(minx + maxx + 1) * 0.5 / float(img.get_width())
+	var res := {"top": top, "cx": cx}
+	_envelopes[id] = res
+	return res
 
 static func _bar_shader() -> Shader:
 	if _bar_sh == null:

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Prépare les cinq poses d'un monstre « Atlas Noir » à partir des images brutes (fond noir) et écrit les webp du jeu.
 Usage : python3 tools/make_monster.py <id> repos.png attaque.png coup.png attaque2.png mort.png
-  → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (1024 px, RGBA).
+  → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (même taille que les images d'origine, RGBA).
 Traitements (indispensables pour que le sprite ne SCINTILLE pas en 3D) :
   1. détourage du fond noir relié au bord (les orbites et poches sombres intérieures restent opaques) ;
   2. suppression du liseré clair « autocollant » du contour (érosion de l'alpha) et bord adouci : un trait fin de 1-2 px qui bouge à la
      respiration du sprite ou à la caméra crépite à l'écran ;
   3. couleurs des pixels transparents prolongées depuis le bord (pas de frange noire ou blanche aux mipmaps) ;
-  4. léger flou des couleurs (1,2 px à 1536) : amortit le micro-contraste que la réduction 1024 → ~300 px fait danser ;
+  4. AUCUN rééchantillonnage ni flou : la résolution d'origine est conservée (le calme à l'écran vient des mipmaps et de la respiration réduite) ;
   5. toutes les poses à la même échelle, pieds calés sur la même ligne (celle du repos).
 Côté moteur : respiration réduite à 30 % pour ces monstres (EntityLayer, méta « atlas »).
 Les imports Godot du dossier assets/monsters doivent avoir mipmaps/generate=true (voir assets/monsters/*.webp.import)."""
@@ -19,7 +19,7 @@ from scipy import ndimage as ndi
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ERODE = 3          # px (à 1536) retirés autour de la silhouette
 FEATHER = 1.6      # px de dégradé du bord
-BLUR = 1.2         # px (à 1536) de flou sur les couleurs
+BLUR = 0.0         # pas de flou : la résolution d'origine est conservée
 
 def key(path):
     a = np.asarray(Image.open(path).convert("RGB")).astype(np.float32) / 255
@@ -34,7 +34,8 @@ def key(path):
     # couleurs : on prolonge l'intérieur vers l'extérieur (plus proche voisin opaque), puis léger flou
     idx = ndi.distance_transform_edt(~solid, return_distances=False, return_indices=True)
     filled = a[idx[0], idx[1]]
-    filled = np.stack([ndi.gaussian_filter(filled[..., c], BLUR) for c in range(3)], -1)
+    if BLUR > 0:
+        filled = np.stack([ndi.gaussian_filter(filled[..., c], BLUR) for c in range(3)], -1)
     return filled, alpha
 
 def bottom(alpha):
@@ -52,9 +53,8 @@ def main():
         im = Image.fromarray((np.dstack([rgb, alpha]) * 255).astype(np.uint8), "RGBA")
         canvas = Image.new("RGBA", im.size, (0, 0, 0, 0))
         canvas.paste(im, (0, dy))
-        canvas = canvas.resize((1024, 1024), Image.LANCZOS)
         out = ROOT / "assets/monsters" / f"{mid}{suf}.webp"
-        canvas.save(out, quality=92, method=6)
+        canvas.save(out, lossless=True, quality=100, method=6)
         print("écrit", out.relative_to(ROOT))
 
 if __name__ == "__main__":
