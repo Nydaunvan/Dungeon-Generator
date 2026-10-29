@@ -1,5 +1,32 @@
 [
  {
+  "version": "1.37.0",
+  "date": "2026-10-29",
+  "changes": [
+   "## Techniques ultimes",
+   "Chaque classe évoluée (14) gagne à l'évolution, au niveau 5, une technique ultime : un 7e sort sur un disque doré de la barre (touches 8 ou R, réglables). Avant l'évolution, le disque porte un cadenas.",
+   "Elle ne coûte ni endurance ni recharge : une jauge se remplit quand le héros porte un coup (+10), reçoit un coup (+6) ou lance un sort de soutien (+6). Jauge pleine, le disque brille ; la lancer vide la jauge, qui démarre à zéro à l'évolution.",
+   "Quand la jauge est pleine, un sceau doré « ULTIME » apparaît à droite de la vue 3D, à l'opposé du sceau rouge d'instinct, avec l'icône et le nom du sort : un clic le lance. Il se retire pendant une alerte d'instinct.",
+   "Quatorze effets : Rage Sanguinaire, Jugement Divin, Volée Arcanique, Tempête d'Acier, Rafle Éclair, Exécution, Cataclysme Élémentaire, Pacte Funeste, Miracle, Croisade, Chant de Guerre, Berceuse Finale, Racines Ancestrales et Colère du Ciel, avec les effets graphiques et les sons des gros sorts existants.",
+   "Atelier : carte « Technique ultime » dans Règles du jeu › Combat (jauge, niveau de départ, gains), interrupteur dans l'onglet Sorts, choix du sort dans l'onglet Classes. Les anciennes sauvegardes et configurations reçoivent les 14 sorts à l'ouverture (migration de schéma 19), sauf les donjons personnalisés.",
+   "## Interface « Atlas Noir »",
+   "Nouvelle interface de jeu d'après la maquette : bande du haut à boussole, colonne « Carte » à gauche, vue 3D pleine largeur, fiches de héros en biais, « Inventaire commun » et « Carnet » sur parchemin à droite, raccourcis en cercles numérotés (attaque + sorts), file d'initiative en filet fin, menu d'en-tête en icônes, cadres et infobulles Atlas.",
+   "Combat : file d'initiative entière, barre de vie des monstres fine au-dessus de leur tête, bouton Pause en haut au centre, ronds de sorts plus gros qui s'allument à la pression de leur touche, cible de soin surlignée.",
+   "Besace à 5 catégories de 12 emplacements (armes, armures, potions, parchemins, clés), compteur par onglet, volet d'inventaire en grille 4 × 3 avec ascenseur.",
+   "Coffres et leviers s'actionnent au clic ou à la touche d'action (F par défaut) ; le butin jaillit du coffre et ce qui ne tient pas dans la besace reste au sol, ramassable plus tard.",
+   "## Atelier de création",
+   "Atelier refait d'après les maquettes : menu latéral, accueil, recherche (Ctrl K), pages de règles séparées, Sorts et Classes en liste avec fiche, Objets avec fiche par rareté, Groupe, éditeur de niveaux plein écran, enregistrement automatique et remise par défaut d'une page.",
+   "## Donjons et expéditions",
+   "Écran « Préparer l'expédition » : compagnie, taille du donjon (jusqu'à Gigantesque 45 × 45 et Colossal 60 × 60) et 12 modificateurs en une page, avec confirmation avant de générer.",
+   "Donjons en couloirs et salles : 10 styles de salle, décors et accessoires 3D détaillés, sols PBR, coffres 3D animés, outil Coffre dans l'éditeur de niveaux.",
+   "Piège de la hache pendulaire (esquive, son, contrepoids par interrupteur mural 3D). Nid de monstres avec butin de boss légendaire ou mythique.",
+   "## Mode en ligne",
+   "Mode en ligne au style jeu vidéo (anneau d'XP, onglets lumineux, liste de modes dorée, version mobile), point rouge clignotant sur les demandes d'amis, « Retour à l'accueil » vers le menu en ligne si la partie en venait.",
+   "## Monster Studio",
+   "Logiciel indépendant : images 2D → modèle 3D par IA locale → squelette → peau → animations → .glb, avec installateur et désinstallateur de TripoSR et cuisson de texture 1K/2K/4K."
+  ]
+ },
+ {
   "version": "1.36.2",
   "date": "2026-10-21",
   "changes": [
