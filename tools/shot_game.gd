@@ -91,6 +91,56 @@ func _init() -> void:
 					for m in get_nodes_in_group("modal"): m.close()
 					await create_timer(8.0).timeout
 					root.get_texture().get_image().save_png(out + "_fountain_apres.png")
+			"lever", "chest", "chestfull":
+				main.wand.paused_if = func(): return true
+				var gx0: int = main.rig.gx
+				var gy0: int = main.rig.gy
+				var dir0 := -1
+				for dd in 4:
+					var vv: Vector2i = DungeonGrid.DIRS[dd]
+					if main.grid.is_walkable(gx0 + vv.x, gy0 + vv.y) and not main.grid.is_walkable(gx0 + 2 * vv.x, gy0 + 2 * vv.y):
+						dir0 = dd
+						break
+				if dir0 < 0:
+					dir0 = 0
+				var vv2: Vector2i = DungeonGrid.DIRS[dir0]
+				var cx := gx0 + vv2.x
+				var cy := gy0 + vv2.y
+				if step == "lever":
+					main.level.items.append({"id": "t_sw", "type": "switch", "name": "Levier", "icon": "@icon:misc_lever", "x": cx, "y": cy})
+				else:
+					var wall := "N"
+					for k in main.level_node.entities.WALL_SIDES.keys():
+						if main.level_node.entities.WALL_SIDES[k]["d"] == vv2:
+							wall = str(k)
+					var cont: Array = []
+					for i in 4:
+						cont.append({"id": "tc%d" % i, "type": "weapon", "name": "Épée %d" % i, "icon": "@icon:sword_broad", "bonusAtkMin": 1, "bonusAtkMax": 2})
+					cont.append({"id": "tcp", "type": "potion", "name": "Potion", "icon": "@icon:potion_heal", "heal": 25})
+					main.level.items.append({"id": "t_ch", "type": "chest", "name": "Coffre", "icon": "@icon:misc_chest", "x": cx, "y": cy, "wall": wall, "gold": 12, "contents": cont})
+					if step == "chestfull":
+						for i in 12:
+							main.gs.inventory.append({"id": "fw%d" % i, "uid": "fw%d" % i, "type": "weapon", "name": "Dague %d" % i, "icon": "@icon:sword_broad"})
+				main.load_level(main.level_index, false, {"x": gx0, "y": gy0, "dir": dir0})
+				await create_timer(1.5).timeout
+				root.get_texture().get_image().save_png(out + "_" + step + "_avant.png")
+				print("hint: ", main.inter.interact_hint())
+				var face := dir0
+				if step == "lever":
+					var swd: Vector2i = load("res://scripts/dungeon/level_builder.gd").dart_wall_dir(main.grid, main.level, cx, cy, "t_sw")
+					face = DungeonGrid.DIRS.find(swd) if swd != Vector2i.ZERO else dir0
+				if step == "lever":
+					main.rig.place(main.grid, cx, cy, face)
+				else:
+					main.rig.place(main.grid, gx0, gy0, face)      # coffre : ouvert depuis la case voisine, face à lui
+				await create_timer(0.7).timeout
+				print("hint sur place: ", main.inter.interact_hint())
+				root.get_texture().get_image().save_png(out + "_" + step + "_dessus.png")
+				main._interact()
+				for t in [0.4, 0.4, 0.5, 1.5]:
+					await create_timer(t).timeout
+					root.get_texture().get_image().save_png(out + "_" + step + "_t%d.png" % int(Time.get_ticks_msec() % 100000))
+				print("sol: ", main.level.items.filter(func(i): return str(i.id).begins_with("drop_")).size(), " besace: ", main.gs.inventory.size())
 			"fx":
 				for sid in ["spell_fire1", "spell_arc1", "spell_holy1"]:
 					main._on_fx3d(sid)

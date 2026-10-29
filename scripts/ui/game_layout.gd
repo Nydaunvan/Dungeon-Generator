@@ -34,6 +34,8 @@ var safe: Control      # partie de la vue non recouverte par les panneaux latér
 var stage: Control
 var popup_layer: Control
 var message_label: Label
+var interact_hint: PanelContainer
+var interact_hint_label: Label
 var level_label: Label
 var compass: AtlasCompass
 var pad: TouchControls
@@ -77,7 +79,7 @@ var _timer_track: ColorRect
 var _timer_fill: ColorRect
 var _was_combat: bool = false
 var _flash: ColorRect
-var pouch: HFlowContainer
+var pouch: FlowContainer
 var _pouch_sig: String = ""
 
 var _building := false        # première construction pendant le chargement : le travail est réparti sur plusieurs images
@@ -466,7 +468,7 @@ func _build_parts() -> void:
 	stage.add_child(_timer_track)
 
 	# barre rapide potions / parchemins (combat)
-	pouch = HFlowContainer.new()
+	pouch = FlowContainer.new()
 	pouch.visible = false
 	_place_pouch(true)
 
@@ -488,6 +490,32 @@ func _build_parts() -> void:
 	popup_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(popup_layer)
 
+	interact_hint = PanelContainer.new()
+	interact_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interact_hint.visible = false
+	interact_hint.anchor_left = 0.5
+	interact_hint.anchor_right = 0.5
+	interact_hint.anchor_top = 1.0
+	interact_hint.anchor_bottom = 1.0
+	interact_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	interact_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	interact_hint.offset_bottom = -UiMetrics.css(70.0)
+	var hb := AtlasBox.new(0.0)
+	hb.fill_top = Color(Atlas.OBSIDIAN, 0.92)
+	hb.fill_bottom = Color(Atlas.OBSIDIAN, 0.92)
+	hb.border = Atlas.AMBER
+	hb.cut = 6.0
+	hb.content_margin_left = 16
+	hb.content_margin_right = 16
+	hb.content_margin_top = 6
+	hb.content_margin_bottom = 6
+	interact_hint.add_theme_stylebox_override("panel", hb)
+	interact_hint_label = Label.new()
+	interact_hint_label.add_theme_font_override("font", Atlas.title_font(true, 2))
+	interact_hint_label.add_theme_font_size_override("font_size", int(UiMetrics.rem(0.95)))
+	interact_hint_label.add_theme_color_override("font_color", Atlas.IVORY)
+	interact_hint.add_child(interact_hint_label)
+	safe.add_child(interact_hint)
 	message_label = Label.new()
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	message_label.offset_top = 90
@@ -969,6 +997,14 @@ func _place_pouch(portrait: bool) -> void:
 		pouch.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		pouch.grow_horizontal = Control.GROW_DIRECTION_END
 		pouch.grow_vertical = Control.GROW_DIRECTION_END
+
+## Invite d'action en bas de la vue (« [F] Ouvrir le coffre ») ; vide = masquée.
+func set_interact_hint(text: String) -> void:
+	if interact_hint == null:
+		return
+	interact_hint.visible = text != ""
+	if text != "" and interact_hint_label.text != text:
+		interact_hint_label.text = text
 
 func _refresh_pouch(on: bool) -> void:
 	var potions: Array = []

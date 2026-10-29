@@ -418,6 +418,10 @@ func _drain() -> void:
 					gs.stats["regenCooldown"] = ExploreRegen.AFTER_COMBAT_STEPS     # pas de régénération juste après un combat
 				if not model_in_combat() and not combat.summary.is_empty():
 					combat_won.emit(combat.take_summary())
+			"loot_drop":
+				for d in combat.level.get("items", []):
+					if str(d.id) == str(e.id):
+						view.entities.drop_loot(d)
 			"door_open":
 				combat.lstate().get_or_add("opened_doors", {})[str(e.id)] = true
 				view.open_door(str(e.id))

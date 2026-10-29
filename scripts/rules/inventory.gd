@@ -71,6 +71,36 @@ static func has_space(gs: GameState, it: Dictionary) -> bool:
 				return true
 	return tab_count(gs, tab) < MAX_PER_TAB
 
+## Plus petit rang de butin libre de la case (x, y), en évitant aussi ceux de `reserved`.
+static func free_slot(level: Dictionary, x: int, y: int, reserved: Array = []) -> int:
+	var used := {}
+	for d in level.get("items", []):
+		if int(d.get("x", -1)) == x and int(d.get("y", -1)) == y and d.has("dropSlot") and not (d.get("taken", false)):
+			used[int(d.dropSlot)] = true
+	for r in reserved:
+		used[int(r)] = true
+	var n := 0
+	while used.has(n):
+		n += 1
+	return n
+
+## Dépose un objet au sol de la case (x, y) : jamais perdu (besace pleine). L'objet devient un objet de niveau ordinaire, ramassable en
+## marchant dessus ou avec la touche d'action ; `dropSlot` (rang dans la case) et `dropDir` (angle d'éloignement, rad) fixent sa place
+## exacte pour que plusieurs butins ne s'empilent jamais. Renvoie la définition ajoutée au niveau.
+static func drop_to_floor(gs: GameState, level: Dictionary, tmpl: Dictionary, x: int, y: int, dir_angle: float = 0.0, slot: int = -1) -> Dictionary:
+	var inst := make_instance(tmpl)
+	var n := slot if slot >= 0 else free_slot(level, x, y)
+	inst.erase("price")
+	inst.erase("startHidden")
+	inst["id"] = "drop_" + str(inst.uid)
+	inst["x"] = x
+	inst["y"] = y
+	inst["dropSlot"] = n
+	inst["dropDir"] = dir_angle
+	level["items"].append(inst)
+	gs.item_state(str(level.get("id", "")), str(inst.id)).merge({"taken": false, "hidden": false, "triggered": false}, true)
+	return inst
+
 ## Copie d'un objet de niveau / de bibliothèque sans position.
 static func make_instance(def: Dictionary) -> Dictionary:
 	var inst: Dictionary = def.duplicate(true)

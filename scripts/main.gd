@@ -27,7 +27,16 @@ var _modal_layer: CanvasLayer
 ## Temps de jeu d'un donjon aléatoire (départage les égalités du classement des défis).
 var _choice_poll := 0.0
 
+var _hint_poll := 0.0
+
 func _process(delta: float) -> void:
+	_hint_poll -= delta
+	if _hint_poll <= 0.0 and gs != null and layout != null and inter != null:
+		_hint_poll = 0.2
+		var hint := ""
+		if not gs.game_over and not ctrl.in_combat() and get_tree().get_nodes_in_group("modal").is_empty():
+			hint = inter.interact_hint()
+		layout.set_interact_hint(hint)
 	if gs != null and not gs.choice_queue.is_empty():
 		# talents / évolutions en attente : présentés dès que le combat (et ses effets) est vraiment terminé, sans attendre une action
 		_choice_poll -= delta
@@ -540,6 +549,13 @@ func _toggle_map() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if RunLog.replaying:
 		return                              # rejeu : aucune commande du clavier ne doit modifier la partie
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# clic sur le coffre / levier / objet au sol désigné : même effet que la touche d'action
+		if gs != null and not gs.game_over and get_tree().get_nodes_in_group("modal").is_empty() and not ctrl.in_combat() and inter != null:
+			if inter.click_interact((event as InputEventMouseButton).position):
+				RunLog.rec("i")
+				get_viewport().set_input_as_handled()
+		return
 	if not (event is InputEventKey and event.pressed):
 		return
 	# Touches modifiables dans Paramètres › Commandes (voir Keybinds) ; Échap reste géré par chaque fenêtre.
@@ -682,6 +698,8 @@ func _front() -> Vector2i:
 
 func _interact() -> void:
 	RunLog.rec("i")
+	if inter.interact_here():
+		return
 	var f := _front()
 	var ch := grid.cell(f.x, f.y)
 	if ch == "D":

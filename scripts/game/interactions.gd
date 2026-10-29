@@ -96,12 +96,13 @@ func step_items() -> void:
 				# fontaine logée dans un décroché : on l'utilise en avançant vers elle (comme une porte), pas en passant dessus
 				if LevelBuilder.fountain_niche_dir(grid, int(it.x), int(it.y), str(it.id)) == Vector2i.ZERO or bool(level.get("outdoor", false)):
 					_prompt_fountain(it)
-			"chest": _open_chest(it)
-			"switch": _trigger_switch(it)
+			"chest", "switch":
+				continue      # coffres et leviers s'actionnent au clic ou avec la touche d'action, plus en marchant dessus
 			"decor": _activate_decor(it)
 			_:
 				if PICKUP_TYPES.has(str(it.get("type", ""))):
 					_pickup(it)
+					continue  # tout le butin de la case est ramassé d'un coup
 		break
 
 # ------------------------------------------------------------------ village
@@ -300,6 +301,78 @@ func _chest_contents(it: Dictionary) -> Array:
 				break
 	return out
 
+## Ce que la touche d'action (ou un clic sur l'objet) déclenche ici : coffre ou levier sur la case du groupe ou juste devant lui, ou objet au sol
+## de la case. Renvoie {} s'il n'y a rien ; sinon {"it": définition, "kind": "chest"|"switch"|"pickup", "cell": Vector2i}.
+func interact_target() -> Dictionary:
+	if level.is_empty() or rig == null:
+		return {}
+	var v: Vector2i = DungeonGrid.DIRS[rig.dir]
+	var cells: Array = [Vector2i(rig.gx, rig.gy), Vector2i(rig.gx + v.x, rig.gy + v.y)]
+	for ci in cells.size():
+		var c: Vector2i = cells[ci]
+		for it in level.get("items", []):
+			if int(it.x) != c.x or int(it.y) != c.y:
+				continue
+			var st := gs.item_state(_lid(), str(it.id))
+			if st.get("taken", false) or st.get("disarmed", false) or st.get("hidden", bool(it.get("startHidden", false))):
+				continue
+			match str(it.get("type", "")):
+				"chest":
+					if not st.get("emptied", false):
+						return {"it": it, "kind": "chest", "cell": c}
+				"switch":
+					if not st.get("triggered", false):
+						return {"it": it, "kind": "switch", "cell": c}
+				_:
+					if ci == 0 and PICKUP_TYPES.has(str(it.get("type", ""))):
+						return {"it": it, "kind": "pickup", "cell": c}
+	return {}
+
+## Texte d'invite affiché dans la vue (« [F] Ouvrir le coffre »), vide s'il n'y a rien à faire.
+func interact_hint() -> String:
+	var t := interact_target()
+	if t.is_empty():
+		return ""
+	var key := Keybinds.text("interact").get_slice(" ", 0)
+	match str(t.kind):
+		"chest": return "[%s] %s" % [key, L.t("game.interactions.hint_chest")]
+		"switch": return "[%s] %s" % [key, L.t("game.interactions.hint_switch")]
+	return "[%s] %s" % [key, L.fa(L.t("game.interactions.hint_pickup"), str(t.it.get("name", "")))]
+
+## Un clic de souris (coordonnées de la fenêtre) sur le coffre, le levier ou l'objet au sol désigné par `interact_target` les déclenche.
+func click_interact(mouse: Vector2) -> bool:
+	var t := interact_target()
+	if t.is_empty() or rig == null or rig.camera == null or layout == null or layout.sub_container == null:
+		return false
+	var node: Node3D = null
+	for e in view.entities.items.get(t.cell, []):
+		if str(e.def.id) == str(t.it.id) and is_instance_valid(e.node):
+			node = e.node
+	if node == null or not node.visible:
+		return false
+	var cam := rig.camera
+	var centre: Vector3 = node.global_position + Vector3(0.0, 0.35 if str(t.kind) == "chest" else 0.0, 0.0)
+	if cam.is_position_behind(centre):
+		return false
+	var local := mouse - layout.sub_container.global_position
+	var p := cam.unproject_position(centre)
+	var edge := cam.unproject_position(centre + cam.global_transform.basis.x * 0.8)
+	var radius := maxf(48.0, p.distance_to(edge))
+	if local.distance_to(p) > radius:
+		return false
+	return interact_here()
+
+## Touche d'action ou clic sur l'objet : exécute ce que `interact_target` désigne. Renvoie faux s'il n'y avait rien.
+func interact_here() -> bool:
+	var t := interact_target()
+	if t.is_empty():
+		return false
+	match str(t.kind):
+		"chest": _open_chest(t.it)
+		"switch": _trigger_switch(t.it)
+		"pickup": _pickup(t.it)
+	return true
+
 func _open_chest(it: Dictionary) -> void:
 	var st := gs.item_state(_lid(), str(it.id))
 	if st.get("emptied", false):
@@ -319,24 +392,37 @@ func _open_chest(it: Dictionary) -> void:
 		_log(L.fa(L.t("game.interactions.coffre_or"), gold))
 		ctrl.popup.emit("+%d 💰" % gold, Color("ffd76a"), "")
 	var took: Dictionary = st.get_or_add("took", {})
-	var left := 0
+	# Chaque objet jaillit du coffre d'un petit saut et retombe à sa propre place sur le sol (jamais empilés). Ceux qui tiennent dans la besace
+	# y entrent d'eux-mêmes (le butin s'efface après l'atterrissage) ; les autres restent au sol, ramassables plus tard : rien n'est perdu.
+	var wd: Vector2i = EntityLayer.WALL_SIDES.get(str(it.get("wall", "N")), EntityLayer.WALL_SIDES["N"])["d"]
+	var away := atan2(float(wd.y), float(wd.x))      # direction du mur du coffre : le butin retombe devant lui
+	var cell := Vector2i(int(it.x), int(it.y))
+	var contents: Array = []
 	for c in _chest_contents(it):
-		if took.has(str(c.id)):
-			continue
+		if not took.has(str(c.id)):
+			contents.append(c)
+	var spill: Array = []
+	var reserved: Array = []
+	for c in contents:
 		var inst := Inventory.make_instance(c)
-		if not Inventory.has_space(gs, inst):
-			left += 1
+		took[str(c.id)] = true
+		var slot := Inventory.free_slot(level, cell.x, cell.y, reserved)
+		reserved.append(slot)
+		if Inventory.has_space(gs, inst):
+			Inventory.add(gs, inst)
+			Sound.sfx("pickup")
+			gs.stats["itemsFound"] = int(gs.stats.get("itemsFound", 0)) + 1
+			_log(L.fa(L.t("game.interactions.le_groupe_ramasse"), c.get("name", L.t("game.interactions.un_objet"))))
+			spill.append({"def": c, "keep": false, "slot": slot})
+		else:
 			_log(L.fa(L.t("game.interactions.l_onglet_est_plein_equipez"), [
 				Inventory.TAB_LABELS[Inventory.tab_of(inst)], Inventory.MAX_PER_TAB, Inventory.MAX_PER_TAB, c.get("name", "l'objet")]))
-			continue
-		Inventory.add(gs, inst)
-		took[str(c.id)] = true
-		Sound.sfx("pickup")
-		gs.stats["itemsFound"] = int(gs.stats.get("itemsFound", 0)) + 1
-		_log(L.fa(L.t("game.interactions.le_groupe_ramasse"), c.get("name", L.t("game.interactions.un_objet"))))
-	if left == 0:
-		st["emptied"] = true
-		view.entities.empty_chest(str(it.id))
+			var drop := Inventory.drop_to_floor(gs, level, c, cell.x, cell.y, away, slot)
+			spill.append({"def": drop, "keep": true, "slot": slot})
+	st["emptied"] = true
+	view.entities.empty_chest(str(it.id))
+	if not spill.is_empty():
+		view.entities.spill_loot(str(it.id), cell, away, spill)
 	bag_changed.emit()
 	ctrl.changed.emit()
 

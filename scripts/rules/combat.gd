@@ -1256,6 +1256,9 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 						if not summary.is_empty():
 							summary.loot.append(str(it.name))
 					else:
+						# besace pleine : le butin n'est jamais perdu, il tombe au sol à l'emplacement du monstre
+						var drop := Inventory.drop_to_floor(gs, level, it, int(st.get("x", gs.px)), int(st.get("y", gs.py)))
+						events.append({"type": "loot_drop", "id": str(drop.id)})
 						gs.add_log(L.fa(L.t("rules.combat.laissait_tomber_mais_la_besace"), [_mname(def), it.name]))
 	# endurance récupérée après la victoire (difficulté « normal »)
 	var pct_map: Dictionary = (gs.cfg.get("staminaSettings", {}) as Dictionary).get("victoryGainPct", {"easy": 4, "normal": 6, "hard": 9, "hardcore": 13})

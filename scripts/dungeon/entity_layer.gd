@@ -156,10 +156,76 @@ func populate(level: Dictionary, grid: DungeonGrid = null, sliced: bool = false)
 			_place_on_wall(n, p, str(it.wall))
 		else:
 			_place_on_floor(n, p, str(it.get("icon", "")), true)
+			if it.has("dropSlot"):      # butin tombé au sol : sa place propre dans la case (jamais empilé)
+				var dof := drop_offset(int(it.dropSlot), float(it.get("dropDir", 0.0)))
+				n.position += Vector3(dof.x, 0.0, dof.y)
 		n.visible = not bool(it.get("startHidden", false))
 		add_child(n)
 		if type != "decor" or str(it.get("wall", "")) == "":
 			_register(items, p, n, it)
+
+## Places du butin au sol, dans le repère de la case : `u` le long du mur, `v` en s'éloignant du centre vers le mur du coffre (le coffre occupe
+## v ≈ 0,9 à 1,6 sur u ∈ ±0,7). Les premières places sont devant le coffre, bien visibles du joueur ; deux places ne se recouvrent jamais.
+const LOOT_SPOTS := [Vector2(0.0, 0.75), Vector2(-0.95, 0.75), Vector2(0.95, 0.75), Vector2(-0.5, 0.2), Vector2(0.5, 0.2),
+	Vector2(-1.4, 0.2), Vector2(1.4, 0.2), Vector2(-1.45, 1.3), Vector2(1.45, 1.3), Vector2(0.0, -0.35), Vector2(-1.0, -0.35), Vector2(1.0, -0.35)]
+
+## Décalage (x, z) dans la case de la place `slot` ; `dir_a` : angle (rad) de la direction du mur du coffre. Au-delà des places réservées, une
+## couronne de plus en plus large autour du centre.
+static func drop_offset(slot: int, dir_a: float) -> Vector2:
+	var w := Vector2(cos(dir_a), sin(dir_a))
+	var up := Vector2(-w.y, w.x)
+	if slot < LOOT_SPOTS.size():
+		var sp: Vector2 = LOOT_SPOTS[slot]
+		return w * sp.y + up * sp.x
+	var k := slot - LOOT_SPOTS.size()
+	var a := dir_a + PI + (float(k % 10) - 4.5) * 0.6
+	return Vector2(cos(a), sin(a)) * (1.55 + 0.3 * floorf(float(k) / 10.0))
+
+## Fait jaillir du coffre `chest_id` les objets de `spill` ([{def, keep, slot}]) : chacun décrit un saut et retombe à sa place sur le sol de la
+## case `cell`. `keep` faux : butin déjà dans la besace, il s'efface après l'atterrissage ; vrai : objet de niveau qui reste au sol (ramassable).
+func spill_loot(chest_id: String, cell: Vector2i, dir_a: float, spill: Array) -> void:
+	var from := Vector3(cell.x * LevelBuilder.CELL, 0.9, cell.y * LevelBuilder.CELL)
+	var ch = chests.get(chest_id)
+	if ch != null and is_instance_valid(ch):
+		from = (ch as Node3D).position + Vector3(0.0, 0.8, 0.0)
+	for i in spill.size():
+		_spill_one(from, cell, dir_a, spill[i].def, bool(spill[i].keep), int(spill[i].slot), 0.25 + 0.14 * float(i))
+
+## Objet tombé d'un monstre (besace pleine) : même saut, depuis la case du monstre vers sa place au sol.
+func drop_loot(def: Dictionary) -> void:
+	var cell := Vector2i(int(def.x), int(def.y))
+	var from := Vector3(cell.x * LevelBuilder.CELL, 1.2, cell.y * LevelBuilder.CELL)
+	_spill_one(from, cell, float(def.get("dropDir", 0.0)), def, true, int(def.get("dropSlot", 0)), 0.1)
+
+func _spill_one(from: Vector3, cell: Vector2i, dir_a: float, def: Dictionary, keep: bool, slot: int, delay: float) -> void:
+	var icon := str(def.get("icon", ""))
+	var n := _make_sprite(icon, false, true)
+	if n == null:
+		return
+	add_child(n)
+	_place_on_floor(n, cell, icon, true)
+	var off := drop_offset(slot, dir_a)
+	var land := n.position + Vector3(off.x, 0.0, off.y)
+	n.position = from
+	n.visible = false
+	if keep:
+		_register(items, cell, n, def)
+	var tw := n.create_tween()
+	tw.tween_interval(delay)
+	tw.tween_callback(func(): n.visible = true)
+	tw.tween_method(func(t: float):
+		var arc := sin(PI * t) * 1.1
+		n.position = from.lerp(land, t) + Vector3(0.0, arc, 0.0), 0.0, 1.0, 0.6).set_trans(Tween.TRANS_LINEAR)
+	tw.tween_property(n, "position:y", land.y + 0.18, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)      # petit rebond à l'arrivée
+	tw.tween_property(n, "position:y", land.y, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if keep:
+		return
+	tw.tween_interval(0.55)
+	var m: StandardMaterial3D = (n.material_override as StandardMaterial3D).duplicate()
+	n.material_override = m
+	tw.tween_property(n, "position:y", land.y + 0.5, 0.35).set_trans(Tween.TRANS_SINE)       # le butin s'élève et s'efface : il rejoint la besace
+	tw.parallel().tween_property(m, "albedo_color:a", 0.0, 0.35)
+	tw.tween_callback(n.queue_free)
 
 ## Ouvre (avec animation) ou montre ouvert (sans) le coffre `id`.
 func open_chest(id: String, animate: bool = true) -> void:
