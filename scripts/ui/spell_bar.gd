@@ -52,7 +52,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 	_ult.tip_show.connect(_show_ult_tip)
 	_ult.tip_hide.connect(SpellTip.hide_tip)
 	_ult.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ult.set_caption(Keybinds.text("slot_%d" % (SLOTS + 2)))
+	_ult.set_caption(Keybinds.text("slot_%d" % (SLOTS + 2)).get_slice(" ", 0))
 	add_child(_ult)
 	resized.connect(_apply_size)
 	ctrl.changed.connect(_refresh)
