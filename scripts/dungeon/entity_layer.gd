@@ -419,8 +419,10 @@ func _pose(n: Node3D, delta: float, fighting: bool, charge: float, idle: bool, c
 	var off := Vector3.ZERO
 	if idle and not fighting:
 		var boss: bool = n.get_meta("boss", false)
-		sy += (0.018 if boss else 0.03) * sin(_clock * (1.6 if boss else 2.1) + ph)
-		dy += (0.008 if boss else 0.014) * sin(_clock * 1.3 + ph * 1.7)
+		# monstres Atlas Noir (illustrations très détaillées) : respiration quasi nulle, sinon le grain fin crépite (scintillement)
+		var calm: float = 0.3 if n.has_meta("atlas") else 1.0
+		sy += (0.018 if boss else 0.03) * calm * sin(_clock * (1.6 if boss else 2.1) + ph)
+		dy += (0.008 if boss else 0.014) * calm * sin(_clock * 1.3 + ph * 1.7)
 	# au combat (salle de combat) : le monstre reste immobile, seule l'attaque l'avance vers l'écran
 	var r: Variant = _react.get(n)
 	if r != null:
@@ -753,6 +755,8 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 	mi.set_meta("h", h)
 	if not is_item and not is_boss:
 		mi.set_meta("pose_id", _icon_id(icon))
+		if ResourceLoader.exists("res://assets/monsters/%s_attack.webp" % _icon_id(icon)):
+			mi.set_meta("atlas", true)
 	return mi
 
 ## Décalage vertical d'ancrage (fraction de la hauteur) propre à certaines icônes.
