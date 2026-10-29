@@ -7,11 +7,23 @@ static func hover_pop(c: Control, scale_to: float = 1.06) -> void:
 	c.resized.connect(func(): c.pivot_offset = c.size * 0.5)
 	c.mouse_entered.connect(func():
 		c.pivot_offset = c.size * 0.5
+		_kill_pop(c)
+		c.z_index = 10          # la case agrandie passe par-dessus ses voisines (sinon leurs bords la recouvrent)
 		var t := c.create_tween()
+		c.set_meta("pop_tween", t)
 		t.tween_property(c, "scale", Vector2(scale_to, scale_to), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
 	c.mouse_exited.connect(func():
+		_kill_pop(c)
 		var t := c.create_tween()
-		t.tween_property(c, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT))
+		c.set_meta("pop_tween", t)
+		t.tween_property(c, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_callback(func(): c.z_index = 0))
+
+static func _kill_pop(c: Control) -> void:
+	if c.has_meta("pop_tween"):
+		var old = c.get_meta("pop_tween")
+		if old is Tween and (old as Tween).is_valid():
+			(old as Tween).kill()
 
 ## Apparition d'une fenêtre : fondu + léger zoom arrière (keyframe « combatModalIn » : opacity 0→1, scale 1.06→1).
 static func pop_in(c: Control, seconds: float = 0.18) -> void:

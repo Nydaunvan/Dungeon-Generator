@@ -685,8 +685,15 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	bag_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	bag_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	bag_scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	bag_scroll.custom_minimum_size = Vector2(4.0 * 54.0 + 3.0 * 6.0 + 14.0, 3.0 * 54.0 + 2.0 * 6.0)
-	bag_scroll.add_child(grid)
+	# marge autour de la grille : la case survolée (agrandie) déborde un peu et ne doit pas être rognée par l'ascenseur
+	const POP_PAD := 4
+	bag_scroll.custom_minimum_size = Vector2(4.0 * 54.0 + 3.0 * 6.0 + 14.0 + 2 * POP_PAD, 3.0 * 54.0 + 2.0 * 6.0 + 2 * POP_PAD)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, POP_PAD)
+	pad.add_child(grid)
+	bag_scroll.add_child(pad)
 	body.add_child(bag_scroll)
 	bag_scroll.get_v_scroll_bar().value_changed.connect(func(v: float): _bag_scroll_v = int(v))
 	bag_scroll.set_deferred("scroll_vertical", _bag_scroll_v)
