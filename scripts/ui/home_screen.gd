@@ -60,6 +60,15 @@ func _build() -> void:
 	_wall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_wall)
+	# fond de caverne : occupe toute la page (derrière l'en-tête, la scène et la colonne), recadré au centre sans déformation
+	_scene_bg = TextureRect.new()
+	_scene_bg.texture = _tex("home_bg.png")
+	_scene_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_scene_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_scene_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_scene_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scene_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	add_child(_scene_bg)
 
 	_stage = Control.new()
 	_stage.clip_contents = true
@@ -75,13 +84,6 @@ func _build() -> void:
 	_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_column)
 
-	_scene_bg = TextureRect.new()
-	_scene_bg.texture = _tex("home_bg.png")
-	_scene_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_scene_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED     # image 16:9 sur une scène 16:10 : recadrée au centre, jamais déformée
-	_scene_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_scene_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_stage.add_child(_scene_bg)
 	# chaînes animées (à gauche : avec le crâne ; à droite : avec le crochet, décalée de 1,2 s)
 	for spec in [["chain_left.png", 0.0, Vector2(452, 0), Vector2(40, 228)], ["chain_right.png", 1.2, Vector2(948, 0), Vector2(40, 281)]]:
 		var ch := TextureRect.new()
@@ -161,9 +163,7 @@ func _build() -> void:
 
 	_foot = PanelContainer.new()
 	var fs := StyleBoxFlat.new()
-	fs.bg_color = Color(20 / 255.0, 14 / 255.0, 7 / 255.0, 0.72)
-	fs.border_color = Color(200 / 255.0, 166 / 255.0, 110 / 255.0, 0.35)
-	fs.border_width_top = 1
+	fs.bg_color = Color(0, 0, 0, 0)       # pas de bande : le fond de caverne occupe toute la page
 	fs.set_content_margin_all(8)
 	_foot.add_theme_stylebox_override("panel", fs)
 	var fv := VBoxContainer.new()
@@ -409,8 +409,6 @@ func _layout_stage(area: Rect2) -> void:
 	_stage.position = area.position
 	_stage.size = area.size
 	var off := origin - area.position
-	_scene_bg.position = off
-	_scene_bg.size = sz
 	for c in _chains:
 		var cn: TextureRect = c.node
 		cn.position = off + (c.pos as Vector2) * k
