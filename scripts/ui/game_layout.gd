@@ -967,10 +967,30 @@ func set_ranked_timer(text: String, color: Color) -> void:
 
 func set_level_name(text: String, index: int) -> void:
 	level_label.text = text
-	# repère central : numéro et nom du niveau affiché (le titre du donjon ne sert que si le niveau n'a pas de nom)
-	header.set_level(L.fa(L.t("ui.atlas.level_n"), index + 1), text if text != "" else str(gs.cfg.get("title", "")))
+	# repère central : « NIVEAU n / titre du donjon » ; sans titre, le type de donjon lancé (texte seul, sans pictogramme)
+	header.set_level(L.fa(L.t("ui.atlas.level_n"), index + 1), _dungeon_caption(index + 1))
 	if type_badge != null:
 		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, RankedRun.mode_label(gs.cfg))
+
+## Texte à droite de « NIVEAU n » : le titre du donjon s'il existe (et n'est pas lui-même « Niveau n »), sinon le nom du type de donjon.
+func _dungeon_caption(level_num: int) -> String:
+	var title := str(gs.cfg.get("title", "")).strip_edges()
+	var generic := RegEx.create_from_string("(?i)^\\s*(niveau|level)\\s*\\d+\\s*$")
+	if title != "" and generic.search(title) == null:
+		return title
+	var kind := ""
+	match Data.play_origin:
+		"original":
+			kind = L.t("ui.home_screen.donjon_origine")
+		"custom":
+			kind = L.t("common.donjon_personnalise")
+		"random":
+			kind = L.t("common.donjon_aleatoire") if str(gs.cfg.get("rankedKind", "")) == "" and str(gs.cfg.get("runSeed", "")) == "" else RankedRun.mode_label(gs.cfg)
+		_:
+			kind = RankedRun.mode_label(gs.cfg)
+	# retire pictogramme et espaces de tête (🎲, 🏰, 🛠️…)
+	var strip := RegEx.create_from_string("^[^\\p{L}\\p{N}]+")
+	return strip.sub(kind, "")
 
 ## Barre rapide potions / parchemins : en paysage elle se range en largeur sous le carnet (colonne de droite) ;
 ## en portrait elle reste un petit empilement vertical à gauche de la vue.
