@@ -134,19 +134,145 @@ func _gui_input(e: InputEvent) -> void:
 		queue_redraw()
 		accept_event()
 
-## Jauge d'ultime : anneau doré qui se remplit depuis le haut ; pleine, il pulse (halo or) ; verrouillé : cadenas.
+## Anneau lumineux de l'ultime (shader additif) : l'arc se remplit depuis le haut avec une tête incandescente ; il pulse en continu
+## (doucement en charge, franchement une fois pleine, avec un éclat qui en fait le tour) et le halo déborde du disque.
+const ULT_RING_SHADER := """
+shader_type canvas_item;
+render_mode blend_add;
+uniform float charge = 0.0;
+uniform float ring_px = 26.0;
+uniform float width_px = 2.6;
+uniform float glow_px = 14.0;
+uniform float node_px = 100.0;
+uniform float dim = 1.0;
+uniform float boost = 0.0;
+uniform vec3 gold : source_color = vec3(1.0, 0.81, 0.35);
+uniform vec3 hot : source_color = vec3(1.0, 0.95, 0.74);
+
+float wrap_dist(float a, float b) {
+	float d = abs(a - b);
+	return min(d, 1.0 - d);
+}
+
+void fragment() {
+	vec2 p = (UV - 0.5) * node_px;
+	float d = length(p);
+	float t = atan(p.x, -p.y) / TAU;
+	t = t < 0.0 ? t + 1.0 : t;
+	float full = step(0.999, charge);
+	float dr = abs(d - ring_px);
+	float side = d < ring_px ? 1.7 : 1.0;
+	// arc rempli (bord doux) ; pleine, tout le tour
+	float lit = max(full, smoothstep(charge + 0.006, charge - 0.006, t) * step(0.001, charge));
+	float lit_soft = max(full, smoothstep(charge + 0.025, charge - 0.01, t) * smoothstep(0.0, 0.035, t) * step(0.001, charge));
+	float spd = mix(2.4, 5.2, full);
+	float pulse = 0.5 + 0.5 * sin(TIME * spd);
+	float amp = mix(0.22, 0.6, full);
+	float breath = 1.0 - amp + amp * 2.0 * pulse;       // 1 - amp .. 1 + amp
+	// filet net + halo serré + halo large
+	float core = smoothstep(width_px * 0.5 + 0.9, width_px * 0.5 - 0.3, dr) * lit;
+	float halo1 = exp(-dr * side / (glow_px * 0.22)) * lit_soft * 0.75;
+	float halo2 = exp(-dr * side / (glow_px * 0.62)) * lit_soft * 0.42;
+	// tête incandescente à l'avant de l'arc pendant la charge (distance réelle au point de tête : étincelle ronde)
+	float ha = charge * TAU;
+	vec2 head_pos = ring_px * vec2(sin(ha), -cos(ha));
+	float hd = length(p - head_pos);
+	float on_charge = step(0.001, charge) * (1.0 - full);
+	float head = exp(-pow(hd / (width_px * 2.2), 2.0)) * on_charge;
+	float head_halo = exp(-hd / (glow_px * 0.45)) * on_charge * 0.7;
+	// éclat qui fait le tour de l'anneau une fois plein
+	float ga = fract(TIME * 0.38) * TAU;
+	float gd = length(p - ring_px * vec2(sin(ga), -cos(ga)));
+	float glint = exp(-pow(gd / (width_px * 3.5), 2.0)) * full;
+	float glint_halo = exp(-gd / (glow_px * 0.4)) * full * 0.3;
+	float inten = (core * 1.15 + halo1 + halo2) * breath + head * 1.6 + head_halo + glint * 0.9 + glint_halo;
+	// fondu vers zéro avant le bord du carré : aucun bord de halo visible
+	float edge = 1.0 - smoothstep(ring_px + glow_px * 1.2, node_px * 0.5, d);
+	inten *= edge * (1.0 + boost);
+	vec3 col = mix(gold, hot, clamp(0.25 * pulse * (full + 0.4) + head * 0.8 + glint * 0.7, 0.0, 1.0));
+	COLOR = vec4(col * inten, dim);
+}
+"""
+
+static var _ult_shader: Shader = null
+static var _spark_tex: GradientTexture2D = null
+
+var _ult_ring: ColorRect
+var _ult_sparks: CPUParticles2D
+
+func _ensure_ult_nodes() -> void:
+	if _ult_ring != null:
+		return
+	if _ult_shader == null:
+		_ult_shader = Shader.new()
+		_ult_shader.code = ULT_RING_SHADER
+	_ult_ring = ColorRect.new()
+	_ult_ring.name = "UltRing"
+	_ult_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ult_ring.color = Color.WHITE
+	var mat := ShaderMaterial.new()
+	mat.shader = _ult_shader
+	_ult_ring.material = mat
+	add_child(_ult_ring)
+	if _spark_tex == null:
+		_spark_tex = GradientTexture2D.new()
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		_spark_tex.gradient = g
+		_spark_tex.fill = GradientTexture2D.FILL_RADIAL
+		_spark_tex.fill_from = Vector2(0.5, 0.5)
+		_spark_tex.fill_to = Vector2(1.0, 0.5)
+		_spark_tex.width = 16
+		_spark_tex.height = 16
+	_ult_sparks = CPUParticles2D.new()
+	_ult_sparks.name = "UltSparks"
+	_ult_sparks.texture = _spark_tex
+	var cm := CanvasItemMaterial.new()
+	cm.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_ult_sparks.material = cm
+	_ult_sparks.amount = 20
+	_ult_sparks.lifetime = 1.2
+	_ult_sparks.emitting = false
+	_ult_sparks.local_coords = true
+	_ult_sparks.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE_SURFACE
+	_ult_sparks.gravity = Vector2.ZERO
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1.0, 0.9, 0.55, 0.0))
+	grad.add_point(0.2, Color(1.0, 0.85, 0.4, 0.9))
+	grad.set_color(grad.get_point_count() - 1, Color(1.0, 0.7, 0.2, 0.0))
+	_ult_sparks.color_ramp = grad
+	add_child(_ult_sparks)
+
+## Place et règle l'anneau lumineux : `c` centre du disque, `ro` rayon de l'anneau, `k` échelle.
+func _update_ult_ring(c: Vector2, ro: float, k: float) -> void:
+	_ensure_ult_nodes()
+	var glow := 15.0 * k
+	var side := 2.0 * (ro + glow * 1.6 + 6.0 * k)
+	_ult_ring.size = Vector2(side, side)
+	_ult_ring.position = c - Vector2(side, side) * 0.5
+	var mat := _ult_ring.material as ShaderMaterial
+	mat.set_shader_parameter("charge", 0.0 if ult_locked else ult_charge)
+	mat.set_shader_parameter("ring_px", ro)
+	mat.set_shader_parameter("width_px", 2.6 * k)
+	mat.set_shader_parameter("glow_px", glow)
+	mat.set_shader_parameter("node_px", side)
+	mat.set_shader_parameter("dim", dim)
+	mat.set_shader_parameter("boost", _flash * 0.6)
+	_ult_ring.visible = not ult_locked
+	_ult_sparks.position = c
+	_ult_sparks.emission_sphere_radius = ro
+	_ult_sparks.radial_accel_min = 5.0 * k
+	_ult_sparks.radial_accel_max = 11.0 * k
+	_ult_sparks.scale_amount_min = 0.35 * k
+	_ult_sparks.scale_amount_max = 0.85 * k
+	_ult_sparks.emitting = ult_charge >= 1.0 and not ult_locked
+
+## Jauge d'ultime : piste cuivre fixe, anneau lumineux et pulsant par-dessus (shader) ; verrouillé : cadenas.
 func _draw_ult(c: Vector2, r: float, k: float, mod: Color) -> void:
-	var gold := Color("ffcf5a")
 	var ro := r + 3.4 * k
 	draw_arc(c, ro, 0.0, TAU, 56, Color(Atlas.COPPER_DIM, 0.45 * dim), 2.4 * k, true)
-	if ult_locked:
-		return
-	if ult_charge > 0.0:
-		draw_arc(c, ro, -PI * 0.5, -PI * 0.5 + TAU * ult_charge, 56, Color(gold, (1.0 if ult_charge >= 1.0 else 0.85) * dim), 2.6 * k, true)
-	if ult_charge >= 1.0:
-		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.2)
-		for i in 5:
-			draw_arc(c, ro + 1.5 + i * 1.8 * k, 0.0, TAU, 56, Color(gold, (0.32 - i * 0.055) * (0.55 + 0.45 * pulse) * dim), 2.0 * k, true)
+	_update_ult_ring(c, ro, k)
 
 func _draw_lock(c: Vector2, r: float) -> void:
 	var w := r * 0.62
