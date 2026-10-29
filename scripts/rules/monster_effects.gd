@@ -7,7 +7,7 @@ extends RefCounted
 ## icône de la famille → [statut, aspect, chance par coup (%), durée (tours)]. Les familles absentes (rat, gobelin, loup, orc, gnoll, squelette, homme-lézard) n'ont rien.
 const FAMILY := {
 	"mon_spider": ["poison", "", 35, 3], "mon_naga": ["poison", "", 35, 3], "mon_zombie": ["poison", "", 30, 3], "mon_werewolf": ["poison", "", 35, 3],
-	"mon_mummy": ["weaken", "", 40, 3], "mon_cultist": ["weaken", "", 35, 3],
+	"mon_mummy": ["weaken", "", 40, 3], "mon_fossoyeur": ["weaken", "", 35, 3], "mon_cultist": ["weaken", "", 35, 3],
 	"mon_skeletonarcher": ["slow", "", 35, 2], "mon_mudgolem": ["slow", "", 35, 2], "mon_slime": ["slow", "", 40, 2],
 	"mon_ghost": ["lifedrain", "", 35, 3],
 	"mon_gargoyle": ["stun", "", 20, 1], "mon_stonegolem": ["stun", "", 20, 1], "mon_troll": ["stun", "", 20, 1], "mon_ogre": ["stun", "", 20, 1],

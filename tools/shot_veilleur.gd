@@ -1,5 +1,5 @@
 extends SceneTree
-## Essai d'intégration du Veilleur Os : combat contre lui, puis poses d'attaque (×4), coup reçu et mort.
+## Essai d'intégration d'un monstre Atlas Noir (option icon=mon_xxx) : combat, poses d'attaque (×4), coup reçu et mort.
 ## xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-driver opengl3 --script res://tools/shot_veilleur.gd -- out=/tmp/vo
 func _init() -> void:
 	var args := {}
@@ -16,7 +16,7 @@ func _init() -> void:
 	main.wand.paused_if = func(): return true
 	var g: DungeonGrid = main.grid
 	for mm in main.level.monsters:
-		mm["icon"] = "@icon:mon_veilleur_os"
+		mm["icon"] = "@icon:" + str(args.get("icon", "mon_veilleur_os"))
 		mm.erase("isBoss")
 	main.load_level(main.level_index)
 	await create_timer(1.5).timeout

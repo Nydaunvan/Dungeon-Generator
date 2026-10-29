@@ -2400,6 +2400,21 @@
      "opensDoorId": "",
      "patrolRadius": 2,
      "attackSpeed": 1.8
+    },
+    {
+     "id": "fossoyeur1",
+     "name": "Fossoyeur sans visage",
+     "icon": "@icon:mon_fossoyeur",
+     "x": 7,
+     "y": 3,
+     "force": 10,
+     "dex": 9,
+     "con": 9,
+     "xpReward": 24,
+     "goldReward": 11,
+     "opensDoorId": "",
+     "patrolRadius": 1,
+     "attackSpeed": 1.9
     }
    ],
    "items": [
