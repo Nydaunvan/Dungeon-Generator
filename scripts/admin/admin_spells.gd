@@ -247,17 +247,74 @@ static func _inspector(admin: Node, s: Dictionary, col: Control) -> void:
 		refresh.call())))
 	var g := Ax.grid2(col)
 	_stats(g, s, mode)
-	g.add_child(Ax.num(s, "staminaCost", 15, 0, 50, L.t("common.endurance")))
-	g.add_child(Ax.num(s, "cooldownSec", 6, 0, 60, L.t("admin.spells.recharge")))
+	var ult := bool(s.get("ultimate", false))
+	if not ult:
+		g.add_child(Ax.num(s, "staminaCost", 15, 0, 50, L.t("common.endurance")))
+		g.add_child(Ax.num(s, "cooldownSec", 6, 0, 60, L.t("admin.spells.recharge")))
 	if mode == "damage":
 		g.add_child(Ax.num(s, "spellLifestealPct", 0, 0, 100, L.t("admin.spells.vol_de_vie").lstrip("🩸 ")))
 		Ax.switch_row(col, L.t("admin.spells.ignore_resist"), bool(s.get("ignoreAllResist", false)), func(on: bool):
 			s["ignoreAllResist"] = on
 			Ax.changed(), L.t("admin.spells.degats_vrais_ignore_toute_resistance"))
 		col.add_child(_group(L.t("admin.spells.effet_de_statut"), _status(s, refresh)))
+	Ax.switch_row(col, L.t("admin.spells.ultime"), ult, func(on: bool):
+		s["ultimate"] = on
+		if on:
+			s["staminaCost"] = 0
+			s["cooldownSec"] = 0
+		Ax.changed()
+		refresh.call(), L.t("admin.spells.ultime_aide"))
+	if ult:
+		_ultimate_block(col, s, refresh)
 	_style_block(col, s, admin, refresh)
 	col.add_child(Ax.spacer())
 	col.add_child(Ax.btn(L.t("ui.atelier.s_delete"), func(): _remove(admin, s), "danger", 38.0))
+
+## Réglages d'une technique ultime : description, son emprunté, effets annexes (sacrifice, soins, bouclier, relève, exécution, frappes multiples, or)
+## et statuts sur le groupe / le lanceur / les monstres. Voir Combat._ultimate_extras.
+const ULT_NUMS := [["hits", 1, 1, 10, "admin.spells.ult_hits", ""], ["selfDmgPct", 0, 0, 90, "admin.spells.ult_selfdmg", " %"],
+	["selfHealPct", 0, 0, 100, "admin.spells.ult_selfheal", " %"], ["drainPct", 0, 0, 100, "admin.spells.ult_drain", " %"],
+	["shieldParty", 0, 0, 200, "admin.spells.ult_shield", ""], ["healPartyPct", 0, 0, 100, "admin.spells.ult_healparty", " %"],
+	["revivePct", 0, 0, 100, "admin.spells.ult_revive", " %"], ["executePct", 0, 0, 100, "admin.spells.ult_execute", " %"],
+	["bonusGold", 0, 0, 500, "admin.spells.ult_gold", ""]]
+
+static func _ultimate_block(col: Control, s: Dictionary, refresh: Callable) -> void:
+	col.add_child(_group(L.t("admin.spells.ult_titre"), Ax.para(L.t("admin.spells.ult_resume"), 12, Ax.MUTED)))
+	col.add_child(Ax.labeled(L.t("admin.spells.ult_desc_fr"), Ax.text_field(s, "descFr", 36.0, 13)))
+	col.add_child(Ax.labeled(L.t("admin.spells.ult_desc_en"), Ax.text_field(s, "descEn", 36.0, 13)))
+	var snd: Array = [["", L.t("common.aucun")]]
+	for sid in Sound.SPELL_SOUND_IDS:
+		snd.append([sid, sid])
+	col.add_child(Ax.labeled(L.t("admin.spells.ult_son"), Ax.select(snd, str(s.get("soundFrom", "")), func(v):
+		s["soundFrom"] = str(v)
+		Ax.changed(), 36.0, 13)))
+	var g := Ax.grid2(col)
+	for n in ULT_NUMS:
+		g.add_child(Ax.num(s, str(n[0]), float(n[1]), float(n[2]), float(n[3]), L.t(str(n[4])), 1.0, str(n[5])))
+	var defs: Dictionary = Data.constants.get("STATUS_DEFS", {})
+	var opts: Array = [["", L.t("common.aucun")]]
+	for id in defs:
+		opts.append([id, "%s %s" % [defs[id].get("icon", ""), defs[id].get("label", id)]])
+	for k in [["partyStatuses", "admin.spells.ult_st_party"], ["selfStatuses", "admin.spells.ult_st_self"], ["extraStatuses", "admin.spells.ult_st_monsters"]]:
+		var key: String = k[0]
+		var arr: Array = s.get(key, [])
+		var first: Dictionary = arr[0] if not arr.is_empty() else {}
+		var row := Ax.hbox(8)
+		row.add_child(Ax.labeled(L.t(str(k[1])), Ax.select(opts, str(first.get("effect", "")), func(v):
+			var list: Array = s.get(key, [])
+			if str(v) == "":
+				if not list.is_empty():
+					list.remove_at(0)
+			elif list.is_empty():
+				list.append({"effect": str(v), "duration": 3, "chance": 100})
+			else:
+				list[0]["effect"] = str(v)
+			s[key] = list
+			Ax.changed()
+			refresh.call(), 36.0, 13)))
+		if not first.is_empty():
+			row.add_child(Ax.num(first, "duration", 3, 1, 10, L.t("admin.spells.duree_tours")))
+		col.add_child(row)
 
 static func _group(title_text: String, ctl: Control) -> VBoxContainer:
 	var v := Ax.vbox(6)

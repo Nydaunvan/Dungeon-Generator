@@ -20,7 +20,9 @@ static func _gray_material() -> ShaderMaterial:
 		_gray_mat.shader = sh
 	return _gray_mat
 
-var tone: String = "spell"      # "spell", "attack", "empty"
+var tone: String = "spell"      # "spell", "attack", "ult" (7e sort : technique ultime), "empty"
+var ult_charge: float = 0.0     ## ultime : remplissage de la jauge (0 → 1)
+var ult_locked: bool = false    ## ultime : verrouillé (le héros n'a pas encore évolué) → cadenas
 var glyph: String = ""
 var tex: Texture2D = null
 var cd_text: String = ""
@@ -50,7 +52,7 @@ func _init() -> void:
 	mouse_entered.connect(func():
 		_hover = true
 		queue_redraw()
-		if tone == "spell" or tone == "attack":
+		if tone == "spell" or tone == "attack" or tone == "ult":
 			tip_show.emit())
 	mouse_exited.connect(func():
 		_hover = false
@@ -69,7 +71,7 @@ func flash() -> void:
 func _process(d: float) -> void:
 	_flash = maxf(0.0, _flash - d / 0.45)
 	queue_redraw()
-	if _flash <= 0.0:
+	if _flash <= 0.0 and not (tone == "ult" and ult_charge >= 1.0 and not ult_locked):
 		set_process(false)
 
 func _cap_font() -> int:
@@ -94,6 +96,16 @@ func set_state(g: String, t: Texture2D, cd: String, dimmed: float, hl: bool = fa
 	cd_text = cd
 	dim = dimmed
 	highlight = hl
+	queue_redraw()
+
+## Jauge de l'ultime : `charge` 0 → 1, `locked` = cadenas (classe de base).
+func set_ult(charge: float, locked: bool) -> void:
+	charge = clampf(charge, 0.0, 1.0)
+	if is_equal_approx(charge, ult_charge) and locked == ult_locked:
+		return
+	ult_charge = charge
+	ult_locked = locked
+	set_process(ult_charge >= 1.0 or _flash > 0.0)
 	queue_redraw()
 
 func set_badge(glyph: String, harmful: bool = true) -> void:
@@ -121,6 +133,32 @@ func _gui_input(e: InputEvent) -> void:
 			_down = false
 		queue_redraw()
 		accept_event()
+
+## Jauge d'ultime : anneau doré qui se remplit depuis le haut ; pleine, il pulse (halo or) ; verrouillé : cadenas.
+func _draw_ult(c: Vector2, r: float, k: float, mod: Color) -> void:
+	var gold := Color("ffcf5a")
+	var ro := r + 3.4 * k
+	draw_arc(c, ro, 0.0, TAU, 56, Color(Atlas.COPPER_DIM, 0.45 * dim), 2.4 * k, true)
+	if ult_locked:
+		return
+	if ult_charge > 0.0:
+		draw_arc(c, ro, -PI * 0.5, -PI * 0.5 + TAU * ult_charge, 56, Color(gold, (1.0 if ult_charge >= 1.0 else 0.85) * dim), 2.6 * k, true)
+	if ult_charge >= 1.0:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.2)
+		for i in 5:
+			draw_arc(c, ro + 1.5 + i * 1.8 * k, 0.0, TAU, 56, Color(gold, (0.32 - i * 0.055) * (0.55 + 0.45 * pulse) * dim), 2.0 * k, true)
+
+func _draw_lock(c: Vector2, r: float) -> void:
+	var w := r * 0.62
+	var h := r * 0.46
+	var col := Color(Atlas.IVORY_DIM, 0.9 * dim)
+	draw_arc(Vector2(c.x, c.y - h * 0.35), w * 0.34, PI, TAU, 14, col, maxf(1.6, r * 0.11), true)
+	draw_line(Vector2(c.x - w * 0.34, c.y - h * 0.35), Vector2(c.x - w * 0.34, c.y), col, maxf(1.6, r * 0.11), true)
+	draw_line(Vector2(c.x + w * 0.34, c.y - h * 0.35), Vector2(c.x + w * 0.34, c.y), col, maxf(1.6, r * 0.11), true)
+	var body_r := Rect2(Vector2(c.x - w * 0.5, c.y - h * 0.05), Vector2(w, h))
+	draw_rect(body_r, Color(Atlas.COPPER, 0.85 * dim))
+	draw_rect(body_r, Color("0a0c0b", 0.9 * dim), false, 1.0)
+	draw_circle(Vector2(c.x, c.y + h * 0.28), maxf(1.4, r * 0.07), Color("0a0c0b", 0.9 * dim))
 
 func _draw() -> void:
 	# Style Atlas : disque sombre, filet cuivre (ambre au survol / sélection), pas de rivets ; légende (numéro de touche) dessous.
@@ -161,6 +199,8 @@ func _draw() -> void:
 		var tc := Color(Atlas.AMBER if hot else Atlas.COPPER, 0.9 * dim)
 		for dir in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
 			draw_line(c + dir * (r - 1.0), c + dir * (r + 2.6 * k), tc, 1.0, true)
+	if tone == "ult":
+		_draw_ult(c, r, k, mod)
 	if caption != "":
 		var cf := Atlas.font(Atlas.F_BODY_BOLD)
 		var cs := _cap_font()
@@ -168,7 +208,9 @@ func _draw() -> void:
 		draw_string(cf, Vector2(c.x - ct.x * 0.5, area.y + cap_h - 3.0), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, cs, Color(Atlas.IVORY_DIM, dim))
 	# contenu
 	var inner := r * 1.08
-	if tex != null and tone != "empty":
+	if tone == "ult" and ult_locked:
+		_draw_lock(c, r)
+	elif tex != null and tone != "empty":
 		var s := inner * 0.92
 		draw_texture_rect(tex, Rect2(c - Vector2(s, s) * 0.5, Vector2(s, s)), false, Color(1.25, 1.25, 1.25, dim))
 	elif glyph != "":

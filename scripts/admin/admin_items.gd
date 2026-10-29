@@ -351,7 +351,8 @@ static func _details(col: Control, g: GridContainer, it: Dictionary, admin: Node
 			var cfg: Dictionary = Data.admin_config()
 			var so: Array = []
 			for s in cfg.get("spells", []):
-				so.append([s.id, AdminUtil.spell_label(s)])
+				if not bool(s.get("ultimate", false)):         # une technique ultime ne s'apprend ni ne se lit : elle vient de la classe
+					so.append([s.id, AdminUtil.spell_label(s)])
 			if so.is_empty():
 				so.append(["", L.t("common.aucun_sort_defini_2")])
 			_before(g, Ax.labeled(L.t("admin.items.sort_enseigne"), Ax.select(so, it.get("spellId", ""), func(x):

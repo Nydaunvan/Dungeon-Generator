@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 18
+const SCHEMA := 19
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -72,6 +72,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v16_to_v17(d))
 			17:
 				notes.append_array(_v17_to_v18(d))
+			18:
+				notes.append_array(_v18_to_v19(d, defaults))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -490,6 +492,41 @@ static func _v17_to_v18(d: Dictionary) -> Array[String]:
 		n += _crown_fix(inv)
 		n += _crown_worn((sv as Dictionary).get("party", []), inv)
 	return ["couronne d'or sertie : %d objet(s) passé(s) en casque" % n] if n > 0 else []
+
+## v18 → v19 : techniques ultimes (7e sort des classes évoluées). Les 14 sorts ultimes manquants et le lien « ultimateSpellId » des classes évoluées
+## sont ajoutés, ainsi que les réglages de la jauge (ultimateSettings). Un donjon « custom » garde ses classes et ses sorts tels quels ; un sort ou un lien
+## déjà présent n'est jamais écrasé.
+static func _v18_to_v19(d: Dictionary, defaults: Dictionary) -> Array[String]:
+	var cfg = d.get("config")
+	if not (cfg is Dictionary) or (cfg as Dictionary).is_empty() or str(d.get("dungeonOrigin", "random")) == "custom":
+		return []
+	var c: Dictionary = cfg
+	var added := 0
+	var spells = c.get("spells")
+	var theirs = defaults.get("spells")
+	if spells is Array and theirs is Array:
+		var have := {}
+		for e in spells:
+			if e is Dictionary:
+				have[str(e.get("id", ""))] = true
+		for e in theirs:
+			if e is Dictionary and bool(e.get("ultimate", false)) and not have.has(str(e.get("id", ""))):
+				(spells as Array).append((e as Dictionary).duplicate(true))
+				added += 1
+	var linked := 0
+	var classes = c.get("classes")
+	var tclasses = defaults.get("classes")
+	if classes is Array and tclasses is Array:
+		for tc in tclasses:
+			if not (tc is Dictionary) or str(tc.get("ultimateSpellId", "")) == "":
+				continue
+			for mc in classes:
+				if mc is Dictionary and str(mc.get("id", "")) == str(tc.id) and str(mc.get("ultimateSpellId", "")) == "":
+					mc["ultimateSpellId"] = str(tc.ultimateSpellId)
+					linked += 1
+	if not c.has("ultimateSettings") and defaults.get("ultimateSettings") is Dictionary:
+		c["ultimateSettings"] = (defaults.ultimateSettings as Dictionary).duplicate(true)
+	return ["techniques ultimes : %d sort(s) ajouté(s), %d classe(s) reliée(s)" % [added, linked]] if added + linked > 0 else []
 
 static func _is_crown(it: Variant) -> bool:
 	return it is Dictionary and str((it as Dictionary).get("icon", "")) == "@icon:spr_156" and str((it as Dictionary).get("type", "")) == "jewelry"

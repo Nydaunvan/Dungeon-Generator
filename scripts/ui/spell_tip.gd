@@ -58,6 +58,19 @@ static func lines(spell: Dictionary, caster: Dictionary = {}) -> Array[String]:
 		var sd := Statuses.def(se)
 		var extra := " · %d/tour" % int(spell.statusPower) if int(spell.get("statusPower", 0)) > 0 else ""
 		out.append(L.fa(L.t("ui.spell_tip.effet_de_statut_tour"), [sd.get("icon", ""), sd.get("label", se), int(spell.get("statusChance", 0)), int(spell.get("statusDuration", 0)), extra]))
+	if bool(spell.get("ultimate", false)):
+		var desc := str(spell.get("descEn" if Data.lang == "en" else "descFr", ""))
+		if desc != "":
+			out.append(desc)
+		var hits := int(spell.get("hits", 1))
+		if hits > 1:
+			out.append(L.fa(L.t("ui.spell_tip.ultime_frappes"), hits))
+		if not caster.is_empty():
+			var mx := float(Characters.ult_cfg(Data.config).max)
+			out.append(L.fa(L.t("ui.spell_tip.ultime_jauge"), [int(round(Characters.ult_charge(caster) / mx * 100.0))]))
+		else:
+			out.append(L.t("ui.spell_tip.ultime_sans_cout"))
+		return out
 	out.append(L.fa(L.t("ui.spell_tip.endurance_recharge_ds"), [int(spell.get("staminaCost", 15)), int(spell.get("cooldownSec", 6))]))
 	return out
 
@@ -133,6 +146,19 @@ static func show_attack(host: Control, caster: Dictionary, attack_cost: int) -> 
 	if y < 4.0:
 		y = r.end.y + 6.0
 	t.position = Vector2(x, y)
+
+## Infobulle du disque d'ultime verrouillé (héros de classe de base).
+static func show_locked(host: Control) -> void:
+	var t := _inst_for(host)
+	t._label.text = "[b][color=#e8b45c]%s[/color][/b]\n%s" % [L.t("ui.spell_tip.ultime_titre"), L.t("ui.spell_tip.ultime_verrouille")]
+	t.size = Vector2.ZERO
+	t.visible = true
+	await host.get_tree().process_frame
+	if not is_instance_valid(t) or not is_instance_valid(host):
+		return
+	var r := host.get_global_rect()
+	var vs := host.get_viewport().get_visible_rect().size
+	t.position = Vector2(clampf(r.position.x + r.size.x * 0.5 - t.size.x * 0.5, 4.0, maxf(4.0, vs.x - t.size.x - 4.0)), maxf(4.0, r.position.y - t.size.y - 6.0))
 
 static func hide_tip() -> void:
 	if _inst != null and is_instance_valid(_inst):

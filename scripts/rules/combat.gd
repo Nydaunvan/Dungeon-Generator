@@ -467,7 +467,9 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		gs.add_log(L.t("rules.combat.sorts_interdits_defi"), true)       # règle « Armes seules » du Défi de la semaine
 		return false
 	var spell := spell_def(spell_id)
-	if spell.is_empty() or (not free and not (caster.get("spellsKnown", []) as Array).has(spell_id)):
+	var is_ult := bool(spell.get("ultimate", false))         # 7e sort : technique ultime d'une classe évoluée, chargée par la jauge
+	var knows := (caster.get("spellsKnown", []) as Array).has(spell_id) if not is_ult else Characters.ultimate_id(gs.cfg, caster) == spell_id
+	if spell.is_empty() or (not free and not knows):
 		gs.add_log(L.fa(L.t("rules.combat.ne_connait_pas_ce_sort"), caster.name))
 		return false
 	var mode := str(spell.get("mode", "damage"))
@@ -491,6 +493,8 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		if target.is_empty():
 			gs.add_log(L.t("rules.combat.il_n_y_a_rien"))
 			return false
+	elif is_ult and not (spell.get("extraStatuses", []) as Array).is_empty():
+		target = front_monster()         # ultime de soutien qui affaiblit aussi les monstres en face (ceux-ci peuvent être absents)
 	var ally: Dictionary = {}
 	if spell_needs_ally(spell):
 		ally = gs.char_by_id(ally_id)
@@ -503,12 +507,19 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		if Statuses.has(ally, "freeze"):
 			gs.add_log(L.fa(L.t("rules.combat.est_gele_impossible_de_lui"), ally.name))
 			return false
-	var cost := 0 if free else int(spell.get("staminaCost", 15))
+	if is_ult and not free and not Characters.ult_ready(gs.cfg, caster):
+		gs.add_log(L.fa(L.t("rules.combat.ultime_pas_charge"), [spell.name, int(Characters.ult_charge(caster)), int(Characters.ult_cfg(gs.cfg).max)]))
+		return false
+	var cost := 0 if (free or is_ult) else int(spell.get("staminaCost", 15))
 	if int(caster.get("stamina", 0)) < cost:
 		gs.add_log(L.fa(L.t("rules.combat.n_a_plus_assez_endurance"), [caster.name, spell.name]))
 		return false
 	caster["stamina"] = int(caster.stamina) - cost
-	if not free:
+	if is_ult and not free:
+		caster["ultCharge"] = 0.0
+		gs.add_log(L.fa(L.t("rules.combat.ultime_declenche"), [caster.name, spell.get("icon", ""), spell.name]), true)
+		events.append({"type": "popup", "text": L.t("rules.combat.ultime_popup"), "on": "char:" + str(caster.id), "color": Color("ffcf5a")})
+	if not free and not is_ult:
 		var cds: Dictionary = caster.get("spellCooldowns", {})
 		cds[spell_id] = GameClock.ms + int(float(spell.get("cooldownSec", 6)) * 1000.0)
 		caster["spellCooldowns"] = cds
@@ -529,8 +540,8 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		"ally": ally_idx if ally_idx >= 0 else caster_idx, "caster": caster_idx, "status": str(spell.get("statusEffect", "")), "solo": gs.party.size() == 1}
 	fx_ctx.merge(SpellFxLibrary.fx_keys(spell))      # effet visuel choisi dans l'éditeur (fx, teinte, intensité)
 	events.append({"type": "fx3d", "spell": spell_id, "ctx": fx_ctx})
-	if Sound.spell_sound(str(spell_id)):
-		pass        # son fourni pour ce sort
+	if Sound.spell_sound(str(spell_id)) or (str(spell.get("soundFrom", "")) != "" and Sound.spell_sound(str(spell.soundFrom))):
+		pass        # son fourni pour ce sort (ou emprunté à un autre sort : « soundFrom », cas des ultimes)
 	elif ["healSingle", "healParty", "staminaRestoreSingle", "shieldSingle", "dispelSingle", "selfBuff", "partyUtility"].has(mode):
 		Sound.sfx("heal")
 	else:
@@ -541,9 +552,22 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 	match mode:
 		"damage", "damageGroup":
 			var int_bonus := power + bonus
-			var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
 			var magic: bool = str(spell.get("style", "")) != "physical"
-			_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", bool(spell.get("ignoreAllResist", false)), spell, mode == "damageGroup")
+			var hit_spell := spell
+			var pool: Array = spell.get("statusPool", [])
+			if not pool.is_empty():         # ultime à statut aléatoire (brûlure ou gel…)
+				hit_spell = spell.duplicate()
+				hit_spell["statusEffect"] = str(pool[GameRng.i("combat") % pool.size()])
+			_dmg_acc = 0
+			for hi in maxi(1, int(spell.get("hits", 1))):          # plusieurs frappes sur la même cible (ultime du Danselame)
+				if hi > 0 and not _target_alive(target):
+					break
+				var dmg := GameRng.range_i("combat", int(spell.get("dmgMin", 0)) + int_bonus, int(spell.get("dmgMax", 0)) + int_bonus)
+				var ign := bool(spell.get("ignoreAllResist", false))
+				if int(spell.get("executePct", 0)) > 0 and _executable(target, int(spell.executePct)):
+					dmg = _lethal_damage(caster, target)          # exécution : sous le seuil de PV, la cible est tuée net
+					ign = true
+				_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", ign, hit_spell, mode == "damageGroup")
 		"healSingle":
 			var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus + power, int(spell.get("healMax", 0)) + bonus + power)
 			var before := int(ally.hp)
@@ -619,12 +643,114 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				var cds: Dictionary = c.get("spellCooldowns", {})
 				for sid in cds.keys():
 					cds[sid] = maxi(now, int(cds[sid]) - cut_ms)
-				Statuses.give(c, "vigor", int(spell.get("statusDuration", 4)), str(caster.id))
+				if not is_ult:
+					Statuses.give(c, "vigor", int(spell.get("statusDuration", 4)), str(caster.id))
 				Characters.recompute(c, gs.cfg)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_tout_le_groupe"), [caster.name, spell.get("icon", ""), spell.name]), true)
-			events.append({"type": "popup", "text": "🎶 Vigueur", "on": "party", "color": Color("ffd88a")})
+			events.append({"type": "popup", "text": "🎶 Vigueur" if not is_ult else str(spell.name), "on": "party", "color": Color("ffd88a")})
+	if is_ult:
+		_ultimate_extras(caster, spell, target)
+	elif mode != "damage" and mode != "damageGroup":
+		Characters.ult_gain(gs.cfg, caster, "gainSupport")          # un sort de soutien charge aussi la jauge d'ultime
 	_mark_acted(caster, mode != "damage")
 	return true
+
+# ------------------------------------------------------------------ ultimes
+
+var _dmg_acc := 0          ## dégâts totaux du dernier sort offensif (vol de vie de l'ultime du Sorcier)
+
+func _target_alive(target: Dictionary) -> bool:
+	var st: Dictionary = lstate().monsters.get(str(target.id), {})
+	return not st.is_empty() and bool(st.get("alive", false))
+
+## Exécution : la cible visée (pas un boss) est sous `pct` % de ses PV.
+func _executable(target: Dictionary, pct: int) -> bool:
+	if bool(target.get("isBoss", false)):
+		return false
+	var st: Dictionary = lstate().monsters[str(target.id)]
+	var hs := _hit_holders(target, st, false)
+	if hs.is_empty():
+		return false
+	var h: Dictionary = hs[0]
+	return float(h.hp) <= float(h.get("maxHp", st.maxHp)) * pct / 100.0
+
+## Dégâts bruts qui tuent la cible malgré l'affaiblissement éventuel du héros.
+func _lethal_damage(attacker: Dictionary, target: Dictionary) -> int:
+	var st: Dictionary = lstate().monsters[str(target.id)]
+	var hs := _hit_holders(target, st, false)
+	var hp := float(hs[0].hp) if not hs.is_empty() else float(st.hp)
+	var keep := maxf(0.2, 1.0 - Statuses.damage_reduction_pct(attacker) / 100.0)
+	return int(ceil(hp / keep)) + 1
+
+func _heal_hero(c: Dictionary, amount: int) -> int:
+	var before := int(c.hp)
+	c["hp"] = mini(int(c.maxHp), before + maxi(0, amount))
+	return int(c.hp) - before
+
+## Effets propres à l'ultime, après son effet principal : sacrifice de PV, soins, boucliers, relève d'un héros tombé, statuts sur le groupe,
+## sur le lanceur ou sur les monstres touchés, butin d'or.
+func _ultimate_extras(caster: Dictionary, spell: Dictionary, target: Dictionary) -> void:
+	var cid := str(caster.id)
+	var sd := int(spell.get("selfDmgPct", 0))
+	if sd > 0 and int(caster.hp) > 0:
+		var loss := mini(maxi(1, int(round(int(caster.maxHp) * sd / 100.0))), int(caster.hp) - 1)
+		caster["hp"] = int(caster.hp) - loss
+		gs.add_log(L.fa(L.t("rules.combat.ultime_sacrifice"), [caster.name, loss]), true)
+		events.append({"type": "popup", "text": "-%d" % loss, "on": "char:" + cid, "color": Color("c0392b")})
+	var drain := int(spell.get("drainPct", 0))
+	if drain > 0 and _dmg_acc > 0:
+		var got := _heal_hero(caster, maxi(1, int(round(_dmg_acc * drain / 100.0))))
+		if got > 0:
+			gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [caster.name, got]), true)
+			events.append({"type": "popup", "text": "+%d" % got, "on": "char:" + cid, "color": Color("7fd17f")})
+	var sh := int(spell.get("selfHealPct", 0))
+	if sh > 0:
+		var got2 := _heal_hero(caster, int(round(int(caster.maxHp) * sh / 100.0)))
+		if got2 > 0:
+			gs.add_log(L.fa(L.t("rules.combat.ultime_se_soigne"), [caster.name, got2]), true)
+			events.append({"type": "popup", "text": "+%d" % got2, "on": "char:" + cid, "color": Color("7fd17f")})
+	var party_heal := int(spell.get("healPartyPct", 0))
+	var shield := int(spell.get("shieldParty", 0))
+	if party_heal > 0 or shield > 0:
+		for c in gs.alive_party():
+			if party_heal > 0:
+				_heal_hero(c, int(round(int(c.maxHp) * party_heal / 100.0)))
+			if shield > 0:
+				c["shieldAmount"] = int(c.get("shieldAmount", 0)) + shield
+		if party_heal > 0:
+			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "on": "party", "color": Color("7fd17f")})
+		if shield > 0:
+			gs.add_log(L.fa(L.t("rules.combat.ultime_bouclier_groupe"), [caster.name, shield]), true)
+			events.append({"type": "popup", "text": "🛡️ %d" % shield, "on": "party", "color": Color("8fc8e8")})
+	var rv := int(spell.get("revivePct", 0))
+	if rv > 0:
+		for c in gs.party:
+			if int(c.hp) <= 0:
+				c["hp"] = maxi(1, int(round(int(c.maxHp) * rv / 100.0)))
+				c["statusEffects"] = []
+				Characters.recompute(c, gs.cfg)
+				gs.add_log(L.fa(L.t("rules.combat.ultime_releve"), [caster.name, c.name, int(c.hp)]), true)
+				events.append({"type": "popup", "text": L.t("rules.combat.ultime_releve_popup"), "on": "char:" + str(c.id), "color": Color("ffe9a0")})
+				break          # un seul héros tombé est relevé
+	for k in [["partyStatuses", true], ["selfStatuses", false]]:
+		for es in spell.get(k[0], []):
+			for c in (gs.alive_party() if bool(k[1]) else [caster]):
+				Statuses.give(c, str(es.effect), int(es.get("duration", 3)), cid)
+				Characters.recompute(c, gs.cfg)
+	if not target.is_empty() and not (spell.get("extraStatuses", []) as Array).is_empty() and lstate().monsters.has(str(target.id)):
+		var st: Dictionary = lstate().monsters[str(target.id)]
+		for h in _hit_holders(target, st, true):
+			if not bool(h.get("alive", true)):
+				continue
+			for es in spell.extraStatuses:
+				var one := {"statusEffect": str(es.effect), "statusChance": int(es.get("chance", 100)), "statusDuration": int(es.get("duration", 3)), "statusPower": int(es.get("power", 3))}
+				Statuses.apply_from_spell(gs, one, h, _mname(target), cid, false)
+	var gold := int(spell.get("bonusGold", 0))
+	if gold > 0 and not target.is_empty():
+		var got3 := GameRng.range_i("combat", gold, gold * 2) * maxi(1, int(caster.level))
+		gs.gold += got3
+		gs.add_log(L.fa(L.t("rules.combat.ultime_rafle"), [caster.name, got3]), true)
+		events.append({"type": "popup", "text": "+%d 💰" % got3, "on": "party", "color": Color("ffd24a")})
 
 ## Les soins comptent dans la contribution au combat (XP), pondérés par xpSettings.healRatio.
 func _credit_heal(caster: Dictionary, healed: int, stat: bool = true) -> void:
@@ -675,6 +801,8 @@ func _hit_holders(target: Dictionary, st: Dictionary, all_members: bool) -> Arra
 func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic: bool, verb: String,
 		all_members: bool, ignore_resist: bool, spell: Dictionary = {}, aoe: bool = false) -> void:
 	var st: Dictionary = lstate().monsters[str(target.id)]
+	if not bool(spell.get("ultimate", false)):
+		Characters.ult_gain(gs.cfg, attacker, "gainHit")           # chaque coup porté charge la jauge d'ultime
 	var base_resist := int(target.get("resistMagic", 0)) if magic else int(target.get("resistPhys", 0))
 	var first_h: Array = _hit_holders(target, st, all_members)
 	var sh: Dictionary = first_h[0] if not first_h.is_empty() else st      # statuts du monstre (ou du membre) réellement frappé
@@ -709,6 +837,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 
 	var is_group: bool = bool(target.get("isGroup", false)) and st.has("members")
 	var holders: Array = first_h
+	_dmg_acc += dmg * holders.size()
 	for h in holders:
 		h["hp"] = float(h.hp) - dmg
 		_add_contrib(st, str(attacker.id), dmg)
@@ -875,6 +1004,8 @@ func _basic_hit_tail(def: Dictionary, st: Dictionary, victim: Dictionary, dmg: i
 	var raw := dmg
 	dmg = _instinct_damage(victim, dmg, outcome)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	if dmg > 0:
+		Characters.ult_gain(gs.cfg, victim, "gainTaken")        # un coup reçu charge aussi la jauge d'ultime
 	if outcome == "perfect":
 		_instinct_class_effect(def, st, victim, raw)
 	if int(victim.hp) <= 0 and dmg > 0 and _perk_value(victim, "last_stand") > 0 and not bool(victim.get("lastStandUsed", false)):
@@ -1066,6 +1197,8 @@ func _ability_hit_tail(def: Dictionary, st: Dictionary, spell: Dictionary, victi
 	var raw := dmg
 	dmg = _instinct_damage(victim, dmg, outcome)
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
+	if dmg > 0:
+		Characters.ult_gain(gs.cfg, victim, "gainTaken")        # un coup reçu charge aussi la jauge d'ultime
 	if outcome == "perfect":
 		_instinct_class_effect(def, st, victim, raw)
 	var sta: Dictionary = gs.cfg.get("staminaSettings", {})

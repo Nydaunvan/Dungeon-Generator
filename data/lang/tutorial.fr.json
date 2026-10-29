@@ -17,12 +17,12 @@
  {
   "id": "classes",
   "label": "3. Classes",
-  "text": "[font_size=20][color=#e8b45c]3. Onglet Classes[/color][/font_size]\n\nAjustez les [b]classes de base[/b] et leurs [b]évolutions[/b] (statistiques, armes autorisées, sorts accessibles). Une classe évoluée est débloquée automatiquement en jeu à un niveau donné.\n\nChaque classe affiche aussi ses [b]talents[/b] : 5 paliers (niveaux 5/10/15/20/25), avec pour chacun deux choix éditables (icône, nom, description) et une liste déroulante pour sélectionner le type de bonus associé (Force, Critique, Résistance, PV max...) avec une valeur libre — plusieurs effets peuvent être combinés sur un même talent."
+  "text": "[font_size=20][color=#e8b45c]3. Onglet Classes[/color][/font_size]\n\nAjustez les [b]classes de base[/b] et leurs [b]évolutions[/b] (statistiques, armes autorisées, sorts accessibles). Une classe évoluée est débloquée automatiquement en jeu à un niveau donné.\n\nChaque classe affiche aussi ses [b]talents[/b] : 5 paliers (niveaux 5/10/15/20/25), avec pour chacun deux choix éditables (icône, nom, description) et une liste déroulante pour sélectionner le type de bonus associé (Force, Critique, Résistance, PV max...) avec une valeur libre — plusieurs effets peuvent être combinés sur un même talent.\n\nChaque classe évoluée peut aussi avoir une [b]technique ultime[/b] (carte « Technique ultime » de l'onglet Classes), à choisir parmi les sorts marqués ainsi."
  },
  {
   "id": "spells",
   "label": "4. Sorts / Capacités",
-  "text": "[font_size=20][color=#e8b45c]4. Onglet Sorts / Capacités[/color][/font_size]\n\nCréez les [b]sorts et capacités spéciales[/b] utilisables en combat : dégâts, soin, effet de statut, animation associée. Réglez pour chacun son [b]coût en endurance[/b] et son [b]temps de recharge[/b] — plus un sort est puissant, plus il devrait coûter cher et/ou recharger lentement."
+  "text": "[font_size=20][color=#e8b45c]4. Onglet Sorts / Capacités[/color][/font_size]\n\nCréez les [b]sorts et capacités spéciales[/b] utilisables en combat : dégâts, soin, effet de statut, animation associée. Réglez pour chacun son [b]coût en endurance[/b] et son [b]temps de recharge[/b] — plus un sort est puissant, plus il devrait coûter cher et/ou recharger lentement.\n\nActivez [b]Technique ultime[/b] sur un sort pour en faire le 7e sort d'une classe évoluée : sans endurance ni recharge, il demande une jauge pleine (réglable dans Règles du jeu › Combat), avec des effets annexes (sacrifice de PV, soin, bouclier, relève, exécution, frappes multiples, statuts)."
  },
  {
   "id": "items",

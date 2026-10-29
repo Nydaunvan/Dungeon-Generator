@@ -375,6 +375,9 @@ func _meta(sp: Dictionary) -> String:
 		var sd := Statuses.def(se)
 		var pw := " · %d/tour" % int(sp.statusPower) if int(sp.get("statusPower", 0)) > 0 else ""
 		out += "\n[b]Effet[/b] : %s %s (%d%% · %d tour(s)%s)" % [sd.get("icon", ""), sd.get("label", se), int(sp.get("statusChance", 0)), int(sp.get("statusDuration", 0)), pw]
+	if bool(sp.get("ultimate", false)):
+		var desc := str(sp.get("descEn" if Data.lang == "en" else "descFr", ""))
+		return out + "\n" + L.t("ui.party_modal.ultime_meta") + ("\n" + desc if desc != "" else "")
 	out += L.fa(L.t("ui.party_modal.b_endurance_b_b_recharge"), [int(sp.get("staminaCost", 15)), int(sp.get("cooldownSec", 6))])
 	return out
 
@@ -401,14 +404,16 @@ func _spells(p: Control, c: Dictionary) -> void:
 		var k: Dictionary = g[0]
 		if g[1] != "":
 			_source_label(p, str(k.get("icon", "")), g[1])
-		var ids: Array = k.get("allowedSpellIds", [])
+		var ids: Array = (k.get("allowedSpellIds", []) as Array).duplicate()
+		if str(k.get("ultimateSpellId", "")) != "":
+			ids.append(str(k.ultimateSpellId))        # 7e sort : technique ultime de la classe évoluée
 		if ids.is_empty():
 			var none := Label.new()
 			none.text = L.t("common.aucun_sort_defini")
 			none.add_theme_color_override("font_color", UiTheme.DIM)
 			p.add_child(none)
 		for sid in ids:
-			_spell_card(p, str(sid), known.has(sid))
+			_spell_card(p, str(sid), known.has(sid) or (str(sid) == Characters.ultimate_id(gs.cfg, c)))
 
 
 # ------------------------------------------------------------------ caractéristiques détaillées

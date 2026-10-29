@@ -626,7 +626,11 @@ func _try_slot(slot: int) -> bool:
 		return false
 	var c := gs.char_by_id(gs.active_char_id)
 	var known: Array = c.get("spellsKnown", []) if not c.is_empty() else []
-	if slot - 1 < known.size():
+	if slot == 7:       # touche 8 : technique ultime (7e sort) de la classe évoluée, si la jauge est pleine
+		var ult := Characters.ultimate_id(gs.cfg, c)
+		if ult != "":
+			ctrl.cast(ult)
+	elif slot - 1 < known.size():
 		ctrl.cast(str(known[slot - 1]))
 	return true
 

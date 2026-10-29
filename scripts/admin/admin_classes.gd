@@ -262,6 +262,8 @@ static func _tab_spells(b: Control, admin: Node, cfg: Dictionary, cls: Dictionar
 		sf.add_theme_constant_override("v_separation", 8)
 		sc.add_child(sf)
 		for s in spells:
+			if bool(s.get("ultimate", false)):
+				continue          # les techniques ultimes ont leur propre carte (« Technique ultime »)
 			var sid: String = s.id
 			var pill := Ax.pill(AdminUtil.spell_label(s), (cls.allowedSpellIds as Array).has(sid), Callable(), Ax.GOLD, 34.0, 13, 13)
 			pill.pressed.connect(func():
@@ -280,12 +282,25 @@ static func _tab_spells(b: Control, admin: Node, cfg: Dictionary, cls: Dictionar
 				counter.text = L.fa(L.t("ui.atelier.c_inherit_n"), [arr.size(), max_sp])
 				Ax.changed())
 			sf.add_child(pill)
+	_ultimate_card(b, admin, cfg, cls)
 	if not base.is_empty() and not (base.get("allowedSpellIds", []) as Array).is_empty():
 		var names2: Array = []
 		for sid in base.allowedSpellIds:
 			var sp := AdminChars.spell_by_id(cfg, str(sid))
 			names2.append(AdminUtil.spell_label(sp) if not sp.is_empty() else str(sid))
 		sc.add_child(_inherit_note(str(base.name), names2))
+
+## Carte « Technique ultime (7e sort) » : choix du sort ultime de la classe (réservé aux sorts marqués « technique ultime » dans l'onglet Sorts).
+static func _ultimate_card(b: Control, admin: Node, cfg: Dictionary, cls: Dictionary) -> void:
+	var uc := _card(b, L.t("admin.classes.ultime_titre"))
+	var opts: Array = [["", L.t("common.aucun")]]
+	for s in cfg.get("spells", []):
+		if bool(s.get("ultimate", false)):
+			opts.append([str(s.id), AdminUtil.spell_label(s)])
+	uc.add_child(Ax.para(L.t("admin.classes.ultime_aide"), 12, Ax.MUTED))
+	uc.add_child(Ax.select(opts, str(cls.get("ultimateSpellId", "")), func(v):
+		cls["ultimateSpellId"] = str(v)
+		Ax.changed(), 40.0, 14))
 
 ## Note « 🔗 Hérite aussi de **base** : … » (nom de la base en gras).
 static func _inherit_note(base_name: String, items: Array) -> Control:
@@ -353,7 +368,8 @@ static func _progression(b: Control, admin: Node, cfg: Dictionary, cls: Dictiona
 	if spells.is_empty():
 		spell_opts.append(["", L.t("common.aucun_sort_defini_2")])
 	for s in spells:
-		spell_opts.append([s.id, AdminUtil.spell_label(s)])
+		if not bool(s.get("ultimate", false)):
+			spell_opts.append([s.id, AdminUtil.spell_label(s)])
 	st.spell = str(spell_opts[0][0])
 	var spell_sel := Ax.select(spell_opts, st.spell, func(v): st.spell = str(v))
 	spell_sel.custom_minimum_size.x = 220

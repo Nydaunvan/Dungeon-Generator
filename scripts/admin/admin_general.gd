@@ -292,7 +292,14 @@ static func _p_combat(host: Control, admin: Node) -> void:
 	_sub(b, L.t("admin.general.resistances"), 10)
 	_note(b, L.t("admin.general.resistances_aide"))
 	_c(b, L.t("admin.general.resistances_boss"), "bossResist", true)
-	_anchors(page, admin, [[L.t("ui.atelier.card_turn"), t], [L.t("common.endurance"), e], [L.t("ui.atelier.card_rage"), r], [L.t("ui.atelier.card_boss"), b]])
+	# ---- Technique ultime (7e sort des classes évoluées)
+	var u := Ax.card(cols[1], L.t("admin.general.ultime_titre"), L.t("admin.general.ultime_aide"))
+	_s(u, L.t("admin.general.ultime_max"), "ultimateSettings.max", 20, 500, 5, 100)
+	_s(u, L.t("admin.general.ultime_niveau"), "ultimateSettings.startLevel", 1, 30, 1, 5)
+	_s(u, L.t("admin.general.ultime_gain_coup"), "ultimateSettings.gainHit", 0, 100, 1, 10)
+	_s(u, L.t("admin.general.ultime_gain_subi"), "ultimateSettings.gainTaken", 0, 100, 1, 6)
+	_s(u, L.t("admin.general.ultime_gain_soutien"), "ultimateSettings.gainSupport", 0, 100, 1, 6)
+	_anchors(page, admin, [[L.t("ui.atelier.card_turn"), t], [L.t("common.endurance"), e], [L.t("admin.general.ultime_titre"), u], [L.t("ui.atelier.card_rage"), r], [L.t("ui.atelier.card_boss"), b]])
 
 # ------------------------------------------------------------------ Progression
 

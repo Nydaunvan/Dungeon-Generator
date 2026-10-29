@@ -29,6 +29,7 @@ const ACTIONS := [
 	{"id": "slot_5", "group": "combat", "fr": [KEY_5], "en": [KEY_5]},
 	{"id": "slot_6", "group": "combat", "fr": [KEY_6], "en": [KEY_6]},
 	{"id": "slot_7", "group": "combat", "fr": [KEY_7], "en": [KEY_7]},
+	{"id": "slot_8", "group": "combat", "fr": [KEY_8], "en": [KEY_8]},
 	{"id": "inventory", "group": "interface", "fr": [KEY_I], "en": [KEY_I]},
 	{"id": "map", "group": "interface", "fr": [KEY_M], "en": [KEY_M]},
 	{"id": "perf", "group": "interface", "fr": [KEY_F3], "en": [KEY_F3]},

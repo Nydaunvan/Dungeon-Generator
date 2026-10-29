@@ -875,7 +875,10 @@ func _build_drawer(c: Dictionary) -> Control:
 		_drawer_inner.add_child(ln)
 	_add_bonus_overview(c)
 	_drawer_inner.add_child(_label(L.t("ui.equip_dock.sorts_et_capacites"), 13, UiTheme.GOLD, UiTheme.F_TITLE_BOLD))
-	var known: Array = c.get("spellsKnown", [])
+	var known: Array = (c.get("spellsKnown", []) as Array).duplicate()
+	var ult := Characters.ultimate_id(gs.cfg, c)
+	if ult != "":
+		known.append(ult)          # technique ultime de la classe évoluée, à la suite des sorts
 	if known.is_empty():
 		_drawer_inner.add_child(_label(L.t("ui.equip_dock.aucune_competence_apprise"), 13, UiTheme.DIM, UiTheme.F_BODY_ITALIC))
 	for sid in known:
@@ -883,6 +886,8 @@ func _build_drawer(c: Dictionary) -> Control:
 			if sp.get("id") == sid:
 				var ic := str(sp.get("icon", ""))
 				var l := _label(L.fa(L.t("ui.equip_dock.endurance_recharge"), [("" if ic.begins_with("@icon:") else ic), sp.name, Interactions.spell_effect(sp), int(sp.get("staminaCost", 0)), int(sp.get("cooldownSec", 0))]), 13)
+				if bool(sp.get("ultimate", false)):
+					l.text = L.fa(L.t("ui.equip_dock.ultime_ligne"), [("" if ic.begins_with("@icon:") else ic), sp.name, Interactions.spell_effect(sp)])
 				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				l.custom_minimum_size = Vector2(200, 0)
 				l.mouse_filter = Control.MOUSE_FILTER_STOP

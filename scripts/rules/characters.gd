@@ -18,6 +18,35 @@ static func class_def(cfg: Dictionary, class_id: String) -> Dictionary:
 			return c
 	return {}
 
+# ------------------------------------------------------------------ ultime (7e sort)
+
+## Réglages de la jauge d'ultime (cfg.ultimateSettings) avec valeurs par défaut : max, niveau minimal, gains par coup porté / reçu / action de soutien.
+const ULT_DEFAULTS := {"max": 100, "startLevel": 5, "gainHit": 10, "gainTaken": 6, "gainSupport": 6}
+
+static func ult_cfg(cfg: Dictionary) -> Dictionary:
+	var out := ULT_DEFAULTS.duplicate()
+	out.merge(cfg.get("ultimateSettings", {}), true)
+	return out
+
+## Identifiant du sort ultime du héros : seules les classes évoluées en ont un (« ultimateSpellId »), dès le niveau de départ. "" = verrouillé.
+static func ultimate_id(cfg: Dictionary, c: Dictionary) -> String:
+	if c.is_empty() or int(c.get("level", 1)) < int(ult_cfg(cfg).startLevel):
+		return ""
+	return str(class_def(cfg, str(c.get("classId", ""))).get("ultimateSpellId", ""))
+
+static func ult_charge(c: Dictionary) -> float:
+	return float(c.get("ultCharge", 0.0))
+
+static func ult_ready(cfg: Dictionary, c: Dictionary) -> bool:
+	return ultimate_id(cfg, c) != "" and ult_charge(c) >= float(ult_cfg(cfg).max)
+
+## Fait monter la jauge d'ultime (`key` : gainHit, gainTaken ou gainSupport). Sans effet pour un héros qui n'a pas d'ultime.
+static func ult_gain(cfg: Dictionary, c: Dictionary, key: String) -> void:
+	if ultimate_id(cfg, c) == "" or int(c.get("hp", 0)) <= 0:
+		return
+	var u := ult_cfg(cfg)
+	c["ultCharge"] = minf(float(u.max), ult_charge(c) + float(u.get(key, 0)))
+
 static func instantiate_item(lib_id: String, cfg: Dictionary) -> Dictionary:
 	for def in cfg.get("itemLibrary", []):
 		if def.get("id") == lib_id:

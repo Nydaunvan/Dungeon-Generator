@@ -1386,7 +1386,7 @@ static func _mon_editor(v: VBoxContainer, lvl: Dictionary, m: Dictionary) -> voi
 	# capacité spéciale
 	var spells: Array = [["", _plain(L.t("admin.levels.attaque_simple"))]]
 	for s in _cfg().get("spells", []):
-		if s.get("mode") == "damage":
+		if s.get("mode") == "damage" and not bool(s.get("ultimate", false)):
 			spells.append([s.id, str(s.get("name", ""))])
 	v.add_child(Ax.labeled(_plain(L.t("admin.levels.capacite_chance")), Ax.select(spells, str(m.get("abilitySpellId", "")), func(val):
 		m["abilitySpellId"] = val
@@ -1729,7 +1729,8 @@ static func _item_details(v: VBoxContainer, it: Dictionary, lvl: Dictionary) -> 
 		"scroll":
 			var so: Array = []
 			for s in _cfg().get("spells", []):
-				so.append([s.id, str(s.get("name", ""))])
+				if not bool(s.get("ultimate", false)):
+					so.append([s.id, str(s.get("name", ""))])
 			if so.is_empty():
 				so.append(["", _plain(L.t("common.aucun_sort_defini_2"))])
 			var hint := Ax.para("", 12, Ax.MUTED)

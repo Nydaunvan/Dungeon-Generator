@@ -32,7 +32,7 @@ const KEY_ACTIONS := {
 	"strafe_left": "ui.keys.act_strafe_left", "strafe_right": "ui.keys.act_strafe_right", "attack": "ui.keys.act_attack",
 	"interact": "ui.keys.act_interact", "flee": "ui.keys.act_flee", "slot_1": "ui.keys.act_slot_1", "slot_2": "ui.keys.act_slot_2",
 	"slot_3": "ui.keys.act_slot_3", "slot_4": "ui.keys.act_slot_4", "slot_5": "ui.keys.act_slot_5", "slot_6": "ui.keys.act_slot_6",
-	"slot_7": "ui.keys.act_slot_7", "inventory": "ui.keys.act_inventory", "map": "ui.keys.act_map", "perf": "ui.keys.act_perf",
+	"slot_7": "ui.keys.act_slot_7", "slot_8": "ui.keys.act_slot_8", "inventory": "ui.keys.act_inventory", "map": "ui.keys.act_map", "perf": "ui.keys.act_perf",
 	"fullscreen": "ui.keys.act_fullscreen"}
 
 static func open(host: Node, tab: String = "graphics") -> Modal:

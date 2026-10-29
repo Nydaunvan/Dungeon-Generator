@@ -17,12 +17,12 @@
  {
   "id": "classes",
   "label": "3. Classes",
-  "text": "[font_size=20][color=#e8b45c]3. Classes tab[/color][/font_size]\n\nAdjust the [b]base classes[/b] and their [b]evolutions[/b] (stats, allowed weapons, accessible spells). An evolved class is unlocked automatically in-game at a given level.\n\nEach class also shows its [b]talents[/b]: 5 tiers (levels 5/10/15/20/25), each with two editable choices (icon, name, description) and a dropdown to pick the associated bonus type (Strength, Critical, Resistance, Max HP...) with a free value — multiple effects can be combined on a single talent."
+  "text": "[font_size=20][color=#e8b45c]3. Classes tab[/color][/font_size]\n\nAdjust the [b]base classes[/b] and their [b]evolutions[/b] (stats, allowed weapons, accessible spells). An evolved class is unlocked automatically in-game at a given level.\n\nEach class also shows its [b]talents[/b]: 5 tiers (levels 5/10/15/20/25), each with two editable choices (icon, name, description) and a dropdown to pick the associated bonus type (Strength, Critical, Resistance, Max HP...) with a free value — multiple effects can be combined on a single talent.\n\nEach evolved class can also have an [b]ultimate technique[/b] (“Ultimate technique” card of the Classes tab), picked among the spells flagged as such."
  },
  {
   "id": "spells",
   "label": "4. Spells / Abilities",
-  "text": "[font_size=20][color=#e8b45c]4. Spells / Abilities tab[/color][/font_size]\n\nCreate the [b]spells and special abilities[/b] usable in combat: damage, healing, status effect, matching animation. Set each one's [b]stamina cost[/b] and [b]cooldown[/b] — the more powerful a spell, the more it should cost and/or the slower it should recharge."
+  "text": "[font_size=20][color=#e8b45c]4. Spells / Abilities tab[/color][/font_size]\n\nCreate the [b]spells and special abilities[/b] usable in combat: damage, healing, status effect, matching animation. Set each one's [b]stamina cost[/b] and [b]cooldown[/b] — the more powerful a spell, the more it should cost and/or the slower it should recharge.\n\nSwitch on [b]Ultimate technique[/b] for a spell to make it the 7th spell of an evolved class: no stamina or cooldown, it needs a full gauge (set in Game rules › Combat), with extra effects (HP sacrifice, heal, shield, raise, execution, multiple strikes, statuses)."
  },
  {
   "id": "items",

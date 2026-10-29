@@ -852,6 +852,307 @@
    "statusChance": 20,
    "statusDuration": 1,
    "cooldownSec": 15
+  },
+  {
+   "id": "spell_ult_berserker",
+   "name": "Rage Sanguinaire",
+   "icon": "💢",
+   "style": "physical",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "phys_fury",
+   "soundFrom": "spell_berserker4",
+   "descFr": "Déchaîne la rage : frappe tout le groupe visé, puis le Berserker gagne Lame Ardente 3 tours au prix de 12 % de ses PV.",
+   "descEn": "Unleashes rage: hits the whole targeted group, then the Berserker gains Flame Blade for 3 turns at the cost of 12% of their HP.",
+   "dmgMin": 24,
+   "dmgMax": 36,
+   "selfDmgPct": 12,
+   "selfStatuses": [
+    {
+     "effect": "weaponfire",
+     "duration": 3
+    }
+   ]
+  },
+  {
+   "id": "spell_ult_paladin",
+   "name": "Jugement Divin",
+   "icon": "⚖️",
+   "style": "holy",
+   "mode": "damage",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "holy_judgment",
+   "soundFrom": "spell_paladin2",
+   "descFr": "Frappe sacrée sur une cible (étourdissement possible). Tout le groupe reçoit un bouclier et le Paladin récupère des PV.",
+   "descEn": "Holy strike on one target (may stun). The whole party gains a shield and the Paladin recovers HP.",
+   "dmgMin": 30,
+   "dmgMax": 44,
+   "statusEffect": "stun",
+   "statusChance": 60,
+   "statusDuration": 1,
+   "shieldParty": 14,
+   "selfHealPct": 20
+  },
+  {
+   "id": "spell_ult_magearcher",
+   "name": "Volée Arcanique",
+   "icon": "🏹",
+   "style": "arcane",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "arcane_stars",
+   "soundFrom": "spell_magearcher3",
+   "descFr": "Une volée de flèches enchantées frappe tout le groupe visé et peut le ralentir.",
+   "descEn": "A volley of enchanted arrows hits the whole targeted group and may slow it.",
+   "dmgMin": 22,
+   "dmgMax": 32,
+   "statusEffect": "slow",
+   "statusChance": 65,
+   "statusDuration": 3
+  },
+  {
+   "id": "spell_ult_bladedancer",
+   "name": "Tempête d'Acier",
+   "icon": "🌀",
+   "style": "physical",
+   "mode": "damage",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "phys_deadly",
+   "soundFrom": "spell_bladedancer4",
+   "descFr": "Cinq frappes éclair sur la même cible ; le Danselame gagne Célérité 2 tours.",
+   "descEn": "Five lightning strikes on one target; the Bladedancer gains Haste for 2 turns.",
+   "dmgMin": 9,
+   "dmgMax": 14,
+   "hits": 5,
+   "selfStatuses": [
+    {
+     "effect": "haste",
+     "duration": 2
+    }
+   ]
+  },
+  {
+   "id": "spell_ult_thief",
+   "name": "Rafle Éclair",
+   "icon": "💰",
+   "style": "shadow",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "shadow_ambush",
+   "soundFrom": "spell_thief3",
+   "descFr": "Frappe tout le groupe visé et rafle une bourse d'or au passage.",
+   "descEn": "Hits the whole targeted group and snatches a purse of gold on the way.",
+   "dmgMin": 20,
+   "dmgMax": 30,
+   "bonusGold": 12
+  },
+  {
+   "id": "spell_ult_assassin",
+   "name": "Exécution",
+   "icon": "🗡️",
+   "style": "shadow",
+   "mode": "damage",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "shadow_execute",
+   "soundFrom": "spell_assassin3",
+   "descFr": "Dégâts énormes sur une cible, empoisonnée ; elle est tuée net sous 30 % de ses PV (sauf boss).",
+   "descEn": "Huge damage on one target, poisoned; it dies outright below 30% HP (bosses excepted).",
+   "dmgMin": 34,
+   "dmgMax": 48,
+   "executePct": 30,
+   "statusEffect": "poison",
+   "statusChance": 85,
+   "statusDuration": 4,
+   "statusPower": 4
+  },
+  {
+   "id": "spell_ult_elementalist",
+   "name": "Cataclysme Élémentaire",
+   "icon": "☄️",
+   "style": "fire",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "fire_meteor",
+   "soundFrom": "spell_elementalist1",
+   "descFr": "Frappe tout le groupe visé de feu, de glace ou de foudre : brûlure ou gel au hasard.",
+   "descEn": "Strikes the whole targeted group with fire, ice or lightning: random burn or freeze.",
+   "dmgMin": 28,
+   "dmgMax": 40,
+   "statusPool": [
+    "burn",
+    "freeze"
+   ],
+   "statusChance": 70,
+   "statusDuration": 3,
+   "statusPower": 4
+  },
+  {
+   "id": "spell_ult_warlock",
+   "name": "Pacte Funeste",
+   "icon": "🌑",
+   "style": "shadow",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "shadow_apocalypse",
+   "soundFrom": "spell_warlock4",
+   "descFr": "Sacrifie 10 % de ses PV, ravage tout le groupe visé et récupère 40 % des dégâts infligés.",
+   "descEn": "Sacrifices 10% of own HP, ravages the whole targeted group and recovers 40% of the damage dealt.",
+   "dmgMin": 26,
+   "dmgMax": 38,
+   "selfDmgPct": 10,
+   "drainPct": 40
+  },
+  {
+   "id": "spell_ult_cleric",
+   "name": "Miracle",
+   "icon": "🙏",
+   "style": "holy",
+   "mode": "healParty",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "heal_sanctuary",
+   "soundFrom": "spell_cleric4",
+   "descFr": "Soigne tout le groupe, lui donne un bouclier et relève un héros tombé à 40 % de ses PV.",
+   "descEn": "Heals the whole party, shields it and raises a fallen hero at 40% HP.",
+   "healMin": 28,
+   "healMax": 40,
+   "shieldParty": 12,
+   "revivePct": 40
+  },
+  {
+   "id": "spell_ult_crusader",
+   "name": "Croisade",
+   "icon": "✝️",
+   "style": "holy",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "holy_anathema",
+   "soundFrom": "spell_crusader3",
+   "descFr": "Frappe sacrée sur tout le groupe visé ; le groupe gagne Lame Ardente 3 tours et un bouclier.",
+   "descEn": "Holy strike on the whole targeted group; the party gains Flame Blade for 3 turns and a shield.",
+   "dmgMin": 24,
+   "dmgMax": 34,
+   "shieldParty": 10,
+   "partyStatuses": [
+    {
+     "effect": "weaponfire",
+     "duration": 3
+    }
+   ]
+  },
+  {
+   "id": "spell_ult_skald",
+   "name": "Chant de Guerre",
+   "icon": "📯",
+   "style": "bard",
+   "mode": "partyUtility",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "bard_requiem",
+   "soundFrom": "spell_skald3",
+   "descFr": "Le groupe gagne Célérité et Lame Ardente 3 tours ; les monstres visés deviennent vulnérables.",
+   "descEn": "The party gains Haste and Flame Blade for 3 turns; targeted monsters become vulnerable.",
+   "partyStatuses": [
+    {
+     "effect": "haste",
+     "duration": 3
+    },
+    {
+     "effect": "weaponfire",
+     "duration": 3
+    }
+   ],
+   "extraStatuses": [
+    {
+     "effect": "warcry",
+     "chance": 100,
+     "duration": 3
+    }
+   ]
+  },
+  {
+   "id": "spell_ult_minstrel",
+   "name": "Berceuse Finale",
+   "icon": "🌙",
+   "style": "bard",
+   "mode": "sleepGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "bard_lullaby",
+   "soundFrom": "spell_minstrel1",
+   "descFr": "Endort tout le groupe visé et rend un peu de vie au groupe.",
+   "descEn": "Puts the whole targeted group to sleep and restores some of the party's health.",
+   "statusChance": 100,
+   "statusDuration": 4,
+   "healPartyPct": 12
+  },
+  {
+   "id": "spell_ult_warden",
+   "name": "Racines Ancestrales",
+   "icon": "🌳",
+   "style": "nature",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "nature_vines",
+   "soundFrom": "spell_nature2",
+   "descFr": "Des racines étourdissent le groupe visé, l'empoisonnent, et rendent un peu de vie au groupe.",
+   "descEn": "Roots stun the targeted group, poison it, and restore some of the party's health.",
+   "dmgMin": 10,
+   "dmgMax": 16,
+   "statusEffect": "stun",
+   "statusChance": 65,
+   "statusDuration": 2,
+   "extraStatuses": [
+    {
+     "effect": "poison",
+     "chance": 100,
+     "duration": 4,
+     "power": 3
+    }
+   ],
+   "healPartyPct": 10
+  },
+  {
+   "id": "spell_ult_stormcaller",
+   "name": "Colère du Ciel",
+   "icon": "⛈️",
+   "style": "nature",
+   "mode": "damageGroup",
+   "ultimate": true,
+   "staminaCost": 0,
+   "cooldownSec": 0,
+   "fx": "nature_wrath",
+   "soundFrom": "spell_nature11",
+   "descFr": "La foudre s'abat sur tout le groupe visé et peut l'étourdir.",
+   "descEn": "Lightning strikes the whole targeted group and may stun it.",
+   "dmgMin": 28,
+   "dmgMax": 40,
+   "statusEffect": "stun",
+   "statusChance": 45,
+   "statusDuration": 1
   }
  ],
  "itemLibrary": [
@@ -1253,7 +1554,8 @@
      "level": 27,
      "spellId": "spell_skald4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_skald"
   },
   {
    "id": "class_minstrel",
@@ -1290,7 +1592,8 @@
      "level": 27,
      "spellId": "spell_minstrel4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_minstrel"
   },
   {
    "id": "class_berserker",
@@ -1328,7 +1631,8 @@
      "level": 27,
      "spellId": "spell_berserker4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_berserker"
   },
   {
    "id": "class_paladin",
@@ -1365,7 +1669,8 @@
      "level": 22,
      "spellId": "spell_paladin2"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_paladin"
   },
   {
    "id": "class_magearcher",
@@ -1401,7 +1706,8 @@
      "level": 25,
      "spellId": "spell_magearcher3"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_magearcher"
   },
   {
    "id": "class_bladedancer",
@@ -1439,7 +1745,8 @@
      "level": 28,
      "spellId": "spell_bladedancer4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_bladedancer"
   },
   {
    "id": "class_thief",
@@ -1475,7 +1782,8 @@
      "level": 27,
      "spellId": "spell_thief4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_thief"
   },
   {
    "id": "class_assassin",
@@ -1512,7 +1820,8 @@
      "level": 27,
      "spellId": "spell_assassin4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_assassin"
   },
   {
    "id": "class_elementalist",
@@ -1548,7 +1857,8 @@
      "level": 28,
      "spellId": "spell_elementalist3"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_elementalist"
   },
   {
    "id": "class_warlock",
@@ -1585,7 +1895,8 @@
      "level": 27,
      "spellId": "spell_warlock4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_warlock"
   },
   {
    "id": "class_cleric",
@@ -1622,7 +1933,8 @@
      "level": 27,
      "spellId": "spell_cleric4"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_cleric"
   },
   {
    "id": "class_crusader",
@@ -1654,7 +1966,8 @@
      "level": 27,
      "spellId": "spell_crusader3"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_crusader"
   },
   {
    "id": "class_warden",
@@ -1691,7 +2004,8 @@
      "level": 27,
      "spellId": "spell_nature9"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_warden"
   },
   {
    "id": "class_stormcaller",
@@ -1727,7 +2041,8 @@
      "level": 27,
      "spellId": "spell_nature11"
     }
-   ]
+   ],
+   "ultimateSpellId": "spell_ult_stormcaller"
   }
  ],
  "party": [
@@ -2299,5 +2614,12 @@
     }
    ]
   }
- ]
+ ],
+ "ultimateSettings": {
+  "max": 100,
+  "startLevel": 5,
+  "gainHit": 10,
+  "gainTaken": 6,
+  "gainSupport": 6
+ }
 }
