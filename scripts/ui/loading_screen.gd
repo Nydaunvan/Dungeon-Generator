@@ -111,10 +111,11 @@ func _build() -> void:
 	seal_box.visible = false
 	col.add_child(seal_box)
 	_seal = TextureRect.new()
-	_seal.texture = load("res://assets/home/seal.png")
+	_seal.texture = load("res://assets/ui/compass.png")
 	_seal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_seal.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_seal.size = Vector2(150, 150)
+	_seal.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	_seal.pivot_offset = Vector2(75, 75)
 	_seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	seal_box.add_child(_seal)

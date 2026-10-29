@@ -311,7 +311,7 @@ func rescale() -> void:
 	_box.content_margin_top = UiMetrics.css(15.0 if not UiMetrics.portrait else 0.0)    # titre et icônes descendus vers le décroché
 	_box.emit_changed()
 	if _emblem != null:
-		_emblem.custom_minimum_size = Vector2(side * 1.6, side * 1.6)
+		_emblem.custom_minimum_size = Vector2(side * 1.8, side * 1.8)
 		_emblem.queue_redraw()
 	if nav_row != null:
 		for b in nav_row.get_children():

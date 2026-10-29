@@ -137,7 +137,7 @@ Les écrans plein cadre adoptent un style commun, d'après la maquette validée 
 Boutons à l'écran (tactile) ou clavier, touches physiques : ↑/Z avancer, ↓/S reculer, Q/D pas de côté, ←/A et →/E tourner (libellés AZERTY).
 
 ## Icône du jeu
-- Source : l'épée du jeu (`assets/ui/sword_loading_padded.png`) ; `python3 tools/make_icon.py` régénère `assets/app_icon.png` (icône du projet : fenêtre et barre des tâches sous Windows et Linux), `installer/app.ico` et `installer/app_icon_256.png`.
+- Source : la boussole Atlas Noir (`assets/ui/compass.png`, aussi utilisée par l'en-tête, le pied de la carte et l'écran de chargement) ; `python3 tools/make_icon.py` régénère `assets/app_icon.png` (icône du projet : fenêtre et barre des tâches sous Windows et Linux), `installer/app.ico` et `installer/app_icon_256.png`.
 - Windows : le workflow de publication applique `installer/app.ico` et les informations de version à l'exécutable avec rcedit sous Wine (`tools/patch_windows_exe.sh`, vérifié par `tools/check_exe_icon.py` : simple avertissement en cas d'échec) ; l'installateur Inno Setup, ses raccourcis et la désinstallation utilisent la même icône (`installer/app.ico`).
 - Linux : l'exécutable ELF ne porte pas d'icône ; l'archive complète contient `Dungeon Generator.png` et `install-menu.sh` (entrée du menu des applications avec l'icône, sans droits administrateur ; `--remove` pour la retirer).
 

@@ -126,7 +126,7 @@ func _build() -> void:
 		ch.texture = _tex(spec[0])
 		ch.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ch.stretch_mode = TextureRect.STRETCH_SCALE
-		ch.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		ch.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC    # mipmaps : plus de scintillement du grain pendant l'oscillation
 		ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_stage.add_child(ch)
 		_chains.append({"node": ch, "delay": spec[1], "pos": spec[2], "size": spec[3]})
