@@ -3780,7 +3780,9 @@
   "admin.general.ultime_niveau": "Minimum hero level",
   "admin.general.ultime_gain_coup": "Gain per hit dealt",
   "admin.general.ultime_gain_subi": "Gain per hit taken",
-  "admin.general.ultime_gain_soutien": "Gain per support spell"
+  "admin.general.ultime_gain_soutien": "Gain per support spell",
+  "ui.ultimate.bouton": "ULTIMATE",
+  "ui.ultimate.touche": "Click / %s"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

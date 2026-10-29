@@ -206,6 +206,11 @@ func _ready() -> void:
 	instinct_ui.ctrl = ctrl
 	instinct_ui.view = layout.sub_container
 	ui.add_child(instinct_ui)
+	var ult_ui := UltimateOverlay.new()      # bouton d'ultime (sceau doré, côté droit de la vue)
+	ult_ui.ctrl = ctrl
+	ult_ui.view = layout.sub_container
+	ult_ui.instinct = instinct_ui
+	ui.add_child(ult_ui)
 	card_fx.ref_cam = rig.camera
 	card_fx.ref_view = layout.sub_container
 	# la vue 3D ne dessine rien tant que le chargement n'est pas fini : tout le temps d'image va à l'écran de chargement (épée fluide)
