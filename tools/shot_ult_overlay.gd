@@ -40,7 +40,7 @@ func _init() -> void:
 	main.ctrl.combat.ensure_gauges()
 	main.ctrl.combat.gauges["char_" + str(hero.id)] = 100.0
 	var ult = null
-	for c in main.ui.get_children():
+	for c in main.instinct_ui.get_parent().get_children():
 		var sc = c.get_script()
 		if sc != null and sc.get_global_name() == &"UltimateOverlay": ult = c
 	if args.has("both"):
