@@ -461,7 +461,7 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 				return true
 			var mm: Dictionary = wand.merchant() if wand != null else {}
 			return not mm.is_empty() and absi(int(mm.x) - rig.gx) + absi(int(mm.y) - rig.gy) <= 2
-	layout.set_level_name(str(level.name))
+	layout.set_level_name(str(gs.cfg.levels[index].name), index)
 	layout.minimap.bind(grid, rig, gs)
 	layout.minimap.merchant_cell = func():
 		var mm := wand.merchant()

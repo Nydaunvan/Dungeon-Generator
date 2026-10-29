@@ -965,9 +965,10 @@ func set_ranked_timer(text: String, color: Color) -> void:
 	ranked_timer.text = text
 	ranked_timer.add_theme_color_override("font_color", color)
 
-func set_level_name(text: String) -> void:
+func set_level_name(text: String, index: int) -> void:
 	level_label.text = text
-	header.set_level(L.fa(L.t("ui.atlas.level_n"), gs.level_index + 1), str(gs.cfg.get("title", "")) if str(gs.cfg.get("title", "")) != "" else text)
+	# repère central : numéro et nom du niveau affiché (le titre du donjon ne sert que si le niveau n'a pas de nom)
+	header.set_level(L.fa(L.t("ui.atlas.level_n"), index + 1), text if text != "" else str(gs.cfg.get("title", "")))
 	if type_badge != null:
 		type_badge.text = {"original": "🏰 Donjon d'Origine", "custom": L.t("common.donjon_personnalise")}.get(Data.play_origin, RankedRun.mode_label(gs.cfg))
 
