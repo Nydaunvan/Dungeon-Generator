@@ -20,6 +20,7 @@ var ctrl: CombatController
 var is_open: bool = false
 var char_id: String = ""
 var tab: String = "items"
+var _bag_scroll_v: int = 0          ## position de l'ascenseur de la grille de la besace (conservée d'un rendu à l'autre)
 var sel: Dictionary = {}          # {"src":"bag","key":..} | {"src":"slot","slot":..}
 var details_open: bool = false
 var _rail_prev := -1
@@ -670,6 +671,7 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	_rail_prev = cur
 	rail.selected.connect(func(i: int):
 		tab = TABS[i][0]
+		_bag_scroll_v = 0
 		sel = {}
 		_render())
 	body.add_child(rail)
@@ -678,7 +680,16 @@ func _build_right(c: Dictionary, resolved: Dictionary) -> Control:
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
-	body.add_child(grid)
+	# fenêtre de 4 cases en largeur sur 3 en hauteur au plus ; au-delà (capacité de l'onglet), un ascenseur vertical
+	var bag_scroll := ScrollContainer.new()
+	bag_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	bag_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	bag_scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	bag_scroll.custom_minimum_size = Vector2(4.0 * 54.0 + 3.0 * 6.0 + 14.0, 3.0 * 54.0 + 2.0 * 6.0)
+	bag_scroll.add_child(grid)
+	body.add_child(bag_scroll)
+	bag_scroll.get_v_scroll_bar().value_changed.connect(func(v: float): _bag_scroll_v = int(v))
+	bag_scroll.set_deferred("scroll_vertical", _bag_scroll_v)
 	var entries := _entries()
 	var total := maxi(Inventory.group_max(tab), int(ceil(entries.size() / 4.0)) * 4)
 	for i in total:
