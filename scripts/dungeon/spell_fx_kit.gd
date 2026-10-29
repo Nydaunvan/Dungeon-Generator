@@ -545,7 +545,7 @@ void fragment() {
 	float streak = 0.7 + 0.3 * sin(uvp.x * 26.0 + rays * 7.0);
 	float vf = smoothstep(1.0, 0.6, uvp.y) * smoothstep(0.0, 0.02, uvp.y);
 	float glow = smoothstep(0.3, 0.0, uvp.y) * 0.8;
-	float reveal = smoothstep(drop, drop - 0.08, 1.0 - uvp.y);
+	float reveal = smoothstep(drop * 1.08, drop * 1.08 - 0.08, 1.0 - uvp.y);      // drop = 1 : colonne entièrement révélée, jusqu'au sol
 	vec3 c = col.rgb * edge * (0.5 + rays * 1.1) + core.rgb * coreW * 1.7 + col.rgb * glow;
 	ALBEDO = c * streak * power;
 	ALPHA = clamp((edge * 0.85 + glow) * vf, 0.0, 1.0) * fade * reveal;
