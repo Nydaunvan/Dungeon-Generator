@@ -2324,16 +2324,21 @@
    ]
   ],
   [
+   "Monstres Atlas Noir",
+   [
+    [
+     "mon_veilleur_os",
+     "Veilleur Os",
+     1
+    ]
+   ]
+  ],
+  [
    "Monstres",
    [
     [
      "mon_skeleton",
      "Squelette",
-     1
-    ],
-    [
-     "mon_veilleur_os",
-     "Veilleur Os",
      1
     ],
     [

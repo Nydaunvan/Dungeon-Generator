@@ -78,6 +78,8 @@ static func texture(icon: String) -> Texture2D:
 		tex = load("res://assets/icons/%s.webp" % id)
 	elif ResourceLoader.exists("res://assets/icons/%s.png" % id):
 		tex = load("res://assets/icons/%s.png" % id)
+	elif ResourceLoader.exists("res://assets/monsters/%s.webp" % id):
+		tex = load("res://assets/monsters/%s.webp" % id)          # monstres à illustration propre (Atlas Noir : Veilleur Os…)
 	_cache[icon] = tex
 	return tex
 
