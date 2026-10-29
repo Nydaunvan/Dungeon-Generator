@@ -31,7 +31,7 @@ const FAMILY := {
 	"mon_elemental": {"fire": [50, 80], "ice": [-50, -25]}, "mon_drake": {"fire": [40, 70], "ice": [-40, -25]},
 	"mon_imp": {"fire": [40, 60], "holy": [-40, -25]}, "mon_darkpanther": {"fire": [25, 45], "ice": [-35, -20]},
 	"mon_iceelemental": {"ice": [50, 80], "fire": [-50, -25]},
-	"mon_skeleton": {"shadow": [40, 60], "phys": [20, 35], "holy": [-50, -25]}, "mon_skeletonarcher": {"shadow": [40, 60], "phys": [20, 35], "holy": [-50, -25]},
+	"mon_skeleton": {"shadow": [40, 60], "phys": [20, 35], "holy": [-50, -25]}, "mon_veilleur_os": {"shadow": [40, 60], "phys": [25, 40], "holy": [-50, -25]}, "mon_skeletonarcher": {"shadow": [40, 60], "phys": [20, 35], "holy": [-50, -25]},
 	"mon_zombie": {"shadow": [30, 50], "holy": [-50, -25], "fire": [-30, -15]}, "mon_mummy": {"shadow": [30, 50], "fire": [-50, -30], "holy": [-40, -20]},
 	"mon_ghost": {"phys": [50, 75], "shadow": [40, 60], "holy": [-50, -30]},
 	"mon_stonegolem": {"phys": [40, 60], "shadow": [-40, -25]}, "mon_mudgolem": {"phys": [30, 45], "shadow": [-40, -25]}, "mon_gargoyle": {"phys": [40, 60], "shadow": [-40, -25]},

@@ -11,7 +11,7 @@ const ITEM_ROWS := 23
 const NEW_MONSTER_IDS := ["mon_troll", "mon_gargoyle", "mon_werewolf", "mon_naga", "mon_mudgolem", "mon_cultist", "mon_cavegoblin"]
 const MON_HEIGHTS := [
 	["rat|bat", 0.8], ["snake|crab|mushroom|centipede", 0.9], ["slime|imp", 1.0],
-	["goblin|gnoll|harpy|mimic", 1.2], ["spider", 1.1],
+	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur", 1.5], ["spider", 1.1],
 	["skeleton|zombie|wolf|ghost|lizardman|gargoyle|darkpanther|wraith", 1.4],
 	["orc|mummy|beholder", 1.55], ["drake", 1.7], ["elemental", 1.6],
 	["minotaur", 1.9], ["ogre", 2.1], ["golem", 1.75],
@@ -370,6 +370,9 @@ func _pose_material(n: Node3D, kind: String) -> Material:
 	var id := str(n.get_meta("pose_id", ""))
 	if id == "" or bool(n.get_meta("boss", false)):
 		return null
+	var own := _own_pose(id, kind)
+	if own != null:
+		return own
 	var idx := NEW_MONSTER_IDS.find(id)
 	if idx < 0:
 		var remake: Dictionary = Data.constants.get("REMAKE_MAP", {})
@@ -379,6 +382,18 @@ func _pose_material(n: Node3D, kind: String) -> Material:
 	var key := "P|%d|%s" % [idx, kind]
 	if not _mats.has(key):
 		var path := "res://assets/monsters/m%02d_%s.webp" % [idx, kind]
+		_mats[key] = _base_material(load(path)) if ResourceLoader.exists(path) else null
+	return _mats[key]
+
+## Poses d'un monstre qui a ses propres illustrations (assets/monsters/<id>_attack.webp, _attack2.webp, _hit.webp, _dead.webp).
+## S'il existe deux poses d'attaque (_attack et _attack2), chaque attaque en tire une au hasard.
+static func _own_pose(id: String, kind: String) -> Material:
+	var suffix := kind
+	if kind == "attack" and ResourceLoader.exists("res://assets/monsters/%s_attack2.webp" % id) and randf() < 0.5:
+		suffix = "attack2"
+	var key := "O|%s|%s" % [id, suffix]
+	if not _mats.has(key):
+		var path := "res://assets/monsters/%s_%s.webp" % [id, suffix]
 		_mats[key] = _base_material(load(path)) if ResourceLoader.exists(path) else null
 	return _mats[key]
 
@@ -628,6 +643,18 @@ func _die(n: MeshInstance3D) -> void:
 	var m: StandardMaterial3D = (n.material_override as StandardMaterial3D).duplicate()
 	n.material_override = m
 	var h: float = n.get_meta("h", 1.0)
+	var dead_id := str(n.get_meta("pose_id", ""))
+	if dead_id != "" and not bool(n.get_meta("boss", false)):
+		var dm := _own_pose(dead_id, "dead") as StandardMaterial3D
+		if dm != null:
+			# pose « à terre » illustrée : le monstre s'effondre, reste étendu un instant, puis s'estompe
+			m.albedo_texture = dm.albedo_texture
+			m.albedo_color = Color(1, 1, 1, 1)
+			var tl := n.create_tween()
+			tl.tween_interval(0.9)
+			tl.tween_property(m, "albedo_color:a", 0.0, 0.6)
+			tl.tween_callback(n.queue_free)
+			return
 	var tw := n.create_tween().set_parallel(true)
 	tw.tween_property(n, "scale:y", 0.25, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_property(n, "position:y", n.position.y - h * 0.375, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)

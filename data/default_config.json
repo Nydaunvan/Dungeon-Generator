@@ -2190,6 +2190,21 @@
      "opensDoorId": "",
      "patrolRadius": 2,
      "attackSpeed": 2.4
+    },
+    {
+     "id": "veilleur1",
+     "name": "Veilleur Os",
+     "icon": "@icon:mon_veilleur_os",
+     "x": 4,
+     "y": 5,
+     "force": 8,
+     "dex": 8,
+     "con": 6,
+     "xpReward": 14,
+     "goldReward": 6,
+     "opensDoorId": "",
+     "patrolRadius": 1,
+     "attackSpeed": 2.0
     }
    ],
    "items": [
