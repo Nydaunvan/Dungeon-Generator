@@ -8,6 +8,39 @@ signal nav(name: String)
 
 const SW := 1672.0
 const SH := 940.0
+const FLAME_SHADER := """
+shader_type canvas_item;
+render_mode blend_add;
+uniform float intensity = 1.0;
+uniform float seed = 0.0;
+uniform float speed = 1.0;
+float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vnoise(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+}
+float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + 11.7; a *= 0.5; } return v; }
+void fragment() {
+	float h = 1.0 - UV.y;                       // 0 = base, 1 = pointe
+	float x = (UV.x - 0.5) * 2.0;
+	float t = TIME * speed * 1.7 + seed * 17.0;
+	float n = fbm(vec2(x * 1.6 + seed, h * 2.6 - t * 1.25));
+	float n2 = fbm(vec2(x * 3.1 - seed, h * 4.8 - t * 2.1));
+	float sway = (n - 0.5) * 0.9 * h * h + sin(t * 0.9 + seed * 5.0) * 0.12 * h;
+	float xx = x + sway;
+	float width = (0.62 * pow(1.0 - h, 0.55) + 0.05) * smoothstep(0.0, 0.08, h) ;
+	float body = 1.0 - smoothstep(width * 0.25, width, abs(xx));
+	float cut = smoothstep(0.55 + 0.4 * n2, 1.05, h + (n2 - 0.5) * 0.4);   // la pointe se déchire
+	float d = clamp(body * (1.0 - cut) * (0.55 + 0.9 * n2), 0.0, 1.0);
+	float core = pow(clamp(1.0 - abs(xx) / (width * 0.55 + 0.001), 0.0, 1.0), 1.6) * (1.0 - h * 0.9) * d;
+	vec3 col = mix(vec3(0.85, 0.10, 0.02), vec3(1.0, 0.50, 0.08), smoothstep(0.1, 0.6, d));
+	col = mix(col, vec3(1.0, 0.86, 0.45), smoothstep(0.35, 0.9, core));
+	col = mix(col, vec3(1.0, 0.97, 0.85), smoothstep(0.75, 1.0, core) * 0.8);
+	float flick = 0.88 + 0.12 * sin(t * 7.0 + seed * 9.0) * sin(t * 3.1 + seed);
+	COLOR = vec4(col * d * intensity * flick, d);
+}
+"""
 const TOP := 66.0          # hauteur de la barre d'en-tête dans la maquette (la scène commence sous l'en-tête réel)
 const HOME := "res://assets/home/"
 
@@ -29,6 +62,7 @@ var _btn_main: HomeMenuButton    # « Nouvelle Expédition » (« Expédition en
 var _btn_origin: HomeMenuButton
 var _btn_saves: HomeMenuButton
 var _tools: HomeToolsPanel
+var _flames: Array = []       # {node, u, v, w, h} : flammes animées posées sur les torches / bougies du fond (coordonnées relatives à l'image)
 var _foot_line: TextureRect
 var _foot_ver: Button
 var _foot_made: Button
@@ -87,7 +121,7 @@ func _build() -> void:
 	_scroll.add_child(_column)
 
 	# chaînes animées (à gauche : avec le crâne ; à droite : avec le crochet, décalée de 1,2 s)
-	for spec in [["chain_left.png", 0.0, Vector2(790, 0), Vector2(52, 298)], ["chain_right.png", 1.2, Vector2(1445, 0), Vector2(52, 367)]]:
+	for spec in [["chain_left.png", 0.0, Vector2(727, 0), Vector2(126, 378)], ["chain_right.png", 1.2, Vector2(1405, 0), Vector2(80, 459)]]:
 		var ch := TextureRect.new()
 		ch.texture = _tex(spec[0])
 		ch.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -115,7 +149,8 @@ func _build() -> void:
 	var mat := CanvasItemMaterial.new()
 	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	_glow.material = mat
-	_stage.add_child(_glow)
+	add_child(_glow)
+	move_child(_glow, _scene_bg.get_index() + 1)
 	var tw := create_tween().set_loops()
 	tw.tween_property(_glow, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_glow, "modulate:a", 0.55, 0.9).set_trans(Tween.TRANS_SINE)
@@ -123,6 +158,7 @@ func _build() -> void:
 
 	_embers = Embers.new()
 	_stage.add_child(_embers)
+	_make_flames()
 
 	# en-tête
 	_header = AppHeader.new()
@@ -205,6 +241,42 @@ func _link(text: String, act: String, size: int) -> Button:
 	b.pressed.connect(func(): action.emit(act))
 	return b
 
+## Flammes animées (shader additif) : torche et bougie de gauche, torche de droite. Positions relatives à l'image de fond (u, v = pied de la flamme).
+func _make_flames() -> void:
+	var sh := Shader.new()
+	sh.code = FLAME_SHADER
+	var idx := _scene_bg.get_index() + 1
+	for spec in [[0.0965, 0.250, 0.046, 0.165, 1.0, 0.1], [0.1320, 0.7100, 0.020, 0.085, 0.9, 0.5], [0.9547, 0.618, 0.011, 0.034, 0.8, 0.9]]:
+		var r := ColorRect.new()
+		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var m := ShaderMaterial.new()
+		m.shader = sh
+		m.set_shader_parameter("intensity", spec[4])
+		m.set_shader_parameter("seed", spec[5])
+		r.material = m
+		add_child(r)
+		move_child(r, idx)
+		idx += 1
+		_flames.append({"node": r, "u": spec[0], "v": spec[1], "w": spec[2], "h": spec[3]})
+
+## Place les flammes d'après la position de l'image de fond (recadrée « cover » sur toute la page).
+func _layout_flames() -> void:
+	var tex := _scene_bg.texture
+	if tex == null or _flames.is_empty():
+		return
+	var ts := tex.get_size()
+	var sc := maxf(size.x / ts.x, size.y / ts.y)
+	var org := (size - ts * sc) * 0.5
+	var gs := 0.2 * ts.x * sc
+	_glow.size = Vector2(gs, gs)
+	_glow.position = org + Vector2(0.0965 * ts.x * sc, 0.2 * ts.y * sc) - _glow.size * 0.5
+	for f in _flames:
+		var n: ColorRect = f.node
+		var fw: float = float(f.w) * ts.x * sc
+		var fh: float = float(f.h) * ts.y * sc
+		n.size = Vector2(fw, fh)
+		n.position = org + Vector2(float(f.u) * ts.x * sc - fw * 0.5, float(f.v) * ts.y * sc - fh)
+
 func _menu_button(title: String, sub: String, icon: String, act: String, primary: bool) -> HomeMenuButton:
 	var b := HomeMenuButton.new()
 	b.title = title
@@ -237,6 +309,7 @@ func _layout() -> void:
 		return
 	var w := size.x
 	var h := size.y
+	_layout_flames()
 	UiMetrics.update(self)
 	var mx := UiMetrics.css(30.0 if not UiMetrics.portrait else 6.0)
 	var hh := UiMetrics.css(92.0 if not UiMetrics.portrait else 60.0)
@@ -287,8 +360,6 @@ func _layout_stage(area: Rect2) -> void:
 	_embers.position = off
 	_embers.size = sz
 	_embers.k = k
-	_glow.position = off + Vector2(-60, 170) * k
-	_glow.size = Vector2(440, 440) * k
 	var at := func(n: Control, x: float, y: float, ww: float, hh: float) -> void:
 		n.custom_minimum_size = Vector2.ZERO
 		n.size_flags_horizontal = Control.SIZE_FILL

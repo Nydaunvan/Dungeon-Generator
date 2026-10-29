@@ -103,7 +103,7 @@ func _init() -> void:
 	_emblem = Emblem.new()
 	_emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hrow.add_child(_emblem)
-	# titre sur deux lignes : « DONJON » en grand, « ATLAS NOIR » en petites capitales espacées dessous
+	# titre : « ATLAS NOIR » seul (plus de « DONJON » ni de seconde ligne)
 	var tbox := VBoxContainer.new()
 	_tbox = tbox
 	tbox.add_theme_constant_override("separation", -2)
@@ -111,13 +111,14 @@ func _init() -> void:
 	tbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hrow.add_child(tbox)
 	title_label = Label.new()
-	title_label.text = L.t("ui.atlas.title_main").to_upper()
+	title_label.text = L.t("ui.atlas.title_sub").to_upper()
 	title_label.clip_text = false
 	title_label.add_theme_font_override("font", Atlas.title_font(true, 6))
 	title_label.add_theme_color_override("font_color", Atlas.IVORY)
 	tbox.add_child(title_label)
 	_subtitle = Label.new()
-	_subtitle.text = L.t("ui.atlas.title_sub").to_upper()
+	_subtitle.text = ""
+	_subtitle.visible = false
 	_subtitle.add_theme_font_override("font", Atlas.title_font(false, 5))
 	_subtitle.add_theme_color_override("font_color", Atlas.COPPER)
 	tbox.add_child(_subtitle)
@@ -300,7 +301,7 @@ func _plain(full: String) -> String:
 
 func rescale() -> void:
 	custom_minimum_size.y = UiMetrics.css(76.0 if not UiMetrics.portrait else 44.0)
-	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(30.0 if not UiMetrics.portrait else 16.0)))
+	title_label.add_theme_font_size_override("font_size", int(UiMetrics.css(32.0 if not UiMetrics.portrait else 18.0)))
 	_subtitle.add_theme_font_size_override("font_size", int(UiMetrics.css(11.0 if not UiMetrics.portrait else 8.0)))
 	if _crest != null:
 		_crest.visible = not UiMetrics.portrait and _crest.num_text != ""
