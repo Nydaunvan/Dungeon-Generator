@@ -78,7 +78,7 @@ func _build() -> void:
 	_scene_bg = TextureRect.new()
 	_scene_bg.texture = _tex("home_bg.png")
 	_scene_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_scene_bg.stretch_mode = TextureRect.STRETCH_SCALE
+	_scene_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED     # image 16:9 sur une scène 16:10 : recadrée au centre, jamais déformée
 	_scene_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scene_bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_stage.add_child(_scene_bg)
