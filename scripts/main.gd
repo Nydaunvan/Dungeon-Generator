@@ -210,6 +210,9 @@ func _ready() -> void:
 	ult_ui.ctrl = ctrl
 	ult_ui.view = layout.sub_container
 	ult_ui.instinct = instinct_ui
+	ult_ui.right_limit = func() -> float:      # bord gauche de la colonne de droite (marge de `safe`) ; sans effet en portrait
+		var st := layout.safe.get_parent() as Control
+		return st.global_position.x + st.size.x + layout.safe.offset_right if st != null else 1.0e9
 	ui.add_child(ult_ui)
 	card_fx.ref_cam = rig.camera
 	card_fx.ref_view = layout.sub_container

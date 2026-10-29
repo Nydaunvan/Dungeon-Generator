@@ -9,6 +9,7 @@ const SEAL := "res://assets/ui/seal_gold.png"
 var ctrl: CombatController
 var view: Control                # vue 3D encadrée : le bouton est posé sur son bord droit
 var instinct: InstinctOverlay    # l'instinct (coup fatal) a toujours la priorité : le bouton s'efface pendant son invite
+var right_limit: Callable          # abscisse écran (px) du bord gauche de la colonne de droite : le sceau reste en entier dans la vue, jamais sous les panneaux
 
 var _seal: Control
 var _ring: Control
@@ -127,6 +128,8 @@ func _place() -> void:
 	var area: Rect2 = view.get_global_rect() if view != null else get_viewport_rect()
 	var d := clampf(minf(area.size.x, area.size.y) * 0.36, 120.0, 210.0)
 	var center := Vector2(area.end.x - maxf(d * 1.25, area.size.x * 0.17), area.get_center().y)
+	if right_limit.is_valid():
+		center.x = minf(center.x, float(right_limit.call()) - d * 0.5)      # le sceau est à gauche de la colonne de droite
 	_seal.size = Vector2(d, d)
 	_seal.pivot_offset = _seal.size * 0.5
 	_seal.global_position = center - _seal.size * 0.5
