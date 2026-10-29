@@ -24,6 +24,8 @@ var _icons := {}
 ## Emblème : boussole à quatre pointes dans un cercle fin.
 class Emblem extends Control:
 	static var _tex: Texture2D
+	func _init() -> void:
+		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC      # réduction lisse de l'image 1024 px
 	func _draw() -> void:
 		if _tex == null:
 			_tex = load("res://assets/ui/compass.png")

@@ -6,6 +6,7 @@ static var _tex: Texture2D
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	custom_minimum_size = Vector2(0, 56)
 
 func _draw() -> void:
