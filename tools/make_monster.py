@@ -34,6 +34,7 @@ ERODE = 2           # px retirés ensuite (reste de liseré gris)
 FEATHER = 1.0       # px de dégradé du bord
 KEEP_OUTLINE = True  # liseré blanc conservé (voulu) ; --sans-liseré pour le retirer
 SCALES_OVERRIDE = None  # échelles imposées (--echelles=...) ; None = estimation SIFT
+GAP_PX = 45          # liseré uniforme : enveloppe fermée de rayon GAP_PX px, pas de blanc dans les vides plus étroits que 2 × GAP_PX px (--liseré-trou=N, 0 = liseré partout)
 UNIFORM_PX = 0       # > 0 : liseré d'origine remplacé par un liseré blanc de cette épaisseur (--liseré-uniforme)
 FLOOR = 0.94        # position des pieds dans le carré (fraction de la hauteur)
 MARGIN = 0.03       # marge minimale autour de la pose la plus grande
@@ -143,6 +144,13 @@ def uniform_outline(rgb, solid, px):
         touch = np.unique(wl[ndi.binary_dilation(removed, iterations=2) & blob])
         wsz = ndi.sum(blob, wl, range(1, wn + 1))
         removed |= np.isin(wl, [i for i in touch if i and wsz[i - 1] < 1500])
+    # trous du tissu remplis de blanc par l'illustration : aplats d'un blanc franc (≥ 60 px) → retirés (le dessin garde son propre trait noir)
+    strict = (rgb.min(-1) > 0.92) & ((rgb.max(-1) - rgb.min(-1)) < 0.08) & solid & ~removed
+    sl, sn = ndi.label(strict)
+    if sn:
+        ssz = ndi.sum(strict, sl, range(1, sn + 1))
+        core = np.isin(sl, [i + 1 for i, z in enumerate(ssz) if z >= 60])
+        removed |= ndi.binary_dilation(core, iterations=3) & whitish & solid
     inner = solid & ~removed
     lab, n = ndi.label(inner)
     if n > 1:
@@ -150,6 +158,21 @@ def uniform_outline(rgb, solid, px):
         inner = np.isin(lab, [i + 1 for i, z in enumerate(sz) if z > 300])
     dist = ndi.distance_transform_edt(~inner)
     alpha = np.where(inner, 1.0, np.clip(px + 0.5 - dist, 0, 1)).astype(np.float32)
+    # le liseré ne fait que le tour du personnage : les trous fermés (sans lien avec l'extérieur) restent transparents, sans liseré
+    vide, vn = ndi.label(~inner)
+    if vn > 1:
+        bord = np.unique(np.concatenate([vide[0], vide[-1], vide[:, 0], vide[:, -1]]))
+        alpha[(vide > 0) & ~np.isin(vide, bord)] = 0
+    # ... et les vides étroits ouverts sur l'extérieur (entre les mèches du lambeau, entre un bras et le corps) n'en ont pas non plus : on ferme la
+    # silhouette (fermeture morphologique de rayon GAP_PX : dilatation puis érosion) et le liseré suit cette enveloppe (il enjambe les vides étroits)
+    if GAP_PX > 0:
+        g = GAP_PX
+        pad = np.pad(inner, g + 2)
+        dil = ndi.distance_transform_edt(~pad) <= g
+        ferme = (ndi.distance_transform_edt(dil) > g) | pad
+        ferme = ferme[g + 2:-(g + 2), g + 2:-(g + 2)]
+        dist_env = ndi.distance_transform_edt(~ferme)       # le liseré suit l'enveloppe : il enjambe les vides étroits au lieu d'y entrer
+        alpha = np.where(inner, 1.0, np.where(ferme, 0.0, np.clip(px + 0.5 - dist_env, 0, 1))).astype(np.float32)
     out = np.where(inner[..., None], rgb, 1.0).astype(np.float32)     # liseré : blanc pur, prolongé en blanc au-delà (pas de frange aux mipmaps)
     return out, alpha
 
@@ -218,12 +241,15 @@ def stats(alpha):
                 cx=float((xs * w).sum() / w.sum()))
 
 def main():
-    global KEEP_OUTLINE, UNIFORM_PX, SCALES_OVERRIDE
+    global KEEP_OUTLINE, UNIFORM_PX, SCALES_OVERRIDE, GAP_PX
     if "--sans-liseré" in sys.argv:
         sys.argv.remove("--sans-liseré"); KEEP_OUTLINE = False
     for a in list(sys.argv):
         if a.startswith("--echelles="):
             sys.argv.remove(a); SCALES_OVERRIDE = [float(x) for x in a.split("=")[1].split(",")]; assert len(SCALES_OVERRIDE) == 5
+    for a in list(sys.argv):
+        if a.startswith("--liseré-trou="):
+            sys.argv.remove(a); GAP_PX = int(a.split("=")[1])
     for a in list(sys.argv):
         if a.startswith("--liseré-uniforme"):
             sys.argv.remove(a); UNIFORM_PX = int(a.split("=")[1]) if "=" in a else 5
