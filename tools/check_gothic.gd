@@ -21,6 +21,10 @@ func _ready() -> void:
 		fails.append("l'ambiance gothic déborde sur les autres thèmes")
 	if VisualFx.light_k("gothic", "torch_range_k") >= 1.0:
 		fails.append("portée des torches gothic non limitée")
+	for th in ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]:      # autres thèmes : valeurs d'origine de la torche du groupe (couleur ffb060, atténuation 1)
+		if VisualFx.light_color(th, "player_color", Color("ffb060")) != Color("ffb060") or VisualFx.light_k(th, "player_atten", 1.0) != 1.0 \
+				or VisualFx.light_k(th, "player_range_k") != 1.0 or VisualFx.light_k(th, "player_energy_k") != 1.0 or VisualFx.light_k(th, "torch_energy_k") != 1.0:
+			fails.append("l'éclairage de %s a changé" % th)
 	var env := Environment.new()
 	VisualFx.apply_environment(env, "gothic", false)
 	var amb := env.ambient_light_color
