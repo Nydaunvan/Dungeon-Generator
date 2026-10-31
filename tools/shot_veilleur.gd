@@ -11,7 +11,7 @@ func _init() -> void:
 	await process_frame
 	if str(args.get("mat", "")) == "std":     # comparaison : ancien matériau StandardMaterial3D (sans biais de mipmap)
 		load("res://scripts/dungeon/entity_layer.gd").set("atlas_shader", false)
-	if args.has("lod"):                      # biais de mipmap du matériau Atlas (par défaut -0.6)
+	if args.has("lod"):                      # biais de mipmap du matériau Atlas (par défaut -1.0)
 		load("res://scripts/dungeon/atlas_sprite_material.gd").set("lod_bias", float(args.lod))
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)

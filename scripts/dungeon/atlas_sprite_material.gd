@@ -4,14 +4,14 @@ extends ShaderMaterial
 ## carte de normales, liseré de lumière), avec UN réglage en plus : un biais de mipmap négatif.
 ##
 ## Pourquoi : les mipmaps de Godot sont un filtre boîte, et le sprite (1 700 px) s'affiche 2 à 3 fois plus petit : l'image devenait floue (netteté mesurée à
-## environ 50 % d'une vraie réduction à 1440p). Un biais de -0,6 ramène la netteté au niveau d'une réduction correcte, sans toucher aux fichiers
+## environ 50 % d'une vraie réduction à 1440p). Un biais de -1,0 ramène la netteté au niveau d'une réduction correcte, sans toucher aux fichiers
 ## (banc d'essai : tools/sprite_lab.gd). Le moteur « Compatibilité » ignore le biais de la vue 3D : il faut le demander dans le shader.
 ##
 ## Les propriétés ci-dessous portent les noms de celles du StandardMaterial3D, pour que le code de combat (fondu, coup reçu, pose de mort) n'ait pas à changer :
 ## elles lisent et écrivent les paramètres du shader, donc `duplicate()` et les tweens fonctionnent tels quels.
 
 ## Biais de mipmap (modifiable par les outils de capture pour comparer).
-static var lod_bias := -0.6
+static var lod_bias := -1.0
 
 static var _shader: Shader = null
 
@@ -62,7 +62,7 @@ uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform float emission_energy = 0.22;
 uniform float rim_amount = 0.25;
 uniform float rim_tint_amount = 0.5;
-uniform float lod_bias = -0.6;
+uniform float lod_bias = -1.0;
 uniform bool use_normal = false;
 
 void vertex() {
