@@ -15,6 +15,21 @@ func _init() -> void:
 	var out := str(args.get("out", "/tmp/vo"))
 	if args.has("bias"):                    # essai de netteté : biais de mipmaps de la vue 3D (négatif = plus net)
 		main.layout.sub_viewport.texture_mipmap_bias = float(args.bias)
+	if args.has("dyn"):                     # l'adaptation de qualité baisse la résolution 3D sur un rendu logiciel : on la force pour juger la netteté
+		var st: Node = root.get_node("Settings")      # autoload : introuvable par son nom en mode --script
+		st.dyn_scale = float(args.dyn)
+		st.opts["res_scale"] = float(args.get("res", 1.0))
+		main._apply_quality()
+	if args.has("fx"):                      # essai : coupe des effets (ex. fx=glow,mist) pour trouver ce qui adoucit le sprite
+		var st3: Node = root.get_node("Settings")
+		for k in str(args.fx).split(","):
+			if k == "glow": st3.opts["fx_glow"] = false
+		main._apply_quality()
+		if str(args.fx).contains("mist"):
+			for n in main.get_tree().get_nodes_in_group("fogmist"): n.visible = false
+	var vpi: SubViewport = main.layout.sub_viewport
+	var st2: Node = root.get_node("Settings")
+	print("QUALITE res_scale=%.2f dyn=%.2f scaling_3d=%.2f msaa=%d aniso=%d taille=%s" % [st2.res_scale(), st2.dyn_scale, vpi.scaling_3d_scale, vpi.msaa_3d, vpi.anisotropic_filtering_level, str(vpi.size)])
 	main.wand.paused_if = func(): return true
 	var g: DungeonGrid = main.grid
 	for mm in main.level.monsters:
