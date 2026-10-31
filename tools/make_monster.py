@@ -2,6 +2,8 @@
 """Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
 Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré | --liseré-uniforme[=N]]
      ou : python3 tools/make_monster.py <id> repos.png attaque.png coup.png attaque2.png mort.png   (cinq images, une par pose)
+  --echelles=1,a,b,c,d : échelles des cinq poses imposées (remplacent l'estimation automatique, utile quand les poses se ressemblent trop peu pour être
+     appariées directement à l'attente : voir tools/estimate_scales.py qui résout les échelles par toutes les paires de poses).
   --liseré-uniforme[=N] : retire le liseré d'origine (épaisseur inégale d'une image à l'autre, franges colorées, parfois absent) puis retrace un liseré blanc
      pur de N px (5 par défaut), identique sur les cinq poses, APRÈS la mise à l'échelle des poses.
   → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille)
@@ -31,6 +33,7 @@ OUTLINE_ITER = 16   # px max parcourus par le liseré blanc depuis l'extérieur
 ERODE = 2           # px retirés ensuite (reste de liseré gris)
 FEATHER = 1.0       # px de dégradé du bord
 KEEP_OUTLINE = True  # liseré blanc conservé (voulu) ; --sans-liseré pour le retirer
+SCALES_OVERRIDE = None  # échelles imposées (--echelles=...) ; None = estimation SIFT
 UNIFORM_PX = 0       # > 0 : liseré d'origine remplacé par un liseré blanc de cette épaisseur (--liseré-uniforme)
 FLOOR = 0.94        # position des pieds dans le carré (fraction de la hauteur)
 MARGIN = 0.03       # marge minimale autour de la pose la plus grande
@@ -96,7 +99,7 @@ def _scales(files):
 def split_files(files):
     """Une image par pose (déjà sur fond transparent), dans l'ordre Attente, Attaque, Impact, Attaque alternative, Mort.
     Les poses sont remises à l'échelle de l'attente (voir _scales)."""
-    scales = _scales(files)
+    scales = list(SCALES_OVERRIDE) if SCALES_OVERRIDE else _scales(files)
     print("échelles des poses (par rapport à l'attente) :", ", ".join("%.3f" % x for x in scales))
     poses = []
     for f, sc in zip(files, scales):
@@ -215,9 +218,12 @@ def stats(alpha):
                 cx=float((xs * w).sum() / w.sum()))
 
 def main():
-    global KEEP_OUTLINE, UNIFORM_PX
+    global KEEP_OUTLINE, UNIFORM_PX, SCALES_OVERRIDE
     if "--sans-liseré" in sys.argv:
         sys.argv.remove("--sans-liseré"); KEEP_OUTLINE = False
+    for a in list(sys.argv):
+        if a.startswith("--echelles="):
+            sys.argv.remove(a); SCALES_OVERRIDE = [float(x) for x in a.split("=")[1].split(",")]; assert len(SCALES_OVERRIDE) == 5
     for a in list(sys.argv):
         if a.startswith("--liseré-uniforme"):
             sys.argv.remove(a); UNIFORM_PX = int(a.split("=")[1]) if "=" in a else 5
