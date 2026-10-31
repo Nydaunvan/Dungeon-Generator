@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Prépare les cinq poses d'un monstre « Atlas Noir » à partir des images brutes (fond noir) et écrit les webp du jeu.
-Usage : python3 tools/make_monster.py <id> repos.png attaque.png coup.png attaque2.png mort.png
-  → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (même taille que les images d'origine, RGBA).
+"""Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
+Usage : python3 tools/make_monster.py <id> planche.png
+  → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille).
+
+Format de la planche (fond transparent, un liseré blanc « autocollant » autour de chaque pose) :
+  en haut, de gauche à droite : Attente, Attaque, Impact (coup reçu) ; en bas : Attaque alternative, Mort.
 Traitements (indispensables pour que le sprite ne SCINTILLE pas en 3D) :
-  1. détourage du fond noir relié au bord (les orbites et poches sombres intérieures restent opaques) ;
-  2. suppression du liseré clair « autocollant » du contour (érosion de l'alpha) et bord adouci : un trait fin de 1-2 px qui bouge à la
-     respiration du sprite ou à la caméra crépite à l'écran ;
-  3. couleurs des pixels transparents prolongées depuis le bord (pas de frange noire ou blanche aux mipmaps) ;
-  4. AUCUN rééchantillonnage ni flou : la résolution d'origine est conservée (le calme à l'écran vient des mipmaps et de la respiration réduite) ;
-  5. toutes les poses à la même échelle, pieds calés sur la même ligne (celle du repos).
+  1. découpe des cinq poses (composantes connexes de l'alpha) ;
+  2. suppression du liseré blanc : pixels clairs reliés à l'extérieur (le trait noir de l'illustration reste), puis bord
+     légèrement érodé et adouci : un trait clair fin qui bouge à la respiration ou à la caméra crépite à l'écran ;
+  3. couleurs des pixels transparents prolongées depuis le bord (pas de frange claire ou noire aux mipmaps) ;
+  4. AUCUN rééchantillonnage ni flou : la résolution d'origine de la planche est conservée (pas d'agrandissement) ;
+  5. toutes les poses à la même échelle, dans un même carré : pieds sur la même ligne et centre de masse de l'attente au milieu.
+Le carré est dimensionné pour que la pose la plus grande tienne ; l'affichage dans le jeu se règle par la ligne du monstre
+dans EntityLayer.MON_HEIGHTS (hauteur de la pose d'attente = IDLE_FRAC × côté du carré, affichée à la fin du script).
 Côté moteur : respiration réduite à 30 % pour ces monstres (EntityLayer, méta « atlas »).
 Les imports Godot du dossier assets/monsters doivent avoir mipmaps/generate=true (voir assets/monsters/*.webp.import)."""
 import sys, pathlib
@@ -17,45 +22,100 @@ from PIL import Image
 from scipy import ndimage as ndi
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ERODE = 3          # px (à 1536) retirés autour de la silhouette
-FEATHER = 1.6      # px de dégradé du bord
-BLUR = 0.0         # pas de flou : la résolution d'origine est conservée
+SUFFIXES = ["", "_attack", "_hit", "_attack2", "_dead"]
+OUTLINE_ITER = 16   # px max parcourus par le liseré blanc depuis l'extérieur
+ERODE = 2           # px retirés ensuite (reste de liseré gris)
+FEATHER = 1.0       # px de dégradé du bord
+FLOOR = 0.94        # position des pieds dans le carré (fraction de la hauteur)
+MARGIN = 0.03       # marge minimale autour de la pose la plus grande
 
-def key(path):
-    a = np.asarray(Image.open(path).convert("RGB")).astype(np.float32) / 255
-    dark = a.max(-1) < 0.075
-    lab, _ = ndi.label(dark)
-    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
-    solid = ~np.isin(lab, list(border))
-    solid = ndi.binary_opening(solid, iterations=1)
-    solid = ndi.binary_erosion(solid, iterations=ERODE)
-    alpha = ndi.gaussian_filter(solid.astype(np.float32), FEATHER)
-    alpha = np.clip((alpha - 0.2) / 0.6, 0, 1)
-    # couleurs : on prolonge l'intérieur vers l'extérieur (plus proche voisin opaque), puis léger flou
-    idx = ndi.distance_transform_edt(~solid, return_distances=False, return_indices=True)
-    filled = a[idx[0], idx[1]]
-    if BLUR > 0:
-        filled = np.stack([ndi.gaussian_filter(filled[..., c], BLUR) for c in range(3)], -1)
-    return filled, alpha
+def split(sheet):
+    """Renvoie les cinq poses (rgb float 0-1, alpha bool) recadrées, dans l'ordre Attente, Attaque, Impact, Attaque2, Mort."""
+    a = np.asarray(Image.open(sheet).convert("RGBA")).astype(np.float32) / 255
+    rgb, al = a[..., :3], a[..., 3]
+    # noyaux érodés (deux poses dont les liserés se touchent restent séparées), puis chaque pixel va au noyau le plus proche
+    core = ndi.binary_erosion(al > 0.5, iterations=6)
+    clab, n = ndi.label(core)
+    sizes = ndi.sum(core, clab, range(1, n + 1))
+    keep = [i + 1 for i, s in enumerate(sizes) if s > 10000]
+    assert len(keep) == 5, f"5 poses attendues, {len(keep)} trouvées (tailles : {sorted(sizes)[-8:]})"
+    clab = np.where(np.isin(clab, keep), clab, 0)
+    idx = ndi.distance_transform_edt(clab == 0, return_distances=False, return_indices=True)
+    lab = np.where(al > 0.08, clab[idx[0], idx[1]], 0)
+    cm = {i: ndi.center_of_mass(lab == i) for i in keep}
+    by_y = sorted(keep, key=lambda i: cm[i][0])
+    top = sorted(by_y[:3], key=lambda i: cm[i][1])
+    bot = sorted(by_y[3:], key=lambda i: cm[i][1])
+    poses = []
+    for i in top + bot:
+        mine = lab == i                                           # pixels de CETTE pose seulement (liseré compris)
+        solid = (al > 0.5) & mine
+        ys, xs = np.where(mine)
+        y0, y1 = max(0, ys.min() - 4), min(al.shape[0], ys.max() + 5)
+        x0, x1 = max(0, xs.min() - 4), min(al.shape[1], xs.max() + 5)
+        poses.append(clean(rgb[y0:y1, x0:x1], solid[y0:y1, x0:x1]))
+    return poses
 
-def bottom(alpha):
-    rows = np.where(alpha.max(1) > 0.5)[0]
-    return int(rows.max())
+def clean(rgb, solid):
+    """Retire le liseré blanc relié à l'extérieur, érode, adoucit, prolonge les couleurs."""
+    solid = np.pad(solid, 2); rgb = np.pad(rgb, ((2, 2), (2, 2), (0, 0)), mode="edge")
+    whitish = (rgb.min(-1) > 0.78) & ((rgb.max(-1) - rgb.min(-1)) < 0.18)
+    removed = ~solid
+    for _ in range(OUTLINE_ITER):
+        grown = ndi.binary_dilation(removed) & whitish & solid
+        if not grown.any() or (grown & ~removed).sum() == 0:
+            break
+        removed |= grown
+    # restes de liseré piégés entre deux pointes de tissu : petits amas très clairs collés à la zone déjà retirée
+    # (un reflet clair de l'illustration, lui, est séparé du vide par le trait noir)
+    blob = whitish & solid & ~removed
+    wl, wn = ndi.label(blob)
+    if wn:
+        touch = np.unique(wl[ndi.binary_dilation(removed, iterations=2) & blob])
+        wsz = ndi.sum(blob, wl, range(1, wn + 1))
+        removed |= np.isin(wl, [i for i in touch if i and wsz[i - 1] < 1500])
+    inner = solid & ~removed
+    inner = ndi.binary_opening(inner, iterations=1)
+    lab, n = ndi.label(inner)                                    # on garde les pièces principales (pas de poussière)
+    if n > 1:
+        sz = ndi.sum(inner, lab, range(1, n + 1))
+        inner = np.isin(lab, [i + 1 for i, s in enumerate(sz) if s > 400])
+    inner = ndi.binary_erosion(inner, iterations=ERODE)
+    alpha = np.clip((ndi.gaussian_filter(inner.astype(np.float32), FEATHER) - 0.2) / 0.6, 0, 1)
+    idx = ndi.distance_transform_edt(~inner, return_distances=False, return_indices=True)
+    return rgb[idx[0], idx[1]], alpha
+
+def stats(alpha):
+    ys, xs = np.where(alpha > 0.5)
+    w = alpha[ys, xs]
+    return dict(top=ys.min(), bottom=ys.max(), left=xs.min(), right=xs.max(),
+                cx=float((xs * w).sum() / w.sum()))
 
 def main():
-    mid, files = sys.argv[1], sys.argv[2:]
-    suffixes = ["", "_attack", "_hit", "_attack2", "_dead"]
-    assert len(files) == 5, "cinq images : repos, attaque, coup, attaque2, mort"
-    data = [key(f) for f in files]
-    ref = bottom(data[0][1])
-    for suf, (rgb, alpha) in zip(suffixes, data):
-        dy = ref - bottom(alpha)
-        im = Image.fromarray((np.dstack([rgb, alpha]) * 255).astype(np.uint8), "RGBA")
-        canvas = Image.new("RGBA", im.size, (0, 0, 0, 0))
-        canvas.paste(im, (0, dy))
+    mid, sheet = sys.argv[1], sys.argv[2]
+    poses = split(sheet)
+    st = [stats(p[1]) for p in poses]
+    idle_cx, idle_h = st[0]["cx"], st[0]["bottom"] - st[0]["top"] + 1
+    # carré : tout doit tenir autour du centre de masse de l'attente et entre le sol et le plafond
+    need_h = max((s["bottom"] - s["top"] + 1) for s in st) / (FLOOR - MARGIN)
+    need_w = max(2 * max(s["cx"] - s["left"], s["right"] - s["cx"]) for s in st) / (1 - 2 * MARGIN)
+    side = int(np.ceil(max(need_h, need_w) / 16) * 16)
+    floor_y = int(round(FLOOR * side))
+    for suf, (rgb, alpha), s in zip(SUFFIXES, poses, st):
+        im = np.dstack([rgb, alpha])
+        canvas = np.zeros((side, side, 4), np.float32)
+        canvas[..., :3] = 0
+        dy = floor_y - 1 - s["bottom"]
+        dx = int(round(side / 2 - s["cx"])) if suf != "" else int(round(side / 2 - idle_cx))
+        h, w = alpha.shape
+        ys0, xs0 = max(0, dy), max(0, dx)
+        ys1, xs1 = min(side, dy + h), min(side, dx + w)
+        canvas[ys0:ys1, xs0:xs1] = im[ys0 - dy:ys1 - dy, xs0 - dx:xs1 - dx]
+        assert canvas[..., 3].sum() > 0.97 * alpha.sum(), f"pose {suf or 'repos'} rognée"
         out = ROOT / "assets/monsters" / f"{mid}{suf}.webp"
-        canvas.save(out, lossless=True, quality=100, method=6)
+        Image.fromarray((canvas * 255 + 0.5).astype(np.uint8), "RGBA").save(out, lossless=True, quality=100, method=6)
         print("écrit", out.relative_to(ROOT))
+    print(f"carré {side} px ; pose d'attente haute de {idle_h} px = {idle_h / side:.3f} du carré")
 
 if __name__ == "__main__":
     main()
