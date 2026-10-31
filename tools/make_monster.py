@@ -2,6 +2,7 @@
 """Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
 Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré | --liseré-uniforme[=N]]
      ou : python3 tools/make_monster.py <id> repos.png attaque.png coup.png attaque2.png mort.png   (cinq images, une par pose)
+  --3+2 : planche large mais en 3 poses en haut et 2 en bas (sinon, largeur > 2,2 × hauteur = une seule rangée de 5).
   --echelles=1,a,b,c,d : échelles des cinq poses imposées (remplacent l'estimation automatique, utile quand les poses se ressemblent trop peu pour être
      appariées directement à l'attente : voir tools/estimate_scales.py qui résout les échelles par toutes les paires de poses).
   --liseré-uniforme[=N] : retire le liseré d'origine (épaisseur inégale d'une image à l'autre, franges colorées, parfois absent) puis retrace un liseré blanc
@@ -36,6 +37,7 @@ KEEP_OUTLINE = True  # liseré blanc conservé (voulu) ; --sans-liseré pour le 
 SCALES_OVERRIDE = None  # échelles imposées (--echelles=...) ; None = estimation SIFT
 GAP_PX = 90          # liseré uniforme : rayon de fermeture de la silhouette pour repérer les creux (--liseré-trou=N, 0 = liseré partout)
 GAP_DEPTH = 14       # le liseré est supprimé dans les creux à plus de GAP_DEPTH px sous l'enveloppe
+FORCE_GRID = False   # --3+2 : planche large mais disposée en 3 poses en haut et 2 en bas (au lieu d'une seule rangée de 5)
 UNIFORM_PX = 0       # > 0 : liseré d'origine remplacé par un liseré blanc de cette épaisseur (--liseré-uniforme)
 FLOOR = 0.94        # position des pieds dans le carré (fraction de la hauteur)
 MARGIN = 0.03       # marge minimale autour de la pose la plus grande
@@ -54,7 +56,7 @@ def split(sheet):
     idx = ndi.distance_transform_edt(clab == 0, return_distances=False, return_indices=True)
     lab = np.where(al > 0.08, clab[idx[0], idx[1]], 0)
     cm = {i: ndi.center_of_mass(lab == i) for i in keep}
-    one_row = al.shape[1] > 2.2 * al.shape[0]                   # planche large (cinq poses côte à côte) : de gauche à droite
+    one_row = al.shape[1] > 2.2 * al.shape[0] and not FORCE_GRID  # planche large (cinq poses côte à côte) : de gauche à droite (--3+2 pour forcer 3 en haut et 2 en bas)
     if one_row:
         order = sorted(keep, key=lambda i: cm[i][1])
     else:                                                       # 3 poses en haut, 2 en bas
@@ -236,9 +238,11 @@ def stats(alpha):
                 cx=float((xs * w).sum() / w.sum()))
 
 def main():
-    global KEEP_OUTLINE, UNIFORM_PX, SCALES_OVERRIDE, GAP_PX
+    global KEEP_OUTLINE, UNIFORM_PX, SCALES_OVERRIDE, GAP_PX, FORCE_GRID
     if "--sans-liseré" in sys.argv:
         sys.argv.remove("--sans-liseré"); KEEP_OUTLINE = False
+    if "--3+2" in sys.argv:
+        sys.argv.remove("--3+2"); FORCE_GRID = True
     for a in list(sys.argv):
         if a.startswith("--echelles="):
             sys.argv.remove(a); SCALES_OVERRIDE = [float(x) for x in a.split("=")[1].split(",")]; assert len(SCALES_OVERRIDE) == 5

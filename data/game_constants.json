@@ -2385,6 +2385,21 @@
      "mon_boucher_ecorche",
      "Boucher Écorché",
      1
+    ],
+    [
+     "mon_rampant_suture",
+     "Rampant Suturé",
+     1
+    ],
+    [
+     "mon_crache_os",
+     "Crache-Os",
+     1
+    ],
+    [
+     "mon_porte_pustules",
+     "Porte-Pustules",
+     1
     ]
    ]
   ],
