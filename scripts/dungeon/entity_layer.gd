@@ -11,7 +11,7 @@ const ITEM_ROWS := 23
 const NEW_MONSTER_IDS := ["mon_troll", "mon_gargoyle", "mon_werewolf", "mon_naga", "mon_mudgolem", "mon_cultist", "mon_cavegoblin"]
 const MON_HEIGHTS := [
 	["rat|bat", 0.8], ["snake|crab|mushroom|centipede", 0.9], ["slime|imp", 1.0],
-	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur_m01", 1.5], ["veilleur", 1.59], ["fossoyeur", 1.71], ["veuve", 1.74], ["cercueil", 1.5], ["spider", 1.1],
+	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur_m01", 1.7], ["veilleur", 1.59], ["fossoyeur", 1.71], ["veuve", 1.74], ["cercueil", 1.5], ["spider", 1.1],
 	["skeleton|zombie|wolf|ghost|lizardman|gargoyle|darkpanther|wraith", 1.4],
 	["orc|mummy|beholder", 1.55], ["drake", 1.7], ["elemental", 1.6],
 	["minotaur", 1.9], ["ogre", 2.1], ["golem", 1.75],
@@ -391,11 +391,20 @@ static func _own_pose(id: String, kind: String) -> Material:
 	var suffix := kind
 	if kind == "attack" and ResourceLoader.exists("res://assets/monsters/%s_attack2.webp" % id) and randf() < 0.5:
 		suffix = "attack2"
+	return _pose_mat(id, suffix)
+
+static func _pose_mat(id: String, suffix: String) -> Material:
 	var key := "O|%s|%s" % [id, suffix]
 	if not _mats.has(key):
 		var path := "res://assets/monsters/%s_%s.webp" % [id, suffix]
 		_mats[key] = _lit_material(load(path)) if ResourceLoader.exists(path) else null
 	return _mats[key]
+
+## Construit d'avance les matériaux de toutes les poses d'un monstre Atlas Noir : la mise à la taille de l'écran (voir _fit_texture) prend quelques
+## dizaines de ms par image, ce qui se verrait comme un à-coup à la première attaque.
+static func warm_poses(id: String) -> void:
+	for suffix in ["attack", "attack2", "hit", "dead"]:
+		_pose_mat(id, suffix)
 
 ## Réaction courte sur un sprite précis (salle de combat).
 func play_node(n: Node3D, kind: String) -> void:
@@ -762,6 +771,7 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 		mi.set_meta("pose_id", _icon_id(icon))
 		if is_atlas_id(_icon_id(icon)):
 			mi.set_meta("atlas", true)
+			warm_poses(_icon_id(icon))
 	return mi
 
 ## Décalage vertical d'ancrage (fraction de la hauteur) propre à certaines icônes.
@@ -831,12 +841,63 @@ static var atlas_shader := true
 ## Matériau à shader (AtlasSpriteMaterial) : même rendu, avec un biais de mipmap négatif qui garde le sprite net quand il est affiché bien plus petit que l'image.
 static func _lit_atlas(tex: Texture2D) -> AtlasSpriteMaterial:
 	var m := AtlasSpriteMaterial.new()
-	m.albedo_texture = tex
-	m.emission_texture = tex
+	var fitted := _fit_texture(tex)
+	m.albedo_texture = fitted
+	m.emission_texture = fitted
 	var npath := tex.resource_path.replace(".webp", "_n.webp") if tex != null else ""
 	if npath != "" and npath != tex.resource_path and ResourceLoader.exists(npath):
 		m.normal_texture = load(npath)
 	return m
+
+## ---- Texture mise à la taille de l'écran -------------------------------------------------------------------------------------------------
+## Un sprite très réduit à l'affichage perd en netteté (filtrage des mipmaps), alors qu'une image à peine plus grande que son affichage reste nette
+## (la Veuve, affichée à ×1,2, est plus nette que M01, affiché à ×3,3). Au chargement, l'image est donc réduite UNE fois, avec un vrai filtre (Lanczos),
+## à FIT_MARGIN × sa taille d'affichage à une case de distance (le plus près possible) sur l'écran du joueur : jamais agrandie, jamais en dessous de
+## ce que l'écran peut montrer. En 4K l'image reste en pleine définition ; en 1440p elle est plus petite (et prend 3 à 4 fois moins de mémoire vidéo).
+const FIT_FRAC := 0.189       # côté du carré du sprite à une case de distance, en hauteur d'écran par mètre de monde (mesuré en 1440p sur trois monstres : 0,189)
+const FIT_MARGIN := 1.15
+static var fit_enabled := true
+static var fit_screen_h := 0  # 0 = hauteur de l'écran du joueur (modifiable par les outils de capture)
+static var _fit_cache: Dictionary = {}
+
+static func _mon_row(kind: String) -> float:
+	for row in MON_HEIGHTS:
+		if RegEx.create_from_string(row[0]).search(kind) != null:
+			return float(row[1])
+	return 1.5
+
+static func _fit_texture(tex: Texture2D) -> Texture2D:
+	if not fit_enabled or tex == null:
+		return tex
+	var src := tex.get_width()
+	var base := tex.resource_path.get_file().get_basename()
+	for suf in ["_attack2", "_attack", "_hit", "_dead"]:
+		base = base.trim_suffix(suf)
+	var sh := fit_screen_h
+	if sh <= 0:
+		sh = DisplayServer.screen_get_size(DisplayServer.window_get_current_screen()).y
+	if sh <= 0:
+		return tex
+	var want := int(ceil(_mon_row(base.trim_prefix("mon_")) * 1.3 * FIT_FRAC * float(sh) * FIT_MARGIN))
+	if float(want) * 1.1 >= float(src):
+		return tex                                              # déjà à peu près à la bonne taille
+	want = maxi(want, 384)
+	var key := "%s|%d" % [tex.resource_path, want]
+	if _fit_cache.has(key):
+		return _fit_cache[key]
+	var img := tex.get_image()
+	if img == null:
+		return tex
+	if img.is_compressed():
+		img.decompress()
+	img.clear_mipmaps()
+	img.convert(Image.FORMAT_RGBA8)
+	img.resize(want, want, Image.INTERPOLATE_LANCZOS)
+	img.generate_mipmaps()
+	var out := ImageTexture.create_from_image(img)
+	out.resource_path = ""
+	_fit_cache[key] = out
+	return out
 
 static func _lit_standard(tex: Texture2D) -> StandardMaterial3D:
 	var m := _base_material(tex)

@@ -13,6 +13,10 @@ func _init() -> void:
 		load("res://scripts/dungeon/entity_layer.gd").set("atlas_shader", false)
 	if args.has("lod"):                      # biais de mipmap du matériau Atlas (par défaut -1.0)
 		load("res://scripts/dungeon/atlas_sprite_material.gd").set("lod_bias", float(args.lod))
+	var el: GDScript = load("res://scripts/dungeon/entity_layer.gd")
+	if args.has("fit"):                      # fit=0 : pas de mise à la taille de l'écran ; fit=<hauteur> : simule un écran de cette hauteur (ex. 2160)
+		if int(args.fit) == 0: el.set("fit_enabled", false)
+		else: el.set("fit_screen_h", int(args.fit))
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await create_timer(2.5).timeout
