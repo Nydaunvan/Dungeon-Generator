@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
-Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré]
+Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré | --liseré-uniforme[=N]]
      ou : python3 tools/make_monster.py <id> repos.png attaque.png coup.png attaque2.png mort.png   (cinq images, une par pose)
+  --liseré-uniforme[=N] : retire le liseré d'origine (épaisseur inégale d'une image à l'autre, franges colorées, parfois absent) puis retrace un liseré blanc
+     pur de N px (5 par défaut), identique sur les cinq poses, APRÈS la mise à l'échelle des poses.
   → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille)
     + une carte de normales par pose (<id>_n.webp, <id>_attack_n.webp…) pour l'éclairage en relief (import : compress/normal_map=1, mipmaps).
 
@@ -29,6 +31,7 @@ OUTLINE_ITER = 16   # px max parcourus par le liseré blanc depuis l'extérieur
 ERODE = 2           # px retirés ensuite (reste de liseré gris)
 FEATHER = 1.0       # px de dégradé du bord
 KEEP_OUTLINE = True  # liseré blanc conservé (voulu) ; --sans-liseré pour le retirer
+UNIFORM_PX = 0       # > 0 : liseré d'origine remplacé par un liseré blanc de cette épaisseur (--liseré-uniforme)
 FLOOR = 0.94        # position des pieds dans le carré (fraction de la hauteur)
 MARGIN = 0.03       # marge minimale autour de la pose la plus grande
 
@@ -109,14 +112,49 @@ def split_files(files):
         rgb, al = a[..., :3], a[..., 3]
         mine = al > 0.08
         ys, xs = np.where(al > 0.5)
-        y0, y1 = max(0, ys.min() - 4), min(al.shape[0], ys.max() + 5)
-        x0, x1 = max(0, xs.min() - 4), min(al.shape[1], xs.max() + 5)
+        m_ = 4 + UNIFORM_PX
+        y0, y1 = max(0, ys.min() - m_), min(al.shape[0], ys.max() + m_ + 1)
+        x0, x1 = max(0, xs.min() - m_), min(al.shape[1], xs.max() + m_ + 1)
         poses.append(clean(rgb[y0:y1, x0:x1], (al > 0.5)[y0:y1, x0:x1], (al * mine)[y0:y1, x0:x1]))
     return poses
+
+def uniform_outline(rgb, solid, px):
+    """Retire le liseré blanc d'origine puis retrace un liseré blanc pur de `px` px tout autour du dessin (trous du tissu compris).
+    Le liseré d'origine : blanc relié au vide, plus la bande des 2 px du bord (frange colorée des pixels semi-transparents)."""
+    lab, n = ndi.label(solid)
+    if n > 1:
+        sz = ndi.sum(solid, lab, range(1, n + 1))
+        solid = np.isin(lab, [i + 1 for i, z in enumerate(sz) if z > 400])
+    whitish = (rgb.min(-1) > 0.78) & ((rgb.max(-1) - rgb.min(-1)) < 0.18)
+    band = solid & ~ndi.binary_erosion(solid, iterations=2, border_value=0)
+    cand = (whitish | band) & solid
+    removed = ~solid
+    for _ in range(OUTLINE_ITER):
+        grown = ndi.binary_dilation(removed) & cand & ~removed
+        if not grown.any():
+            break
+        removed |= grown
+    blob = whitish & solid & ~removed                 # restes de liseré piégés entre deux pointes
+    wl, wn = ndi.label(blob)
+    if wn:
+        touch = np.unique(wl[ndi.binary_dilation(removed, iterations=2) & blob])
+        wsz = ndi.sum(blob, wl, range(1, wn + 1))
+        removed |= np.isin(wl, [i for i in touch if i and wsz[i - 1] < 1500])
+    inner = solid & ~removed
+    lab, n = ndi.label(inner)
+    if n > 1:
+        sz = ndi.sum(inner, lab, range(1, n + 1))
+        inner = np.isin(lab, [i + 1 for i, z in enumerate(sz) if z > 300])
+    dist = ndi.distance_transform_edt(~inner)
+    alpha = np.where(inner, 1.0, np.clip(px + 0.5 - dist, 0, 1)).astype(np.float32)
+    out = np.where(inner[..., None], rgb, 1.0).astype(np.float32)     # liseré : blanc pur, prolongé en blanc au-delà (pas de frange aux mipmaps)
+    return out, alpha
 
 def clean(rgb, solid, soft):
     """Par défaut le liseré blanc est GARDÉ (alpha d'origine de la planche, poussière écartée). Avec --sans-liseré : retire le liseré
     relié à l'extérieur, érode, adoucit."""
+    if UNIFORM_PX > 0:
+        return uniform_outline(rgb, solid, UNIFORM_PX)
     if KEEP_OUTLINE:
         lab, n = ndi.label(solid)
         if n > 1:
@@ -177,9 +215,12 @@ def stats(alpha):
                 cx=float((xs * w).sum() / w.sum()))
 
 def main():
-    global KEEP_OUTLINE
+    global KEEP_OUTLINE, UNIFORM_PX
     if "--sans-liseré" in sys.argv:
         sys.argv.remove("--sans-liseré"); KEEP_OUTLINE = False
+    for a in list(sys.argv):
+        if a.startswith("--liseré-uniforme"):
+            sys.argv.remove(a); UNIFORM_PX = int(a.split("=")[1]) if "=" in a else 5
     mid = sys.argv[1]
     files = sys.argv[2:]
     poses = split_files(files) if len(files) == 5 else split(files[0])     # 5 images (une par pose) ou une planche
