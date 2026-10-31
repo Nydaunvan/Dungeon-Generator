@@ -359,7 +359,7 @@ func _start_react(n: Node3D, kind: String) -> void:
 		var base: Material = mi.material_override
 		if not n.has_meta("mat0"):
 			n.set_meta("mat0", base)
-		var flash: StandardMaterial3D = base.duplicate()
+		var flash = base.duplicate()            # StandardMaterial3D ou AtlasSpriteMaterial : même propriété albedo_color
 		flash.albedo_color = Color(1.0, 0.35, 0.35)
 		mi.material_override = flash
 
@@ -439,8 +439,8 @@ func _pose(n: Node3D, delta: float, fighting: bool, charge: float, idle: bool, c
 						sy -= 0.16 * env
 						sx += 0.12 * env
 						off -= cb.z * 0.14 * env                 # recul (s'éloigne de la caméra)
-					var m := (n as MeshInstance3D).material_override as StandardMaterial3D
-					if m != null:
+					var m = (n as MeshInstance3D).material_override
+					if m is StandardMaterial3D or m is AtlasSpriteMaterial:
 						m.albedo_color = Color(1.0, 0.35 + 0.65 * k, 0.35 + 0.65 * k)
 				"attack":
 					if fighting:
@@ -642,12 +642,12 @@ func remove_monster(id: String, animate: bool = false) -> void:
 func _die(n: MeshInstance3D) -> void:
 	_end_react(n)
 	_reset_pose(n)
-	var m: StandardMaterial3D = (n.material_override as StandardMaterial3D).duplicate()
+	var m = n.material_override.duplicate()      # StandardMaterial3D ou AtlasSpriteMaterial
 	n.material_override = m
 	var h: float = n.get_meta("h", 1.0)
 	var dead_id := str(n.get_meta("pose_id", ""))
 	if dead_id != "" and not bool(n.get_meta("boss", false)):
-		var dm := _own_pose(dead_id, "dead") as StandardMaterial3D
+		var dm = _own_pose(dead_id, "dead")
 		if dm != null:
 			# pose « à terre » illustrée : le monstre s'effondre, reste étendu un instant, puis s'estompe
 			m.albedo_texture = dm.albedo_texture
@@ -783,12 +783,12 @@ func _place_on_wall(n: MeshInstance3D, p: Vector2i, side: String) -> void:
 
 ## Matériau (sprite face caméra) pour une icône "@icon:xxx" : planche de monstres, planche d'objets
 ## ou vignette individuelle (boss). Renvoie null si aucune image n'est connue.
-func _material_for(icon: String, is_boss: bool, is_item: bool) -> StandardMaterial3D:
+func _material_for(icon: String, is_boss: bool, is_item: bool) -> Material:
 	var id := _icon_id(icon)
 	var key := ("B|" if is_boss else "M|") + id
 	if _mats.has(key):
 		return _mats[key]
-	var mat: StandardMaterial3D = null
+	var mat: Material = null
 	var consts: Dictionary = Data.constants
 	var remake: Dictionary = consts.get("REMAKE_MAP", {})
 	var legacy: Dictionary = consts.get("ITEM_SPRITE_LEGACY", {})
@@ -820,7 +820,25 @@ static func _monster_cell(index: int) -> StandardMaterial3D:
 
 ## Monstre « Atlas Noir » (illustrations haute définition à cinq poses) : sprite ÉCLAIRÉ — il reçoit la lumière d'ambiance du niveau, la torche
 ## du groupe et les lampes proches au lieu d'être plaqué en pleine lumière, ce qui l'ancre dans le décor.
-static func _lit_material(tex: Texture2D) -> StandardMaterial3D:
+static func _lit_material(tex: Texture2D) -> Material:
+	if atlas_shader:
+		return _lit_atlas(tex)
+	return _lit_standard(tex)
+
+## Interrupteur de comparaison (outils de capture) : false = ancien matériau StandardMaterial3D, sans biais de mipmap.
+static var atlas_shader := true
+
+## Matériau à shader (AtlasSpriteMaterial) : même rendu, avec un biais de mipmap négatif qui garde le sprite net quand il est affiché bien plus petit que l'image.
+static func _lit_atlas(tex: Texture2D) -> AtlasSpriteMaterial:
+	var m := AtlasSpriteMaterial.new()
+	m.albedo_texture = tex
+	m.emission_texture = tex
+	var npath := tex.resource_path.replace(".webp", "_n.webp") if tex != null else ""
+	if npath != "" and npath != tex.resource_path and ResourceLoader.exists(npath):
+		m.normal_texture = load(npath)
+	return m
+
+static func _lit_standard(tex: Texture2D) -> StandardMaterial3D:
 	var m := _base_material(tex)
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 	m.roughness = 1.0

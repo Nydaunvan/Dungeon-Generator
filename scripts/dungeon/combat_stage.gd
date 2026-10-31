@@ -707,8 +707,8 @@ func _visual_center(e: Dictionary) -> Dictionary:
 	return {"pos": pos, "h": h * float(info.size.y), "w": h * float(info.size.x)}
 
 static func _sprite_mass(node: MeshInstance3D) -> Dictionary:
-	var mat := node.material_override as StandardMaterial3D
-	if mat == null or mat.albedo_texture == null:
+	var mat = node.material_override
+	if not (mat is StandardMaterial3D or mat is AtlasSpriteMaterial) or mat.albedo_texture == null:
 		return {"center": Vector2(0.5, 0.5), "size": Vector2(0.6, 0.6)}
 	var tex: Texture2D = mat.albedo_texture
 	var key := "%d|%.4f|%.4f" % [tex.get_rid().get_id(), mat.uv1_offset.x, mat.uv1_offset.y]

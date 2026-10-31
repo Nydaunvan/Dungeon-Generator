@@ -9,6 +9,10 @@ func _init() -> void:
 	var sz := str(args.get("size", "1600x900")).split("x")
 	root.size = Vector2i(int(sz[0]), int(sz[1]))
 	await process_frame
+	if str(args.get("mat", "")) == "std":     # comparaison : ancien matériau StandardMaterial3D (sans biais de mipmap)
+		load("res://scripts/dungeon/entity_layer.gd").set("atlas_shader", false)
+	if args.has("lod"):                      # biais de mipmap du matériau Atlas (par défaut -0.6)
+		load("res://scripts/dungeon/atlas_sprite_material.gd").set("lod_bias", float(args.lod))
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await create_timer(2.5).timeout
