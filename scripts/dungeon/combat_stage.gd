@@ -204,6 +204,8 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			node.set_meta("boss", is_boss)
 		var h: float = e.h
 		var gap := maxf(2.6, h * 1.15)
+		if e.node.has_meta("atlas") and n > 1:
+			gap = _atlas_gap(str(e.node.get_meta("pose_id", "")), h, n)
 		var slot := float(pos) - float(n - 1) / 2.0
 		var off := view.entities.anchor_offset(icon) * h
 		var at := Vector3(cell.x * CELL + right.x * slot * gap, h * 0.5 + 0.02 + off, cell.y * CELL + right.y * slot * gap)
@@ -305,6 +307,18 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 
 ## Durée pendant laquelle la barre de vie finit de se vider avant que le monstre ne tombe (voir EntityLayer.DEATH_BAR_SEC, même valeur).
 const DEATH_BAR_SEC := 0.4
+## Écart entre les membres d'un groupe de monstres Atlas Noir. Leur image est un grand carré dont le monstre n'occupe que la moitié de la largeur : un écart
+## calculé sur le carré (h × 1,15) les envoyait hors de la salle dès que le groupe comptait trois membres. Ici l'écart suit la largeur VISIBLE de la pose
+## d'attente (légère superposition des bras et des capes, le membre central passant devant), sans rien réduire, et il est plafonné pour que les bords
+## extérieurs restent dans la salle (murs à ±6 m) et hors des panneaux qui recouvrent les côtés de la vue.
+const GROUP_HALF_ROOM := 5.2
+static func _atlas_gap(pose_id: String, h: float, count: int) -> float:
+	var vis_w: float = h * float(_pose_envelope(pose_id).w)
+	var gap: float = vis_w * (0.92 if count == 2 else 0.84)
+	var half_span: float = float(count - 1) * 0.5
+	gap = minf(gap, (GROUP_HALF_ROOM - vis_w * 0.5) / half_span)
+	return maxf(gap, 1.2)
+
 static var _bar_sh: Shader
 static var _envelopes: Dictionary = {}
 

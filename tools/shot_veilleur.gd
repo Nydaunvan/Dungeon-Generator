@@ -1,4 +1,5 @@
 extends SceneTree
+## (option group=2|3 : groupe de N monstres identiques, pour contrôler l'espacement)
 ## Essai d'intégration d'un monstre Atlas Noir (option icon=mon_xxx) : combat, poses d'attaque (×4), coup reçu et mort.
 ## xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-driver opengl3 --script res://tools/shot_veilleur.gd -- out=/tmp/vo
 func _init() -> void:
@@ -42,6 +43,9 @@ func _init() -> void:
 	var g: DungeonGrid = main.grid
 	for mm in main.level.monsters:
 		mm["icon"] = "@icon:" + str(args.get("icon", "mon_veilleur_os"))
+		if int(args.get("group", 1)) > 1:
+			mm["isGroup"] = true
+			mm["groupSize"] = int(args.group)
 		if str(mm["icon"]).begins_with("@icon:boss_"):
 			mm["isBoss"] = true            # boss Atlas Noir : on garde (ou pose) le drapeau boss
 		else:
@@ -50,6 +54,16 @@ func _init() -> void:
 	await create_timer(1.5).timeout
 	g = main.grid
 	var lst: Dictionary = main.ctrl.combat.lstate().monsters
+	if int(args.get("group", 1)) > 1:            # le groupe est créé dans l'état de combat : N membres vivants
+		for m in main.level.monsters:
+			var gst: Dictionary = lst.get(str(m.id), {})
+			if gst.is_empty(): continue
+			var mem: Array = []
+			for i in int(args.group): mem.append({"hp": gst.maxHp, "maxHp": gst.maxHp, "alive": true})
+			gst["members"] = mem
+			gst["mirrorSlot"] = 1
+			m["isGroup"] = true
+			m["groupSize"] = int(args.group)
 	var found := false
 	for m in main.level.monsters:
 		var st: Dictionary = lst.get(str(m.id), {})
