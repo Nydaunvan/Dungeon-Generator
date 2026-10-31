@@ -13,6 +13,8 @@ func _init() -> void:
 	root.add_child(main)
 	await create_timer(2.5).timeout
 	var out := str(args.get("out", "/tmp/vo"))
+	if args.has("bias"):                    # essai de netteté : biais de mipmaps de la vue 3D (négatif = plus net)
+		main.layout.sub_viewport.texture_mipmap_bias = float(args.bias)
 	main.wand.paused_if = func(): return true
 	var g: DungeonGrid = main.grid
 	for mm in main.level.monsters:
