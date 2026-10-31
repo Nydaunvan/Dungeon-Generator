@@ -452,8 +452,9 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 	_fx_outdoor = bool(level.get("outdoor", false))
 	_apply_fx()
 	if not bool(level.get("outdoor", false)):
-		env.ambient_light_energy = float(level.get("lightAmbient", 1.1))
-		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4
+		env.ambient_light_energy = float(level.get("lightAmbient", 1.1)) * VisualFx.light_k(_fx_theme, "ambient_k")      # facteurs de thème : 1 sauf thèmes à ambiance propre (gothic)
+		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4 * VisualFx.light_k(_fx_theme, "player_energy_k")
+		rig.torch.omni_range = LevelBuilder.CELL * 6.0 * VisualFx.light_k(_fx_theme, "player_range_k")
 		level_node.torches.light_scale = float(level.get("lightTorch", 1.4)) / 1.4
 	if FogMist.level_has_mist(gs.run_seed, str(level.id), bool(level.get("outdoor", false))):
 		var mist := FogMist.new()

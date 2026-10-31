@@ -5,7 +5,7 @@ extends RefCounted
 ## Carte / Monstres / Objets / Réglages. Sur écran étroit : carte + feuille du bas (pinceaux + navigation à cinq entrées).
 ## Toutes les modifications sont enregistrées automatiquement (`Ax.changed`).
 
-const THEMES := [["stone", "admin.levels.pierre_classique"], ["dirt", "admin.levels.pyramide"], ["damp", "admin.levels.cachot_humide"], ["ruins", "admin.levels.ruines_effondrees"], ["ice", "admin.levels.glace"], ["lava", "admin.levels.lave"], ["temple", "admin.levels.temple_ancien"]]
+const THEMES := [["stone", "admin.levels.pierre_classique"], ["dirt", "admin.levels.pyramide"], ["damp", "admin.levels.cachot_humide"], ["ruins", "admin.levels.ruines_effondrees"], ["ice", "admin.levels.glace"], ["lava", "admin.levels.lave"], ["temple", "admin.levels.temple_ancien"], ["gothic", "admin.levels.gothique"]]
 const DIRS := [[0, "admin.levels.nord"], [1, "admin.levels.est"], [2, "admin.levels.sud"], [3, "admin.levels.ouest"]]
 const MAX_LEVELS := 8
 ## [type, clé de langue, icône]

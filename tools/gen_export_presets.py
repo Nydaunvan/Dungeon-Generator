@@ -6,12 +6,12 @@ Plus de préréglage Web : le jeu n'existe qu'en version exécutable (Windows, L
 import re, pathlib
 
 PACKS = {
-    "themes": ["assets/themes"],
+    "themes": ["assets/themes", "assets/kit"],
     "monsters": ["assets/monsters", "assets/portraits", "assets/sheets", "assets/misc"],
     "audio": ["assets/music", "assets/sounds"],
 }
 CORE_DIRS = ["scripts", "scenes", "data", "assets/fonts", "assets/ui", "assets/icons", "assets/home", "assets/splash.png"]
-BASE_EXCLUDE = ["_tmp/*", "tests/*", "tools/*", "assets/themes/stone_lite/*", "assets/themes/fountain_lite/*", "assets/themes/village_lite/*"]
+BASE_EXCLUDE = ["_tmp/*", "tests/*", "tools/*", "assets/themes/stone_lite/*", "assets/themes/damp_lite/*", "assets/themes/lava_lite/*", "assets/themes/temple_lite/*", "assets/themes/gothic_lite/*", "assets/themes/fountain_lite/*", "assets/themes/village_lite/*"]
 
 def join(items): return ", ".join(items)
 

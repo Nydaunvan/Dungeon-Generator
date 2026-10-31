@@ -21,10 +21,21 @@ const LAVA_FLOOR_REPEAT := 1.0
 const LAVA_EMISSION := 0.75
 const DAMP_FLOOR_REPEAT := 1.0    # terre rocailleuse du sol : une répétition par case
 const DAMP_WALL_REPEAT := 0.5     # la texture 2048 couvre deux pans : briques de taille raisonnable (un pan en montre le quart)
+## Thème « gothic » (Atlas Noir) : pierre anthracite. Jeux de textures attendus : assets/themes/gothic_hd/ (2048) et gothic_lite/ (1024), avec
+## wall_*, floor_* et ceil_* (… _albedo.jpg, _normal.png, _orm.jpg ; voir assets/themes/gothic_LISEZMOI.md). Tant que ces fichiers n'existent pas,
+## le thème est TEMPORAIRE : relief et rugosité de la pierre classique, couleur ramenée au gris froid (voir `_gothic_derived`) ; `gothic_placeholder` vaut alors true.
+const GOTHIC_WALL_REPEAT := 2.0      # entier : les pans voisins se raccordent
+const GOTHIC_FLOOR_REPEAT := 1.0
+const GOTHIC_CEIL_REPEAT := 2.0      # plafond : dalles du sol, deux par case
+const GOTHIC_WALL_TINT := Color(0.60, 0.65, 0.74)
+const GOTHIC_FLOOR_TINT := Color(0.50, 0.54, 0.60)
+const GOTHIC_CEIL_TINT := Color(0.40, 0.43, 0.50)
+static var gothic_placeholder := false
+static var _gray: Dictionary = {}
 static var _cache: Dictionary = {}
 
 static func for_theme(theme: String) -> Dictionary:
-	if not ResourceLoader.exists("res://assets/themes/%s_wall.jpg" % theme) \
+	if theme != "gothic" and not ResourceLoader.exists("res://assets/themes/%s_wall.jpg" % theme) \
 			and not ResourceLoader.exists("res://assets/themes/%s_wall.png" % theme):
 		theme = "stone"
 	var reflect: bool = VisualFx.is_forward() and bool(Settings.opt("fx_reflect")) and VisualFx.WET_THEMES.has(theme)
@@ -34,8 +45,11 @@ static func for_theme(theme: String) -> Dictionary:
 		return _cache[key]
 	var pixel := PIXEL_THEMES.has(theme)
 	var mats := {}
-	for part in ["wall", "floor", "ceil"]:
-		mats[part] = _make(theme, part, pixel)
+	if theme == "gothic":
+		mats = _gothic_mats()
+	else:
+		for part in ["wall", "floor", "ceil"]:
+			mats[part] = _make(theme, part, pixel)
 	if theme == "damp":
 		mats["wall"].uv1_scale = Vector3(2, 2, 1)
 		var dwall := _stone_pbr("wall", DAMP_WALL_REPEAT, "damp")
@@ -82,6 +96,55 @@ static func for_theme(theme: String) -> Dictionary:
 			wl.heightmap_deep_parallax = false
 	_cache[key] = mats
 	return mats
+
+## Mur, sol et plafond du thème gothic : vrais jeux « gothic_hd / gothic_lite » s'ils existent, sinon version temporaire dérivée de la pierre.
+static func _gothic_mats() -> Dictionary:
+	var wall := _stone_pbr("wall", GOTHIC_WALL_REPEAT, "gothic")
+	var floor_ := _stone_pbr("floor", GOTHIC_FLOOR_REPEAT, "gothic")
+	var ceil_ := _stone_pbr("ceil", GOTHIC_CEIL_REPEAT, "gothic")
+	gothic_placeholder = wall == null or floor_ == null
+	if wall == null:
+		wall = _gothic_derived("wall", GOTHIC_WALL_REPEAT, GOTHIC_WALL_TINT)
+	if floor_ == null:
+		floor_ = _gothic_derived("floor", GOTHIC_FLOOR_REPEAT, GOTHIC_FLOOR_TINT)
+	if ceil_ == null:
+		if gothic_placeholder:
+			ceil_ = _gothic_derived("floor", GOTHIC_CEIL_REPEAT, GOTHIC_CEIL_TINT)
+		else:
+			ceil_ = wall.duplicate() as StandardMaterial3D      # vrais jeux sans plafond dédié : le mur, plus sombre et à plus grande échelle
+			ceil_.albedo_color = Color(0.62, 0.64, 0.70)
+			ceil_.uv1_scale = Vector3(1, 1, 1)
+	return {"wall": wall, "floor": floor_, "ceil": ceil_}
+
+## TEMPORAIRE : matériau de pierre classique (normales, occlusion, rugosité) dont la couleur est passée en gris contrasté puis teintée froid.
+static func _gothic_derived(part: String, repeat: float, tint: Color) -> StandardMaterial3D:
+	var m := _stone_pbr(part, repeat)
+	if m == null:
+		return placeholder(tint.darkened(0.5))
+	m.albedo_texture = _cool_gray(m.albedo_texture)
+	m.albedo_color = tint
+	m.metallic_specular = 0.3
+	return m
+
+## Texture en niveaux de gris contrastés (calculée une fois par texture et par résolution).
+static func _cool_gray(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var k := tex.resource_path
+	if _gray.has(k):
+		return _gray[k]
+	var img := tex.get_image()
+	var out: Texture2D = tex
+	if img != null and not img.is_empty():
+		if img.is_compressed():
+			img.decompress()
+		img.clear_mipmaps()
+		img.convert(Image.FORMAT_RGB8)
+		img.adjust_bcs(0.95, 1.25, 0.0)
+		img.generate_mipmaps()
+		out = ImageTexture.create_from_image(img)
+	_gray[k] = out
+	return out
 
 static var _heights: Dictionary = {}
 

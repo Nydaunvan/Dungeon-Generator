@@ -13,10 +13,25 @@ const GRADES := {
 	"ice": {"sat": 0.96, "contrast": 1.06, "bright": 1.03, "shadow": Color(0.0, 0.01, 0.05), "light": Color(0.86, 0.95, 1.0)},
 	"lava": {"sat": 1.12, "contrast": 1.14, "bright": 1.0, "shadow": Color(0.05, 0.0, 0.0), "light": Color(1.0, 0.86, 0.72)},
 	"temple": {"sat": 1.05, "contrast": 1.1, "bright": 1.0, "shadow": Color(0.02, 0.01, 0.0), "light": Color(1.0, 0.92, 0.74)},
+	# gothic (Atlas Noir) : couleurs retenues, contraste marqué, ombres légèrement bleutées ; les hautes lumières restent neutres, donc les torches restent chaudes
+	"gothic": {"sat": 0.78, "contrast": 1.16, "bright": 0.98, "shadow": Color(0.0, 0.006, 0.022), "light": Color(0.97, 0.98, 1.0)},
 }
 const NEUTRAL := {"sat": 1.0, "contrast": 1.0, "bright": 1.0, "shadow": Color(0, 0, 0), "light": Color(1, 1, 1)}
 ## Thèmes à sol brillant : les reflets (SSR) n'y sont actifs qu'avec leur rugosité abaissée (voir ThemeMaterials).
-const WET_THEMES := {"damp": 0.42, "ice": 0.30, "lava": 0.55}
+const WET_THEMES := {"damp": 0.42, "ice": 0.30, "lava": 0.55, "gothic": 0.52}
+
+## Ambiance lumineuse propre à un thème (les autres thèmes gardent l'ambiance chaude de main.gd / warm_up.gd, facteurs à 1).
+## ambient_color / fog_* : lumière ambiante et brouillard ; ambient_k : facteur sur l'énergie ambiante du niveau ;
+## torch_* : portée, énergie et atténuation des torches murales éclairées ; player_* : torche du groupe.
+const THEME_LIGHT := {
+	"gothic": {"ambient_color": Color("1b2029"), "ambient_k": 0.55, "fog_color": Color("04060a"), "fog_density": 0.03,
+		"torch_range_k": 0.72, "torch_energy_k": 1.2, "torch_atten": 1.75, "player_range_k": 0.7, "player_energy_k": 0.95},
+}
+
+## Valeur d'ambiance du thème (`default` quand le thème n'a pas d'ambiance propre).
+static func light_k(theme: String, key: String, default: float = 1.0) -> float:
+	var tl: Dictionary = THEME_LIGHT.get(theme, {})
+	return float(tl.get(key, default))
 
 static var _luts: Dictionary = {}
 static var _blood: Array = []
@@ -33,6 +48,11 @@ static func is_forward() -> bool:
 static func apply_environment(env: Environment, theme: String, outdoor: bool) -> void:
 	if env == null:
 		return
+	var tl: Dictionary = THEME_LIGHT.get(theme, {})
+	if not tl.is_empty() and not outdoor:      # ambiance propre au thème : gris bleuté très sombre, brouillard discret
+		env.ambient_light_color = tl.ambient_color
+		env.fog_light_color = tl.fog_color
+		env.fog_density = float(tl.fog_density)
 	var g: Dictionary = NEUTRAL
 	if Settings.opt("fx_grade") and not outdoor:
 		g = GRADES.get(theme, GRADES["stone"])

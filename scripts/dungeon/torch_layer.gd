@@ -20,7 +20,7 @@ static var FLAME_BASE_LOCAL: Vector3 = _ember_center() + Vector3(0.0, EMBER_Y - 
 ## Teinte du bois / fer par thème (multipliée dans la couleur des sommets).
 const TORCH_TINT := {"stone": Color(1, 1, 1), "dirt": Color(1.0, 0.92, 0.78), "damp": Color(0.82, 0.95, 0.88),
 	"ruins": Color(0.93, 0.9, 0.88), "ice": Color(0.78, 0.88, 1.0), "lava": Color(0.78, 0.68, 0.66),
-	"temple": Color(1.0, 0.9, 0.62), "village_forward": Color(1.0, 0.9, 0.62), "village_return": Color(0.82, 0.95, 0.88)}
+	"temple": Color(1.0, 0.9, 0.62), "gothic": Color(0.7, 0.7, 0.76), "village_forward": Color(1.0, 0.9, 0.62), "village_return": Color(0.82, 0.95, 0.88)}
 
 # --- réglages (à ajuster à l'œil) ---
 const POOL := 9                  # rigs (lumière + fumée + étincelles) en tout, dont ceux qui s'éteignent en fondu (≥ torches Ultra + 2)
@@ -177,6 +177,7 @@ func add_torch(pos: Vector3, rot: float, theme: String) -> void:
 		"rot": rot, "theme": theme, "flame": flame_col, "glow": glow_col,
 		"light_color": glow_col.lerp(flame_col, 0.35),
 		"light_k": clampf(float(c.get("glowOpacity", 0.75)) / 0.75, 0.6, 1.3),
+		"ek": VisualFx.light_k(theme, "torch_energy_k"),
 		"rig": null})
 
 # ---------------------------------------------------------------- lots (MultiMesh)
@@ -353,6 +354,8 @@ func _assign(r: TorchFx, ti: int) -> void:
 	r.root.position = t.fpos
 	r.root.rotation.y = float(t.rot)
 	r.light.light_color = t.light_color
+	r.light.omni_range = LIGHT_RANGE * VisualFx.light_k(str(t.theme), "torch_range_k")      # thèmes à ambiance propre : pools de lumière plus courts et plus contrastés
+	r.light.omni_attenuation = VisualFx.light_k(str(t.theme), "torch_atten", 1.3)
 	r.light.light_energy = 0.0
 	r.light.shadow_enabled = false
 	r.smoke.color = Color.WHITE.lerp(flame, 0.3)
@@ -421,7 +424,7 @@ func _update_rig(r: TorchFx, delta: float) -> void:
 	var t: Dictionary = _torches[r.torch]
 	var p := _time * r.speed + r.phase
 	var flick := 1.0 + (sin(p) * 0.10 + sin(p * 2.7) * 0.06 + sin(p * 7.3) * 0.04) * Settings.motion_k()
-	r.light.light_energy = LIGHT_ENERGY * light_scale * float(t.light_k) * smoothstep(0.0, 1.0, r.level) * flick
+	r.light.light_energy = LIGHT_ENERGY * light_scale * float(t.light_k) * float(t.ek) * smoothstep(0.0, 1.0, r.level) * flick
 
 func _process(delta: float) -> void:
 	_time += delta

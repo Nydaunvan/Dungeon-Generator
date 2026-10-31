@@ -148,6 +148,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 	else:
 		_add_columns(view, grid, theme.get("wall"))
 		RoomDecor.add(view, level, theme_name, theme.get("wall"))
+		await KitDecor.add(view, level, grid, theme_name, niches, holes, sliced)      # modules d'architecture (thème gothic uniquement, désactivable)
 	return view
 
 ## Creux des murs du niveau : `niches` (case -> {d, w, h, ...}, pour les fontaines et le marchand) et `holes` ("x,y,dx,dy" -> intervalle évidé
@@ -330,10 +331,6 @@ static func _wall_with_hole(parts: Dictionary, counts: Dictionary, c: Vector3, d
 
 ## Colonnes aux angles : là où deux murs se rejoignent, et aux deux extrémités d'un mur isolé (port de buildDecor).
 static func _add_columns(view: LevelView, grid: DungeonGrid, wall_mat: Material) -> void:
-	var dirs := {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S": Vector2i(0, 1), "O": Vector2i(-1, 0)}
-	var opposite := {"N": "S", "S": "N", "E": "O", "O": "E"}
-	var perp := {"N": ["E", "O"], "S": ["E", "O"], "E": ["N", "S"], "O": ["N", "S"]}
-	var placed := {}
 	var root := Node3D.new()
 	root.name = "Columns"
 	view.add_child(root)
@@ -344,15 +341,25 @@ static func _add_columns(view: LevelView, grid: DungeonGrid, wall_mat: Material)
 	mesh.radial_segments = 10
 	mesh.rings = 1
 	mesh.material = wall_mat
+	for p in column_points(grid):
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.position = Vector3(p.x, CELL * 0.5, p.y)
+		root.add_child(mi)
+
+## Points (x, z du monde) des colonnes d'angle, dans l'ordre de pose. Sert aussi à KitDecor (piliers sculptés aux mêmes endroits).
+static func column_points(grid: DungeonGrid) -> Array:
+	var dirs := {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S": Vector2i(0, 1), "O": Vector2i(-1, 0)}
+	var opposite := {"N": "S", "S": "N", "E": "O", "O": "E"}
+	var perp := {"N": ["E", "O"], "S": ["E", "O"], "E": ["N", "S"], "O": ["N", "S"]}
+	var placed := {}
+	var out: Array = []
 	var place := func(wx: float, wz: float):
 		var key := "%.2f,%.2f" % [wx, wz]
 		if placed.has(key):
 			return
 		placed[key] = true
-		var mi := MeshInstance3D.new()
-		mi.mesh = mesh
-		mi.position = Vector3(wx, CELL * 0.5, wz)
-		root.add_child(mi)
+		out.append(Vector2(wx, wz))
 	for y in grid.height:
 		for x in grid.width:
 			if grid.cell(x, y) == "#":
@@ -376,6 +383,7 @@ static func _add_columns(view: LevelView, grid: DungeonGrid, wall_mat: Material)
 				for pn in perp[walls[0]]:
 					var p: Vector2i = dirs[pn]
 					place.call(cx + (d0.x + p.x) * CELL * 0.5, cz + (d0.y + p.y) * CELL * 0.5)
+	return out
 
 ## Rotation Y d'un plan qui regarde vers l'intérieur de la case (même valeur que `rot` du JS).
 static func _rot(d: Vector2i) -> float:

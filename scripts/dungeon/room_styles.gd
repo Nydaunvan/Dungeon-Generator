@@ -26,6 +26,7 @@ const THEME_WEIGHTS := {
 	"ice": {"ruine": 2.0, "humide": 2.0, "autel": 1.5, "cellier": 0.8},
 	"lava": {"armes": 3.0, "ruine": 1.5, "autel": 1.2, "humide": 0.2, "bibliotheque": 0.5},
 	"temple": {"autel": 3.0, "bibliotheque": 2.5, "commune": 0.8, "cellier": 0.6},
+	"gothic": {"autel": 2.5, "ruine": 1.5, "armes": 1.5, "humide": 1.5, "bibliotheque": 1.2, "commune": 0.6},
 }
 
 static func _h(a: int, b: int, c: int) -> int:

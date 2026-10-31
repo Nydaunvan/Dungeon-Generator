@@ -1442,6 +1442,11 @@
    "metal": "#d0b458",
    "metalDark": "#5a4a20",
    "glow": "#e0c868"
+  },
+  "gothic": {
+   "metal": "#3a3b40",
+   "metalDark": "#16171a",
+   "glow": "#6a6c74"
   }
  },
  "CANDELABRA_THEME": {
@@ -1498,6 +1503,12 @@
    "flame": 6342911,
    "glow": 3184895,
    "glowOpacity": 0.85
+  },
+  "gothic": {
+   "metal": 1842465,
+   "flame": 16752704,
+   "glow": 16748608,
+   "glowOpacity": 0.6
   }
  },
  "FX_ANIM": {

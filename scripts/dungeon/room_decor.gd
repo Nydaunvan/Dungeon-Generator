@@ -16,6 +16,7 @@ const PALETTES := {
 	"ice": [0x3a6a9a, 0xdff2ff, 0x1d3a58],
 	"lava": [0x6a1a0a, 0xff8a2a, 0x2e0803],
 	"temple": [0x4a2a6a, 0xd8b84a, 0x24133a],
+	"gothic": [0x2a2e38, 0x8a7650, 0x0e1016],      # étoffe ardoise, galon de bronze ancien
 }
 
 ## Palettes propres à certains styles (le trésor est doré, le repaire sanglant) ; les autres suivent le thème du niveau.

@@ -1,0 +1,108 @@
+extends Node
+## Thème gothic : matériaux créés (avec leur indicateur « provisoire » tant que les textures finales manquent), ambiance propre au thème sans effet
+## sur les autres, kit d'architecture : plan de pose déterministe (même niveau -> même plan), jamais sur une case de mur, de départ ou d'objet,
+## aucune arche près d'une porte ou d'un escalier, désactivable (aucun nœud ajouté), sans GLB rien n'est posé (hors boîtes de test).
+func _ready() -> void:
+	await get_tree().create_timer(1.0).timeout
+	var DG = DungeonGenerator
+	var fails: Array = []
+	# matériaux
+	var mats: Dictionary = ThemeMaterials.for_theme("gothic")
+	for k in ["wall", "floor", "ceil"]:
+		if not mats.has(k) or mats[k] == null:
+			fails.append("matériau gothic manquant : " + k)
+	print("matériaux gothic : ", mats.keys(), " ; provisoires : ", mats.get("gothic_placeholder", "n/a"))
+	if ThemeMaterials.for_theme("stone").get("wall") == mats.get("wall"):
+		fails.append("gothic partage le matériau de mur de stone")
+	# ambiance
+	if VisualFx.light_k("stone", "ambient_k") != 1.0 or VisualFx.light_k("ice", "torch_range_k") != 1.0:
+		fails.append("l'ambiance gothic déborde sur les autres thèmes")
+	if VisualFx.light_k("gothic", "torch_range_k") >= 1.0:
+		fails.append("portée des torches gothic non limitée")
+	var env := Environment.new()
+	VisualFx.apply_environment(env, "gothic", false)
+	var amb := env.ambient_light_color
+	if amb.b <= amb.r:
+		fails.append("ambiance gothic non bleutée")
+	var env2 := Environment.new()
+	var amb_before := env2.ambient_light_color
+	VisualFx.apply_environment(env2, "stone", false)
+	if env2.ambient_light_color != amb_before:
+		fails.append("l'ambiance de stone a changé")
+	# kit : sans GLB, rien n'est posé
+	KitDecor.placeholders = false
+	KitDecor.reset_cache()
+	var planned_total := 0
+	var counts_all := {}
+	var cfg: Dictionary = DG.build_config(Data.original_config, 3, 19, 15, "normal", [], 1, 4242)
+	for lv0 in cfg.levels:
+		var lv: Dictionary = lv0.duplicate(true)
+		lv["theme"] = "gothic"
+		var grid := DungeonGrid.new(lv)
+		var view := await LevelBuilder.build(lv, grid)
+		if view.find_child("KitDecor", true, false) != null:
+			fails.append("kit posé sans GLB")
+		view.free()
+		# boîtes de test : plan complet
+		KitDecor.placeholders = true
+		KitDecor.reset_cache()
+		var avail := {}
+		for id in KitDecor.MODULES:
+			avail[id] = true
+		var nd := LevelBuilder.niche_data(grid, lv, false)
+		var p1: Array = await KitDecor.plan(lv, grid, nd.niches, nd.holes, avail)
+		var p2: Array = await KitDecor.plan(lv, grid, nd.niches, nd.holes, avail)
+		if p1.size() != p2.size():
+			fails.append("plan non déterministe (taille)")
+		else:
+			for i in p1.size():
+				if p1[i].id != p2[i].id or not (p1[i].xf as Transform3D).is_equal_approx(p2[i].xf):
+					fails.append("plan non déterministe")
+					break
+		var special := KitDecor._special_cells(lv, RoomDecor._blocked_cells(lv), nd.niches)
+		for it in p1:
+			planned_total += 1
+			counts_all[it.id] = int(counts_all.get(it.id, 0)) + 1
+			var o: Vector3 = it.xf.origin
+			var cx := int(floor((o.x + 2.0) / 4.0))
+			var cz := int(floor((o.z + 2.0) / 4.0))
+			if it.id == "arch":
+				for dy in range(-1, 2):
+					for dx in range(-1, 2):
+						var q := Vector2i(cx + dx, cz + dy)
+						var ch := grid.cell(q.x, q.y)
+						if ch == "D" or ch == "S" or special.has(q):
+							fails.append("arche près d'une porte, d'un escalier ou d'un objet")
+		# avec le kit actif et les boîtes : les nœuds existent ; désactivé : aucun
+		var v2 := await LevelBuilder.build(lv, grid)
+		if v2.find_child("KitDecor", true, false) == null and p1.size() > 0:
+			fails.append("kit actif sans nœud")
+		v2.free()
+		KitDecor.enabled = false
+		var v3 := await LevelBuilder.build(lv, grid)
+		if v3.find_child("KitDecor", true, false) != null:
+			fails.append("kit désactivé mais présent")
+		v3.free()
+		KitDecor.enabled = true
+		KitDecor.placeholders = false
+		KitDecor.reset_cache()
+		# autres thèmes : jamais de kit
+		var lv_s: Dictionary = lv.duplicate(true)
+		lv_s["theme"] = "stone"
+		var v4 := await LevelBuilder.build(lv_s, DungeonGrid.new(lv_s))
+		if v4.find_child("KitDecor", true, false) != null:
+			fails.append("kit posé sur un autre thème")
+		v4.free()
+	print("modules planifiés (boîtes de test) : ", planned_total, " ", counts_all)
+	if planned_total == 0:
+		fails.append("aucun module planifié")
+	for need in ["plinth", "pilaster", "arch", "pillar", "door_frame", "bracket"]:
+		if int(counts_all.get(need, 0)) == 0:
+			fails.append("module jamais planifié : " + need)
+	var uniq := {}
+	for f in fails:
+		uniq[f] = int(uniq.get(f, 0)) + 1
+	for f in uniq:
+		print("ECHEC ", f, " x", uniq[f])
+	print("RESULTAT gothic -> %s" % ("OK" if fails.is_empty() else "ECHEC"))
+	get_tree().quit()
