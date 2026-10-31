@@ -278,11 +278,41 @@ static func _parts(id: String) -> Array:
 				while up != null and up is Node3D:
 					xf = (up as Node3D).transform * xf
 					up = up.get_parent()
-				out.append({"mesh": _with_theme_stone(mi.mesh), "xf": xf})
+				out.append({"mesh": _with_theme_stone(flat_normals(mi.mesh)), "xf": xf})
 			root.free()
 	elif placeholders:
 		out = _placeholder_parts(id)
 	_parts_cache[id] = out
+	return out
+
+## Les GLB livrés ne contiennent que les positions (ni normales ni UV) : sans normales l'éclairage et la projection triplanaire sont faux (toutes les faces
+## se comportent comme si elles regardaient +Z). Les normales sont donc recalculées ici, par face (ombrage plat, sommets dédoublés), d'après le sens
+## de rotation des triangles de Godot (sens horaire = face avant). Un modèle qui fournit déjà ses normales est laissé tel quel.
+static func flat_normals(mesh: Mesh) -> Mesh:
+	var out := ArrayMesh.new()
+	for si in mesh.get_surface_count():
+		var arr := mesh.surface_get_arrays(si)
+		if arr[Mesh.ARRAY_NORMAL] != null or mesh.surface_get_primitive_type(si) != Mesh.PRIMITIVE_TRIANGLES:
+			out.add_surface_from_arrays(mesh.surface_get_primitive_type(si), arr)
+		else:
+			var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var idx = arr[Mesh.ARRAY_INDEX]
+			var tri: PackedInt32Array = idx if idx != null else PackedInt32Array(range(v.size()))
+			var pv := PackedVector3Array()
+			var pn := PackedVector3Array()
+			for t in range(0, tri.size() - 2, 3):
+				var a: Vector3 = v[tri[t]]
+				var b: Vector3 = v[tri[t + 1]]
+				var c: Vector3 = v[tri[t + 2]]
+				var n := (c - a).cross(b - a).normalized()
+				pv.append_array(PackedVector3Array([a, b, c]))
+				pn.append_array(PackedVector3Array([n, n, n]))
+			var na: Array = []
+			na.resize(Mesh.ARRAY_MAX)
+			na[Mesh.ARRAY_VERTEX] = pv
+			na[Mesh.ARRAY_NORMAL] = pn
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, na)
+		out.surface_set_material(si, mesh.surface_get_material(si))
 	return out
 
 ## Les GLB livrés ont des pierres en couleur unie (sans texture) : leurs surfaces non métalliques reçoivent la pierre du thème (même texture, relief et
@@ -304,6 +334,8 @@ static func _with_theme_stone(mesh: Mesh) -> Mesh:
 		if not _stone_cache.has(key):
 			var sm := wall.duplicate() as StandardMaterial3D
 			sm.uv1_triplanar = true
+			sm.uv1_world_triplanar = true       # échelle et orientation identiques d'une instance à l'autre (les modules sont tournés)
+			sm.uv1_triplanar_sharpness = 8.0    # faces nettes : peu de mélange entre axes, donc pas de texture étirée sur les chanfreins
 			sm.uv1_scale = Vector3.ONE * 0.5
 			sm.albedo_color = Color(v, v, v)
 			_stone_cache[key] = sm

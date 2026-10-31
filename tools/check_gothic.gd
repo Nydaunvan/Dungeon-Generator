@@ -52,6 +52,26 @@ func _ready() -> void:
 				var hole := AABB(Vector3(-gap.x * 0.5 + 0.001, 0.0, -1.0), Vector3(gap.x - 0.002, gap.y - 0.001, 2.0))
 				if a.intersects(hole):
 					fails.append("baie obstruée : " + id)
+		# normales (les GLB n'en ont pas : recalculées par KitDecor.flat_normals) : elles doivent regarder vers l'extérieur de chaque pièce
+		var out_n := 0
+		var all_n := 0
+		for part in KitDecor._parts(id):
+			var pm: Mesh = part.mesh
+			var ctr: Vector3 = pm.get_aabb().get_center()
+			for si in pm.get_surface_count():
+				var arr := pm.surface_get_arrays(si)
+				if arr[Mesh.ARRAY_NORMAL] == null:
+					fails.append("normales absentes : " + id)
+					continue
+				var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+				var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+				for k in range(0, vv.size() - 2, 3):
+					var cen := (vv[k] + vv[k + 1] + vv[k + 2]) / 3.0
+					all_n += 1
+					if nn[k].dot(cen - ctr) > -0.01:
+						out_n += 1
+		if all_n > 0 and float(out_n) / float(all_n) < 0.9:
+			fails.append("normales tournées vers l'intérieur : %s (%d/%d vers l'extérieur)" % [id, out_n, all_n])
 		var lim: Vector3 = KitDecor.MODULES[id].size
 		if id != "bracket" and id != "ornament":
 			if box.size.x > lim.x + 0.01 or box.size.y > lim.y + 0.01 or box.size.z > lim.z + 0.2:
@@ -124,6 +144,28 @@ func _ready() -> void:
 		if v4.find_child("KitDecor", true, false) != null:
 			fails.append("kit posé sur un autre thème")
 		v4.free()
+	# arches : espacement, aucune arche près d'une porte/escalier/objet (déjà testé), nombre raisonnable sur des niveaux variés
+	var arch_levels := 0
+	var arch_total := 0
+	for seed_i in 6:
+		var cfg2: Dictionary = DG.build_config(Data.original_config, 3, 19, 15, "normal", [], 1, 900 + seed_i)
+		for lv2 in cfg2.levels:
+			var g2 := DungeonGrid.new(lv2)
+			var nd2 := LevelBuilder.niche_data(g2, lv2, false)
+			var sp2 := KitDecor._special_cells(lv2, RoomDecor._blocked_cells(lv2), nd2.niches)
+			var ar: Array = KitDecor._arch_edges(lv2, g2, sp2, str(lv2.id).hash())
+			var ar2: Array = KitDecor._arch_edges(lv2, g2, sp2, str(lv2.id).hash())
+			if ar.size() != ar2.size():
+				fails.append("arches non déterministes")
+			arch_levels += 1
+			arch_total += ar.size()
+			for i in ar.size():
+				for j in range(i + 1, ar.size()):
+					if (ar[i].pos as Vector3).distance_to(ar[j].pos) < KitDecor.ARCH_GAP_ROOM * 4.0 - 0.01:
+						fails.append("arches trop proches")
+	print("arches : ", arch_total, " sur ", arch_levels, " niveaux")
+	if arch_total < arch_levels * 2:
+		fails.append("trop peu d'arches")
 	print("modules planifiés (boîtes de test) : ", planned_total, " ", counts_all)
 	if planned_total == 0:
 		fails.append("aucun module planifié")

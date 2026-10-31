@@ -31,3 +31,14 @@
   Aucun décalage ni réglage n'a donc été ajouté au code (largeur et animation de la herse inchangées).
 - Amélioration artistique possible (nouveau GLB, non bloquante) : creuser une rainure de 0,4 u de large et 0,1 u de profondeur sur la face intérieure des montants
   (x de ± 1,555 à ± 1,95, au plan z = 0) pour justifier la pénétration des barres.
+
+## Ce que le pack actuel ne contient pas (à fournir dans une prochaine version des GLB)
+
+- **Normales** : les 8 GLB livrés ne contiennent que `POSITION` (ni `NORMAL`, ni `TEXCOORD_0`, ni tangentes). Le jeu recalcule des normales par face au chargement
+  (`KitDecor.flat_normals`, ombrage plat) : l'éclairage est correct, mais sans biseaux lissés. À exporter : normales (lissées ou non) et UV 0.
+- **UV** : sans UV, la pierre du thème est projetée en triplanaire (monde, 1 tuile = 2 u, mélange net). Avec des UV dépliés, des textures propres au kit seraient possibles.
+- **Arche gothique** : `arch.glb` est un portique rectangulaire (deux montants et un linteau plat), pas une ogive. À remplacer par une vraie ogive de même encombrement
+  (4 × 4 × 0,5 u, ouverture libre ≥ 3,0 u de large et 3,5 u de haut au sommet de la clé : une ogive laisse moins de hauteur sur les côtés, la baie doit rester dégagée sur
+  ± 1,5 u de large jusqu'à 3,5 u de haut, soit un tympan plein au-dessus).
+- **Matériaux** : les pierres du pack sont des couleurs unies ; le jeu y applique temporairement la pierre du thème (surfaces dont `metallic` < 0,3). Le fer et le bronze
+  (`metallic` ≥ 0,3) gardent le matériau du GLB.
