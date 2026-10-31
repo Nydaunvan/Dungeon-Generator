@@ -8,6 +8,44 @@ signal nav(name: String)
 
 const SW := 1672.0
 const SH := 940.0
+## Cascades du fond : des filets d'eau clairs qui descendent (bruit étiré en hauteur, deux couches à vitesses différentes), additifs et limités par un masque
+## (assets/home/waterfall_mask.png, tracé par tools/make_waterfall_mask.py) pour ne toucher que l'eau déjà claire de l'image.
+const WATERFALL_SHADER := """
+shader_type canvas_item;
+render_mode blend_add;
+uniform sampler2D mask : filter_linear, repeat_disable;
+uniform vec2 px = vec2(3840.0, 2160.0);
+uniform float intensity = 0.75;
+uniform vec3 tint = vec3(0.62, 0.78, 1.0);
+
+float h21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y);
+}
+void fragment() {
+	float m = texture(mask, UV).r;
+	if (m < 0.01) {
+		discard;
+	}
+	vec2 p = UV * px;
+	// filets fins qui tombent (vitesses en pixels du fond par seconde)
+	float a = vnoise(vec2(p.x / 7.0, p.y / 70.0 - TIME * 3.6));
+	float b = vnoise(vec2(p.x / 15.0 + 11.0, p.y / 130.0 - TIME * 2.3));
+	float c = vnoise(vec2(p.x / 4.0 + 5.0, p.y / 36.0 - TIME * 5.5));
+	float streak = smoothstep(0.38, 0.95, a * 0.5 + b * 0.35 + c * 0.25);
+	float shimmer = 0.8 + 0.2 * sin(TIME * 2.0 + p.y / 60.0);
+	float v = streak * shimmer * m * intensity;
+	COLOR = vec4(tint * v, 1.0);
+}
+"""
+
 const FLAME_SHADER := """
 shader_type canvas_item;
 render_mode blend_add;
@@ -62,6 +100,7 @@ var _btn_main: HomeMenuButton    # « Nouvelle Expédition » (« Expédition en
 var _btn_origin: HomeMenuButton
 var _btn_saves: HomeMenuButton
 var _tools: HomeToolsPanel
+var _waterfall: ColorRect     # eau animée des cascades du fond (même cadrage que l'image)
 var _flames: Array = []       # {node, u, v, w, h} : flammes animées posées sur les torches / bougies du fond (coordonnées relatives à l'image)
 var _foot_line: TextureRect
 var _foot_ver: Button
@@ -159,6 +198,7 @@ func _build() -> void:
 	_embers = Embers.new()
 	_stage.add_child(_embers)
 	_make_flames()
+	_make_waterfalls()
 
 	# en-tête
 	_header = AppHeader.new()
@@ -259,6 +299,21 @@ func _make_flames() -> void:
 		idx += 1
 		_flames.append({"node": r, "u": spec[0], "v": spec[1], "w": spec[2], "h": spec[3]})
 
+func _make_waterfalls() -> void:
+	var sh := Shader.new()
+	sh.code = WATERFALL_SHADER
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	m.set_shader_parameter("mask", _tex("waterfall_mask.png"))
+	var bt := _scene_bg.texture
+	if bt != null:
+		m.set_shader_parameter("px", bt.get_size())
+	_waterfall = ColorRect.new()
+	_waterfall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_waterfall.material = m
+	add_child(_waterfall)
+	move_child(_waterfall, _scene_bg.get_index() + 1)
+
 ## Place les flammes d'après la position de l'image de fond (recadrée « cover » sur toute la page).
 func _layout_flames() -> void:
 	var tex := _scene_bg.texture
@@ -267,6 +322,9 @@ func _layout_flames() -> void:
 	var ts := tex.get_size()
 	var sc := maxf(size.x / ts.x, size.y / ts.y)
 	var org := (size - ts * sc) * 0.5
+	if _waterfall != null:
+		_waterfall.size = ts * sc
+		_waterfall.position = org
 	var gs := 0.2 * ts.x * sc
 	_glow.size = Vector2(gs, gs)
 	_glow.position = org + Vector2(0.0965 * ts.x * sc, 0.2 * ts.y * sc) - _glow.size * 0.5

@@ -13,4 +13,6 @@ func _init() -> void:
 	data.go_home()
 	await create_timer(2.5).timeout
 	root.get_texture().get_image().save_png(str(args.get("out", "/tmp/home")) + ".png")
+	await create_timer(0.6).timeout        # deuxième image : l'eau des cascades doit avoir bougé
+	root.get_texture().get_image().save_png(str(args.get("out", "/tmp/home")) + "_b.png")
 	quit()
