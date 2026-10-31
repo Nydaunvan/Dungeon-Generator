@@ -2415,6 +2415,21 @@
      "opensDoorId": "",
      "patrolRadius": 1,
      "attackSpeed": 1.9
+    },
+    {
+     "id": "cercueil1",
+     "name": "Porte-Cercueil",
+     "icon": "@icon:mon_porte_cercueil",
+     "x": 10,
+     "y": 1,
+     "force": 13,
+     "dex": 5,
+     "con": 12,
+     "xpReward": 26,
+     "goldReward": 12,
+     "opensDoorId": "",
+     "patrolRadius": 1,
+     "attackSpeed": 2.4
     }
    ],
    "items": [
@@ -2540,6 +2555,21 @@
      "opensDoorId": "",
      "patrolRadius": 2,
      "attackSpeed": 2.2
+    },
+    {
+     "id": "veuve1",
+     "name": "Veuve des Cryptes",
+     "icon": "@icon:mon_veuve",
+     "x": 7,
+     "y": 3,
+     "force": 11,
+     "dex": 10,
+     "con": 8,
+     "xpReward": 28,
+     "goldReward": 14,
+     "opensDoorId": "",
+     "patrolRadius": 1,
+     "attackSpeed": 1.8
     },
     {
      "id": "boss1",

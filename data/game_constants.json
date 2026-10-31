@@ -2335,6 +2335,16 @@
      "mon_fossoyeur",
      "Fossoyeur sans visage",
      1
+    ],
+    [
+     "mon_veuve",
+     "Veuve des Cryptes",
+     1
+    ],
+    [
+     "mon_porte_cercueil",
+     "Porte-Cercueil",
+     1
     ]
    ]
   ],
