@@ -97,16 +97,33 @@ func die_all() -> void:
 
 func _free_entry(k, dying: bool = false) -> void:
 	var e: Dictionary = _nodes[k]
-	if dying and view != null and view.entities != null:
-		view.entities.die_node(e.node)
+	var bar = e.get("bar")
+	var ents = view.entities if view != null else null
+	if dying and ents != null:
+		if Settings.monster_anim and bar != null and is_instance_valid(bar):
+			# mort : la barre de vie finit de se vider d'abord (elle reste visible, à zéro), PUIS le monstre prend sa pose de mort et s'efface
+			if e.get("bar_tw") != null and (e.bar_tw as Tween).is_valid():
+				(e.bar_tw as Tween).kill()
+			var bmat := bar.material_override as ShaderMaterial
+			var tb: Tween = bar.create_tween()
+			tb.tween_method(func(v: float): bmat.set_shader_parameter("frac", v), float(bmat.get_shader_parameter("frac")), 0.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tb.tween_interval(DEATH_BAR_SEC - 0.35)
+			tb.tween_callback(bar.queue_free)
+			var node = e.node
+			get_tree().create_timer(DEATH_BAR_SEC).timeout.connect(func():
+				if is_instance_valid(node):
+					ents.die_node(node))
+			bar = null          # libérée par son propre tween
+		else:
+			ents.die_node(e.node)
 	else:
 		e.node.queue_free()
 	if e.halo != null:
 		e.halo.queue_free()
 	if e.get("rage") != null:
 		e.rage.queue_free()
-	if e.get("bar") != null:
-		e.bar.queue_free()
+	if bar != null:
+		bar.queue_free()
 	_nodes.erase(k)       # l'effet de statut est enfant du sprite : il disparaît avec lui
 
 func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
@@ -244,19 +261,20 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 	var frac := clampf(float(holder.get("hp", max_hp)) / max_hp, 0.0, 1.0)
 	var h: float = e.h
 	var info: Dictionary = _sprite_mass(e.node)
+	var pose_id := str(e.node.get_meta("pose_id", ""))
+	var top: float = float((0.5 - (info.center.y - info.size.y * 0.5)) * h)     # sommet visible du sprite : la barre se pose au-dessus de la tête
+	if e.node.has_meta("atlas") and pose_id != "":
+		# monstre à plusieurs poses : la barre se cale au-dessus de sa position la plus haute (arme levée…), avec la largeur et le centre de la pose d'attente
+		# (la position normale) : elle ne bouge pas, ne grandit pas et ne rétrécit pas, quelle que soit la pose affichée
+		var env := _pose_envelope(pose_id)
+		top = (0.5 - float(env.top)) * h
+		info = {"center": Vector2(float(env.cx), 0.5), "size": Vector2(float(env.w), info.size.y)}
 	var vis_w: float = h * float(info.size.x)
 	var width := clampf(vis_w * 0.8, 0.8, 2.4)
 	var mirror := -1.0 if mirrored else 1.0
 	var right: Vector3 = Vector3.RIGHT
 	if camera != null:
 		right = camera.global_transform.basis.x
-	var top: float = float((0.5 - (info.center.y - info.size.y * 0.5)) * h)     # sommet visible du sprite : la barre se pose au-dessus de la tête
-	var pose_id := str(e.node.get_meta("pose_id", ""))
-	if e.node.has_meta("atlas") and pose_id != "":
-		# monstre à plusieurs poses : la barre se cale au-dessus de sa position la plus haute (arme levée…) et ne bouge plus, quelle que soit la pose affichée
-		var env := _pose_envelope(pose_id)
-		top = (0.5 - float(env.top)) * h
-		info = {"center": Vector2(float(env.cx), 0.5), "size": info.size}
 	# posée juste au-dessus du sol et avancée vers la caméra : en perspective elle apparaît sous les pieds du monstre sans passer sous le sol
 	var pos: Vector3 = at + right * ((info.center.x - 0.5) * h * mirror) - Vector3(fwd.x, 0.0, fwd.y) * 0.3
 	pos.y = at.y + top + 0.04
@@ -285,6 +303,8 @@ func _update_bar(e: Dictionary, st: Dictionary, idx: int, at: Vector3, mirrored:
 		tw.tween_method(func(v: float): mat.set_shader_parameter("frac", v), cur, frac, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		e["bar_tw"] = tw
 
+## Durée pendant laquelle la barre de vie finit de se vider avant que le monstre ne tombe (voir EntityLayer.DEATH_BAR_SEC, même valeur).
+const DEATH_BAR_SEC := 0.4
 static var _bar_sh: Shader
 static var _envelopes: Dictionary = {}
 
@@ -295,6 +315,7 @@ static func _pose_envelope(id: String) -> Dictionary:
 		return _envelopes[id]
 	var top := 1.0
 	var cx := 0.5
+	var idle_w := 0.6
 	for suf in ["", "_attack", "_attack2", "_hit"]:
 		var path := "res://assets/monsters/%s%s.webp" % [id, suf]
 		if not ResourceLoader.exists(path):
@@ -316,7 +337,8 @@ static func _pose_envelope(id: String) -> Dictionary:
 		top = minf(top, float(miny) / float(img.get_height()))
 		if suf == "":
 			cx = float(minx + maxx + 1) * 0.5 / float(img.get_width())
-	var res := {"top": top, "cx": cx}
+			idle_w = float(maxx - minx + 1) / float(img.get_width())
+	var res := {"top": top, "cx": cx, "w": idle_w}
 	_envelopes[id] = res
 	return res
 

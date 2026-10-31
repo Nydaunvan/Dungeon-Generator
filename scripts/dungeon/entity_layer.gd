@@ -647,6 +647,26 @@ func remove_monster(id: String, animate: bool = false) -> void:
 				keep.append(e)
 		monsters[p] = keep
 
+## Chronologie de la mort d'un monstre en combat : la barre de vie finit de se vider (DEATH_BAR_SEC), puis le monstre prend sa pose de mort (monstre Atlas Noir :
+## il y reste DEATH_HOLD_SEC puis s'estompe en DEATH_FADE_SEC ; autre monstre : il s'affaisse en 0,5 s), puis une courte respiration (DEATH_BREATH_SEC).
+## Le combat ne se referme et l'écran de victoire ne s'ouvre qu'après la durée totale (death_seconds).
+const DEATH_BAR_SEC := 0.4
+const DEATH_HOLD_SEC := 0.9
+const DEATH_FADE_SEC := 0.6
+const DEATH_FALL_SEC := 0.5
+const DEATH_BREATH_SEC := 0.25
+
+## Durée totale de la mort du monstre `id` (à appeler AVANT remove_monster).
+func death_seconds(id: String) -> float:
+	var anim := DEATH_FALL_SEC
+	for p in monsters.keys():
+		for e in monsters[p]:
+			if str(e.def.id) == id and is_instance_valid(e.node):
+				var pid := str(e.node.get_meta("pose_id", ""))
+				if pid != "" and not bool(e.node.get_meta("boss", false)) and ResourceLoader.exists("res://assets/monsters/%s_dead.webp" % pid):
+					anim = DEATH_HOLD_SEC + DEATH_FADE_SEC
+	return (DEATH_BAR_SEC if Settings.monster_anim else 0.0) + anim + DEATH_BREATH_SEC
+
 ## Mort d'un monstre : il s'affaisse et s'efface (0,5 s), puis le sprite est libéré.
 func _die(n: MeshInstance3D) -> void:
 	_end_react(n)
@@ -664,17 +684,17 @@ func _die(n: MeshInstance3D) -> void:
 			m.normal_texture = dm.normal_texture
 			m.albedo_color = Color(1, 1, 1, 1)
 			var tl := n.create_tween()
-			tl.tween_interval(0.9)
-			tl.tween_property(m, "albedo_color:a", 0.0, 0.6)
+			tl.tween_interval(DEATH_HOLD_SEC)
+			tl.tween_property(m, "albedo_color:a", 0.0, DEATH_FADE_SEC)
 			if m.emission_enabled:                              # l'auto-éclairage et le liseré s'éteignent avec l'image (pas de voile résiduel)
-				tl.parallel().tween_property(m, "emission_energy_multiplier", 0.0, 0.6)
-				tl.parallel().tween_property(m, "rim", 0.0, 0.6)
+				tl.parallel().tween_property(m, "emission_energy_multiplier", 0.0, DEATH_FADE_SEC)
+				tl.parallel().tween_property(m, "rim", 0.0, DEATH_FADE_SEC)
 			tl.chain().tween_callback(n.queue_free)
 			return
 	var tw := n.create_tween().set_parallel(true)
-	tw.tween_property(n, "scale:y", 0.25, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(n, "position:y", n.position.y - h * 0.375, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(m, "albedo_color:a", 0.0, 0.5)
+	tw.tween_property(n, "scale:y", 0.25, DEATH_FALL_SEC).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(n, "position:y", n.position.y - h * 0.375, DEATH_FALL_SEC).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(m, "albedo_color:a", 0.0, DEATH_FALL_SEC)
 	tw.chain().tween_callback(n.queue_free)
 
 ## Piège désamorcé : les pointes rentrent dans leur plaque, la vapeur cesse (le piège reste en place, inoffensif) ; les autres objets disparaissent.
@@ -922,13 +942,13 @@ static func _lit_standard(tex: Texture2D) -> StandardMaterial3D:
 ## Buste des monstres Atlas Noir pour la file d'initiative (id → [centre x, centre y, demi-côté], en fractions de l'image) : de loin, le monstre
 ## entier y est illisible ; on y montre un médaillon de la tête et des épaules, comme les héros. À renseigner pour chaque nouveau monstre.
 const BUSTS := {
-	"mon_veilleur_os": [0.518, 0.205, 0.13], "mon_fossoyeur": [0.492, 0.16, 0.13],
-	"mon_veuve": [0.507, 0.155, 0.115], "mon_porte_cercueil": [0.47, 0.27, 0.115],
-	"mon_crane_murmure": [0.51, 0.2, 0.15],
-	"mon_moine_decharne": [0.50, 0.29, 0.11],
-	"mon_chien_ossuaire": [0.505, 0.27, 0.15],
-	"mon_gardien_vertebres": [0.495, 0.45, 0.13],
-	"mon_porc_cadavre": [0.53, 0.40, 0.17],
+	"mon_veilleur_os": [0.518, 0.187, 0.12], "mon_fossoyeur": [0.492, 0.16, 0.12],
+	"mon_veuve": [0.507, 0.118, 0.1], "mon_porte_cercueil": [0.47, 0.285, 0.11],
+	"mon_crane_murmure": [0.51, 0.21, 0.13],
+	"mon_moine_decharne": [0.5, 0.296, 0.1],
+	"mon_chien_ossuaire": [0.505, 0.31, 0.13],
+	"mon_gardien_vertebres": [0.495, 0.45, 0.11],
+	"mon_porc_cadavre": [0.53, 0.478, 0.13],
 }
 static var _bust_cache: Dictionary = {}
 

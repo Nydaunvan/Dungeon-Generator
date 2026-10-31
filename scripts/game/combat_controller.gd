@@ -34,7 +34,7 @@ var _gate_pending: bool = false    # un combat attend que la porte s'ouvre
 var _hold_until: int = 0           # petite respiration après la dernière fenêtre / le dernier effet
 var _draining: bool = false
 var instinct_waiting: bool = false      # la fenêtre de l'instinct est ouverte : le prochain appui (ou « ins » du journal au rejeu) la referme
-const DEATH_ANIM_SEC := 0.65      # animation de mort d'un monstre (0,5 s) + une courte respiration avant de quitter la fenêtre de combat
+# durée de la mort d'un monstre avant de quitter la fenêtre de combat : voir EntityLayer.death_seconds (barre de vie, pose de mort, disparition, respiration)
 ## Participant dont l'action est encore en cours de présentation (effet visuel, chiffres) : la file d'initiative le garde au centre
 ## tant que l'animation n'est pas finie, même si le modèle a déjà donné la main au suivant.
 var queue_hold: String = ""
@@ -401,11 +401,12 @@ func _drain() -> void:
 					await SpellFx3D.wait_idle(get_tree())
 					_draining = false
 				monster_death_started.emit(str(e.id))
+				var death_sec: float = view.entities.death_seconds(str(e.id))      # barre qui se vide + pose de mort + disparition (avant remove_monster)
 				view.entities.remove_monster(str(e.id), true)
 				if not model_in_combat() and stage_on and Settings.monster_anim:
 					# dernier monstre : la fenêtre de combat reste affichée le temps de son animation de mort (`in_combat` reste vrai tant que `_draining`)
 					_draining = true
-					await get_tree().create_timer(DEATH_ANIM_SEC).timeout
+					await get_tree().create_timer(death_sec).timeout
 					_draining = false
 				if not model_in_combat() and SpellFx3D.busy():
 					_draining = true
