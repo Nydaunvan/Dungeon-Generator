@@ -47,7 +47,7 @@ const BOSS := {
 	"boss_dragon": {"fire": [60, 85], "ice": [-45, -30]}, "boss_demonlord": {"fire": [40, 60], "shadow": [40, 60], "holy": [-50, -35]},
 	"boss_troll": {"phys": [30, 45], "fire": [-45, -30]}, "boss_lich": {"shadow": [60, 80], "ice": [30, 50], "holy": [-50, -35]},
 	"boss_kraken": {"fire": [40, 60], "nature": [-45, -30]}, "boss_golem": {"phys": [50, 70], "shadow": [-45, -30]},
-	"boss_spider": {"nature": [40, 60], "fire": [-50, -35]}, "boss_wraith": {"phys": [60, 80], "shadow": [50, 70], "holy": [-50, -35]},
+	"boss_spider": {"nature": [40, 60], "fire": [-50, -35]}, "boss_roi_pierres": {"phys": [45, 65], "shadow": [-40, -25], "ice": [-35, -20]}, "boss_wraith": {"phys": [60, 80], "shadow": [50, 70], "holy": [-50, -35]},
 }
 
 static func style_key(style: String) -> String:

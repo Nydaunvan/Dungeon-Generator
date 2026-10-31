@@ -11,7 +11,7 @@ const ITEM_ROWS := 23
 const NEW_MONSTER_IDS := ["mon_troll", "mon_gargoyle", "mon_werewolf", "mon_naga", "mon_mudgolem", "mon_cultist", "mon_cavegoblin"]
 const MON_HEIGHTS := [
 	["rat|bat", 0.8], ["snake|crab|mushroom|centipede", 0.9], ["slime|imp", 1.0],
-	["goblin|gnoll|harpy|mimic", 1.2], ["crane_murmure", 1.55], ["moine_decharne", 1.95], ["chien_ossuaire", 1.26], ["gardien_vertebres", 2.27], ["porc_cadavre", 1.5], ["mange_main", 1.99], ["nourrice_putride", 1.68], ["boucher_ecorche", 2.03], ["rampant_suture", 2.26], ["crache_os", 2.15], ["porte_pustules", 2.76], ["veilleur", 1.7], ["fossoyeur", 1.5], ["veuve", 1.66], ["cercueil", 1.5], ["spider", 1.1],
+	["goblin|gnoll|harpy|mimic", 1.2], ["crane_murmure", 1.55], ["moine_decharne", 1.95], ["chien_ossuaire", 1.26], ["gardien_vertebres", 2.27], ["porc_cadavre", 1.5], ["mange_main", 1.99], ["nourrice_putride", 1.68], ["boucher_ecorche", 2.03], ["rampant_suture", 2.26], ["roi_pierres", 3.1], ["crache_os", 2.15], ["porte_pustules", 2.76], ["veilleur", 1.7], ["fossoyeur", 1.5], ["veuve", 1.66], ["cercueil", 1.5], ["spider", 1.1],
 	["skeleton|zombie|wolf|ghost|lizardman|gargoyle|darkpanther|wraith", 1.4],
 	["orc|mummy|beholder", 1.55], ["drake", 1.7], ["elemental", 1.6],
 	["minotaur", 1.9], ["ogre", 2.1], ["golem", 1.75],
@@ -368,7 +368,7 @@ func _pose_material(n: Node3D, kind: String) -> Material:
 	if kind != "attack" and kind != "hit":
 		return null
 	var id := str(n.get_meta("pose_id", ""))
-	if id == "" or bool(n.get_meta("boss", false)):
+	if id == "":          # pas de pose illustrée (boss de l'ancienne génération : seul un boss Atlas Noir porte « pose_id »)
 		return null
 	var own := _own_pose(id, kind)
 	if own != null:
@@ -663,7 +663,7 @@ func death_seconds(id: String) -> float:
 		for e in monsters[p]:
 			if str(e.def.id) == id and is_instance_valid(e.node):
 				var pid := str(e.node.get_meta("pose_id", ""))
-				if pid != "" and not bool(e.node.get_meta("boss", false)) and ResourceLoader.exists("res://assets/monsters/%s_dead.webp" % pid):
+				if pid != "" and ResourceLoader.exists("res://assets/monsters/%s_dead.webp" % pid):
 					anim = DEATH_HOLD_SEC + DEATH_FADE_SEC
 	return (DEATH_BAR_SEC if Settings.monster_anim else 0.0) + anim + DEATH_BREATH_SEC
 
@@ -675,7 +675,7 @@ func _die(n: MeshInstance3D) -> void:
 	n.material_override = m
 	var h: float = n.get_meta("h", 1.0)
 	var dead_id := str(n.get_meta("pose_id", ""))
-	if dead_id != "" and not bool(n.get_meta("boss", false)):
+	if dead_id != "":
 		var dm = _own_pose(dead_id, "dead")
 		if dm != null:
 			# pose « à terre » illustrée : le monstre s'effondre, reste étendu un instant, puis s'estompe
@@ -787,7 +787,7 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 	mi.mesh = q
 	mi.material_override = mat
 	mi.set_meta("h", h)
-	if not is_item and not is_boss:
+	if not is_item and (not is_boss or is_atlas_id(_icon_id(icon))):      # un boss Atlas Noir a aussi ses poses et son éclairage
 		mi.set_meta("pose_id", _icon_id(icon))
 		if is_atlas_id(_icon_id(icon)):
 			mi.set_meta("atlas", true)
@@ -831,7 +831,7 @@ func _material_for(icon: String, is_boss: bool, is_item: bool) -> Material:
 	elif remake.has(id) and not is_boss:
 		mat = _monster_cell(int(remake[id]))
 	elif ResourceLoader.exists(hd):
-		mat = _lit_material(load(hd)) if (is_atlas_id(id) and not is_boss) else _base_material(load(hd))      # vignette individuelle (les monstres Atlas Noir sont éclairés)
+		mat = _lit_material(load(hd)) if is_atlas_id(id) else _base_material(load(hd))      # vignette individuelle (les monstres Atlas Noir sont éclairés)
 	elif legacy.has(id):
 		mat = _sheet_material(ITEM_SHEET, int(legacy[id]), ITEM_COLS, ITEM_ROWS)
 	elif id.begins_with("spr_") and id.substr(4).is_valid_int() and not ResourceLoader.exists(single):
@@ -951,6 +951,7 @@ const BUSTS := {
 	"mon_porc_cadavre": [0.53, 0.478, 0.13],
 	"mon_mange_main": [0.5, 0.47, 0.12], "mon_nourrice_putride": [0.532, 0.33, 0.1], "mon_boucher_ecorche": [0.5, 0.275, 0.1],
 	"mon_rampant_suture": [0.5, 0.72, 0.12], "mon_crache_os": [0.5, 0.572, 0.12], "mon_porte_pustules": [0.5, 0.485, 0.1],
+	"boss_roi_pierres": [0.5, 0.507, 0.09],
 }
 static var _bust_cache: Dictionary = {}
 

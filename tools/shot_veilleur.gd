@@ -42,7 +42,10 @@ func _init() -> void:
 	var g: DungeonGrid = main.grid
 	for mm in main.level.monsters:
 		mm["icon"] = "@icon:" + str(args.get("icon", "mon_veilleur_os"))
-		mm.erase("isBoss")
+		if str(mm["icon"]).begins_with("@icon:boss_"):
+			mm["isBoss"] = true            # boss Atlas Noir : on garde (ou pose) le drapeau boss
+		else:
+			mm.erase("isBoss")
 	main.load_level(main.level_index)
 	await create_timer(1.5).timeout
 	g = main.grid

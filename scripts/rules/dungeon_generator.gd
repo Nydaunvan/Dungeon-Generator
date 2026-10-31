@@ -6,7 +6,9 @@ extends RefCounted
 const TIER1 := [["Gobelin des cavernes", "mon_cavegoblin"], ["Rat géant", "mon_rat"], ["Loup sauvage", "mon_wolf"], ["Araignée venimeuse", "mon_spider"], ["Orc pillard", "mon_orc"]]
 const TIER2 := [["Squelette", "mon_skeleton"], ["Veilleur Os", "mon_veilleur_os"], ["Fossoyeur sans visage", "mon_fossoyeur"], ["Veuve des Cryptes", "mon_veuve"], ["Porte-Cercueil", "mon_porte_cercueil"], ["Crâne-Murmure", "mon_crane_murmure"], ["Moine Décharné", "mon_moine_decharne"], ["Chien d'Ossuaire", "mon_chien_ossuaire"], ["Gardien des Vertèbres", "mon_gardien_vertebres"], ["Porc-Cadavre", "mon_porc_cadavre"], ["Mange-Main", "mon_mange_main"], ["Nourrice Putride", "mon_nourrice_putride"], ["Boucher Écorché", "mon_boucher_ecorche"], ["Rampant Suturé", "mon_rampant_suture"], ["Crache-Os", "mon_crache_os"], ["Porte-Pustules", "mon_porte_pustules"], ["Zombie", "mon_zombie"], ["Gnoll", "mon_gnoll"], ["Homme-lézard", "mon_lizardman"], ["Momie", "mon_mummy"], ["Gluant", "mon_slime"], ["Mimique", "mon_mimic"], ["Fantôme", "mon_ghost"], ["Diablotin", "mon_imp"], ["Harpie", "mon_harpy"], ["Minotaure", "mon_minotaur"], ["Ogre", "mon_ogre"], ["Troll des cavernes", "mon_troll"], ["Gargouille", "mon_gargoyle"], ["Loup-garou", "mon_werewolf"], ["Naga", "mon_naga"], ["Golem de boue", "mon_mudgolem"], ["Cultiste", "mon_cultist"]]
 const TIER3 := [["Élémentaire de feu", "mon_elemental"], ["Élémentaire de glace", "mon_iceelemental"], ["Béholder", "mon_beholder"], ["Squelette archer", "mon_skeletonarcher"], ["Panthère infernale", "mon_darkpanther"], ["Golem de pierre", "mon_stonegolem"], ["Drake", "mon_drake"]]
-const BOSSES := [["Dragon", "boss_dragon"], ["Seigneur démon", "boss_demonlord"], ["Troll géant", "boss_troll"], ["Liche", "boss_lich"], ["Kraken", "boss_kraken"], ["Golem de pierre", "boss_golem"], ["Araignée titanesque", "boss_spider"], ["Spectre des ombres", "boss_wraith"]]
+const BOSSES := [["Dragon", "boss_dragon"], ["Seigneur démon", "boss_demonlord"], ["Troll géant", "boss_troll"], ["Liche", "boss_lich"], ["Kraken", "boss_kraken"], ["Golem de pierre", "boss_golem"], ["Araignée titanesque", "boss_spider"], ["Spectre des ombres", "boss_wraith"], ["Roi Sous les Pierres", "boss_roi_pierres"]]
+## Boss « Atlas Noir » (cinq poses) : seuls tirés par le test Atlas Noir ; ils figurent aussi dans BOSSES pour la génération normale.
+const ATLAS_BOSSES := [["Roi Sous les Pierres", "boss_roi_pierres"]]
 const EQUIP_ICONS := {
 	"sword": [0, 1, 2, 3, 23, 112, 113, 114, 121, 126],
 	"axe": [4, 5, 6, 7, 115, 116, 117],
@@ -713,7 +715,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 	used[_key(boss_cell.x, boss_cell.y)] = true
 	# jamais un monstre à moins de 3 cases du boss (pas de combat sur combat) : un monstre trop proche cède la place
 	monsters = monsters.filter(func(m): return absi(int(m.x) - int(boss_cell.x)) + absi(int(m.y) - int(boss_cell.y)) >= 3)
-	var bf: Array = choice(BOSSES)
+	var bf: Array = choice(ATLAS_BOSSES if atlas_only else BOSSES)
 	var bbf := 22.0 + _depth_bonus(i, 6)
 	var bbd := 16.0 + _depth_bonus(i, 4)
 	var bbc := 20.0 + _depth_bonus(i, 6)
