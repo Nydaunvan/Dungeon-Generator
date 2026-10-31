@@ -21,3 +21,13 @@
 - Faible coût : moins de 2 000 triangles par module (instances en MultiMesh par bloc de 8 × 8 cases).
 - Un module ne doit jamais masquer un passage, une porte ou un monstre (taille du plus grand monstre : 1,85 u).
 - Placement 100 % déterministe (coordonnées + identifiant du niveau), désactivable : `KitDecor.enabled = false` ou `"kit": false` dans le niveau.
+
+## Herse et encadrement de porte (mesures en rendu, thème gothic)
+
+- La grille de herse (texture `assets/ui/door_grille.png`, plan de 4 u posé sur l'arête) a des barres jusqu'à ± 1,91 u ; l'ouverture de `door_frame.glb` fait 3,11 u (montants de 1,555 à 1,995).
+  Les barres pénètrent donc d'environ 0,36 u dans chaque montant (le plan z = 0 traverse l'épaisseur du montant, de - 0,28 à + 0,29).
+- Aucun défaut visible dans les captures (`tools/render_gothic.tscn` : vues de face, obliques, depuis la case de la porte, herse à mi-course, de côté) :
+  la partie enfoncée est cachée par la pierre, la herse se lit comme coulissant dans des rainures et monte dans le linteau pendant l'animation.
+  Aucun décalage ni réglage n'a donc été ajouté au code (largeur et animation de la herse inchangées).
+- Amélioration artistique possible (nouveau GLB, non bloquante) : creuser une rainure de 0,4 u de large et 0,1 u de profondeur sur la face intérieure des montants
+  (x de ± 1,555 à ± 1,95, au plan z = 0) pour justifier la pénétration des barres.
