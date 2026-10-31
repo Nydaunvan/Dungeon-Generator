@@ -11,7 +11,7 @@ const ITEM_ROWS := 23
 const NEW_MONSTER_IDS := ["mon_troll", "mon_gargoyle", "mon_werewolf", "mon_naga", "mon_mudgolem", "mon_cultist", "mon_cavegoblin"]
 const MON_HEIGHTS := [
 	["rat|bat", 0.8], ["snake|crab|mushroom|centipede", 0.9], ["slime|imp", 1.0],
-	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur_m01", 1.7], ["crane_murmure", 1.55], ["veilleur", 1.59], ["fossoyeur", 1.5], ["veuve", 1.66], ["cercueil", 1.5], ["spider", 1.1],
+	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur_m01", 1.7], ["crane_murmure", 1.55], ["moine_decharne", 1.95], ["veilleur", 1.59], ["fossoyeur", 1.5], ["veuve", 1.66], ["cercueil", 1.5], ["spider", 1.1],
 	["skeleton|zombie|wolf|ghost|lizardman|gargoyle|darkpanther|wraith", 1.4],
 	["orc|mummy|beholder", 1.55], ["drake", 1.7], ["elemental", 1.6],
 	["minotaur", 1.9], ["ogre", 2.1], ["golem", 1.75],
@@ -926,6 +926,7 @@ const BUSTS := {
 	"mon_veuve": [0.507, 0.155, 0.115], "mon_porte_cercueil": [0.47, 0.27, 0.115],
 	"mon_veilleur_m01": [0.518, 0.205, 0.13],
 	"mon_crane_murmure": [0.51, 0.2, 0.15],
+	"mon_moine_decharne": [0.50, 0.29, 0.11],
 }
 static var _bust_cache: Dictionary = {}
 
