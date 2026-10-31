@@ -2370,6 +2370,21 @@
      "mon_porc_cadavre",
      "Porc-Cadavre",
      1
+    ],
+    [
+     "mon_mange_main",
+     "Mange-Main",
+     1
+    ],
+    [
+     "mon_nourrice_putride",
+     "Nourrice Putride",
+     1
+    ],
+    [
+     "mon_boucher_ecorche",
+     "Boucher Écorché",
+     1
     ]
    ]
   ],
