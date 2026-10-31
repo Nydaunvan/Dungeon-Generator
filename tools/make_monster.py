@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
 Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré]
-  → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille).
+  → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille)
+    + une carte de normales par pose (<id>_n.webp, <id>_attack_n.webp…) pour l'éclairage en relief (import : compress/normal_map=1, mipmaps).
 
 Format de la planche (fond transparent, un liseré blanc « autocollant » autour de chaque pose) :
   en haut, de gauche à droite : Attente, Attaque, Impact (coup reçu) ; en bas : Attaque alternative, Mort.
@@ -95,6 +96,24 @@ def clean(rgb, solid, soft):
     idx = ndi.distance_transform_edt(~inner, return_distances=False, return_indices=True)
     return rgb[idx[0], idx[1]], alpha
 
+NORMAL_PX = 5.0     # relief tiré de la luminance du dessin (en px de hauteur)
+BEVEL_PX = 9.0      # arrondi de la silhouette : la lumière rase glisse sur les bords
+BEVEL_W = 16        # largeur (px) de l'arrondi
+
+def normal_map(rgb, alpha):
+    """Carte de normales (convention Godot, Y vers le haut) : relief du dessin + silhouette arrondie, plat hors du sprite.
+    C'est elle qui donne du volume aux sprites sous la torche et les lampes (sans elle, un sprite plat est éclairé uniformément)."""
+    lum = rgb @ np.array([0.299, 0.587, 0.114], np.float32)
+    h = (0.55 * ndi.gaussian_filter(lum, 1.1) + 0.45 * ndi.gaussian_filter(lum, 3.5)) * NORMAL_PX
+    d = ndi.distance_transform_edt(alpha > 0.5)
+    b = np.clip(d / BEVEL_W, 0, 1)
+    h = h + (1 - (1 - b) ** 2) * BEVEL_PX
+    hy, hx = np.gradient(h)
+    n = np.dstack([-hx, hy, np.ones_like(h)])
+    n /= np.linalg.norm(n, axis=-1, keepdims=True)
+    n = np.where((alpha > 0.02)[..., None], n, np.array([0, 0, 1], np.float32))
+    return n * 0.5 + 0.5
+
 def stats(alpha):
     ys, xs = np.where(alpha > 0.5)
     w = alpha[ys, xs]
@@ -127,7 +146,10 @@ def main():
         assert canvas[..., 3].sum() > 0.97 * alpha.sum(), f"pose {suf or 'repos'} rognée"
         out = ROOT / "assets/monsters" / f"{mid}{suf}.webp"
         Image.fromarray((canvas * 255 + 0.5).astype(np.uint8), "RGBA").save(out, lossless=True, quality=100, method=6)
-        print("écrit", out.relative_to(ROOT))
+        nm = normal_map(canvas[..., :3], canvas[..., 3])
+        nout = ROOT / "assets/monsters" / f"{mid}{suf}_n.webp"
+        Image.fromarray((nm * 255 + 0.5).astype(np.uint8), "RGB").save(nout, lossless=True, quality=100, method=6)
+        print("écrit", out.relative_to(ROOT), "+ normales")
     print(f"carré {side} px ; pose d'attente haute de {idle_h} px = {idle_h / side:.3f} du carré")
 
 if __name__ == "__main__":

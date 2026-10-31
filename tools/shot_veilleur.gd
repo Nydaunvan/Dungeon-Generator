@@ -53,4 +53,6 @@ func _init() -> void:
 	stage.die_all()
 	await create_timer(0.45).timeout
 	root.get_texture().get_image().save_png(out + "_dead.png")
+	await create_timer(0.8).timeout        # mi-fondu (maintien 0,9 s puis 0,6 s de fondu) : ne doit laisser aucun voile clair
+	root.get_texture().get_image().save_png(out + "_fade.png")
 	quit()

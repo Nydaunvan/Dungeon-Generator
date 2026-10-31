@@ -651,11 +651,16 @@ func _die(n: MeshInstance3D) -> void:
 		if dm != null:
 			# pose « à terre » illustrée : le monstre s'effondre, reste étendu un instant, puis s'estompe
 			m.albedo_texture = dm.albedo_texture
+			m.emission_texture = dm.emission_texture          # sinon l'auto-éclairage garde le dessin de la pose debout : voile clair sur le corps à terre
+			m.normal_texture = dm.normal_texture
 			m.albedo_color = Color(1, 1, 1, 1)
 			var tl := n.create_tween()
 			tl.tween_interval(0.9)
 			tl.tween_property(m, "albedo_color:a", 0.0, 0.6)
-			tl.tween_callback(n.queue_free)
+			if m.emission_enabled:                              # l'auto-éclairage et le liseré s'éteignent avec l'image (pas de voile résiduel)
+				tl.parallel().tween_property(m, "emission_energy_multiplier", 0.0, 0.6)
+				tl.parallel().tween_property(m, "rim", 0.0, 0.6)
+			tl.chain().tween_callback(n.queue_free)
 			return
 	var tw := n.create_tween().set_parallel(true)
 	tw.tween_property(n, "scale:y", 0.25, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
@@ -824,6 +829,15 @@ static func _lit_material(tex: Texture2D) -> StandardMaterial3D:
 	m.emission_enabled = true                      # un soupçon d'auto-éclairage : les zones sombres restent lisibles dans les couloirs noirs
 	m.emission_texture = tex
 	m.emission_energy_multiplier = 0.22
+	# relief : carte de normales tirée du dessin (<pose>_n.webp) + silhouette arrondie ; la torche et les lampes sculptent le monstre
+	var npath := tex.resource_path.replace(".webp", "_n.webp") if tex != null else ""
+	if npath != "" and npath != tex.resource_path and ResourceLoader.exists(npath):
+		m.normal_enabled = true
+		m.normal_texture = load(npath)
+		m.normal_scale = 1.0
+	m.rim_enabled = true                           # liseré de lumière sur les bords : détache le monstre du fond sombre
+	m.rim = 0.25
+	m.rim_tint = 0.5
 	return m
 
 static func is_atlas_id(id: String) -> bool:
