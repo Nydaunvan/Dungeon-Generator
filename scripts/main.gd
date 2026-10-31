@@ -386,6 +386,9 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		_apply_quality()
 	Settings.settle(5.0)      # la reconstruction du niveau ne doit pas passer pour de la lenteur
 	level = gs.cfg.levels[index]
+	if Settings.gothic_test and not bool(level.get("outdoor", false)):      # essai du thème gothic : copie du niveau, la partie (cfg, sauvegarde, rejeu) n'est pas modifiée
+		level = level.duplicate()
+		level["theme"] = "gothic"
 	if level_node:
 		level_node.entities.release_stall()
 		level_node.queue_free()

@@ -3068,6 +3068,8 @@
   "ui.shop_modal.scr_ignore_resist": "Ignore toute résistance de la cible.",
   "ui.shop_modal.scr_conditions": "Se lit en combat. Aucune endurance requise ni dépensée. Pas de temps de recharge ; le parchemin est consommé.",
   "ui.shop_modal.scr_base": "Base du sort : %d – %d, plus la puissance du lanceur (Intelligence ÷ 3 − 1, équipement, niveau). Résultat selon le héros qui lit :",
+  "ui.settings.gothic_test": "Thème Gothique Atlas Noir (essai)",
+  "ui.settings.gothic_test_hint": "Affiche tous les étages intérieurs avec le thème gothique (pierre anthracite, torches localisées, arches et piliers). Purement visuel : la partie et la sauvegarde ne changent pas. Prend effet au prochain chargement d'un étage (changez d'étage ou rechargez la partie).",
   "ui.settings.monster_anim": "Animations des monstres",
   "ui.settings.monster_anim_hint": "Les monstres respirent au repos et réagissent en combat (touché, attaque, étourdissement, mort). L'option « Mouvements réduits » coupe la respiration.",
   "ui.settings.card_fx": "Effets sur les cartes (essai)",

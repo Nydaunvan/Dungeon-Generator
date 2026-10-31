@@ -55,6 +55,7 @@ var refresh_override := 0.0      # tests : fréquence d'écran simulée
 var _peak_fps := 0.0             # meilleure moyenne mesurée en jeu (cible plafonnée tant que l'écran est inconnu)
 var reduced_motion := false
 var card_fx := true              ## effets des monstres et des soins affichés sur les cartes du groupe (couche au-dessus de l'interface)
+var gothic_test := false         ## essai : tous les étages intérieurs s'affichent avec le thème gothic (purement visuel, rien n'est modifié dans la partie)
 var monster_anim := true         ## animations des monstres (respiration au repos, réactions en combat)
 var instinct_scale := 1.0        ## « Instinct de survie » : durée de la fenêtre de réaction ×1 / ×1,5 / ×2 (sans effet en partie classée)
 var village_time := "auto"       ## heure du village : « auto » (cycle jour/nuit) ou « dawn » / « day » / « dusk » / « night » (fixe)
@@ -239,6 +240,10 @@ func set_village_weather(v: String) -> void:
 	village_weather = v if ["auto", "clear", "rain"].has(v) else "auto"
 	_save()
 
+func set_gothic_test(v: bool) -> void:
+	gothic_test = v
+	_save()
+
 func set_monster_anim(v: bool) -> void:
 	monster_anim = v
 	_commit()
@@ -279,6 +284,7 @@ func reset_graphics() -> void:
 	custom = preset_values("high")
 	reduced_motion = false
 	monster_anim = true
+	gothic_test = false
 	instinct_scale = 1.0
 	instinct_mode = "on"
 	village_time = "auto"
@@ -352,6 +358,7 @@ func _load() -> void:
 		_fullscreen_pref = int(cf.get_value("display", "fullscreen", -1))
 		reduced_motion = bool(cf.get_value("access", "reduced_motion", false))
 		monster_anim = bool(cf.get_value("game", "monster_anim", true))
+		gothic_test = bool(cf.get_value("game", "gothic_test", false))
 		instinct_scale = clampf(float(cf.get_value("game", "instinct_scale", 1.0)), 1.0, 2.0)
 		instinct_mode = str(cf.get_value("game", "instinct_mode", "on"))
 		village_time = str(cf.get_value("game", "village_time", "auto"))
@@ -393,6 +400,7 @@ func _save() -> void:
 	cf.set_value("display", "fullscreen", _fullscreen_pref)
 	cf.set_value("access", "reduced_motion", reduced_motion)
 	cf.set_value("game", "monster_anim", monster_anim)
+	cf.set_value("game", "gothic_test", gothic_test)
 	cf.set_value("game", "instinct_scale", instinct_scale)
 	cf.set_value("game", "instinct_mode", instinct_mode)
 	cf.set_value("game", "village_time", village_time)

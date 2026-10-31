@@ -243,6 +243,8 @@ func _graphics() -> void:
 	_section(L.t("ui.settings.anim_title"))
 	_check(L.t("ui.settings.monster_anim"), Settings.monster_anim, func(v: bool): Settings.set_monster_anim(v))
 	_hint(L.t("ui.settings.monster_anim_hint"))
+	_check(L.t("ui.settings.gothic_test"), Settings.gothic_test, func(v: bool): Settings.set_gothic_test(v))
+	_hint(L.t("ui.settings.gothic_test_hint"))
 	_check(L.t("ui.settings.card_fx"), Settings.card_fx, func(v: bool): Settings.set_card_fx(v))
 	_hint(L.t("ui.settings.card_fx_hint"))
 	_section(L.t("ui.settings.village_title"))
