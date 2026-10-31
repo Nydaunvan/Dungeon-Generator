@@ -840,6 +840,36 @@ static func _lit_material(tex: Texture2D) -> StandardMaterial3D:
 	m.rim_tint = 0.5
 	return m
 
+## Buste des monstres Atlas Noir pour la file d'initiative (id → [centre x, centre y, demi-côté], en fractions de l'image) : de loin, le monstre
+## entier y est illisible ; on y montre un médaillon de la tête et des épaules, comme les héros. À renseigner pour chaque nouveau monstre.
+const BUSTS := {
+	"mon_veilleur_os": [0.49, 0.27, 0.12], "mon_fossoyeur": [0.50, 0.29, 0.13],
+	"mon_veuve": [0.50, 0.22, 0.115], "mon_porte_cercueil": [0.47, 0.27, 0.115],
+}
+static var _bust_cache: Dictionary = {}
+
+static func bust_texture(icon: String) -> Texture2D:
+	var id := icon.substr(6) if icon.begins_with("@icon:") else icon
+	if not BUSTS.has(id):
+		return null
+	if _bust_cache.has(id):
+		return _bust_cache[id]
+	var tex: Texture2D = null
+	var path := "res://assets/monsters/%s.webp" % id
+	if ResourceLoader.exists(path):
+		var img: Image = (load(path) as Texture2D).get_image()
+		if img.is_compressed():
+			img.decompress()
+		var b: Array = BUSTS[id]
+		var w := float(img.get_width())
+		var r := Rect2i(int((float(b[0]) - float(b[2])) * w), int((float(b[1]) - float(b[2])) * w), int(2.0 * float(b[2]) * w), int(2.0 * float(b[2]) * w))
+		var c := img.get_region(r)
+		c.resize(192, 192, Image.INTERPOLATE_LANCZOS)         # réduit une fois pour toutes, avec un vrai filtre : net et sans crépitement
+		c.generate_mipmaps()                                   # le médaillon est dessiné 3 à 4 fois plus petit : filtrage par mipmaps (voir QueueChip)
+		tex = ImageTexture.create_from_image(c)
+	_bust_cache[id] = tex
+	return tex
+
 static func is_atlas_id(id: String) -> bool:
 	return ResourceLoader.exists("res://assets/monsters/%s_attack.webp" % id)
 

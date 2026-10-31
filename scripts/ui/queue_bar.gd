@@ -199,6 +199,8 @@ func _update(entries: Array) -> void:
 		if rec.icon_key != ikey:
 			rec.icon_key = ikey
 			rec.chip.tex = _icon_tex(e)
+			rec.chip.is_bust = e.kind == "mon" and EntityLayer.bust_texture(str(e.icon)) != null
+			rec.chip.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC if rec.chip.is_bust else CanvasItem.TEXTURE_FILTER_PARENT_NODE
 		rec.chip.hp = float(e.hp)
 		rec.chip.rank = int(e.rank)
 		rec.chip.speed = int(e.speed)
@@ -223,6 +225,10 @@ func _update(entries: Array) -> void:
 			rec.chip.queue_free()
 
 func _icon_tex(e: Dictionary) -> Texture2D:
+	if e.kind == "mon":
+		var bust := EntityLayer.bust_texture(str(e.icon))        # monstres Atlas Noir : médaillon buste (lisible en petit)
+		if bust != null:
+			return bust
 	if e.kind == "char":
 		var t := IconResolver.texture(str(e.icon)) if str(e.icon) != "" else null
 		if t == null and str(e.portrait) != "":
@@ -356,6 +362,7 @@ static func halo_texture() -> Texture2D:
 class QueueChip extends Node2D:
 	var tex: Texture2D
 	var is_char: bool = false
+	var is_bust: bool = false               # monstre à médaillon buste (anneau rouge)
 	var base: float = 40.0
 	var hp: float = 1.0
 	var halo_on: bool = false
@@ -388,11 +395,12 @@ class QueueChip extends Node2D:
 			_halo.modulate = Color(halo_col.r, halo_col.g, halo_col.b, halo_a)
 		var tint := Color("8a8378") if dim else Color.WHITE
 		var half := base * 0.5
-		if is_char:
+		if is_char or is_bust:
+			var ring := Color("c05a3a") if is_bust else Color("e8b45c")
 			draw_circle(Vector2.ZERO, base * 58.0 / 128.0, Color(0.1, 0.067, 0.035, 0.95))
 			if tex != null:
 				_draw_disc(tex, base * 50.0 / 128.0, tint)
-			draw_arc(Vector2.ZERO, base * 50.0 / 128.0, 0.0, TAU, 40, Color("e8b45c").darkened(0.35) if dim else Color("e8b45c"), maxf(1.5, base * 6.0 / 128.0), true)
+			draw_arc(Vector2.ZERO, base * 50.0 / 128.0, 0.0, TAU, 40, ring.darkened(0.35) if dim else ring, maxf(1.5, base * 6.0 / 128.0), true)
 		elif tex != null:
 			draw_texture_rect(tex, Rect2(-half, -half, base, base), false, tint)
 		# barre de vie
