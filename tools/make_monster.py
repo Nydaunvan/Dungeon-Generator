@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
-Usage : python3 tools/make_monster.py <id> planche.png
+Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré]
   → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille).
 
 Format de la planche (fond transparent, un liseré blanc « autocollant » autour de chaque pose) :
   en haut, de gauche à droite : Attente, Attaque, Impact (coup reçu) ; en bas : Attaque alternative, Mort.
 Traitements (indispensables pour que le sprite ne SCINTILLE pas en 3D) :
   1. découpe des cinq poses (composantes connexes de l'alpha) ;
-  2. suppression du liseré blanc : pixels clairs reliés à l'extérieur (le trait noir de l'illustration reste), puis bord
+  2. le liseré blanc est GARDÉ par défaut (choix de l'auteur) ; avec --sans-liseré : suppression du liseré blanc : pixels clairs reliés à l'extérieur (le trait noir de l'illustration reste), puis bord
      légèrement érodé et adouci : un trait clair fin qui bouge à la respiration ou à la caméra crépite à l'écran ;
   3. couleurs des pixels transparents prolongées depuis le bord (pas de frange claire ou noire aux mipmaps) ;
   4. AUCUN rééchantillonnage ni flou : la résolution d'origine de la planche est conservée (pas d'agrandissement) ;
@@ -26,6 +26,7 @@ SUFFIXES = ["", "_attack", "_hit", "_attack2", "_dead"]
 OUTLINE_ITER = 16   # px max parcourus par le liseré blanc depuis l'extérieur
 ERODE = 2           # px retirés ensuite (reste de liseré gris)
 FEATHER = 1.0       # px de dégradé du bord
+KEEP_OUTLINE = True  # liseré blanc conservé (voulu) ; --sans-liseré pour le retirer
 FLOOR = 0.94        # position des pieds dans le carré (fraction de la hauteur)
 MARGIN = 0.03       # marge minimale autour de la pose la plus grande
 
@@ -53,11 +54,20 @@ def split(sheet):
         ys, xs = np.where(mine)
         y0, y1 = max(0, ys.min() - 4), min(al.shape[0], ys.max() + 5)
         x0, x1 = max(0, xs.min() - 4), min(al.shape[1], xs.max() + 5)
-        poses.append(clean(rgb[y0:y1, x0:x1], solid[y0:y1, x0:x1]))
+        poses.append(clean(rgb[y0:y1, x0:x1], solid[y0:y1, x0:x1], (al * mine)[y0:y1, x0:x1]))
     return poses
 
-def clean(rgb, solid):
-    """Retire le liseré blanc relié à l'extérieur, érode, adoucit, prolonge les couleurs."""
+def clean(rgb, solid, soft):
+    """Par défaut le liseré blanc est GARDÉ (alpha d'origine de la planche, poussière écartée). Avec --sans-liseré : retire le liseré
+    relié à l'extérieur, érode, adoucit."""
+    if KEEP_OUTLINE:
+        lab, n = ndi.label(solid)
+        if n > 1:
+            sz = ndi.sum(solid, lab, range(1, n + 1))
+            solid = np.isin(lab, [i + 1 for i, z in enumerate(sz) if z > 400])
+        alpha = np.where(ndi.binary_dilation(solid, iterations=2), np.clip((soft - 0.06) / 0.9, 0, 1), 0).astype(np.float32)
+        idx = ndi.distance_transform_edt(~solid, return_distances=False, return_indices=True)
+        return rgb[idx[0], idx[1]], alpha
     solid = np.pad(solid, 2); rgb = np.pad(rgb, ((2, 2), (2, 2), (0, 0)), mode="edge")
     whitish = (rgb.min(-1) > 0.78) & ((rgb.max(-1) - rgb.min(-1)) < 0.18)
     removed = ~solid
@@ -92,6 +102,9 @@ def stats(alpha):
                 cx=float((xs * w).sum() / w.sum()))
 
 def main():
+    global KEEP_OUTLINE
+    if "--sans-liseré" in sys.argv:
+        sys.argv.remove("--sans-liseré"); KEEP_OUTLINE = False
     mid, sheet = sys.argv[1], sys.argv[2]
     poses = split(sheet)
     st = [stats(p[1]) for p in poses]
