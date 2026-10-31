@@ -105,11 +105,9 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 					out.append({"id": "door_frame", "xf": Transform3D(basis, edge)})
 				elif n == "S" and avail.has("stair_frame"):
 					out.append({"id": "stair_frame", "xf": Transform3D(basis, edge)})
-			if ch == "." and avail.has("arch"):
-				for e in [Vector2i(1, 0), Vector2i(0, 1)]:
-					if _arch_at(grid, cell, e, special, seed):
-						var ang := atan2(float(e.x), float(e.y))      # +Z du module = sens de marche
-						out.append({"id": "arch", "xf": Transform3D(Basis(Vector3.UP, ang), c + Vector3(e.x * HALF, 0.0, e.y * HALF))})
+	if avail.has("arch"):
+		for ar in _arch_edges(level, grid, special, seed):
+			out.append({"id": "arch", "xf": Transform3D(Basis(Vector3.UP, ar.ang), ar.pos)})
 	if avail.has("pillar"):
 		for p in LevelBuilder.column_points(grid):
 			out.append({"id": "pillar", "xf": Transform3D(Basis.IDENTITY, Vector3(p.x, 0.0, p.y))})
@@ -138,23 +136,60 @@ static func _pilaster_at(grid: DungeonGrid, cell: Vector2i, d: Vector2i, niches:
 		return false
 	return _h(cell.x, cell.y, seed ^ (di * 977 + 3)) % 5 != 0
 
-## Arche sur l'arête entre `cell` et `cell + e` : couloir droit (murs pleins de chaque côté, des deux cases), loin des portes, escaliers,
-## niches, objets, monstres et du départ ; une arête sur trois le long de la ligne, avec quelques absences.
-static func _arch_at(grid: DungeonGrid, cell: Vector2i, e: Vector2i, special: Dictionary, seed: int) -> bool:
-	var nb := cell + e
-	if grid.cell(nb.x, nb.y) != ".":
-		return false
-	var p := Vector2i(e.y, e.x)
-	for q in [cell, nb]:
-		if grid.cell(q.x + p.x, q.y + p.y) != "#" or grid.cell(q.x - p.x, q.y - p.y) != "#":
-			return false
-		if special.has(q) or _near_special(special, grid, q, 1):
-			return false
-	var along := cell.x if e.x != 0 else cell.y
-	var line := cell.y if e.x != 0 else cell.x
-	if (along + _h(line, e.x, seed) % 3) % 3 != 0:
-		return false
-	return _h(cell.x, cell.y, seed ^ 4099) % 4 != 0
+## Distance minimale (en cases) entre deux arches : le long d'un couloir droit, et autour d'une entrée de salle.
+const ARCH_GAP_RUN := 2.9
+const ARCH_GAP_ROOM := 2.4
+
+## Case de couloir ouverte à l'avant et à l'arrière (`d`) avec un mur plein de chaque côté : passage droit.
+static func _walled_sides(grid: DungeonGrid, c: Vector2i, d: Vector2i) -> bool:
+	var p := Vector2i(d.y, d.x)
+	return grid.cell(c.x + p.x, c.y + p.y) == "#" and grid.cell(c.x - p.x, c.y - p.y) == "#"
+
+static func _arch_ok(grid: DungeonGrid, c: Vector2i, d: Vector2i, special: Dictionary) -> bool:
+	return grid.cell(c.x, c.y) == "." and _walled_sides(grid, c, d) and not special.has(c) and not _near_special(special, grid, c, 1)
+
+## Arches : [{pos, ang}] dans l'ordre de lecture de la grille (donc stables). Deux sortes d'emplacements, jamais près d'une porte, d'un escalier,
+## d'une niche, d'un objet, d'un monstre ou du départ (voir `_near_special`) :
+##   1. entrées de salle : arête entre une case de couloir (murs pleins de chaque côté) et une case de salle, trois sur quatre ;
+##   2. couloirs droits : arête entre deux cases de couloir droites, écartées d'au moins ARCH_GAP_RUN cases des autres arches, deux sur trois.
+## Les écarts rendent le motif irrégulier (aucune répétition à pas fixe) ; les angles, T et croix n'en reçoivent jamais (murs pleins de chaque côté exigés).
+static func _arch_edges(level: Dictionary, grid: DungeonGrid, special: Dictionary, seed: int) -> Array:
+	var out: Array = []
+	var taken: Array = []      # milieux d'arête déjà pris, en cases
+	var ridx := RoomMap.index(RoomMap.detect(level.mapRows))
+	for y in grid.height:
+		for x in grid.width:
+			var c := Vector2i(x, y)
+			if ridx.has(c):
+				continue
+			for di in 4:
+				var d: Vector2i = DungeonGrid.DIRS[di]
+				var nb := c + d
+				if not ridx.has(nb) or grid.cell(nb.x, nb.y) != "." or not _arch_ok(grid, c, d, special):
+					continue
+				if _h(x, y, seed ^ (di * 523 + 11)) % 4 == 0 or special.has(nb):
+					continue
+				_take_arch(out, taken, c, d, ARCH_GAP_ROOM)
+	for y in grid.height:
+		for x in grid.width:
+			var c := Vector2i(x, y)
+			for e in [Vector2i(1, 0), Vector2i(0, 1)]:
+				var nb: Vector2i = c + e
+				if grid.cell(nb.x, nb.y) != "." or not _arch_ok(grid, c, e, special) or not _arch_ok(grid, nb, e, special):
+					continue
+				if _h(x, y, seed ^ (e.x * 311 + 4099)) % 3 == 0:
+					continue
+				_take_arch(out, taken, c, e, ARCH_GAP_RUN)
+	return out
+
+## Ajoute l'arche de l'arête (c -> c + d) si aucune autre n'est plus près que `gap` cases.
+static func _take_arch(out: Array, taken: Array, c: Vector2i, d: Vector2i, gap: float) -> void:
+	var mid := Vector2(c.x + d.x * 0.5, c.y + d.y * 0.5)
+	for t in taken:
+		if mid.distance_to(t) < gap:
+			return
+	taken.append(mid)
+	out.append({"pos": Vector3(mid.x * CELL, 0.0, mid.y * CELL), "ang": atan2(float(d.x), float(d.y))})      # +Z du module = sens de marche
 
 ## Cases à ménager : objets, marchand, escaliers, départ, niches et départs des monstres.
 static func _special_cells(level: Dictionary, blocked: Dictionary, niches: Dictionary) -> Dictionary:
@@ -163,6 +198,7 @@ static func _special_cells(level: Dictionary, blocked: Dictionary, niches: Dicti
 		out[c] = true
 	for m in level.get("monsters", []):
 		out[Vector2i(int(m.get("x", -1)), int(m.get("y", -1)))] = true
+	out[Vector2i(int(level.get("startX", -1)), int(level.get("startY", -1)))] = true
 	return out
 
 ## Une case spéciale, une porte ou un escalier se trouve à moins de `r` cases (carré) de `c`.
