@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Découpe la PLANCHE d'un monstre « Atlas Noir » et écrit les cinq webp du jeu.
 Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré]
+     ou : python3 tools/make_monster.py <id> repos.png attaque.png coup.png attaque2.png mort.png   (cinq images, une par pose)
   → assets/monsters/<id>.webp, <id>_attack.webp, <id>_hit.webp, <id>_attack2.webp, <id>_dead.webp (carrés, RGBA, même taille)
     + une carte de normales par pose (<id>_n.webp, <id>_attack_n.webp…) pour l'éclairage en relief (import : compress/normal_map=1, mipmaps).
 
@@ -59,6 +60,58 @@ def split(sheet):
         y0, y1 = max(0, ys.min() - 4), min(al.shape[0], ys.max() + 5)
         x0, x1 = max(0, xs.min() - 4), min(al.shape[1], xs.max() + 5)
         poses.append(clean(rgb[y0:y1, x0:x1], solid[y0:y1, x0:x1], (al * mine)[y0:y1, x0:x1]))
+    return poses
+
+def _scales(files):
+    """Échelle de chaque pose par rapport à l'attente (images dessinées séparément : le monstre n'y a pas toujours la même taille).
+    Appariement de points SIFT sur les détails rigides (crânes, boucles, écailles) + similitude RANSAC ; 1.0 si l'appariement échoue."""
+    try:
+        import cv2
+    except ImportError:
+        print("opencv absent : poses laissées à leur échelle d'origine")
+        return [1.0] * len(files)
+    sift = cv2.SIFT_create(4000)
+    def feat(f):
+        im = cv2.imread(str(f), cv2.IMREAD_UNCHANGED)
+        g = cv2.cvtColor(im[..., :3], cv2.COLOR_BGR2GRAY)
+        return sift.detectAndCompute(g, (im[..., 3] > 200).astype(np.uint8) * 255)
+    k0, d0 = feat(files[0])
+    out = [1.0]
+    for f in files[1:]:
+        k, d = feat(f)
+        sc = 1.0
+        if d is not None and d0 is not None and len(k) > 10:
+            good = [m for m, n in cv2.BFMatcher().knnMatch(d, d0, k=2) if m.distance < 0.75 * n.distance]
+            if len(good) >= 8:
+                src = np.float32([k[m.queryIdx].pt for m in good]); dst = np.float32([k0[m.trainIdx].pt for m in good])
+                M, inl = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=6)
+                if M is not None and inl is not None and int(inl.sum()) >= 10:
+                    sc = float(np.sqrt(abs(np.linalg.det(M[:, :2]))))
+        out.append(sc if 0.8 < sc < 1.25 else 1.0)
+    return out
+
+def split_files(files):
+    """Une image par pose (déjà sur fond transparent), dans l'ordre Attente, Attaque, Impact, Attaque alternative, Mort.
+    Les poses sont remises à l'échelle de l'attente (voir _scales)."""
+    scales = _scales(files)
+    print("échelles des poses (par rapport à l'attente) :", ", ".join("%.3f" % x for x in scales))
+    poses = []
+    for f, sc in zip(files, scales):
+        img = Image.open(f).convert("RGBA")
+        if abs(sc - 1.0) > 0.02:
+            r = img.resize((round(img.width * sc), round(img.height * sc)), Image.LANCZOS)    # LANCZOS sur RGBA prémultiplié : pas de frange
+            pm = np.asarray(img).astype(np.float32) / 255; pm[..., :3] *= pm[..., 3:4]
+            pm = np.asarray(Image.fromarray((pm * 255).astype(np.uint8), "RGBA").resize(r.size, Image.LANCZOS)).astype(np.float32) / 255
+            a_ = pm[..., 3:4]; pm[..., :3] = np.where(a_ > 1e-4, pm[..., :3] / np.maximum(a_, 1e-4), 0)
+            a = np.clip(pm, 0, 1)
+        else:
+            a = np.asarray(img).astype(np.float32) / 255
+        rgb, al = a[..., :3], a[..., 3]
+        mine = al > 0.08
+        ys, xs = np.where(al > 0.5)
+        y0, y1 = max(0, ys.min() - 4), min(al.shape[0], ys.max() + 5)
+        x0, x1 = max(0, xs.min() - 4), min(al.shape[1], xs.max() + 5)
+        poses.append(clean(rgb[y0:y1, x0:x1], (al > 0.5)[y0:y1, x0:x1], (al * mine)[y0:y1, x0:x1]))
     return poses
 
 def clean(rgb, solid, soft):
@@ -127,8 +180,9 @@ def main():
     global KEEP_OUTLINE
     if "--sans-liseré" in sys.argv:
         sys.argv.remove("--sans-liseré"); KEEP_OUTLINE = False
-    mid, sheet = sys.argv[1], sys.argv[2]
-    poses = split(sheet)
+    mid = sys.argv[1]
+    files = sys.argv[2:]
+    poses = split_files(files) if len(files) == 5 else split(files[0])     # 5 images (une par pose) ou une planche
     st = [stats(p[1]) for p in poses]
     idle_cx, idle_h = st[0]["cx"], st[0]["bottom"] - st[0]["top"] + 1
     # carré : tout doit tenir autour du centre de masse de l'attente et entre le sol et le plafond
@@ -150,8 +204,11 @@ def main():
         out = ROOT / "assets/monsters" / f"{mid}{suf}.webp"
         Image.fromarray((canvas * 255 + 0.5).astype(np.uint8), "RGBA").save(out, lossless=True, quality=100, method=6)
         nm = normal_map(canvas[..., :3], canvas[..., 3])
+        nim = Image.fromarray((nm * 255 + 0.5).astype(np.uint8), "RGB")
+        if side > 1000:                                          # le relief n'a pas besoin de la définition du dessin : moitié moins de mémoire vidéo
+            nim = nim.resize((side // 2, side // 2), Image.LANCZOS)
         nout = ROOT / "assets/monsters" / f"{mid}{suf}_n.webp"
-        Image.fromarray((nm * 255 + 0.5).astype(np.uint8), "RGB").save(nout, lossless=True, quality=100, method=6)
+        nim.save(nout, lossless=True, quality=100, method=6)
         print("écrit", out.relative_to(ROOT), "+ normales")
     print(f"carré {side} px ; pose d'attente haute de {idle_h} px = {idle_h / side:.3f} du carré")
 
