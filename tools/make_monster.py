@@ -5,7 +5,7 @@ Usage : python3 tools/make_monster.py <id> planche.png [--sans-liseré]
     + une carte de normales par pose (<id>_n.webp, <id>_attack_n.webp…) pour l'éclairage en relief (import : compress/normal_map=1, mipmaps).
 
 Format de la planche (fond transparent, un liseré blanc « autocollant » autour de chaque pose) :
-  en haut, de gauche à droite : Attente, Attaque, Impact (coup reçu) ; en bas : Attaque alternative, Mort.
+  3 poses en haut puis 2 en bas, OU une seule rangée de 5 (détectée toute seule), toujours dans l'ordre Attente, Attaque, Impact (coup reçu), Attaque alternative, Mort.
 Traitements (indispensables pour que le sprite ne SCINTILLE pas en 3D) :
   1. découpe des cinq poses (composantes connexes de l'alpha) ;
   2. le liseré blanc est GARDÉ par défaut (choix de l'auteur) ; avec --sans-liseré : suppression du liseré blanc : pixels clairs reliés à l'extérieur (le trait noir de l'illustration reste), puis bord
@@ -45,11 +45,14 @@ def split(sheet):
     idx = ndi.distance_transform_edt(clab == 0, return_distances=False, return_indices=True)
     lab = np.where(al > 0.08, clab[idx[0], idx[1]], 0)
     cm = {i: ndi.center_of_mass(lab == i) for i in keep}
-    by_y = sorted(keep, key=lambda i: cm[i][0])
-    top = sorted(by_y[:3], key=lambda i: cm[i][1])
-    bot = sorted(by_y[3:], key=lambda i: cm[i][1])
+    one_row = al.shape[1] > 2.2 * al.shape[0]                   # planche large (cinq poses côte à côte) : de gauche à droite
+    if one_row:
+        order = sorted(keep, key=lambda i: cm[i][1])
+    else:                                                       # 3 poses en haut, 2 en bas
+        by_y = sorted(keep, key=lambda i: cm[i][0])
+        order = sorted(by_y[:3], key=lambda i: cm[i][1]) + sorted(by_y[3:], key=lambda i: cm[i][1])
     poses = []
-    for i in top + bot:
+    for i in order:
         mine = lab == i                                           # pixels de CETTE pose seulement (liseré compris)
         solid = (al > 0.5) & mine
         ys, xs = np.where(mine)

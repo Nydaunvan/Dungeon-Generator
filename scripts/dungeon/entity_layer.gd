@@ -11,7 +11,7 @@ const ITEM_ROWS := 23
 const NEW_MONSTER_IDS := ["mon_troll", "mon_gargoyle", "mon_werewolf", "mon_naga", "mon_mudgolem", "mon_cultist", "mon_cavegoblin"]
 const MON_HEIGHTS := [
 	["rat|bat", 0.8], ["snake|crab|mushroom|centipede", 0.9], ["slime|imp", 1.0],
-	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur", 1.64], ["fossoyeur", 1.71], ["veuve", 1.74], ["cercueil", 1.5], ["spider", 1.1],
+	["goblin|gnoll|harpy|mimic", 1.2], ["veilleur", 1.77], ["fossoyeur", 1.71], ["veuve", 1.74], ["cercueil", 1.5], ["spider", 1.1],
 	["skeleton|zombie|wolf|ghost|lizardman|gargoyle|darkpanther|wraith", 1.4],
 	["orc|mummy|beholder", 1.55], ["drake", 1.7], ["elemental", 1.6],
 	["minotaur", 1.9], ["ogre", 2.1], ["golem", 1.75],
@@ -843,7 +843,7 @@ static func _lit_material(tex: Texture2D) -> StandardMaterial3D:
 ## Buste des monstres Atlas Noir pour la file d'initiative (id → [centre x, centre y, demi-côté], en fractions de l'image) : de loin, le monstre
 ## entier y est illisible ; on y montre un médaillon de la tête et des épaules, comme les héros. À renseigner pour chaque nouveau monstre.
 const BUSTS := {
-	"mon_veilleur_os": [0.49, 0.27, 0.12], "mon_fossoyeur": [0.50, 0.29, 0.13],
+	"mon_veilleur_os": [0.50, 0.29, 0.12], "mon_fossoyeur": [0.50, 0.29, 0.13],
 	"mon_veuve": [0.50, 0.22, 0.115], "mon_porte_cercueil": [0.47, 0.27, 0.115],
 }
 static var _bust_cache: Dictionary = {}
