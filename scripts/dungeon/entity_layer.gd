@@ -11,7 +11,7 @@ const ITEM_ROWS := 23
 const NEW_MONSTER_IDS := ["mon_troll", "mon_gargoyle", "mon_werewolf", "mon_naga", "mon_mudgolem", "mon_cultist", "mon_cavegoblin"]
 const MON_HEIGHTS := [
 	["rat|bat", 0.8], ["snake|crab|mushroom|centipede", 0.9], ["slime|imp", 1.0],
-	["goblin|gnoll|harpy|mimic", 1.2], ["crane_murmure", 1.55], ["moine_decharne", 1.95], ["chien_ossuaire", 1.26], ["gardien_vertebres", 2.27], ["porc_cadavre", 1.5], ["mange_main", 1.99], ["nourrice_putride", 1.68], ["boucher_ecorche", 2.03], ["rampant_suture", 2.26], ["roi_pierres", 3.1], ["crache_os", 2.15], ["porte_pustules", 2.76], ["veilleur", 1.7], ["fossoyeur", 1.5], ["veuve", 1.66], ["cercueil", 1.5], ["spider", 1.1],
+	["goblin|gnoll|harpy|mimic", 1.2], ["crane_murmure", 1.55], ["moine_decharne", 1.95], ["chien_ossuaire", 1.26], ["gardien_vertebres", 2.27], ["porc_cadavre", 1.5], ["mange_main", 1.99], ["nourrice_putride", 1.68], ["boucher_ecorche", 2.03], ["rampant_suture", 2.26], ["roi_pierres", 3.1], ["paladin_renverse", 3.0], ["crache_os", 2.15], ["porte_pustules", 2.76], ["veilleur", 1.7], ["fossoyeur", 1.5], ["veuve", 1.66], ["cercueil", 1.5], ["spider", 1.1],
 	["skeleton|zombie|wolf|ghost|lizardman|gargoyle|darkpanther|wraith", 1.4],
 	["orc|mummy|beholder", 1.55], ["drake", 1.7], ["elemental", 1.6],
 	["minotaur", 1.9], ["ogre", 2.1], ["golem", 1.75],
@@ -951,7 +951,7 @@ const BUSTS := {
 	"mon_porc_cadavre": [0.53, 0.478, 0.13],
 	"mon_mange_main": [0.5, 0.47, 0.12], "mon_nourrice_putride": [0.532, 0.33, 0.1], "mon_boucher_ecorche": [0.5, 0.275, 0.1],
 	"mon_rampant_suture": [0.5, 0.72, 0.12], "mon_crache_os": [0.5, 0.572, 0.12], "mon_porte_pustules": [0.5, 0.485, 0.1],
-	"boss_roi_pierres": [0.5, 0.507, 0.09],
+	"boss_roi_pierres": [0.5, 0.507, 0.09], "boss_paladin_renverse": [0.5, 0.585, 0.08],
 }
 static var _bust_cache: Dictionary = {}
 

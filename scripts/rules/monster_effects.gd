@@ -21,7 +21,7 @@ const FAMILY := {
 ## Boss : toujours un effet, plus fréquent et plus long.
 const BOSS := {
 	"boss_dragon": ["burn", "", 50, 3], "boss_demonlord": ["warcry", "", 50, 3], "boss_troll": ["stun", "", 40, 1], "boss_lich": ["freeze", "", 40, 2],
-	"boss_kraken": ["slow", "", 50, 3], "boss_golem": ["stun", "", 40, 1], "boss_roi_pierres": ["stun", "", 45, 1], "boss_spider": ["poison", "", 55, 4], "boss_wraith": ["lifedrain", "", 50, 3],
+	"boss_kraken": ["slow", "", 50, 3], "boss_golem": ["stun", "", 40, 1], "boss_roi_pierres": ["stun", "", 45, 1], "boss_paladin_renverse": ["weaken", "", 45, 3], "boss_spider": ["poison", "", 55, 4], "boss_wraith": ["lifedrain", "", 50, 3],
 }
 
 ## Champs d'effet pour une famille (icône sans le préfixe « @icon: »). `depth` : étage, pour la puissance des dégâts sur la durée.
