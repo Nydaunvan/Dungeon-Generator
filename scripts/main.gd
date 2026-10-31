@@ -455,6 +455,8 @@ func load_level(index: int, at_saved: bool = false, arrival: Dictionary = {}, sl
 		env.ambient_light_energy = float(level.get("lightAmbient", 1.1)) * VisualFx.light_k(_fx_theme, "ambient_k")      # facteurs de thème : 1 sauf thèmes à ambiance propre (gothic)
 		rig.torch.light_energy = 2.0 * float(level.get("lightTorch", 1.4)) / 1.4 * VisualFx.light_k(_fx_theme, "player_energy_k")
 		rig.torch.omni_range = LevelBuilder.CELL * 6.0 * VisualFx.light_k(_fx_theme, "player_range_k")
+		rig.torch.light_color = VisualFx.light_color(_fx_theme, "player_color", Color("ffb060"))      # la torche du groupe est réinitialisée à chaque niveau (rig réutilisé)
+		rig.torch.omni_attenuation = VisualFx.light_k(_fx_theme, "player_atten", 1.0)
 		level_node.torches.light_scale = float(level.get("lightTorch", 1.4)) / 1.4
 	if FogMist.level_has_mist(gs.run_seed, str(level.id), bool(level.get("outdoor", false))):
 		var mist := FogMist.new()

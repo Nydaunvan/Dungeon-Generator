@@ -73,10 +73,10 @@ func _ready() -> void:
 	add_child(cam)
 	cam.current = true
 	var torch := OmniLight3D.new()
-	torch.light_color = Color("ffb060")
+	torch.light_color = VisualFx.light_color(theme, "player_color", Color("ffb060"))      # comme main.gd
 	torch.light_energy = 2.0 * VisualFx.light_k(theme, "player_energy_k")
 	torch.omni_range = LevelBuilder.CELL * 6.0 * VisualFx.light_k(theme, "player_range_k")
-	torch.omni_attenuation = 1.0
+	torch.omni_attenuation = VisualFx.light_k(theme, "player_atten", 1.0)
 	cam.add_child(torch)
 	get_window().size = Vector2i(1280, 720)
 	DirAccess.make_dir_recursive_absolute(out)

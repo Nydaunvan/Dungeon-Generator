@@ -24,14 +24,20 @@ const WET_THEMES := {"damp": 0.42, "ice": 0.30, "lava": 0.55, "gothic": 0.52}
 ## ambient_color / fog_* : lumière ambiante et brouillard ; ambient_k : facteur sur l'énergie ambiante du niveau ;
 ## torch_* : portée, énergie et atténuation des torches murales éclairées ; player_* : torche du groupe.
 const THEME_LIGHT := {
-	"gothic": {"ambient_color": Color("1b2029"), "ambient_k": 0.55, "fog_color": Color("04060a"), "fog_density": 0.03,
-		"torch_range_k": 0.72, "torch_energy_k": 1.2, "torch_atten": 1.75, "player_range_k": 0.7, "player_energy_k": 0.95},
+	"gothic": {"ambient_color": Color("1a2230"), "ambient_k": 0.7, "fog_color": Color("03050a"), "fog_density": 0.03,
+		"torch_range_k": 0.85, "torch_energy_k": 2.4, "torch_atten": 1.5,
+		"player_color": Color("c6d0e2"), "player_range_k": 0.6, "player_energy_k": 1.2, "player_atten": 1.4},
 }
 
 ## Valeur d'ambiance du thème (`default` quand le thème n'a pas d'ambiance propre).
 static func light_k(theme: String, key: String, default: float = 1.0) -> float:
 	var tl: Dictionary = THEME_LIGHT.get(theme, {})
 	return float(tl.get(key, default))
+
+## Couleur d'ambiance du thème (`default` quand le thème n'a pas d'ambiance propre).
+static func light_color(theme: String, key: String, default: Color) -> Color:
+	var tl: Dictionary = THEME_LIGHT.get(theme, {})
+	return tl.get(key, default)
 
 static var _luts: Dictionary = {}
 static var _blood: Array = []
