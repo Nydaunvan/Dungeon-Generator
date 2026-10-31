@@ -50,6 +50,7 @@ static func applies(theme: String, level: Dictionary) -> bool:
 ## Vide le cache des modèles (outils : changement de `placeholders`).
 static func reset_cache() -> void:
 	_parts_cache.clear()
+	_stone_cache.clear()
 
 ## Ajoute les modules du kit à `view`. `niches` / `holes` : creux des murs (fontaine, marchand), voir LevelBuilder.niche_data.
 static func add(view: LevelView, level: Dictionary, grid: DungeonGrid, theme: String, niches: Dictionary, holes: Dictionary, sliced: bool = false) -> void:
@@ -241,12 +242,37 @@ static func _parts(id: String) -> Array:
 				while up != null and up is Node3D:
 					xf = (up as Node3D).transform * xf
 					up = up.get_parent()
-				out.append({"mesh": mi.mesh, "xf": xf})
+				out.append({"mesh": _with_theme_stone(mi.mesh), "xf": xf})
 			root.free()
 	elif placeholders:
 		out = _placeholder_parts(id)
 	_parts_cache[id] = out
 	return out
+
+## Les GLB livrés ont des pierres en couleur unie (sans texture) : leurs surfaces non métalliques reçoivent la pierre du thème (même texture, relief et
+## rugosité que les murs, en projection triplanaire : aucun UV nécessaire, 1 tuile = 2 u comme les murs), nuancée par la couleur d'origine.
+## Les surfaces métalliques (fer, bronze) gardent leur matériau. Sans textures de thème réelles, le modèle reste tel que livré.
+static var _stone_cache: Dictionary = {}
+
+static func _with_theme_stone(mesh: Mesh) -> Mesh:
+	var wall := ThemeMaterials.for_theme("gothic").get("wall") as StandardMaterial3D
+	if wall == null or wall.albedo_texture == null or mesh.get_surface_count() == 0:
+		return mesh
+	var m2 := mesh.duplicate() as Mesh
+	for i in m2.get_surface_count():
+		var mat := m2.surface_get_material(i) as StandardMaterial3D
+		if mat != null and mat.metallic >= 0.3:
+			continue
+		var v := 1.0 if mat == null else clampf(mat.albedo_color.get_luminance() / 0.6, 0.7, 1.25)
+		var key := int(round(v * 20.0))
+		if not _stone_cache.has(key):
+			var sm := wall.duplicate() as StandardMaterial3D
+			sm.uv1_triplanar = true
+			sm.uv1_scale = Vector3.ONE * 0.5
+			sm.albedo_color = Color(v, v, v)
+			_stone_cache[key] = sm
+		m2.surface_set_material(i, _stone_cache[key])
+	return m2
 
 static func _kit_material() -> StandardMaterial3D:
 	if _default_mat == null:

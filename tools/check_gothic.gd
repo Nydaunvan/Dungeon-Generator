@@ -11,7 +11,9 @@ func _ready() -> void:
 	for k in ["wall", "floor", "ceil"]:
 		if not mats.has(k) or mats[k] == null:
 			fails.append("matériau gothic manquant : " + k)
-	print("matériaux gothic : ", mats.keys(), " ; provisoires : ", mats.get("gothic_placeholder", "n/a"))
+	print("matériaux gothic : ", mats.keys(), " ; provisoires : ", ThemeMaterials.gothic_placeholder)
+	if ThemeMaterials.gothic_placeholder:
+		print("ATTENTION : textures gothic_hd/lite absentes, matériaux provisoires")
 	if ThemeMaterials.for_theme("stone").get("wall") == mats.get("wall"):
 		fails.append("gothic partage le matériau de mur de stone")
 	# ambiance
@@ -29,9 +31,38 @@ func _ready() -> void:
 	VisualFx.apply_environment(env2, "stone", false)
 	if env2.ambient_light_color != amb_before:
 		fails.append("l'ambiance de stone a changé")
-	# kit : sans GLB, rien n'est posé
+	# modèles livrés : encombrement dans le cahier des charges, ouverture libre des arches et encadrements, origine au sol
+	var glb_count := 0
+	var opening := {"arch": Vector2(3.0, 3.5), "door_frame": Vector2(3.0, 3.4), "stair_frame": Vector2(3.0, 3.4)}
 	KitDecor.placeholders = false
 	KitDecor.reset_cache()
+	for id in KitDecor.MODULES:
+		if not ResourceLoader.exists(KitDecor.GLB_DIR + id + ".glb"):
+			print("GLB absent : ", id)
+			continue
+		glb_count += 1
+		var box := AABB()
+		var first := true
+		var gap: Vector2 = opening.get(id, Vector2.ZERO)
+		for part in KitDecor._parts(id):
+			var a: AABB = (part.xf as Transform3D) * (part.mesh as Mesh).get_aabb()
+			box = a if first else box.merge(a)
+			first = false
+			if gap != Vector2.ZERO:       # rien dans la baie : x dans ±gap.x/2, y de 0 à gap.y, sur toute la profondeur
+				var hole := AABB(Vector3(-gap.x * 0.5 + 0.001, 0.0, -1.0), Vector3(gap.x - 0.002, gap.y - 0.001, 2.0))
+				if a.intersects(hole):
+					fails.append("baie obstruée : " + id)
+		var lim: Vector3 = KitDecor.MODULES[id].size
+		if id != "bracket" and id != "ornament":
+			if box.size.x > lim.x + 0.01 or box.size.y > lim.y + 0.01 or box.size.z > lim.z + 0.2:
+				fails.append("encombrement dépassé : %s %s" % [id, str(box.size)])
+			if absf(box.position.y) > 0.01:
+				fails.append("origine hors du sol : " + id)
+		if box.size.z > 1.9:
+			fails.append("module trop profond : " + id)
+		print("GLB ", id, " : ", box.position, box.size)
+	# kit : sans GLB rien n'est posé, avec les GLB livrés il l'est
+	var any_glb := glb_count > 0
 	var planned_total := 0
 	var counts_all := {}
 	var cfg: Dictionary = DG.build_config(Data.original_config, 3, 19, 15, "normal", [], 1, 4242)
@@ -40,8 +71,8 @@ func _ready() -> void:
 		lv["theme"] = "gothic"
 		var grid := DungeonGrid.new(lv)
 		var view := await LevelBuilder.build(lv, grid)
-		if view.find_child("KitDecor", true, false) != null:
-			fails.append("kit posé sans GLB")
+		if (view.find_child("KitDecor", true, false) != null) != any_glb:
+			fails.append("kit posé sans GLB, ou absent malgré les GLB")
 		view.free()
 		# boîtes de test : plan complet
 		KitDecor.placeholders = true
