@@ -233,6 +233,16 @@ static func status_name(s: String) -> String:
 
 func _build_tests() -> void:
 	_begin()
+	_title(_body, L.t("ui.sadmin.atlas_sec"))
+	_note(_body, L.t("ui.sadmin.atlas_desc"))
+	var ab := Button.new()
+	ab.text = L.t("ui.sadmin.atlas_test")
+	ab.focus_mode = Control.FOCUS_NONE
+	ab.custom_minimum_size = Vector2(0, 40)
+	ab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ab.pressed.connect(_launch_atlas)
+	_body.add_child(ab)
+	_title(_body, L.t("ui.sadmin.ranked_sec"))
 	_note(_body, L.t("ui.sadmin.tests_desc"))
 	var grid := GridContainer.new()
 	grid.columns = 2
@@ -336,6 +346,19 @@ func _launch(difficulty: String, kind: String) -> void:
 	var r: Dictionary = await SuperAdmin.launch_test(difficulty, kind)
 	if not r.ok and _alive():
 		_say(str(r.get("message", "")), true)
+
+## Donjon de test local « Atlas Noir » : uniquement des monstres Atlas Noir, hors classement, sans essai ni envoi au serveur.
+func _launch_atlas() -> void:
+	var base: Dictionary = Data.config
+	var build := func() -> Dictionary:
+		DungeonGenerator.atlas_only = true
+		var cfg: Dictionary = DungeonGenerator.build_config(base, 4, 15, 13, "normal", [])
+		DungeonGenerator.atlas_only = false
+		cfg["title"] = L.t("ui.sadmin.atlas_title")
+		return cfg
+	var done := func(cfg: Dictionary) -> void:
+		Data.launch(cfg, "random")
+	Loader.generate(build, done)
 
 func _purge() -> void:
 	var r: Dictionary = await SuperAdmin.purge_tests()

@@ -128,7 +128,22 @@ static func conflicts(id: String, ids: Array) -> Array:
 static func _key(x: int, y: int) -> String:
 	return "%d,%d" % [x, y]
 
+## Test « Atlas Noir » : n'engendre que les monstres de la catégorie d'icônes « Monstres Atlas Noir » (tous les futurs y entrent d'eux-mêmes).
+static var atlas_only: bool = false
+
+static func atlas_pool() -> Array:
+	var out: Array = []
+	for cat in Data.constants.get("ICON_CATALOG", []):
+		if str(cat[0]) == "Monstres Atlas Noir":
+			for e in cat[1]:
+				out.append([str(e[1]), str(e[0])])           # [nom, id d'icône], comme TIER1..3
+	return out
+
 static func pick_tiered_monster(depth: int, num_levels: int) -> Array:
+	if atlas_only:
+		var pool := atlas_pool()
+		if not pool.is_empty():
+			return choice(pool)
 	var p := float(depth) / (num_levels - 1) if num_levels > 1 else 0.0
 	var w: Array
 	if p < 0.4:
