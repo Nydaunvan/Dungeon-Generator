@@ -584,3 +584,4 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - **Torches** : `CANDELABRA_THEME.gothic.glow` éclairci (0xffbc7a) pour que la lumière chaude ne brunisse pas la pierre bleutée ; seule l'entrée du thème gothic change.
 - **GLB** : `kit_v3.json` liste les GLB au format V3 ; `arch.glb` n'est préféré à l'ogive générée que s'il y figure (`KitDecor.v3_ids`).
 - **Tests** : `check_gothic` contrôle aussi les textures (tailles, raccord, matière, luminosité, joints) et le sens des faces du support de torche.
+- **Donjon de test Atlas Noir** (administration, `SuperAdminModal._launch_atlas`) : les niveaux intérieurs passent en thème gothic via `DungeonGenerator.apply_gothic`, appliqué après la génération (aucun tirage consommé, plans et monstres identiques) et réservé à cette config locale hors classement. `check_gothic` le vérifie.

@@ -354,6 +354,7 @@ func _launch_atlas() -> void:
 		DungeonGenerator.atlas_only = true
 		var cfg: Dictionary = DungeonGenerator.build_config(base, 4, 15, 13, "normal", [])
 		DungeonGenerator.atlas_only = false
+		DungeonGenerator.apply_gothic(cfg)      # le donjon de test s'affiche dans le thème gothic
 		cfg["title"] = L.t("ui.sadmin.atlas_title")
 		return cfg
 	var done := func(cfg: Dictionary) -> void:

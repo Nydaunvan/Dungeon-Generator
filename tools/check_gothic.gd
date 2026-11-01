@@ -198,6 +198,7 @@ func _ready() -> void:
 	for need in ["plinth", "pilaster", "ogive", "pillar", "portal_door", "torch_bracket", "cornice", "portal_stair"]:
 		if int(counts_all.get(need, 0)) == 0:
 			fails.append("module jamais planifié : " + need)
+	_check_atlas_test(fails)
 	_check_textures(fails)
 	var uniq := {}
 	for f in fails:
@@ -286,3 +287,32 @@ func _check_textures(fails: Array) -> void:
 				fails.append("texture %s mur : part de joints %.1f %% hors de 1 à 9 %% (joints trop épais ou absents)" % [res[0], jf * 100.0])
 	if lum.size() == 3 and not (lum["wall"] > lum["floor"] and lum["floor"] > lum["ceil"]):
 		fails.append("ordre de luminosité mur > sol > plafond non respecté : %s" % [lum])
+
+
+## Donjon de test Atlas Noir : thème gothic sur tous les niveaux intérieurs, plans et monstres inchangés, générateur normal intact (aucun thème gothic tiré au hasard).
+func _check_atlas_test(fails: Array) -> void:
+	if DungeonGenerator.THEMES.has("gothic"):
+		fails.append("gothic ne doit pas faire partie des thèmes tirés au hasard")
+	DungeonGenerator.atlas_only = true
+	var cfg: Dictionary = DungeonGenerator.build_config(Data.config, 4, 15, 13, "normal", [])
+	DungeonGenerator.atlas_only = false
+	var without_theme := func(levels: Array) -> String:
+		var copy: Array = []
+		for lv in levels:
+			var c: Dictionary = (lv as Dictionary).duplicate(true)
+			c.erase("theme")
+			copy.append(c)
+		return JSON.stringify(copy)
+	var before: String = without_theme.call(cfg.levels)
+	var changed := DungeonGenerator.apply_gothic(cfg)
+	var indoor := 0
+	for lv in cfg.levels:
+		if not bool(lv.get("outdoor", false)):
+			indoor += 1
+			if str(lv.theme) != "gothic":
+				fails.append("donjon Atlas Noir : un niveau intérieur n'est pas en gothic")
+	if before != without_theme.call(cfg.levels):
+		fails.append("donjon Atlas Noir : le plan ou les monstres ont changé en passant en gothic")
+	print("donjon Atlas Noir : %d niveaux intérieurs, %d passés en gothic (plans et monstres identiques)" % [indoor, changed])
+	if indoor == 0:
+		fails.append("donjon Atlas Noir : aucun niveau intérieur")

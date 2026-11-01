@@ -133,6 +133,16 @@ static func _key(x: int, y: int) -> String:
 ## Test « Atlas Noir » : n'engendre que les monstres de la catégorie d'icônes « Monstres Atlas Noir » (tous les futurs y entrent d'eux-mêmes).
 static var atlas_only: bool = false
 
+## Donjon de test Atlas Noir : affiche tous les niveaux intérieurs avec le thème gothic. Appliqué APRÈS la génération (aucun tirage consommé, plan et monstres identiques) ;
+## réservé à la config locale de test, jamais au classement ni au rejeu. Renvoie le nombre de niveaux changés.
+static func apply_gothic(cfg: Dictionary) -> int:
+	var n := 0
+	for lv in cfg.get("levels", []):
+		if not bool(lv.get("outdoor", false)) and str(lv.get("theme", "")) != "gothic":
+			lv["theme"] = "gothic"
+			n += 1
+	return n
+
 static func atlas_pool() -> Array:
 	var out: Array = []
 	for cat in Data.constants.get("ICON_CATALOG", []):
