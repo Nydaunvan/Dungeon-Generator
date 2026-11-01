@@ -628,16 +628,10 @@ func _build_parts() -> void:
 	panel_bag.body.add_child(bag)
 	panel_log = AtlasPanel.new(L.t("ui.game_layout.grimoire_des_evenements"), "scroll")
 	panel_log.name = "Journal"
-	if panel_log.header_row != null:
-		var lb := Button.new()
-		lb.icon = Atlas.icon("scroll", 16, Atlas.IVORY, 1.7)
-		_small_atlas(lb)
-		lb.focus_mode = Control.FOCUS_NONE
-		lb.tooltip_text = L.t("ui.game_layout.historique_complet_du_journal")
-		lb.pressed.connect(func(): menu_pressed.emit("Journal"))
-		panel_log.header_row.add_child(lb)
+	panel_log.set_bare()      # le carnet est un parchemin : ni cadre noir ni barre de titre, le rectangle du panneau reste le même
 	log_panel = LogPanel.new()
 	log_panel.setup(gs)
+	log_panel.history_pressed.connect(func(): menu_pressed.emit("Journal"))      # l'ancien bouton « historique complet » de la barre de titre
 	panel_log.body.add_child(log_panel)
 	# « 💾 Sauvegarde ▾ » : dans le menu du haut (plus de panneau dédié, la place va au grimoire)
 	save_menu = SaveMenu.new()

@@ -52,6 +52,21 @@ func _init(title: String = "", icon_name: String = "") -> void:
 	body.add_theme_constant_override("separation", 6)
 	_v.add_child(body)
 
+## Panneau « nu » : plus de cadre, de titre ni de filet ; le corps occupe tout le rectangle du panneau (qui garde sa place et ses dimensions : seules
+## les marges et l'en-tête disparaissent). Le contenu est rogné au rectangle du panneau. Sert au carnet, dont le parchemin se dessine lui-même.
+func set_bare(on: bool = true) -> void:
+	if not on:
+		return
+	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_v.add_theme_constant_override("separation", 0)
+	if header_row != null:
+		header_row.visible = false
+		if _v.get_child_count() > 2:
+			_v.get_child(1).visible = false      # filet sous le titre
+	ornament = false
+	clip_contents = true
+	queue_redraw()
+
 ## Opacité du fond (0 = transparent) : la carte, à gauche, laisse voir la vue 3D derrière elle.
 func set_fill_alpha(top: float, bottom: float) -> void:
 	_box.fill_top.a = top
