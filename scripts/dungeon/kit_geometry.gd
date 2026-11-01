@@ -11,18 +11,19 @@ extends RefCounted
 
 const TOP := 4.0
 const HALF := 2.0
-const STEPS_N := 10      # claveaux par ressaut et par moitié d'arc
-const JOINT_TINT := Color(0.32, 0.34, 0.40)      # flanc d'un joint de claveau : creux sombre
-const VOUSSOIR_RECESS := 0.05      # retrait d'un claveau sur deux (relief des joints)
+const STEPS_N := 14      # claveaux par membre d'archivolte et par moitié d'arc
+const JOINT_TINT := Color(0.42, 0.44, 0.50)      # flanc d'un joint de claveau : creux sombre
+const VOUSSOIR_RECESS := 0.04      # retrait d'un claveau sur deux (relief des joints)
+const KEY_PROUD := 0.07      # saillie supplémentaire des claveaux de clef (deux membres intérieurs)
 
 ## Portails : hw = demi-largeur de la baie, y0 = naissance de l'arc, steps = [[épaisseur radiale, demi-profondeur], …] de l'intérieur vers l'extérieur
 ## (les ressauts reculent vers l'extérieur : relief), panel_d = demi-profondeur du mur de remplissage, impost / keystone = imposte et clef.
 ## L'arc est équilatéral (rayon = largeur de baie). Somme des épaisseurs + hw <= 2 (bord de case).
 const PRESETS := {
-	"ogive": {"hw": 1.55, "y0": 0.85, "steps": [[0.22, 0.26], [0.18, 0.18]], "panel_d": 0.10, "impost": true, "keystone": false},
-	"portal_room": {"hw": 1.5, "y0": 0.9, "steps": [[0.2, 0.32], [0.2, 0.22]], "panel_d": 0.12, "impost": true, "keystone": true},
-	"portal_door": {"hw": 1.5, "y0": 0.9, "steps": [[0.2, 0.30], [0.2, 0.20]], "panel_d": 0.12, "impost": true, "keystone": true},
-	"portal_stair": {"hw": 1.5, "y0": 0.9, "steps": [[0.2, 0.34], [0.2, 0.22]], "panel_d": 0.12, "impost": true, "keystone": true},
+	"ogive": {"hw": 1.5, "y0": 0.88, "steps": [[0.20, 0.30], [0.17, 0.22], [0.09, 0.14]], "panel_d": 0.09, "impost": true, "keystone": false},
+	"portal_room": {"hw": 1.5, "y0": 0.88, "steps": [[0.20, 0.34], [0.17, 0.24], [0.09, 0.15]], "panel_d": 0.09, "impost": true, "keystone": true},
+	"portal_door": {"hw": 1.5, "y0": 0.88, "steps": [[0.20, 0.32], [0.17, 0.23], [0.09, 0.15]], "panel_d": 0.09, "impost": true, "keystone": true},
+	"portal_stair": {"hw": 1.5, "y0": 0.88, "steps": [[0.20, 0.34], [0.17, 0.24], [0.09, 0.15]], "panel_d": 0.09, "impost": true, "keystone": true},
 }
 const PROCEDURAL := ["ogive", "portal_room", "portal_door", "portal_stair", "rib", "cornice", "torch_bracket"]
 
@@ -136,9 +137,16 @@ static func _arc_pt(cx: float, y0: float, r: float, t: float) -> Vector2:
 	var th := acos(clampf(cx / r, -1.0, 1.0)) * t
 	return Vector2(minf(_arc_x(cx, r, th), 0.0), minf(y0 + r * sin(th), TOP))
 
-## Retrait du claveau i du ressaut k (alterné d'un ressaut à l'autre : les joints ne se superposent pas).
-static func _recess(i: int, k: int) -> float:
-	return VOUSSOIR_RECESS if (i + k) % 2 == 1 else 0.0
+## Profondeur de la face avant du claveau i du membre k : les claveaux alternent saillie et léger retrait (de vrais joints en relief, décalés d'un membre
+## à l'autre) ; avec une clef, les deux claveaux du sommet des deux membres intérieurs avancent nettement.
+static func _front(d: float, i: int, k: int, keyed: bool, alt: bool = true) -> float:
+	if keyed and k < 2 and i == STEPS_N - 1:
+		return d + KEY_PROUD
+	return d - (VOUSSOIR_RECESS if alt and (i + k) % 2 == 1 else 0.0)
+
+## Largeur du chanfrein de l'arête intérieure pour une face avant à la profondeur zf (intrados à zc), limitée à la moitié de la bande.
+static func _chamfer(zf: float, zc: float, width: float) -> float:
+	return minf(zf - zc, 0.5 * width)
 
 ## Abscisses d'échantillonnage d'un arc (angles réguliers : le pied de l'arc, presque vertical, reste bien décrit), jusqu'au sommet (x = 0).
 static func _arc_xs(cx: float, r: float) -> Array:
@@ -148,6 +156,14 @@ static func _arc_xs(cx: float, r: float) -> Array:
 		out.append(minf(_arc_x(cx, r, tha * float(i) / float(STEPS_N)), 0.0))
 	return out
 
+## Quadrilatère avec son symétrique en z (avant et arrière) et en x ; `hint` = vers l'extérieur de la matière (la composante z est inversée pour l'arrière).
+static func _quad_zx(g: Dictionary, a: Vector3, b: Vector3, c: Vector3, d: Vector3, hint: Vector3) -> void:
+	_quad_x(g, a, b, c, d, hint)
+	var f := func(p: Vector3) -> Vector3: return Vector3(p.x, p.y, -p.z)
+	_quad_x(g, f.call(a), f.call(b), f.call(c), f.call(d), Vector3(hint.x, hint.y, -hint.z))
+
+## Portail : un mur plein de 4 u percé d'une baie en arc brisé, encadré d'une archivolte à trois membres (claveaux, intrados chanfreiné), d'un piédroit à imposte
+## et d'un socle. Rien ne se superpose : chaque face est celle d'un seul bloc, la clef est la saillie de deux claveaux (pas une boîte posée sur l'arc).
 static func _portal(g: Dictionary, p: Dictionary) -> void:
 	var hw: float = p.hw
 	var y0: float = p.y0
@@ -155,18 +171,31 @@ static func _portal(g: Dictionary, p: Dictionary) -> void:
 	var cx := r0 - hw
 	var steps: Array = p.steps
 	var pd: float = p.panel_d
+	var keyed: bool = p.keystone
 	var radii: Array = [r0]
 	for s in steps:
 		radii.append(float(radii[-1]) + float(s[0]))
 	var rl: float = radii[-1]
-	var jx: float = cx - rl                       # bord extérieur du dernier ressaut (<= -2 + ...)
-	# ressauts : piédroit plein, puis claveaux (joints radiaux). Les claveaux alternent entre saillie et léger retrait (VOUSSOIR_RECESS) : de vrais joints en relief.
+	var jx: float = cx - rl                       # bord extérieur du dernier membre (juste en deçà du bord de case)
+	var d0: float = steps[0][1]
+	var zc: float = d0 - VOUSSOIR_RECESS - 0.07   # profondeur de l'intrados (fond de la baie, sous le chanfrein)
+	var w0: float = float(steps[0][0])
 	for k in steps.size():
 		var rin: float = radii[k]
 		var rout: float = radii[k + 1]
 		var d: float = steps[k][1]
+		var dn: float = steps[k + 1][1] if k + 1 < steps.size() else pd
+		var w := rout - rin
 		var x0 := cx - rin                        # naissance de l'arc intérieur
-		_face(g, Vector2(cx - rout, 0.0), Vector2(x0, 0.0), Vector2(x0, y0), Vector2(cx - rout, y0), d)
+		# piédroit du membre : face avant (avec chanfrein à l'arête de la baie pour le premier membre) et rive extérieure
+		if k == 0:
+			var crj := _chamfer(d, zc, w)
+			_face(g, Vector2(cx - rout, 0.0), Vector2(x0 - crj, 0.0), Vector2(x0 - crj, y0), Vector2(cx - rout, y0), d)
+			_quad_zx(g, Vector3(x0 - crj, 0.0, d), Vector3(x0 - crj, y0, d), Vector3(x0, y0, zc), Vector3(x0, 0.0, zc), Vector3(1, 0, 1))
+		else:
+			_face(g, Vector2(cx - rout, 0.0), Vector2(x0, 0.0), Vector2(x0, y0), Vector2(cx - rout, y0), d)
+		_side(g, Vector2(cx - rout, 0.0), Vector2(cx - rout, y0), d, dn, Vector2(-1, 0))
+		# claveaux
 		for i in STEPS_N:
 			var t0 := float(i) / float(STEPS_N)
 			var t1 := float(i + 1) / float(STEPS_N)
@@ -174,15 +203,39 @@ static func _portal(g: Dictionary, p: Dictionary) -> void:
 			var ib := _arc_pt(cx, y0, rin, t1)
 			var oa := _arc_pt(cx, y0, rout, t0)
 			var ob := _arc_pt(cx, y0, rout, t1)
+			var alt := k < steps.size() - 1      # le dernier membre (le plus mince) reste lisse : ses joints seraient des filets sans lecture
+			var zf := _front(d, i, k, keyed, alt)
+			var rad_a := (oa - ia).normalized()
+			var rad_b := (ob - ib).normalized()
+			var fa := ia
+			var fb := ib
+			if k == 0:
+				var cr := _chamfer(zf, zc, w)
+				fa = ia + rad_a * cr
+				fb = ib + rad_b * cr
+				var hn := Vector3(-(rad_a.x + rad_b.x) * 0.5, -(rad_a.y + rad_b.y) * 0.5, 1.0)
+				_quad_zx(g, Vector3(ia.x, ia.y, zc), Vector3(ib.x, ib.y, zc), Vector3(fb.x, fb.y, zf), Vector3(fa.x, fa.y, zf), hn)
 			if oa.y >= TOP - 1e-4 and ob.y >= TOP - 1e-4:
 				continue
-			var rec := _recess(i, k)
-			_face(g, ia, oa, ob, ib, d - rec)
-			if i > 0 and rec != _recess(i - 1, k):
-				var toward := (ib - ia).normalized()          # vers le claveau suivant (sens croissant de l'arc)
-				g.tint = JOINT_TINT
-				_side(g, ia, oa, d - VOUSSOIR_RECESS, d, toward if rec > 0.0 else -toward)
-				g.tint = Color.WHITE
+			_face(g, fa, oa, ob, fb, zf)
+			# rive extérieure du claveau (du membre vers le suivant, ou vers le mur de remplissage)
+			if zf > dn + 1e-4:
+				_side(g, oa, ob, zf, dn, Vector2(oa.x - cx, oa.y - y0))
+			# joint avec le claveau précédent : la face du plus avancé, visible parce que l'autre est en retrait
+			if i > 0:
+				var zp := _front(d, i - 1, k, keyed, alt)
+				if absf(zp - zf) > 1e-4:
+					var zlo := minf(zp, zf)
+					var zhi := maxf(zp, zf)
+					var hi_is_i := zf > zp
+					var crh := _chamfer(zhi, zc, w) if k == 0 else 0.0
+					var sa := crh * (zlo - zc) / (zhi - zc) if k == 0 else 0.0
+					var ra := (oa - ia).normalized()
+					var toward := (ib - ia).normalized()
+					g.tint = JOINT_TINT
+					_quad_zx(g, Vector3(ia.x + ra.x * sa, ia.y + ra.y * sa, zlo), Vector3(oa.x, oa.y, zlo), Vector3(oa.x, oa.y, zhi),
+						Vector3(ia.x + ra.x * crh, ia.y + ra.y * crh, zhi), Vector3(-toward.x, -toward.y, 0.0) if hi_is_i else Vector3(toward.x, toward.y, 0.0))
+					g.tint = Color.WHITE
 	# mur de remplissage (de l'arc extérieur au plafond, et le long des piédroits jusqu'au bord de la case)
 	var pxs: Array = _arc_xs(cx, rl)
 	pxs.append(jx)
@@ -199,45 +252,22 @@ static func _portal(g: Dictionary, p: Dictionary) -> void:
 		if la >= TOP - 1e-4 and lb >= TOP - 1e-4:
 			continue
 		_face(g, Vector2(xa, la), Vector2(xb, lb), Vector2(xb, TOP), Vector2(xa, TOP), pd)
-	# intrados : fond de la baie (arc intérieur et piédroit), profondeur du premier ressaut
-	var d0: float = steps[0][1]
+	# intrados : fond de la baie (arc intérieur et piédroit), à la profondeur zc
 	var ixs: Array = _arc_xs(cx, r0)
 	for i in ixs.size() - 1:
 		var xa: float = ixs[i]
 		var xb: float = ixs[i + 1]
 		if xb - xa < 1e-5:
 			continue
-		var a := Vector3(xa, _arc_y(cx, y0, r0, xa), -d0)
-		var b := Vector3(xb, _arc_y(cx, y0, r0, xb), -d0)
-		_quad_x(g, a, b, Vector3(b.x, b.y, d0), Vector3(a.x, a.y, d0), Vector3(cx - xa, y0 - a.y, 0.0))
-	_quad_x(g, Vector3(-hw, 0.0, -d0), Vector3(-hw, y0, -d0), Vector3(-hw, y0, d0), Vector3(-hw, 0.0, d0), Vector3(1, 0, 0))
-	# faces de ressaut : de la profondeur d_k à d_(k+1) (ou à celle du mur), le long de l'arc extérieur de chaque bande et de son piédroit
-	for k in steps.size():
-		var rout: float = radii[k + 1]
-		var dk: float = steps[k][1]
-		var dn: float = steps[k + 1][1] if k + 1 < steps.size() else pd
-		var sxs: Array = _arc_xs(cx, rout)
-		for i in sxs.size() - 1:
-			var xa: float = sxs[i]
-			var xb: float = sxs[i + 1]
-			if xb - xa < 1e-5:
-				continue
-			var ya := _arc_y(cx, y0, rout, xa)
-			var yb := _arc_y(cx, y0, rout, xb)
-			if ya >= TOP - 1e-4 and yb >= TOP - 1e-4:
-				continue
-			_side(g, Vector2(xa, ya), Vector2(xb, yb), dk, dn, Vector2(xa - cx, ya - y0))
-		_side(g, Vector2(cx - rout, 0.0), Vector2(cx - rout, y0), dk, dn, Vector2(-1, 0))
-	# imposte (corniche à la naissance de l'arc), socle des piédroits, clef
-	var ext := rl - r0 + 0.02
-	var dmax: float = steps[0][1]
+		var a := Vector3(xa, _arc_y(cx, y0, r0, xa), -zc)
+		var b := Vector3(xb, _arc_y(cx, y0, r0, xb), -zc)
+		_quad_x(g, a, b, Vector3(b.x, b.y, zc), Vector3(a.x, a.y, zc), Vector3(cx - xa, y0 - a.y, 0.0))
+	_quad_x(g, Vector3(-hw, 0.0, -zc), Vector3(-hw, y0, -zc), Vector3(-hw, y0, zc), Vector3(-hw, 0.0, zc), Vector3(1, 0, 0))
+	# imposte (assise saillante à la naissance de l'arc) et socle des piédroits
+	var ext := rl - r0
 	if p.impost:
-		_box(g, Vector3(-hw - ext, y0 - 0.1, -dmax - 0.07), Vector3(-hw + 0.05, y0 + 0.08, dmax + 0.07), PackedStringArray(), true)
-	_box(g, Vector3(-hw - ext, 0.0, -dmax - 0.05), Vector3(-hw + 0.04, 0.28, dmax + 0.05), PackedStringArray(["-y"]), true)
-	if p.keystone:
-		var yi := _arc_y(cx, y0, r0, 0.0)
-		var yo := _arc_y(cx, y0, rl, 0.0)
-		_box(g, Vector3(-0.17, yi - 0.04, -dmax - 0.08), Vector3(0.17, minf(yo + 0.1, TOP), dmax + 0.08), PackedStringArray(["+y"]))
+		_box(g, Vector3(-hw - ext, y0 - 0.1, -d0 - 0.07), Vector3(-hw + 0.04, y0 + 0.08, d0 + 0.07), PackedStringArray(), true)
+	_box(g, Vector3(-hw - ext, 0.0, -d0 - 0.05), Vector3(-hw + 0.03, 0.28, d0 + 0.05), PackedStringArray(["-y"]), true)
 
 # ------------------------------------------------------------------ nervure de plafond et corniche
 

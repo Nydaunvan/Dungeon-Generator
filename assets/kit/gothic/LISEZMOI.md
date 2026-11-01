@@ -62,7 +62,7 @@ Textures nouvelles utiles : pierre à joints moins répétitifs (variante « us�
 
 ## V3 : claveaux, support de torche et GLB prévus
 
-- **Ogive** : les arcs générés ont maintenant de vrais claveaux (10 par moitié et par ressaut, un sur deux en retrait de 5 cm, flancs de joint assombris). Un GLB doit faire mieux :
+- **Ogive** : les arcs générés ont de vrais claveaux (voir la section V4 ci-dessous). Un GLB doit faire mieux :
   claveaux sculptés irréguliers, clé de voûte, chanfreins, profondeur ≥ 0,25 u.
 - **`torch_bracket`** (remplace `bracket` quand il existe) : platine en ogive clouée au mur, volute de fer qui porte le pied du manche, collerette. Fer sombre (métal 0,55, rugosité 0,52).
   Repère de `TorchLayer` : origine au point d'accroche, +Z vers l'intérieur, mur en Z = -0,04, manche incliné de ≈ 23° (bas en (0, -0,24, 0,045)). La platine, le bras et l'anneau de la torche elle-même
@@ -70,3 +70,9 @@ Textures nouvelles utiles : pierre à joints moins répétitifs (variante « us�
 - **`arch.glb`** : le fichier du premier pack est un portique rectangulaire. Un `arch.glb` en ogive n'est utilisé que si son nom est listé dans `kit_v3.json` (champ `v3`), pour ne pas confondre les deux.
   Mêmes règles que `ogive` (4 × 4 × 0,5 ; baie libre ± 1,5 u jusqu'à 3,5 u).
 - `portal_room.glb`, `portal_door.glb`, `portal_stair.glb`, `rib.glb`, `cornice.glb`, `torch_bracket.glb` : le nom suffit, ils remplacent le module généré (aucune entrée dans `kit_v3.json`).
+
+## V4 : ogive en archivolte
+
+L'ogive et les portails générés (`KitGeometry`) ont changé : baie de 3,0 u, 3,48 u au sommet, archivolte à trois membres (largeur radiale 0,20 + 0,17 + 0,09 u, ressauts jusqu'à 0,34 u de part et d'autre du plan du mur), 14 claveaux par moitié et par membre,
+arête de baie chanfreinée, clef en saillie. Encombrement : 4 × 4 × ≤ 0,86 u. Ces modules restent **procéduraux** : la forme est juste (silhouette, proportions, claveaux, chanfreins), mais ni sculptée, ni irrégulière pierre par pierre ;
+un GLB du même nom les remplace toujours (mêmes contraintes de baie libre qu'avant).
