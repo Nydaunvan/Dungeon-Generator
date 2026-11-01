@@ -32,6 +32,8 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 	view.torches = torches
 
 	var outdoor := bool(level.get("outdoor", false))
+	_vary = theme_name == "gothic" and not outdoor
+	_vary_k = 1.0
 	var path_cells: Array = level.get("pathCells", [])
 	var plaza_cells: Array = level.get("plazaCells", [])
 	var chunks := {}      # Vector2i(bloc) -> {"parts": {...}, "counts": {...}}
@@ -149,6 +151,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		_add_columns(view, grid, theme.get("wall"))
 		RoomDecor.add(view, level, theme_name, theme.get("wall"))
 		await KitDecor.add(view, level, grid, theme_name, niches, holes, sliced)      # modules d'architecture (thème gothic uniquement, désactivable)
+	_vary = false
 	return view
 
 ## Creux des murs du niveau : `niches` (case -> {d, w, h, ...}, pour les fontaines et le marchand) et `holes` ("x,y,dx,dy" -> intervalle évidé
@@ -505,7 +508,14 @@ static func _floor_cell(st: SurfaceTool, c: Vector3, half: float, pit: bool) -> 
 			_v(st, tr, Vector3.UP, uv.call(x1, z0))
 			_v(st, br, Vector3.UP, uv.call(x1, z1))
 
+## Variation de teinte par pan (thème gothic seulement) : casse la répétition de la texture sans toucher aux UV. Déterministe (position du pan), jamais GameRng.
+static var _vary := false
+static var _vary_k := 1.0
+
 static func _quad(st: SurfaceTool, c: Vector3, up: Vector3, n: Vector3, half: float) -> void:
+	if _vary:
+		var hh := (int(round(c.x * 8.0)) * 73856093) ^ (int(round(c.y * 8.0)) * 19349663) ^ (int(round(c.z * 8.0)) * 83492791) ^ (int(round(n.x + 2.0 * n.y + 3.0 * n.z)) * 2654435)
+		_vary_k = 0.88 + 0.24 * float(absi(hh) & 0xffff) / 65535.0
 	var right := up.cross(n)
 	var u := up * half
 	var r := right * half
@@ -521,6 +531,8 @@ static func _quad(st: SurfaceTool, c: Vector3, up: Vector3, n: Vector3, half: fl
 	_v(st, br, n, Vector2(1, 1))
 
 static func _v(st: SurfaceTool, p: Vector3, n: Vector3, uv: Vector2) -> void:
+	if _vary:
+		st.set_color(Color(_vary_k, _vary_k, _vary_k))
 	st.set_normal(n)
 	st.set_uv(uv)
 	st.add_vertex(p)

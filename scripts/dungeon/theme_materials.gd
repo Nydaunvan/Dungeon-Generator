@@ -114,6 +114,8 @@ static func _gothic_mats() -> Dictionary:
 			ceil_ = wall.duplicate() as StandardMaterial3D      # vrais jeux sans plafond dédié : le mur, plus sombre et à plus grande échelle
 			ceil_.albedo_color = Color(0.62, 0.64, 0.70)
 			ceil_.uv1_scale = Vector3(1, 1, 1)
+	for m in [wall, floor_, ceil_]:
+		m.vertex_color_use_as_albedo = true      # variation de teinte par pan (LevelBuilder._vary) : casse la répétition de la texture
 	return {"wall": wall, "floor": floor_, "ceil": ceil_}
 
 ## TEMPORAIRE : matériau de pierre classique (normales, occlusion, rugosité) dont la couleur est passée en gris contrasté puis teintée froid.
