@@ -39,12 +39,14 @@ static func _build_index(admin: Node) -> void:
 		return
 	_index.clear()
 	_index_lang = Data.lang
-	# la construction d'une page touche à quelques états partagés : on les remet tels quels ensuite
-	var keep_scroll = admin.get("_scroll")
-	var keep_status = admin.get("admin_status")
+	# la construction d'une page touche à quelques états partagés (défilement, libellé d'état, compteur, aperçus) : on les
+	# garde tels quels, et on ne remet que des objets encore valides (une page quittée a déjà libéré les siens)
+	var keep_scroll: Variant = _alive(admin.get("_scroll"))
+	var keep_status: Variant = _alive(admin.get("admin_status"))
 	var keep_reg: Array = AdminGeneral.reg.duplicate()
-	var keep_cnt = AdminGeneral._count_lbl
+	var keep_cnt: Variant = _alive(AdminGeneral._count_lbl)
 	var keep_prev: Array = AdminGeneral._preview.duplicate()
+	var keep_pending: int = Form._pending.size()
 	for page in AdminGeneral.PAGES:
 		if page == "identity" or page == "share":
 			continue
@@ -57,6 +59,15 @@ static func _build_index(admin: Node) -> void:
 	AdminGeneral.reg = keep_reg
 	AdminGeneral._count_lbl = keep_cnt
 	AdminGeneral._preview = keep_prev
+	# les enregistrements automatiques des pages construites ici sont sans objet (leurs minuteries sont libérées)
+	if Form._pending.size() > keep_pending:
+		Form._pending.resize(keep_pending)
+
+## L'objet s'il existe encore, sinon null (évite de réaffecter une instance libérée).
+static func _alive(v: Variant) -> Variant:
+	if v is Object and not is_instance_valid(v):
+		return null
+	return v
 
 static func _collect(n: Node, section: String, panel: String) -> void:
 	for ch in n.get_children():
@@ -252,16 +263,24 @@ func _pick(i: int) -> void:
 	elif str(r.section) == "party":
 		AtelierParty.sub = "party"
 	var admin := _admin
+	if admin == null or not is_instance_valid(admin):
+		queue_free()
+		return
+	var tree := admin.get_tree()
 	queue_free()
 	admin.go(str(r.section))
-	if r.has("find"):
-		await admin.get_tree().process_frame
-		await admin.get_tree().process_frame
-		_flash(admin, str(r.find))
+	if r.has("find") and tree != null:
+		await tree.process_frame
+		await tree.process_frame
+		if is_instance_valid(admin):
+			_flash(admin, str(r.find))
 
 ## Fait défiler jusqu'au réglage trouvé et le fait clignoter en doré.
 static func _flash(admin: Node, text: String) -> void:
-	var node: Control = _find(admin._content_host, text)
+	var host: Node = admin.get("_content_host")
+	if host == null or not is_instance_valid(host):
+		return
+	var node: Control = _find(host, text)
 	if node == null:
 		return
 	if admin._scroll != null and is_instance_valid(admin._scroll):
