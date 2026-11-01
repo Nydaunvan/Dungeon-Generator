@@ -59,3 +59,14 @@ Tous : origine au centre de l'arête de case, face avant vers +z, x en largeur, 
 | `cornice.glb` | corniche haute continue | 4 × 0,25 × 0,25 | sans objet |
 
 Textures nouvelles utiles : pierre à joints moins répétitifs (variante « usée » et variante « mousse ») et dallage de sol avec mortier plus marqué. La variation de teinte par face (`LevelBuilder._vary`) atténue la répétition mais ne la supprime pas.
+
+## V3 : claveaux, support de torche et GLB prévus
+
+- **Ogive** : les arcs générés ont maintenant de vrais claveaux (10 par moitié et par ressaut, un sur deux en retrait de 5 cm, flancs de joint assombris). Un GLB doit faire mieux :
+  claveaux sculptés irréguliers, clé de voûte, chanfreins, profondeur ≥ 0,25 u.
+- **`torch_bracket`** (remplace `bracket` quand il existe) : platine en ogive clouée au mur, volute de fer qui porte le pied du manche, collerette. Fer sombre (métal 0,55, rugosité 0,52).
+  Repère de `TorchLayer` : origine au point d'accroche, +Z vers l'intérieur, mur en Z = -0,04, manche incliné de ≈ 23° (bas en (0, -0,24, 0,045)). La platine, le bras et l'anneau de la torche elle-même
+  sont dessinés par `TorchLayer` : un modèle de remplacement doit les prolonger sans les doubler. **Aucune lumière dans le GLB** (le jeu pose la sienne). Matériau métallique (`metallic` ≥ 0,3), sinon le jeu y applique la pierre.
+- **`arch.glb`** : le fichier du premier pack est un portique rectangulaire. Un `arch.glb` en ogive n'est utilisé que si son nom est listé dans `kit_v3.json` (champ `v3`), pour ne pas confondre les deux.
+  Mêmes règles que `ogive` (4 × 4 × 0,5 ; baie libre ± 1,5 u jusqu'à 3,5 u).
+- `portal_room.glb`, `portal_door.glb`, `portal_stair.glb`, `rib.glb`, `cornice.glb`, `torch_bracket.glb` : le nom suffit, ils remplacent le module généré (aucune entrée dans `kit_v3.json`).

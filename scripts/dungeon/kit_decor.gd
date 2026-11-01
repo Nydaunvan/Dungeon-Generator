@@ -28,6 +28,7 @@ const MODULES := {
 	"door_frame": {"size": Vector3(4.0, 4.0, 0.6), "note": "encadrement massif de porte, ouverture >= 3,0 x 3,4 (la herse reste visible)"},
 	"stair_frame": {"size": Vector3(4.0, 4.0, 0.7), "note": "encadrement d'escalier, ouverture >= 3,0 x 3,4"},
 	"bracket": {"size": Vector3(0.3, 0.5, 0.35), "note": "support de torche en fer forgé, autour du point d'accroche de la torche"},
+	"torch_bracket": {"size": Vector3(0.2, 0.55, 0.15), "note": "V3 : support de torche en fer forgé (platine, volute, collerette) ; remplace bracket quand il existe ; aucune lumière dans le modèle"},
 	"ornament": {"size": Vector3(0.7, 1.0, 0.1), "note": "élément décoratif mural discret, centré sur un pan sans torche"},
 	# V2 : modules en arc brisé. Générés par code (KitGeometry) tant qu'aucun GLB de ce nom n'existe dans assets/kit/gothic/ ; un GLB artistique les remplace.
 	"ogive": {"size": Vector3(4.0, 4.0, 0.6), "note": "arche gothique en ogive de couloir droit (mur plein de 4 u percé d'une baie en arc brisé de 3,1 u, 3,5 u au sommet), ressauts"},
@@ -46,6 +47,15 @@ static var placeholders := false
 static var procedural := true
 ## Dernier niveau posé : {"total": n, "count": {module: n}} (tests et mesures).
 static var last_stats: Dictionary = {}
+## GLB livrés au format V3 (assets/kit/gothic/kit_v3.json). Sert à distinguer l'ancien arch.glb (portique rectangulaire du premier pack) d'une vraie ogive.
+const V3_FILE := "res://assets/kit/gothic/kit_v3.json"
+static func v3_ids() -> Array:
+	if ResourceLoader.exists(V3_FILE):
+		var j = load(V3_FILE)
+		if j is JSON and j.data is Dictionary:
+			return (j.data as Dictionary).get("v3", [])
+	return []
+
 static var _parts_cache: Dictionary = {}
 static var _default_mat: StandardMaterial3D
 
@@ -83,7 +93,7 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 	var seed := str(level.get("id", "")).hash()
 	var blocked := RoomDecor._blocked_cells(level)
 	var special := _special_cells(level, blocked, niches)
-	var arch_id := "ogive" if avail.has("ogive") else "arch"
+	var arch_id := "arch" if (avail.has("arch") and v3_ids().has("arch")) else ("ogive" if avail.has("ogive") else "arch")
 	var door_id := "portal_door" if avail.has("portal_door") else "door_frame"
 	var stair_id := "portal_stair" if avail.has("portal_stair") else "stair_frame"
 	var arches: Array = _arch_edges(level, grid, special, seed) if (avail.has(arch_id) or avail.has("portal_room")) else []
@@ -121,8 +131,9 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 						var t := Vector2i(1, 0) if d.x == 0 else Vector2i(0, 1)
 						out.append({"id": "pilaster", "xf": Transform3D(basis, edge + Vector3(t.x * HALF, 0.0, t.y * HALF))})
 					var torch := (x + y) % 2 == 0
-					if torch and avail.has("bracket"):
-						out.append({"id": "bracket", "xf": Transform3D(basis, c + Vector3(d.x * CELL * 0.49, CELL * 0.62, d.y * CELL * 0.49))})
+					var bracket_id := "torch_bracket" if avail.has("torch_bracket") else "bracket"
+					if torch and avail.has(bracket_id):
+						out.append({"id": bracket_id, "xf": Transform3D(basis, c + Vector3(d.x * CELL * 0.49, CELL * 0.62, d.y * CELL * 0.49))})
 					elif not torch and avail.has("ornament") and not special.has(cell) and not _near_special(special, grid, cell, 1) \
 							and _h(x, y, seed ^ (di * 131 + 7)) % 4 == 0:
 						out.append({"id": "ornament", "xf": Transform3D(basis, edge)})
@@ -346,10 +357,10 @@ static func _parts(id: String) -> Array:
 				while up != null and up is Node3D:
 					xf = (up as Node3D).transform * xf
 					up = up.get_parent()
-				out.append({"mesh": _with_theme_stone(flat_normals(mi.mesh)), "xf": xf})
+				out.append({"mesh": _with_theme_stone(flat_normals(mi.mesh), _stone_scale(id)), "xf": xf})
 			root.free()
 	elif procedural and KitGeometry.PROCEDURAL.has(id):
-		out.append({"mesh": _with_theme_stone(KitGeometry.build(id)), "xf": Transform3D.IDENTITY})
+		out.append({"mesh": _with_theme_stone(KitGeometry.build(id), _stone_scale(id)), "xf": Transform3D.IDENTITY})
 	elif placeholders:
 		out = _placeholder_parts(id)
 	_parts_cache[id] = out
@@ -390,7 +401,13 @@ static func flat_normals(mesh: Mesh) -> Mesh:
 ## Les surfaces métalliques (fer, bronze) gardent leur matériau. Sans textures de thème réelles, le modèle reste tel que livré.
 static var _stone_cache: Dictionary = {}
 
-static func _with_theme_stone(mesh: Mesh) -> Mesh:
+## Échelle de la pierre projetée (en tuiles par unité) : la texture couvre 4 u ; les grands modules (arches, portails) montrent de gros claveaux,
+## les petits (pilastres, nervures, corniches, consoles) une pierre deux fois plus fine pour que les joints y restent visibles.
+const BIG_STONE := ["arch", "ogive", "portal_room", "portal_door", "portal_stair", "door_frame", "stair_frame"]
+static func _stone_scale(id: String) -> float:
+	return 0.25 if BIG_STONE.has(id) else 0.5
+
+static func _with_theme_stone(mesh: Mesh, scale: float = 0.5) -> Mesh:
 	var wall := ThemeMaterials.for_theme("gothic").get("wall") as StandardMaterial3D
 	if wall == null or wall.albedo_texture == null or mesh.get_surface_count() == 0:
 		return mesh
@@ -400,13 +417,13 @@ static func _with_theme_stone(mesh: Mesh) -> Mesh:
 		if mat != null and mat.metallic >= 0.3:
 			continue
 		var v := 1.0 if mat == null else clampf(mat.albedo_color.get_luminance() / 0.6, 0.7, 1.25)
-		var key := int(round(v * 20.0))
+		var key := int(round(v * 20.0)) * 100 + int(round(scale * 40.0))
 		if not _stone_cache.has(key):
 			var sm := wall.duplicate() as StandardMaterial3D
 			sm.uv1_triplanar = true
 			sm.uv1_world_triplanar = true       # échelle et orientation identiques d'une instance à l'autre (les modules sont tournés)
 			sm.uv1_triplanar_sharpness = 8.0    # faces nettes : peu de mélange entre axes, donc pas de texture étirée sur les chanfreins
-			sm.uv1_scale = Vector3.ONE * 0.5
+			sm.uv1_scale = Vector3.ONE * scale
 			sm.albedo_color = Color(v, v, v)
 			_stone_cache[key] = sm
 		m2.surface_set_material(i, _stone_cache[key])

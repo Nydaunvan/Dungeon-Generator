@@ -1,0 +1,4 @@
+{
+	"note": "Liste des modèles GLB livrés au format V3 (voir LISEZMOI.md). Ajouter \"arch\" ici dès que arch.glb est une vraie ogive à claveaux : le jeu l'utilisera à la place de l'ogive générée par code. Les autres noms (portal_room, portal_door, portal_stair, rib, cornice, torch_bracket) remplacent le module généré dès que leur GLB existe, sans rien ajouter ici.",
+	"v3": []
+}
