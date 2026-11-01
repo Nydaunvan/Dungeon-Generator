@@ -40,12 +40,24 @@ def smooth(x, a=0.0, b=1.0):
     return t * t * (3 - 2 * t)
 
 
-def course_edges(rng, total, lo, hi):
-    """Bords irréguliers sur un cercle de longueur total (somme exacte)."""
+def course_edges(rng, total, lo, hi, mix=None):
+    """Bords irréguliers sur un cercle de longueur total (somme exacte). mix = [(probabilité, mini, maxi), …] : tailles tirées dans plusieurs plages
+    (quelques blocs courts, quelques longs) au lieu d'une seule ; sinon uniforme entre lo et hi."""
     sizes = []
     t = 0.0
     while t < total:
-        s = rng.uniform(lo, hi)
+        if mix:
+            r = rng.uniform()
+            acc = 0.0
+            a, b = mix[-1][1], mix[-1][2]
+            for pr, mn, mx in mix:
+                acc += pr
+                if r < acc:
+                    a, b = mn, mx
+                    break
+            s = rng.uniform(a, b)
+        else:
+            s = rng.uniform(lo, hi)
         sizes.append(s)
         t += s
     sizes = np.array(sizes) * total / sum(sizes)
@@ -59,7 +71,7 @@ def masonry(n, rng, wx, wy):
     xx = (np.arange(n)[None, :] + wx) % n
     yy = np.broadcast_to(yy, (n, n)).astype(np.float32)
     xx = np.broadcast_to(xx, (n, n)).astype(np.float32)
-    cedges, csizes = course_edges(rng, n, 0.40 * ppu, 0.66 * ppu)
+    cedges, csizes = course_edges(rng, n, 0.40 * ppu, 0.66 * ppu, [(0.18, 0.30 * ppu, 0.40 * ppu), (0.62, 0.42 * ppu, 0.62 * ppu), (0.20, 0.66 * ppu, 0.92 * ppu)])
     dist = np.zeros((n, n), np.float32)
     bid = np.zeros((n, n), np.int32)
     bu = np.zeros((n, n), np.float32)
@@ -68,7 +80,7 @@ def masonry(n, rng, wx, wy):
     counter = 0
     for c in range(len(cedges)):
         y0, y1 = cedges[c], cedges[c] + csizes[c]
-        be, _ = course_edges(rng, n, 0.80 * ppu, 1.70 * ppu)
+        be, _ = course_edges(rng, n, 0.80 * ppu, 1.70 * ppu, [(0.22, 0.55 * ppu, 0.85 * ppu), (0.56, 0.90 * ppu, 1.50 * ppu), (0.22, 1.55 * ppu, 2.15 * ppu)])
         be = np.sort((be + rng.uniform(0, n)) % n)
         m = ci == c
         x = xx[m]
@@ -169,7 +181,7 @@ def build(part, seed):
     speck = fbm(n, 0.2, seed + 12, lo=150, hi=500)
     if part == "wall":
         dist, bid, u, v, cnt = masonry(n, rng, wx, wy)
-        joint_half, bevel, relief, tilt_k = 4.6, 30.0, 0.55, 0.10
+        joint_half, bevel, relief, tilt_k = 5.2, 40.0, 0.62, 0.11
         base, tone_sd, strength = np.array([0.238, 0.252, 0.272]), 0.16, 14.0
     elif part == "floor":
         dist, bid, u, v, cnt = voronoi(n, rng, 6, wx, wy)
@@ -186,11 +198,12 @@ def build(part, seed):
     dome = np.abs(per_block(rng, cnt, 0.5)) + 0.15
     rgh = per_block(rng, cnt, 0.05)
     t = tone[bid]
-    d = dist + mid * 2.8 + fine * 1.2          # bords ébréchés, non rectilignes
+    d = dist + mid * 2.8 + gaussian_filter(fine, 1.2, mode="wrap") * 1.6          # bords ébréchés, non rectilignes (sans escalier de pixels)
     s = smooth(d, joint_half, joint_half + bevel)
     edge_band = 1.0 - smooth(d, joint_half, joint_half + bevel * 0.35)
     joint = 1.0 - smooth(d, joint_half - 1.6, joint_half + 1.6)
-    surf = (0.60 * mid + 0.10 * fine + 0.02 * grain) * relief
+    chisel = fbm(n, 1.2, seed + 13, lo=60, hi=380, ax=3.0)      # coups de ciseau : micro-relief un peu étiré
+    surf = (0.60 * mid + 0.17 * fine + 0.05 * grain + 0.08 * chisel) * relief
     pits = np.clip(fine - 1.9, 0, None) * 0.22
     tilt = (tiltx[bid] * (u - 0.5) + tilty[bid] * (v - 0.5)) * tilt_k
     cracks = np.zeros_like(crackn)      # pas de fissures filiformes : elles se répètent en boucles peu crédibles
@@ -206,17 +219,24 @@ def build(part, seed):
     col = col * mott[..., None]
     col = col * (1.0 + 0.20 * edge_band * (s > 0.02))[..., None]
     col = col * (1.0 - 0.55 * cracks)[..., None]
-    jc = np.array([0.075, 0.085, 0.100]) * (1.0 + 0.30 * fine[..., None])
+    jc = np.array([0.118, 0.128, 0.146]) * (1.0 + 0.30 * fine[..., None])      # fond de joint : gris-bleu sombre, jamais noir
     col = col * (1 - joint[..., None]) + jc * joint[..., None]
     ao = np.clip(1.0 - 3.0 * np.clip(gaussian_filter(h, 10, mode="wrap") - h, 0, None), 0.25, 1.0)
     ao *= 1.0 - 0.55 * joint
+    ao *= 1.0 - 0.28 * np.clip(gaussian_filter(joint, 7, mode="wrap") * 2.2, 0, 1)      # ombre douce au pied du joint : de la profondeur sans trait noir
     rough = 0.80 + rgh[bid] + 0.07 * fine + 0.05 * grain
     rough = rough * (1 - joint) + 0.97 * joint + 0.06 * edge_band
     if part == "floor":
-        wet = smooth(fbm(n, 1.7, seed + 11, lo=2, hi=16), 0.55, 1.15)
-        col = col * (1 - 0.30 * wet)[..., None]
-        rough = rough - 0.34 * wet
-        h = h - 0.02 * wet
+        # humidité : surtout dans la rugosité et la réflexion, très peu dans la couleur. Large (la tuile couvre une case : pas de petites taches
+        # qui se répéteraient), plus marquée au creux des joints et variable d'une dalle à l'autre.
+        broad = smooth(fbm(n, 1.9, seed + 11, lo=1, hi=5), -0.3, 1.5)
+        pool = smooth(fbm(n, 1.4, seed + 14, lo=3, hi=22), -0.2, 1.4)
+        slab = np.clip(per_block(rng, cnt, 0.45) + 0.45, 0.0, 1.0)[bid]
+        along = np.clip(gaussian_filter(joint, 14, mode="wrap") * 3.0, 0.0, 1.0)
+        wet = np.clip((0.15 + 0.85 * broad) * (0.35 + 0.65 * pool) * (0.4 + 0.6 * slab) + 0.35 * along * broad, 0.0, 1.0)
+        col = col * (1 - 0.07 * wet)[..., None]
+        rough = rough - 0.30 * wet + 0.05 * fine * wet
+        h = h - 0.008 * wet
     if part == "ceil":
         col = col * (1.0 - 0.18 * np.clip(streak, 0, None))[..., None]
     rough = np.clip(rough, 0.35, 1.0)
