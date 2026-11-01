@@ -73,7 +73,7 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 		var pk := _pal_key(theme, style)
 		var hs := _h(rect.position.x, rect.position.y, seed)
 		var plan := RoomProps.plan({"rows": rows, "inside": inside, "cells": r.cells, "rect": rect, "blocked": blocked,
-			"seed": hs, "vedette": int(r.id) == vedette, "style": style})
+			"seed": hs, "vedette": int(r.id) == vedette, "style": style, "theme": theme})
 		_floor(root, r.cells, str(def.floor), theme)
 		var skip = plan.vertex
 		var pil = def.pillars
@@ -206,7 +206,12 @@ static func _rug_texture(theme: String, w: int, h: int) -> Texture2D:
 	var field := _col(p[0])
 	var trim := _col(p[1])
 	var dark := _col(p[2])
-	var T := 64                        # pixels par case : tissage fin, bords lissés
+	var worn := theme == "gothic"       # tapis ancien : fils d'or ternis, fond éteint, usure par plaques, bord effrangé
+	if worn:
+		trim = trim.darkened(0.5).lerp(Color(0.38, 0.33, 0.29), 0.35)
+		field = field.lerp(Color(0.2, 0.1, 0.11), 0.65).darkened(0.12)      # lie-de-vin passée plutôt que le bleu du thème
+		dark = dark.darkened(0.2)
+	var T := 128 if worn else 64       # pixels par case : tissage fin, bords lissés (plus fin en gothic, vu de près)
 	var img := Image.create(w * T, h * T, false, Image.FORMAT_RGBA8)
 	for y in h * T:
 		for x in w * T:
@@ -231,8 +236,14 @@ static func _rug_texture(theme: String, w: int, h: int) -> Texture2D:
 			var g := float(_h(x, y, 5) % 100) / 100.0
 			var weave := 0.5 + 0.5 * sin(float(x) * 1.9) * sin(float(y) * 1.9)
 			var k := 0.9 + 0.1 * g + 0.05 * weave
+			var edge_n := 0.0
+			if worn:
+				var fu := float(x) / float(w * T)
+				var fv := float(y) / float(h * T)
+				k *= 0.68 + 0.32 * _pnoise(fu * 5.0 * w, fv * 5.0 * h, 5 * w * h)
+				edge_n = (_pnoise(fu * 17.0 * w, fv * 17.0 * h, 17 * w * h) - 0.5) * 0.1
 			# bord du tapis fondu sur ~2 pixels : bord lissé sans dépendre du réglage MSAA
-			var edge_a := clampf((edge * T + 0.5) / 2.5, 0.0, 1.0)
+			var edge_a := clampf(((edge + edge_n) * T + 0.5) / 2.5, 0.0, 1.0)
 			img.set_pixel(x, y, Color(c.r * k, c.g * k, c.b * k, edge_a))
 	img.generate_mipmaps()
 	var t := ImageTexture.create_from_image(img)
@@ -751,6 +762,47 @@ static func _floor_overlay(kind: String) -> Texture2D:
 					var e := 1.0 - smoothstep(0.002, 0.007, minf(ex, ey))
 					c = c.lerp(Color(0.04, 0.035, 0.03), e * 0.8)
 					img.set_pixel(x, y, Color(c.r, c.g, c.b, 1.0))
+		"damier_g":
+			# damier gothic : dalles anciennes, deux tons de pierre proches (contraste atténué), joints irréguliers, usure, éclats et fissures discrètes ; alpha < 1 : la dalle PBR transparaît
+			for y in N:
+				for x in N:
+					var u := float(x) / N
+					var v := float(y) / N
+					var wob := (_pnoise(u * 12.0, v * 12.0, 12) - 0.5) * 0.012
+					var uu := u + wob
+					var vv := v + (_pnoise(u * 12.0 + 5.0, v * 12.0, 12) - 0.5) * 0.012
+					var cx := int(floorf(uu * 4.0))
+					var cy := int(floorf(vv * 4.0))
+					var light := (posmod(cx, 4) + posmod(cy, 4)) % 2 == 0
+					var tone := float(_h(posmod(cx, 4), posmod(cy, 4), 11) % 100) / 100.0
+					var n := _pnoise(u * 6.0, v * 6.0, 6) * 0.6 + _pnoise(u * 20.0, v * 20.0, 20) * 0.4
+					var base := Color(0.37, 0.38, 0.41) if light else Color(0.16, 0.16, 0.19)
+					base = base.lerp(base.darkened(0.35), n * 0.6 + tone * 0.25)
+					var ex := absf(fposmod(uu * 4.0 + 0.5, 1.0) - 0.5) / 4.0
+					var ey := absf(fposmod(vv * 4.0 + 0.5, 1.0) - 0.5) / 4.0
+					var ed := minf(ex, ey)
+					var joint := 1.0 - smoothstep(0.004, 0.012 + 0.006 * n, ed)
+					var chip := (1.0 - smoothstep(0.012, 0.03, ed)) * smoothstep(0.55, 0.8, _pnoise(u * 28.0, v * 28.0, 28))
+					var crack := 1.0 - smoothstep(0.004, 0.014, absf(_pnoise(u * 7.0 + tone, v * 7.0, 7) - 0.5))
+					var wear := smoothstep(0.55, 0.85, _pnoise(u * 9.0 + 2.0, v * 9.0, 9))     # usure : la dalle de fond reprend le dessus
+					var c := base.lerp(Color(0.025, 0.025, 0.03), maxf(joint * 0.85, chip * 0.5))
+					c = c.lerp(Color(0.03, 0.03, 0.035), crack * 0.35 * float(tone > 0.45))
+					var a := (0.62 if light else 0.5) * (1.0 - 0.55 * wear)
+					a = maxf(a, maxf(joint * 0.8, chip * 0.55))
+					img.set_pixel(x, y, Color(c.r, c.g, c.b, clampf(a, 0.0, 1.0)))
+		"filets_g":
+			# filets de bronze terni : traits fins, interrompus par l'usure, sans éclat doré
+			for y in N:
+				for x in N:
+					var u := float(x) / N - 0.5
+					var v := float(y) / N - 0.5
+					var border := absf(maxf(absf(u), absf(v)) - 0.46)
+					var diamond := absf(absf(u) + absf(v) - 0.34)
+					var line := maxf(1.0 - smoothstep(0.003, 0.009, border), 1.0 - smoothstep(0.002, 0.007, diamond))
+					var n := _pnoise((u + 0.5) * 16.0, (v + 0.5) * 16.0, 16)
+					var worn := smoothstep(0.35, 0.7, _pnoise((u + 0.5) * 7.0, (v + 0.5) * 7.0, 7))
+					var c := Color(0.36, 0.29, 0.18).lerp(Color(0.2, 0.16, 0.11), n * 0.7)
+					img.set_pixel(x, y, Color(c.r, c.g, c.b, line * 0.55 * (1.0 - 0.75 * worn)))
 		"filets":
 			for y in N:
 				for x in N:
@@ -833,8 +885,12 @@ static func _floor(root: Node3D, cells: Array, name: String, theme: String = "")
 		xf.append(Transform3D(Basis.IDENTITY, Vector3(c.x * CELL, 0.012, c.y * CELL)))
 	_multi(root, pm, xf)
 	var ov := str((FLOOR_PBR[name] as Array)[4])
+	if theme == "gothic" and (ov == "" or ov == "filets"):
+		_floor_layer(root, cells, "joints", 0.015)      # sol gothic sans dalles propres : joints et usure de dalles anciennes sous le motif éventuel
 	if ov == "":
 		return
+	if theme == "gothic" and (ov == "damier" or ov == "filets"):
+		ov += "_g"          # damier vieilli, filets de bronze terni : les autres thèmes gardent le dessin d'origine
 	var okey := "floorovmat|" + ov
 	if not _tex.has(okey):
 		var m := StandardMaterial3D.new()
@@ -844,6 +900,9 @@ static func _floor(root: Node3D, cells: Array, name: String, theme: String = "")
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if ov != "damier" else BaseMaterial3D.TRANSPARENCY_DISABLED
 		m.roughness = 0.25 if ov == "sang" else (0.35 if ov == "damier" else (0.3 if ov == "filets" else 0.85))
 		m.metallic = 0.6 if ov == "filets" else 0.0
+		if ov == "filets_g":
+			m.roughness = 0.7
+			m.metallic = 0.25
 		m.metallic_specular = 0.5
 		_tex[okey] = m
 	var om := PlaneMesh.new()
@@ -852,6 +911,24 @@ static func _floor(root: Node3D, cells: Array, name: String, theme: String = "")
 	var oxf: Array = []
 	for c in cells:
 		oxf.append(Transform3D(Basis.IDENTITY, Vector3(c.x * CELL, 0.018, c.y * CELL)))
+	_multi(root, om, oxf)
+
+static func _floor_layer(root: Node3D, cells: Array, kind: String, y: float) -> void:
+	var key := "floorovmat|" + kind
+	if not _tex.has(key):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = _floor_overlay(kind)
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		m.texture_repeat = false
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.roughness = 0.85
+		_tex[key] = m
+	var om := PlaneMesh.new()
+	om.size = Vector2(CELL, CELL)
+	om.material = _tex[key]
+	var oxf: Array = []
+	for c in cells:
+		oxf.append(Transform3D(Basis.IDENTITY, Vector3(c.x * CELL, y, c.y * CELL)))
 	_multi(root, om, oxf)
 
 static func _floor_legacy(root: Node3D, cells: Array, name: String) -> void:

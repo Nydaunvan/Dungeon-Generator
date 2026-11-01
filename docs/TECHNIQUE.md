@@ -625,3 +625,10 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - **Écriture** : inchangée sur le fond (`visible_characters`, 20 ms par caractère, file avec accélération puis affichage immédiat) ; seul le texte ajouté est composé, jamais tout le journal. L'historique d'une sauvegarde s'affiche d'un coup. Pas de fondu d'encre par caractère : il imposerait un `RichTextEffect` recalculé à chaque image, jugé trop coûteux pour un gain minime.
 - **Papier** : ajout d'un voile de nuages clairs et sombres (`_mottle`) qui rompt l'uniformité du centre ; texture et forme conservées.
 - **Outils** : `tools/check_carnet.tscn` (126 contrôles : rectangle, limites, marges, curseur, dix événements, défilement manuel, molette, sauvegarde), `tools/shot_ecriture.tscn` (séquence d'images de l'écriture).
+
+
+## Salles gothic : refonte (branche migration/gothic-salles)
+- `scripts/dungeon/prop_gothic.gd` : autel (`altar_g`) et candélabres (`candelabra_g0..2`) en maillages procéduraux provisoires (voir `docs/MODELES_SALLES.md`). Surface `SURF_STONE` de `PropMeshes` : dalle/mur gothic en triplanaire, teintée par les couleurs de sommets.
+- `RoomProps._autel` : en gothic, autel + 4 candélabres autour (ou 2 en coin sans vedette) ; flammes de tailles variées d'après `_var` (hash de position, jamais `GameRng`). Les autres thèmes gardent `altar` / `candelabra`.
+- `RoomDecor` : en gothic, le damier devient `damier_g` (deux tons proches, joints irréguliers, usure, fissures, alpha), les filets d'or `filets_g` (bronze terni), un calque `joints` couvre les sols sans dalles propres ; tapis lie-de-vin usé (128 px/case).
+- Outil : `tools/render_salles.tscn` (niveau d'essai à 10 salles ; `lit=N` ajoute une lumière d'inspection, hors jeu). Rendu GL Compatibility seulement : Forward+ non validé.
