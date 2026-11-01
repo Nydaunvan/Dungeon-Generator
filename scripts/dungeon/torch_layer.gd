@@ -35,6 +35,8 @@ const SPARK_N := 3               # étincelles par torche (idem)
 const LIGHT_ENERGY := 1.1
 const LIGHT_RANGE := 7.5
 const SMOKE_ALPHA := 0.45        # opacité max de la fumée (légère mais lisible)
+const SMOKE_ALPHA_GOTHIC := 0.34      # thème gothic : fumée discrète, gris sombre légèrement chaud, lente (voir _style_smoke)
+const SMOKE_N_GOTHIC := 6
 
 const FLAME_SHADER := """
 shader_type spatial;
@@ -131,6 +133,7 @@ class TorchFx extends RefCounted:
 	var sparks: CPUParticles3D
 	var light: OmniLight3D
 	var torch := -1          # indice de la torche servie (-1 = libre)
+	var theme := ""          # thème de la torche servie (style de la fumée)
 	var target := 0.0        # 1 = allumé, 0 = en train de s'éteindre
 	var level := 0.0         # fondu courant 0..1
 	var phase := 0.0
@@ -160,7 +163,7 @@ func _ready() -> void:
 ## Réglages graphiques modifiés : ajuste le nombre de particules des rigs existants (le nombre de lumières est relu à chaque réaffectation).
 func _on_quality() -> void:
 	for r in _rigs:
-		r.smoke.amount = Settings.pc(SMOKE_N)
+		r.smoke.amount = Settings.pc(SMOKE_N_GOTHIC if r.theme == "gothic" else SMOKE_N)
 		r.sparks.amount = Settings.pc(SPARK_N)
 
 func add_torch(pos: Vector3, rot: float, theme: String) -> void:
@@ -274,39 +277,58 @@ func _make_rig() -> TorchFx:
 
 func _make_smoke() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
-	p.amount = Settings.pc(SMOKE_N)
-	p.lifetime = 2.8
-	p.lifetime_randomness = 0.3
-	p.randomness = 0.5
 	p.local_coords = false
 	p.fixed_fps = 30
 	p.emitting = false
 	p.position = Vector3(0.0, FLAME_H * 0.9, 0.0)
 	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	p.emission_sphere_radius = 0.035
-	p.direction = Vector3(0.0, 1.0, 0.3)     # monte et s'éloigne un peu du mur (+Z local = vers l'intérieur)
-	p.spread = 18.0
-	p.initial_velocity_min = 0.20
-	p.initial_velocity_max = 0.34
-	p.gravity = Vector3(0.0, 0.04, 0.0)
-	p.scale_amount_min = 0.15
-	p.scale_amount_max = 0.23
-	var curve := Curve.new()
-	curve.min_value = 0.0
-	curve.max_value = 4.0
-	curve.add_point(Vector2(0.0, 1.0))
-	curve.add_point(Vector2(1.0, 3.2))
-	p.scale_amount_curve = curve
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array([0.0, 0.18, 0.6, 1.0])
-	g.colors = PackedColorArray([Color(0.95, 0.66, 0.4, 0.0), Color(0.78, 0.64, 0.52, SMOKE_ALPHA),
-		Color(0.58, 0.54, 0.5, SMOKE_ALPHA * 0.6), Color(0.45, 0.45, 0.46, 0.0)])
-	p.color_ramp = g
 	var qm := QuadMesh.new()
 	qm.size = Vector2.ONE
 	qm.material = _get_smoke_mat()
 	p.mesh = qm
+	_style_smoke(p, "")
 	return p
+
+## Réglages de la fumée d'une torche. Les rigs sont réutilisés d'un niveau à l'autre : tout ce qui dépend du thème est réécrit à chaque affectation.
+## Défaut (tous les thèmes sauf gothic) : valeurs d'origine. gothic : plus discrète (opacité, volume), gris sombre légèrement chaud, montée plus lente,
+## dérive et rotation propres à chaque particule pour éviter un panache répétitif.
+static func _style_smoke(p: CPUParticles3D, theme: String) -> void:
+	var gothic := theme == "gothic"
+	p.amount = Settings.pc(SMOKE_N_GOTHIC if gothic else SMOKE_N)
+	p.lifetime = 3.8 if gothic else 2.8
+	p.lifetime_randomness = 0.55 if gothic else 0.3
+	p.randomness = 0.8 if gothic else 0.5
+	p.direction = Vector3(0.0, 1.0, 0.3)     # monte et s'éloigne un peu du mur (+Z local = vers l'intérieur)
+	p.spread = 26.0 if gothic else 18.0
+	p.initial_velocity_min = 0.09 if gothic else 0.20
+	p.initial_velocity_max = 0.17 if gothic else 0.34
+	p.gravity = Vector3(0.0, 0.022 if gothic else 0.04, 0.0)
+	p.scale_amount_min = 0.14 if gothic else 0.15
+	p.scale_amount_max = 0.21 if gothic else 0.23
+	p.angle_min = -80.0 if gothic else 0.0
+	p.angle_max = 80.0 if gothic else 0.0
+	p.angular_velocity_min = -12.0 if gothic else 0.0
+	p.angular_velocity_max = 12.0 if gothic else 0.0
+	p.tangential_accel_min = -0.03 if gothic else 0.0
+	p.tangential_accel_max = 0.03 if gothic else 0.0
+	p.speed_scale = randf_range(0.75, 1.0) if gothic else 1.0      # chaque torche à son rythme
+	var curve := Curve.new()
+	curve.min_value = 0.0
+	curve.max_value = 4.0
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(1.0, 2.7 if gothic else 3.2))
+	p.scale_amount_curve = curve
+	var g := Gradient.new()
+	if gothic:
+		g.offsets = PackedFloat32Array([0.0, 0.22, 0.6, 1.0])
+		g.colors = PackedColorArray([Color(0.42, 0.35, 0.29, 0.0), Color(0.62, 0.52, 0.43, SMOKE_ALPHA_GOTHIC),
+			Color(0.36, 0.31, 0.27, SMOKE_ALPHA_GOTHIC * 0.55), Color(0.20, 0.20, 0.21, 0.0)])      # près de la flamme : gris chaud éclairé par elle ; plus haut : gris sombre
+	else:
+		g.offsets = PackedFloat32Array([0.0, 0.18, 0.6, 1.0])
+		g.colors = PackedColorArray([Color(0.95, 0.66, 0.4, 0.0), Color(0.78, 0.64, 0.52, SMOKE_ALPHA),
+			Color(0.58, 0.54, 0.5, SMOKE_ALPHA * 0.6), Color(0.45, 0.45, 0.46, 0.0)])
+	p.color_ramp = g
 
 func _make_sparks() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
@@ -358,7 +380,9 @@ func _assign(r: TorchFx, ti: int) -> void:
 	r.light.omni_attenuation = VisualFx.light_k(str(t.theme), "torch_atten", 1.3)
 	r.light.light_energy = 0.0
 	r.light.shadow_enabled = false
-	r.smoke.color = Color.WHITE.lerp(flame, 0.3)
+	r.theme = str(t.theme)
+	_style_smoke(r.smoke, r.theme)
+	r.smoke.color = Color.WHITE if r.theme == "gothic" else Color.WHITE.lerp(flame, 0.3)      # gothic : la teinte est dans le dégradé (gris chaud), pas celle de la flamme
 	r.sparks.color = Color.WHITE.lerp(flame, 0.3)
 	r.root.visible = true
 	r.smoke.restart()
