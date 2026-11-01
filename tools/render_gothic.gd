@@ -16,6 +16,8 @@ var shots := [
 	# V3 : vues rapprochées (hauteur des yeux du joueur)
 	["19_monstre_face", 10.0, 5.0, 1, 0.0, 0.0], ["20_monstre_oblique", 9.2, 5.0, 1, 20.0, 0.0], ["21_monstre_proche", 10.45, 5.0, 1, 0.0, 0.0],
 	["22_monstre_salle", 10.0, 8.7, 2, 0.0, 0.0],
+	# monstre vu de loin (halo autour de la silhouette)
+	["28_monstre_loin", 8.0, 5.0, 1, 0.0, 0.0], ["29_monstre_moyen", 9.0, 5.0, 1, 0.0, 0.0],
 	# V4 : ogive de côté et à la jonction avec le mur, entrée de salle, sol vu de près (7e valeur : inclinaison de la caméra, degrés, négatif = vers le bas)
 	["23_arche_cote_g", 10.0, 3.7, 2, -52.0, 0.0], ["23_arche_cote_d", 10.0, 3.7, 2, 52.0, 0.0],
 	["24_arche_mur_g", 9.55, 4.0, 2, 34.0, 0.0], ["24_arche_mur_d", 10.45, 4.0, 2, -34.0, 0.0],
@@ -23,6 +25,7 @@ var shots := [
 ]
 var only: PackedStringArray = []
 var fx := true      # false = sans netteté de shader, sans liseré froid (référence « avant »)
+var fxmode := ""    # "rim" = liseré seul, "sharp" = netteté seule (diagnostic)
 var mon := ""      # id d'un monstre Atlas Noir à poser dans le couloir (ex. mon_veilleur_os) ; vide = aucun, les autres vues restent identiques
 
 func _ready() -> void:
@@ -36,9 +39,10 @@ func _ready() -> void:
 				"only": only = kv[1].split(",")
 				"mon": mon = kv[1]
 				"fx": fx = kv[1] == "1"
+				"fxmode": fxmode = kv[1]
 	KitDecor.enabled = kit
 	Settings.set_option("particles", 1.0)      # réglage « Particules » par défaut du jeu (le rendu d'essai ne lit pas les préférences)
-	if not fx:
+	if not fx or fxmode == "rim":
 		AtlasSpriteMaterial.sharpen = 0.0
 	var W := 20
 	var H := 13
@@ -85,7 +89,7 @@ func _ready() -> void:
 	env.ambient_light_energy = 1.1
 	VisualFx.apply_environment(env, theme, false)
 	AtlasSpriteMaterial.apply_theme(theme)
-	if not fx:
+	if not fx or fxmode == "sharp":
 		RenderingServer.global_shader_parameter_set("atlas_rim_k", 0.0)
 	env.ambient_light_energy = 1.1 * VisualFx.light_k(theme, "ambient_k")
 	var we := WorldEnvironment.new()

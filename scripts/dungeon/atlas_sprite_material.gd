@@ -129,7 +129,9 @@ void fragment() {
 		cov += texture(albedo_tex, UV + vec2(-r * 0.5, -r * 0.87), 3.0).a;
 		float edge = a.a * clamp((1.0 - cov / 6.0) * 1.8, 0.0, 1.0);
 		float from_top = mix(0.35, 1.0, clamp(1.0 - UV.y, 0.0, 1.0));
-		em += atlas_rim_color * edge * from_top * atlas_rim_k * 0.45 * albedo_color.a;
+		// le liseré s'éteint avec la distance : de loin, dans le noir, il dessinait un halo bleuté autour du monstre ; il revient à l'approche du groupe
+		float near_k = 1.0 - smoothstep(3.5, 7.5, length(VERTEX));
+		em += atlas_rim_color * edge * from_top * atlas_rim_k * 0.45 * albedo_color.a * near_k;
 	}
 	EMISSION = em;
 	if (use_normal) {
