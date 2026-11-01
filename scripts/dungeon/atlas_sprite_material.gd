@@ -140,14 +140,16 @@ void fragment() {
 	vec3 em = texture(emission_tex, UV, lod_bias).rgb * emission_energy;
 	// lumière de contour froide : bande intérieure le long de la silhouette (couverture d'opacité autour du pixel), surtout en haut ; nulle hors des thèmes qui la déclarent
 	if (atlas_rim_k > 0.001) {
-		float r = 0.016;
+		// largeur de la bande fixée en pixels d'écran (≈ 3 px à 1080 p) et non en fraction de la texture : de près, l'ancienne bande (1,6 % de la texture, très floue)
+		// s'élargissait en halo bleuté à l'intérieur du liseré blanc
+		vec2 rr = px * 3.0 * (VIEWPORT_SIZE.y / 1080.0);
 		float cov = 0.0;
-		cov += texture(albedo_tex, UV + vec2(r, 0.0), 3.0).a;
-		cov += texture(albedo_tex, UV + vec2(-r, 0.0), 3.0).a;
-		cov += texture(albedo_tex, UV + vec2(r * 0.5, r * 0.87), 3.0).a;
-		cov += texture(albedo_tex, UV + vec2(-r * 0.5, r * 0.87), 3.0).a;
-		cov += texture(albedo_tex, UV + vec2(r * 0.5, -r * 0.87), 3.0).a;
-		cov += texture(albedo_tex, UV + vec2(-r * 0.5, -r * 0.87), 3.0).a;
+		cov += texture(albedo_tex, UV + vec2(rr.x, 0.0), 1.0).a;
+		cov += texture(albedo_tex, UV + vec2(-rr.x, 0.0), 1.0).a;
+		cov += texture(albedo_tex, UV + vec2(rr.x * 0.5, rr.y * 0.87), 1.0).a;
+		cov += texture(albedo_tex, UV + vec2(-rr.x * 0.5, rr.y * 0.87), 1.0).a;
+		cov += texture(albedo_tex, UV + vec2(rr.x * 0.5, -rr.y * 0.87), 1.0).a;
+		cov += texture(albedo_tex, UV + vec2(-rr.x * 0.5, -rr.y * 0.87), 1.0).a;
 		float edge = a.a * clamp((1.0 - cov / 6.0) * 1.8, 0.0, 1.0);
 		float from_top = mix(0.35, 1.0, clamp(1.0 - UV.y, 0.0, 1.0));
 		// le liseré s'éteint avec la distance : de loin, dans le noir, il dessinait un halo bleuté autour du monstre ; il revient à l'approche du groupe
