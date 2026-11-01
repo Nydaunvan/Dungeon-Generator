@@ -24,9 +24,9 @@ const DAMP_WALL_REPEAT := 0.5     # la texture 2048 couvre deux pans : briques d
 ## Thème « gothic » (Atlas Noir) : pierre anthracite. Jeux de textures attendus : assets/themes/gothic_hd/ (2048) et gothic_lite/ (1024), avec
 ## wall_*, floor_* et ceil_* (… _albedo.jpg, _normal.png, _orm.jpg ; voir assets/themes/gothic_LISEZMOI.md). Tant que ces fichiers n'existent pas,
 ## le thème est TEMPORAIRE : relief et rugosité de la pierre classique, couleur ramenée au gris froid (voir `_gothic_derived`) ; `gothic_placeholder` vaut alors true.
-const GOTHIC_WALL_REPEAT := 2.0      # entier : les pans voisins se raccordent
+const GOTHIC_WALL_REPEAT := 1.0      # une tuile de 4 u = une case : grosses pierres, raccord par case
 const GOTHIC_FLOOR_REPEAT := 1.0
-const GOTHIC_CEIL_REPEAT := 2.0      # plafond : dalles du sol, deux par case
+const GOTHIC_CEIL_REPEAT := 1.0
 const GOTHIC_WALL_TINT := Color(0.60, 0.65, 0.74)
 const GOTHIC_FLOOR_TINT := Color(0.50, 0.54, 0.60)
 const GOTHIC_CEIL_TINT := Color(0.40, 0.43, 0.50)
