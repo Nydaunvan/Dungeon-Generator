@@ -10,9 +10,9 @@ var shots := [
 	["05_escalier", 6, 5, 3], ["06_T", 12, 5, 1], ["07_salle", 10, 6, 2], ["08_salle_milieu", 10, 10, 2],
 	["09_impasse", 16, 5, 1], ["10_porte_proche", 8, 5, 3],
 	# x, y en cases (fractions admises), yaw supplémentaire (degrés), montée de la herse (unités) : la porte est entre les cases 6 et 8 (x = 7)
-	["11_porte_oblique", 8.5, 5.4, 3, 28.0, 0.0], ["12_porte_dans_la_case", 7.0, 5.0, 3, 0.0, 0.0],
+	["11_porte_oblique", 8.5, 5.25, 3, 28.0, 0.0], ["12_porte_dans_la_case", 7.0, 5.0, 3, 0.0, 0.0],
 	["13_herse_mi_course", 8.3, 5.0, 3, 0.0, 2.3], ["14_porte_vue_de_cote", 9.0, 5.0, 2, 0.0, 0.0],
-	["15_escalier_oblique", 5.5, 5.4, 3, 25.0, 0.0],
+	["15_escalier_oblique", 5.5, 5.25, 3, 25.0, 0.0],
 ]
 var only: PackedStringArray = []
 

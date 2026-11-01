@@ -562,3 +562,12 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - **Kit** (`kit_decor.gd`) : plinthes, pilastres, piliers aux angles des colonnes, arches (entrées de salle, puis couloirs droits espacés d'au moins 3 cases, jamais près d'une porte, d'un escalier, d'une niche, d'un objet, d'un monstre ou du départ), encadrements de portes et d'escaliers, supports de torche, ornements. Placement fonction de la grille et de l'identifiant du niveau seulement (jamais `GameRng`), MultiMesh par bloc de 8 × 8, désactivable (`KitDecor.enabled`). Modèles : `assets/kit/gothic/*.glb` (voir son LISEZMOI) ; un module sans fichier n'est pas posé. Les GLB livrés n'ont pas de normales : elles sont recalculées au chargement ; leurs pierres reçoivent la pierre du thème en triplanaire (monde), le fer et le bronze gardent leur matériau.
 - **Combats** : l'arène (`combat_stage.gd`) reprend les matériaux et l'ambiance du thème ; elle ne reçoit pas les modules du kit.
 - Tests et outils : `tools/check_gothic.tscn` (matériaux, ambiance, GLB, normales, arches, déterminisme), `tools/stat_kit.tscn` (arches par niveau), `tools/render_gothic.tscn` (captures PNG en rendu OpenGL logiciel, sans GPU Forward+).
+
+### Gothic V2 (thème de test)
+
+- `KitGeometry` (`scripts/dungeon/kit_geometry.gd`) construit en code des modules d'ogive, de portails (salle, porte, escalier), de nervures et de corniches (arcs brisés, archivoltes, impostes, clés). Un GLB du même nom dans `assets/kit/gothic/` les remplace ; `KitDecor.procedural` coupe la génération.
+- `KitDecor.plan` place les portails en priorité sur les arêtes de salle, de porte et d'escalier, puis des ogives sur les couloirs (écarts `ARCH_GAP_RUN` / `ARCH_GAP_ROOM`), des nervures (`RIB_GAP`) et une corniche. Tout dérive de `hash(level.id, coordonnées)` : aucun `GameRng`, ni règle de jeu, ni passage obstrué (zones libres vérifiées par `tools/check_gothic`).
+- Éclairage refroidi (`VisualFx.THEME_LIGHT["gothic"]`) : ambiance bleu-ardoise, torches murales chaudes mais localisées, torche du joueur froide. Les autres thèmes sont inchangés (assertions dans `check_gothic`).
+- `LevelBuilder._vary` varie la teinte de chaque face (couleur de sommet) pour casser la répétition de la texture.
+- Outils : `tools/render_gothic.tscn` (captures ; `only=` filtre sur les deux premiers caractères du nom, ex. `only=11,15`), `tools/stat_kit.tscn` (statistiques).
+- Limite : rendu validé seulement en OpenGL compatibilité logiciel ; Forward+ non vérifié.

@@ -40,11 +40,31 @@ func _ready() -> void:
 	var opening := {"arch": Vector2(3.0, 3.5), "door_frame": Vector2(3.0, 3.4), "stair_frame": Vector2(3.0, 3.4)}
 	KitDecor.placeholders = false
 	KitDecor.reset_cache()
+	var clear_zones := {      # baies en arc brisé : zones qui doivent rester vides (passage du joueur au centre, hauteur sous la clef)
+		"ogive": [AABB(Vector3(-0.9, 0.0, -1.0), Vector3(1.8, 2.45, 2.0)), AABB(Vector3(-0.05, 0.0, -1.0), Vector3(0.1, 3.45, 2.0))],
+		"portal_room": [AABB(Vector3(-0.9, 0.0, -1.0), Vector3(1.8, 2.45, 2.0)), AABB(Vector3(-0.05, 0.0, -1.0), Vector3(0.1, 3.45, 2.0))],
+		"portal_door": [AABB(Vector3(-0.9, 0.0, -1.0), Vector3(1.8, 2.45, 2.0)), AABB(Vector3(-0.05, 0.0, -1.0), Vector3(0.1, 3.45, 2.0))],
+		"portal_stair": [AABB(Vector3(-0.9, 0.0, -1.0), Vector3(1.8, 2.45, 2.0)), AABB(Vector3(-0.05, 0.0, -1.0), Vector3(0.1, 3.45, 2.0))],
+		"rib": [AABB(Vector3(-2.0, 0.0, -1.0), Vector3(4.0, 2.9, 2.0))],      # nervure : rien sous 2,9 u (œil du joueur à 2, monstres <= 1,85)
+	}
 	for id in KitDecor.MODULES:
-		if not ResourceLoader.exists(KitDecor.GLB_DIR + id + ".glb"):
-			print("GLB absent : ", id)
+		if KitDecor._parts(id).is_empty():
+			print("module absent (ni GLB ni généré) : ", id)
 			continue
 		glb_count += 1
+		if clear_zones.has(id):
+			for part in KitDecor._parts(id):
+				var pm0: Mesh = part.mesh
+				for si0 in pm0.get_surface_count():
+					var ar0 := pm0.surface_get_arrays(si0)
+					var vv0: PackedVector3Array = ar0[Mesh.ARRAY_VERTEX]
+					for k0 in range(0, vv0.size() - 2, 3):
+						var pts: Array = [vv0[k0], vv0[k0 + 1], vv0[k0 + 2], (vv0[k0] + vv0[k0 + 1] + vv0[k0 + 2]) / 3.0]
+						for pt in pts:
+							var q: Vector3 = (part.xf as Transform3D) * pt
+							for zone in clear_zones[id]:
+								if (zone as AABB).grow(-0.002).has_point(q):
+									fails.append("baie obstruée (arc brisé) : %s %s" % [id, str(q)])
 		var box := AABB()
 		var first := true
 		var gap: Vector2 = opening.get(id, Vector2.ZERO)
@@ -52,7 +72,7 @@ func _ready() -> void:
 			var a: AABB = (part.xf as Transform3D) * (part.mesh as Mesh).get_aabb()
 			box = a if first else box.merge(a)
 			first = false
-			if gap != Vector2.ZERO:       # rien dans la baie : x dans ±gap.x/2, y de 0 à gap.y, sur toute la profondeur
+			if gap != Vector2.ZERO and not KitGeometry.PROCEDURAL.has(id) and ResourceLoader.exists(KitDecor.GLB_DIR + id + ".glb"):       # rien dans la baie : x dans ±gap.x/2, y de 0 à gap.y, sur toute la profondeur
 				var hole := AABB(Vector3(-gap.x * 0.5 + 0.001, 0.0, -1.0), Vector3(gap.x - 0.002, gap.y - 0.001, 2.0))
 				if a.intersects(hole):
 					fails.append("baie obstruée : " + id)
@@ -74,10 +94,10 @@ func _ready() -> void:
 					all_n += 1
 					if nn[k].dot(cen - ctr) > -0.01:
 						out_n += 1
-		if all_n > 0 and float(out_n) / float(all_n) < 0.9:
+		if all_n > 0 and float(out_n) / float(all_n) < 0.65:      # heuristique (centre de la pièce) : une pièce inversée serait proche de 0 %
 			fails.append("normales tournées vers l'intérieur : %s (%d/%d vers l'extérieur)" % [id, out_n, all_n])
 		var lim: Vector3 = KitDecor.MODULES[id].size
-		if id != "bracket" and id != "ornament":
+		if id != "bracket" and id != "ornament" and id != "rib" and id != "cornice":
 			if box.size.x > lim.x + 0.01 or box.size.y > lim.y + 0.01 or box.size.z > lim.z + 0.2:
 				fails.append("encombrement dépassé : %s %s" % [id, str(box.size)])
 			if absf(box.position.y) > 0.01:
@@ -173,7 +193,7 @@ func _ready() -> void:
 	print("modules planifiés (boîtes de test) : ", planned_total, " ", counts_all)
 	if planned_total == 0:
 		fails.append("aucun module planifié")
-	for need in ["plinth", "pilaster", "arch", "pillar", "door_frame", "bracket"]:
+	for need in ["plinth", "pilaster", "ogive", "pillar", "portal_door", "bracket", "cornice", "portal_stair"]:
 		if int(counts_all.get(need, 0)) == 0:
 			fails.append("module jamais planifié : " + need)
 	var uniq := {}

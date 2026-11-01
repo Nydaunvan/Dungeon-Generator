@@ -42,3 +42,20 @@
   ± 1,5 u de large jusqu'à 3,5 u de haut, soit un tympan plein au-dessus).
 - **Matériaux** : les pierres du pack sont des couleurs unies ; le jeu y applique temporairement la pierre du thème (surfaces dont `metallic` < 0,3). Le fer et le bronze
   (`metallic` ≥ 0,3) gardent le matériau du GLB.
+
+## V2 : géométrie procédurale de remplacement et GLB à fournir
+
+Le jeu génère désormais lui-même (`scripts/dungeon/kit_geometry.gd`) une géométrie gothique de remplacement, technique et non définitive.
+Un GLB portant le même nom dans `assets/kit/gothic/` remplace automatiquement la version procédurale (`KitGeometry.PROCEDURAL`).
+Tous : origine au centre de l'arête de case, face avant vers +z, x en largeur, y en hauteur (0 = sol, 4 = plafond), épaisseur ≤ 0,5 u, normales et UV 0 exportées.
+
+| Fichier | Rôle | Encombrement | Baie libre |
+|---|---|---|---|
+| `ogive.glb` | arc brisé sur arête de couloir ou de salle | 4 × 4 × 0,5 | ± 1,55 u jusqu'à y ≈ 0,85, sommet ≥ 3,5 u ; tympan plein au-dessus |
+| `portal_room.glb` | cadre d'entrée de salle (clé de voûte, impostes) | 4 × 4 × 0,5 | ± 1,5 u, sommet ≥ 3,5 u |
+| `portal_door.glb` | cadre de porte à herse | 4 × 4 × 0,5 | ± 1,5 u ; rainure de 0,4 × 0,1 u sur la face intérieure des montants |
+| `portal_stair.glb` | cadre d'escalier | 4 × 4 × 0,5 | ± 1,5 u |
+| `rib.glb` | nervure de voûte en saillie au plafond | 4 (long.) × 0,3 × 0,3 | sans objet |
+| `cornice.glb` | corniche haute continue | 4 × 0,25 × 0,25 | sans objet |
+
+Textures nouvelles utiles : pierre à joints moins répétitifs (variante « usée » et variante « mousse ») et dallage de sol avec mortier plus marqué. La variation de teinte par face (`LevelBuilder._vary`) atténue la répétition mais ne la supprime pas.
