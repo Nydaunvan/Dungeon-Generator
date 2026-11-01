@@ -13,6 +13,8 @@ var shots := [
 	["11_porte_oblique", 8.5, 5.25, 3, 28.0, 0.0], ["12_porte_dans_la_case", 7.0, 5.0, 3, 0.0, 0.0],
 	["13_herse_mi_course", 8.3, 5.0, 3, 0.0, 2.3], ["14_porte_vue_de_cote", 9.0, 5.0, 2, 0.0, 0.0],
 	["15_escalier_oblique", 5.5, 5.25, 3, 25.0, 0.0],
+	# V3 : vues rapprochées (hauteur des yeux du joueur)
+	["16_mur_proche", 5.0, 0.75, 0, 12.0, 0.0], ["17_arche_proche", 10.0, 3.9, 2, 0.0, 0.0], ["18_torche_proche", 9.0, 5.15, 2, 0.0, 0.0],
 ]
 var only: PackedStringArray = []
 

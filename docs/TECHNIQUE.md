@@ -571,3 +571,16 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - `LevelBuilder._vary` varie la teinte de chaque face (couleur de sommet) pour casser la répétition de la texture.
 - Outils : `tools/render_gothic.tscn` (captures ; `only=` filtre sur les deux premiers caractères du nom, ex. `only=11,15`), `tools/stat_kit.tscn` (statistiques).
 - Limite : rendu validé seulement en OpenGL compatibilité logiciel ; Forward+ non vérifié.
+
+### Gothic V3 (finition graphique du thème de test)
+
+- **Textures** : `tools/gen_gothic_textures.py` génère les 18 fichiers `assets/themes/gothic_hd|lite/` (maçonnerie irrégulière, dalles de Voronoï, voûte rugueuse ; bruit périodique, donc raccord sans couture).
+  Une tuile = une case (4 u) : `ThemeMaterials.GOTHIC_*_REPEAT = 1`. Procédurales, pas peintes : voir `assets/themes/gothic_LISEZMOI.md` pour ce qui reste à produire à la main.
+- **Pierre des modules** (`KitDecor._with_theme_stone`) : projection triplanaire monde. Échelle 0,25 (tuile de 4 u) pour les grands modules (`BIG_STONE`), 0,5 pour les petits (pilastres, nervures, corniche).
+- **Claveaux** (`KitGeometry._portal`) : joints radiaux, un claveau sur deux en retrait (`VOUSSOIR_RECESS`), flancs des joints assombris par couleur de sommet (`JOINT_TINT`).
+- **Support de torche** : module `torch_bracket` (`KitGeometry._torch_bracket`), fer forgé, remplace `bracket`.
+- **Salles** : en thème gothic, `RoomDecor._floor_base` pose la dalle gothic (teinte et rugosité par style, `GOTHIC_FLOOR`) à la place du bois, de la terre et du béton du village ; les calques (filets d'or, sang, paille, damier) restent.
+  Les accessoires en bois, fer ou bronze gardent leurs matériaux.
+- **Torches** : `CANDELABRA_THEME.gothic.glow` éclairci (0xffbc7a) pour que la lumière chaude ne brunisse pas la pierre bleutée ; seule l'entrée du thème gothic change.
+- **GLB** : `kit_v3.json` liste les GLB au format V3 ; `arch.glb` n'est préféré à l'ogive générée que s'il y figure (`KitDecor.v3_ids`).
+- **Tests** : `check_gothic` contrôle aussi les textures (tailles, raccord, matière, luminosité, joints) et le sens des faces du support de torche.

@@ -94,10 +94,12 @@ func _ready() -> void:
 					all_n += 1
 					if nn[k].dot(cen - ctr) > -0.01:
 						out_n += 1
-		if all_n > 0 and float(out_n) / float(all_n) < 0.65:      # heuristique (centre de la pièce) : une pièce inversée serait proche de 0 %
+					if id == "torch_bracket" and (vv[k + 2] - vv[k]).cross(vv[k + 1] - vv[k]).dot(nn[k]) < -1e-9:
+						fails.append("torch_bracket : sens des faces incohérent avec les normales")
+		if id != "torch_bracket" and all_n > 0 and float(out_n) / float(all_n) < 0.65:      # heuristique (centre de la pièce) : une pièce inversée serait proche de 0 %
 			fails.append("normales tournées vers l'intérieur : %s (%d/%d vers l'extérieur)" % [id, out_n, all_n])
 		var lim: Vector3 = KitDecor.MODULES[id].size
-		if id != "bracket" and id != "ornament" and id != "rib" and id != "cornice":
+		if id != "bracket" and id != "torch_bracket" and id != "ornament" and id != "rib" and id != "cornice":
 			if box.size.x > lim.x + 0.01 or box.size.y > lim.y + 0.01 or box.size.z > lim.z + 0.2:
 				fails.append("encombrement dépassé : %s %s" % [id, str(box.size)])
 			if absf(box.position.y) > 0.01:
@@ -193,9 +195,10 @@ func _ready() -> void:
 	print("modules planifiés (boîtes de test) : ", planned_total, " ", counts_all)
 	if planned_total == 0:
 		fails.append("aucun module planifié")
-	for need in ["plinth", "pilaster", "ogive", "pillar", "portal_door", "bracket", "cornice", "portal_stair"]:
+	for need in ["plinth", "pilaster", "ogive", "pillar", "portal_door", "torch_bracket", "cornice", "portal_stair"]:
 		if int(counts_all.get(need, 0)) == 0:
 			fails.append("module jamais planifié : " + need)
+	_check_textures(fails)
 	var uniq := {}
 	for f in fails:
 		uniq[f] = int(uniq.get(f, 0)) + 1
@@ -203,3 +206,83 @@ func _ready() -> void:
 		print("ECHEC ", f, " x", uniq[f])
 	print("RESULTAT gothic -> %s" % ("OK" if fails.is_empty() else "ECHEC"))
 	get_tree().quit()
+
+
+## Textures du thème : tailles, raccord périodique, matière (métal nul, rugosité plausible), teintes froides et peu saturées, ordre mur > sol > plafond en luminosité, joints fins.
+func _check_textures(fails: Array) -> void:
+	var lum := {}
+	for res in [["hd", 2048], ["lite", 1024]]:
+		for part in ["wall", "floor", "ceil"]:
+			var base := "res://assets/themes/gothic_%s/%s_" % [res[0], part]
+			var imgs := {}
+			for suffix in ["albedo.jpg", "normal.png", "orm.jpg"]:
+				var im := Image.load_from_file(ProjectSettings.globalize_path(base + suffix))
+				if im == null or im.is_empty():
+					fails.append("texture illisible : " + base + suffix)
+					continue
+				if im.get_width() != res[1] or im.get_height() != res[1]:
+					fails.append("taille de texture : %s%s = %dx%d (attendu %d)" % [base, suffix, im.get_width(), im.get_height(), res[1]])
+				imgs[suffix] = im
+			if imgs.size() < 3:
+				continue
+			var a: Image = imgs["albedo.jpg"]
+			var n: int = res[1]
+			var step := 8
+			var sum := 0.0
+			var cnt := 0
+			var sat := 0.0
+			var vals: Array = []
+			for y in range(0, n, step):
+				for x in range(0, n, step):
+					var c := a.get_pixel(x, y)
+					var l := c.get_luminance()
+					sum += l
+					vals.append(l)
+					sat += (maxf(c.r, maxf(c.g, c.b)) - minf(c.r, minf(c.g, c.b))) / maxf(maxf(c.r, maxf(c.g, c.b)), 0.01)
+					cnt += 1
+			var mean := sum / cnt
+			vals.sort()
+			var med: float = vals[vals.size() / 2]
+			var joint := 0
+			for v in vals:
+				if v < med * 0.5:
+					joint += 1
+			var jf := float(joint) / vals.size()
+			# raccord : écart entre bords opposés, comparé à l'écart moyen entre colonnes / lignes voisines
+			var wrap_h := 0.0
+			var near_h := 0.0
+			var wrap_v := 0.0
+			var near_v := 0.0
+			for i in range(0, n, 4):
+				wrap_h += absf(a.get_pixel(0, i).get_luminance() - a.get_pixel(n - 1, i).get_luminance())
+				near_h += absf(a.get_pixel(n / 2, i).get_luminance() - a.get_pixel(n / 2 + 1, i).get_luminance())
+				wrap_v += absf(a.get_pixel(i, 0).get_luminance() - a.get_pixel(i, n - 1).get_luminance())
+				near_v += absf(a.get_pixel(i, n / 2).get_luminance() - a.get_pixel(i, n / 2 + 1).get_luminance())
+			var seam := maxf(wrap_h, wrap_v) / maxf(maxf(near_h, near_v), 1e-6)
+			var orm: Image = imgs["orm.jpg"]
+			var metal := 0.0
+			var rough := 0.0
+			var k := 0
+			for y in range(0, n, 32):
+				for x in range(0, n, 32):
+					var o := orm.get_pixel(x, y)
+					metal += o.b
+					rough += o.g
+					k += 1
+			metal /= k
+			rough /= k
+			print("texture %s %-5s : luminance %.3f saturation %.2f joints %.1f %% raccord x%.2f métal %.3f rugosité %.2f" % [res[0], part, mean, sat / cnt, jf * 100.0, seam, metal, rough])
+			if res[0] == "hd":
+				lum[part] = mean
+			if seam > 3.0:
+				fails.append("raccord visible de la texture %s %s (x%.1f)" % [res[0], part, seam])
+			if metal > 0.03:
+				fails.append("texture %s %s : métal non nul" % [res[0], part])
+			if rough < 0.4 or rough > 0.95:
+				fails.append("texture %s %s : rugosité moyenne %.2f hors de 0,4 à 0,95" % [res[0], part, rough])
+			if sat / cnt > 0.30:
+				fails.append("texture %s %s trop saturée (%.2f)" % [res[0], part, sat / cnt])
+			if part == "wall" and (jf < 0.01 or jf > 0.09):
+				fails.append("texture %s mur : part de joints %.1f %% hors de 1 à 9 %% (joints trop épais ou absents)" % [res[0], jf * 100.0])
+	if lum.size() == 3 and not (lum["wall"] > lum["floor"] and lum["floor"] > lum["ceil"]):
+		fails.append("ordre de luminosité mur > sol > plafond non respecté : %s" % [lum])
