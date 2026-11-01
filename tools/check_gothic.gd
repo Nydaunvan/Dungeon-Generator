@@ -200,6 +200,7 @@ func _ready() -> void:
 			fails.append("module jamais planifié : " + need)
 	_check_atlas_test(fails)
 	_check_sprite_fx(fails)
+	_check_smoke(fails)
 	_check_textures(fails)
 	var uniq := {}
 	for f in fails:
@@ -327,3 +328,38 @@ func _check_sprite_fx(fails: Array) -> void:
 		if VisualFx.light_k(th, "sprite_rim_k", 0.0) != 0.0:
 			fails.append("le thème %s ne doit pas avoir de liseré de sprite" % th)
 	print("effets des sprites : liseré réservé au gothic")
+
+## Fumée des torches : plus discrète, plus lente et plus sombre dans le gothic, valeurs d'origine ailleurs, et un rig réutilisé d'un thème à l'autre
+## retrouve exactement les réglages du thème servi.
+func _check_smoke(fails: Array) -> void:
+	var g := CPUParticles3D.new()
+	var s := CPUParticles3D.new()
+	TorchLayer._style_smoke(g, "gothic")
+	TorchLayer._style_smoke(s, "stone")
+	var alpha_g := 0.0
+	var alpha_s := 0.0
+	var lum_g := 0.0
+	var lum_s := 0.0
+	for i in g.color_ramp.get_point_count():
+		alpha_g = maxf(alpha_g, g.color_ramp.get_color(i).a)
+		lum_g = maxf(lum_g, g.color_ramp.get_color(i).get_luminance() * g.color_ramp.get_color(i).a)
+	for i in s.color_ramp.get_point_count():
+		alpha_s = maxf(alpha_s, s.color_ramp.get_color(i).a)
+		lum_s = maxf(lum_s, s.color_ramp.get_color(i).get_luminance() * s.color_ramp.get_color(i).a)
+	if alpha_g > alpha_s * 0.8:
+		fails.append("fumée gothic pas assez transparente (%.2f contre %.2f, 80 %% au plus)" % [alpha_g, alpha_s])
+	if lum_g > lum_s * 0.75:
+		fails.append("fumée gothic pas assez sombre/discrète (%.3f contre %.3f)" % [lum_g, lum_s])
+	if g.initial_velocity_max >= s.initial_velocity_max or g.scale_amount_max >= s.scale_amount_max or g.amount > s.amount:
+		fails.append("fumée gothic pas plus lente, plus petite et moins fournie")
+	var c0 := g.color_ramp.get_color(1)
+	if not (c0.r > c0.g and c0.g > c0.b):
+		fails.append("fumée gothic pas légèrement chaude (gris r > g > b)")
+	if absf(s.initial_velocity_min - 0.20) > 1e-6 or absf(s.lifetime - 2.8) > 1e-6 or absf(alpha_s - TorchLayer.SMOKE_ALPHA) > 1e-6 or s.spread != 18.0:
+		fails.append("la fumée des autres thèmes a changé")
+	TorchLayer._style_smoke(g, "stone")      # rig réutilisé : plus rien du gothic
+	if absf(g.initial_velocity_max - 0.34) > 1e-6 or g.angle_max != 0.0 or g.amount != s.amount:
+		fails.append("un rig gothic réutilisé garde ses réglages de fumée")
+	print("fumée des torches : gothic alpha %.2f / lum %.3f, autres alpha %.2f / lum %.3f" % [alpha_g, lum_g, alpha_s, lum_s])
+	g.free()
+	s.free()
