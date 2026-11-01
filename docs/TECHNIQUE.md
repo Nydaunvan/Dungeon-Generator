@@ -586,10 +586,9 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - **Tests** : `check_gothic` contrôle aussi les textures (tailles, raccord, matière, luminosité, joints) et le sens des faces du support de torche.
 - **Donjon de test Atlas Noir** (administration, `SuperAdminModal._launch_atlas`) : les niveaux intérieurs passent en thème gothic via `DungeonGenerator.apply_gothic`, appliqué après la génération (aucun tirage consommé, plans et monstres identiques) et réservé à cette config locale hors classement. `check_gothic` le vérifie.
 
-### Monstres Atlas Noir : netteté, lumière de contour, ombre au sol
+### Monstres Atlas Noir : netteté et lumière de contour
 
 - **Netteté** (`AtlasSpriteMaterial`, uniforme `sharpen`, 0,5) : masque de netteté dans le shader, au pas d'un pixel d'écran (dérivées de l'UV), pondéré par l'opacité, limité aux zones pleines et borné par le min/max du voisinage (pas de halo, le liseré blanc des illustrations est conservé). Aucun fichier recompressé ; s'ajoute à la réduction Lanczos et au biais de mipmap existants.
 - **Lumière de contour froide** : bande intérieure le long de la silhouette (couverture d'opacité à 6 directions), plus forte en haut, ajoutée à l'émission. Réglée par thème avec des uniformes globaux (`AtlasSpriteMaterial.apply_theme`, appelé par `main._apply_fx`) ; clés `sprite_rim_color` / `sprite_rim_k` de `VisualFx.THEME_LIGHT`. Seul le thème gothic les déclare : les autres thèmes gardent un liseré nul.
-- **Ombre de contact et brume basse** (`GroundShadow`) : disque plat enfant du sprite, posé sous les pieds (la marge transparente de l'image est mesurée une fois, `EntityLayer._feet_gap`), dessiné avant le sprite. L'ombre existe dans tous les thèmes ; la brume (`sprite_mist_color` / `sprite_mist_k`) seulement en gothic.
-- **Outils** : `tools/render_gothic.tscn` accepte `mon=<id>` (pose un ou deux monstres) et `fx=0` (sans les trois effets) pour comparer avant / après.
-- **Limite** : sur un sol presque noir (couloir gothic), l'ombre noire se voit peu ; elle ressort sur un sol éclairé (salle, torche, autres thèmes).
+- **Outils** : `tools/render_gothic.tscn` accepte `mon=<id>` (pose un ou deux monstres) et `fx=0` (sans netteté de shader ni liseré) pour comparer avant / après.
+- Une ombre de contact au sol avec brume basse a été essayée puis retirée (demande du développeur) : les monstres n'ont plus d'ombre ajoutée.

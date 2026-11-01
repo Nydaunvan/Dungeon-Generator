@@ -791,30 +791,8 @@ func _make_sprite(icon: String, is_boss: bool, is_item: bool, mult: float = 1.0)
 		mi.set_meta("pose_id", _icon_id(icon))
 		if is_atlas_id(_icon_id(icon)):
 			mi.set_meta("atlas", true)
-			var shadow := GroundShadow.make(h, -(h * 0.5 + anchor_offset(icon) * h) + _feet_gap(_icon_id(icon), mat) * h)      # ombre de contact + brume basse sous les pieds
-			if shadow != null:
-				mi.add_child(shadow)
 			warm_poses(_icon_id(icon))
 	return mi
-
-static var _gap_cache: Dictionary = {}
-
-## Marge transparente sous les pieds du monstre (fraction de la hauteur de l'image), mesurée une fois sur l'illustration : l'ombre se pose sous les pieds, pas sous le bord de l'image.
-static func _feet_gap(id: String, mat: Material) -> float:
-	if _gap_cache.has(id):
-		return _gap_cache[id]
-	var gap := 0.0
-	var tex: Texture2D = mat.get("albedo_texture") if mat != null else null
-	if tex != null:
-		var img := tex.get_image()
-		if img != null and not img.is_empty():
-			if img.is_compressed():
-				img.decompress()
-			var r := img.get_used_rect()
-			if r.size.y > 0:
-				gap = clampf(float(img.get_height() - r.end.y) / float(img.get_height()), 0.0, 0.2)
-	_gap_cache[id] = gap
-	return gap
 
 ## Décalage vertical d'ancrage (fraction de la hauteur) propre à certaines icônes.
 func anchor_offset(icon: String) -> float:

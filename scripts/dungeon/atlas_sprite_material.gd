@@ -19,24 +19,19 @@ static var _shader: Shader = null
 static var _globals := false
 
 ## Réglages d'ambiance propres au thème, partagés par tous les sprites (uniformes globaux : changer de niveau ne reconstruit aucun matériau).
-## Liseré froid et brume basse : seulement les thèmes qui les déclarent (VisualFx.THEME_LIGHT, clés sprite_*) ; les autres gardent des valeurs nulles.
+## Liseré froid : seulement les thèmes qui les déclarent (VisualFx.THEME_LIGHT, clés sprite_*) ; les autres gardent des valeurs nulles.
 static func ensure_globals() -> void:
 	if _globals:
 		return
 	_globals = true
 	RenderingServer.global_shader_parameter_add("atlas_rim_color", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3(0.56, 0.69, 0.91))
 	RenderingServer.global_shader_parameter_add("atlas_rim_k", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0)
-	RenderingServer.global_shader_parameter_add("atlas_mist_color", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3(0.16, 0.22, 0.33))
-	RenderingServer.global_shader_parameter_add("atlas_mist_k", RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 0.0)
 
 static func apply_theme(theme: String) -> void:
 	ensure_globals()
 	var rc := VisualFx.light_color(theme, "sprite_rim_color", Color(0.56, 0.69, 0.91))
-	var mc := VisualFx.light_color(theme, "sprite_mist_color", Color(0.16, 0.22, 0.33))
 	RenderingServer.global_shader_parameter_set("atlas_rim_color", Vector3(rc.r, rc.g, rc.b))
 	RenderingServer.global_shader_parameter_set("atlas_rim_k", VisualFx.light_k(theme, "sprite_rim_k", 0.0))
-	RenderingServer.global_shader_parameter_set("atlas_mist_color", Vector3(mc.r, mc.g, mc.b))
-	RenderingServer.global_shader_parameter_set("atlas_mist_k", VisualFx.light_k(theme, "sprite_mist_k", 0.0))
 
 var albedo_texture: Texture2D:
 	set(v): set_shader_parameter("albedo_tex", v)

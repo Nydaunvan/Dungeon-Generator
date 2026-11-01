@@ -18,7 +18,7 @@ var shots := [
 	["22_monstre_salle", 10.0, 8.7, 2, 0.0, 0.0], ["16_mur_proche", 5.0, 0.75, 0, 12.0, 0.0], ["17_arche_proche", 10.0, 3.9, 2, 0.0, 0.0], ["18_torche_proche", 9.0, 5.15, 2, 0.0, 0.0],
 ]
 var only: PackedStringArray = []
-var fx := true      # false = sans netteté de shader, sans liseré froid, sans ombre au sol (référence « avant »)
+var fx := true      # false = sans netteté de shader, sans liseré froid (référence « avant »)
 var mon := ""      # id d'un monstre Atlas Noir à poser dans le couloir (ex. mon_veilleur_os) ; vide = aucun, les autres vues restent identiques
 
 func _ready() -> void:
@@ -35,7 +35,6 @@ func _ready() -> void:
 	KitDecor.enabled = kit
 	if not fx:
 		AtlasSpriteMaterial.sharpen = 0.0
-		GroundShadow.enabled = false
 	var W := 20
 	var H := 13
 	var g: Array = []
@@ -78,7 +77,6 @@ func _ready() -> void:
 	AtlasSpriteMaterial.apply_theme(theme)
 	if not fx:
 		RenderingServer.global_shader_parameter_set("atlas_rim_k", 0.0)
-		RenderingServer.global_shader_parameter_set("atlas_mist_k", 0.0)
 	env.ambient_light_energy = 1.1 * VisualFx.light_k(theme, "ambient_k")
 	var we := WorldEnvironment.new()
 	we.environment = env

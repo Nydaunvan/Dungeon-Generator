@@ -319,18 +319,11 @@ func _check_atlas_test(fails: Array) -> void:
 		fails.append("donjon Atlas Noir : aucun niveau intérieur")
 
 
-## Effets des monstres Atlas Noir : liseré froid et brume basse seulement dans les thèmes qui les déclarent (gothic), ombre au sol créée sous les monstres (tous thèmes).
+## Effets des monstres Atlas Noir : liseré froid seulement dans les thèmes qui le déclarent (gothic).
 func _check_sprite_fx(fails: Array) -> void:
-	if VisualFx.light_k("gothic", "sprite_rim_k", 0.0) <= 0.0 or VisualFx.light_k("gothic", "sprite_mist_k", 0.0) <= 0.0:
-		fails.append("gothic doit déclarer sprite_rim_k et sprite_mist_k")
+	if VisualFx.light_k("gothic", "sprite_rim_k", 0.0) <= 0.0:
+		fails.append("gothic doit déclarer sprite_rim_k")
 	for th in ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]:
-		if VisualFx.light_k(th, "sprite_rim_k", 0.0) != 0.0 or VisualFx.light_k(th, "sprite_mist_k", 0.0) != 0.0:
-			fails.append("le thème %s ne doit pas avoir de liseré ni de brume de sprite" % th)
-	var sh := GroundShadow.make(2.0, -1.0)
-	if sh == null or sh.mesh == null or sh.material_override == null:
-		fails.append("ombre au sol non créée")
-	elif absf((sh.mesh as PlaneMesh).size.x - 3.0) > 0.001 or sh.position.y < -1.0 or sh.position.y > -0.9:
-		fails.append("ombre au sol : taille ou hauteur inattendue")
-	if sh != null:
-		sh.free()
-	print("effets des sprites : liseré/brume réservés au gothic, ombre au sol OK")
+		if VisualFx.light_k(th, "sprite_rim_k", 0.0) != 0.0:
+			fails.append("le thème %s ne doit pas avoir de liseré de sprite" % th)
+	print("effets des sprites : liseré réservé au gothic")
