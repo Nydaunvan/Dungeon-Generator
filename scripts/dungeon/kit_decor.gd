@@ -29,12 +29,21 @@ const MODULES := {
 	"stair_frame": {"size": Vector3(4.0, 4.0, 0.7), "note": "encadrement d'escalier, ouverture >= 3,0 x 3,4"},
 	"bracket": {"size": Vector3(0.3, 0.5, 0.35), "note": "support de torche en fer forgé, autour du point d'accroche de la torche"},
 	"ornament": {"size": Vector3(0.7, 1.0, 0.1), "note": "élément décoratif mural discret, centré sur un pan sans torche"},
+	# V2 : modules en arc brisé. Générés par code (KitGeometry) tant qu'aucun GLB de ce nom n'existe dans assets/kit/gothic/ ; un GLB artistique les remplace.
+	"ogive": {"size": Vector3(4.0, 4.0, 0.6), "note": "arche gothique en ogive de couloir droit (mur plein de 4 u percé d'une baie en arc brisé de 3,1 u, 3,5 u au sommet), ressauts"},
+	"portal_room": {"size": Vector3(4.0, 4.0, 0.7), "note": "portail d'entrée de salle : ogive à deux ressauts, imposte et clef"},
+	"portal_door": {"size": Vector3(4.0, 4.0, 0.7), "note": "encadrement de porte (herse) : ogive à deux ressauts, imposte et clef"},
+	"portal_stair": {"size": Vector3(4.0, 4.0, 0.7), "note": "encadrement d'escalier : ogive à deux ressauts, imposte et clef"},
+	"rib": {"size": Vector3(4.0, 1.1, 0.4), "note": "nervure de plafond d'un mur à l'autre, à ressauts, avec corbeaux"},
+	"cornice": {"size": Vector3(4.0, 0.4, 0.22), "note": "corniche en haut d'un pan de mur, trois ressauts"},
 }
 
 ## Interrupteur général (outils, essais) : false = aucun module, le niveau est identique à celui sans kit.
 static var enabled := true
 ## Outils de test seulement : pose des boîtes à la place des GLB manquants.
 static var placeholders := false
+## Modules générés par code (KitGeometry) quand le GLB du même nom manque : arches en ogive, portails, nervures, corniches. false = seulement les GLB (V1).
+static var procedural := true
 ## Dernier niveau posé : {"total": n, "count": {module: n}} (tests et mesures).
 static var last_stats: Dictionary = {}
 static var _parts_cache: Dictionary = {}
@@ -68,11 +77,25 @@ static func add(view: LevelView, level: Dictionary, grid: DungeonGrid, theme: St
 	_build(view, items)
 
 ## Plan de pose : [{id, xf}] (xf = position et orientation du module). Pur calcul, utilisable sans rendu.
+## Les portails (arches, entrées de salle) sont calculés d'abord : leurs arêtes ne reçoivent pas de pilastre (même plan).
 static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes: Dictionary, avail: Dictionary, sliced: bool = false) -> Array:
 	var out: Array = []
 	var seed := str(level.get("id", "")).hash()
 	var blocked := RoomDecor._blocked_cells(level)
 	var special := _special_cells(level, blocked, niches)
+	var arch_id := "ogive" if avail.has("ogive") else "arch"
+	var door_id := "portal_door" if avail.has("portal_door") else "door_frame"
+	var stair_id := "portal_stair" if avail.has("portal_stair") else "stair_frame"
+	var arches: Array = _arch_edges(level, grid, special, seed) if (avail.has(arch_id) or avail.has("portal_room")) else []
+	var occupied := {}
+	for ar in arches:
+		occupied[ar.key] = true
+		var id: String = "portal_room" if (ar.kind == "room" and avail.has("portal_room")) else arch_id
+		if avail.has(id):
+			out.append({"id": id, "xf": Transform3D(Basis(Vector3.UP, ar.ang), ar.pos)})
+	if avail.has("rib"):
+		for rb in _rib_edges(grid, special, seed, arches):
+			out.append({"id": "rib", "xf": Transform3D(Basis(Vector3.UP, rb.ang), rb.pos)})
 	for y in grid.height:
 		if sliced:
 			await Loader.slice()
@@ -92,7 +115,9 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 						continue
 					if avail.has("plinth"):
 						out.append({"id": "plinth", "xf": Transform3D(basis, edge)})
-					if avail.has("pilaster") and _pilaster_at(grid, cell, d, niches, holes, seed, di):
+					if avail.has("cornice"):
+						out.append({"id": "cornice", "xf": Transform3D(basis, edge)})
+					if avail.has("pilaster") and _pilaster_at(grid, cell, d, niches, holes, seed, di, occupied):
 						var t := Vector2i(1, 0) if d.x == 0 else Vector2i(0, 1)
 						out.append({"id": "pilaster", "xf": Transform3D(basis, edge + Vector3(t.x * HALF, 0.0, t.y * HALF))})
 					var torch := (x + y) % 2 == 0
@@ -101,13 +126,10 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 					elif not torch and avail.has("ornament") and not special.has(cell) and not _near_special(special, grid, cell, 1) \
 							and _h(x, y, seed ^ (di * 131 + 7)) % 4 == 0:
 						out.append({"id": "ornament", "xf": Transform3D(basis, edge)})
-				elif n == "D" and avail.has("door_frame"):
-					out.append({"id": "door_frame", "xf": Transform3D(basis, edge)})
-				elif n == "S" and avail.has("stair_frame"):
-					out.append({"id": "stair_frame", "xf": Transform3D(basis, edge)})
-	if avail.has("arch"):
-		for ar in _arch_edges(level, grid, special, seed):
-			out.append({"id": "arch", "xf": Transform3D(Basis(Vector3.UP, ar.ang), ar.pos)})
+				elif n == "D" and avail.has(door_id):
+					out.append({"id": door_id, "xf": Transform3D(basis, edge)})
+				elif n == "S" and avail.has(stair_id):
+					out.append({"id": stair_id, "xf": Transform3D(basis, edge)})
 	if avail.has("pillar"):
 		for p in LevelBuilder.column_points(grid):
 			out.append({"id": "pillar", "xf": Transform3D(Basis.IDENTITY, Vector3(p.x, 0.0, p.y))})
@@ -122,11 +144,13 @@ static func _face_cut(cell: Vector2i, d: Vector2i, niches: Dictionary, holes: Di
 
 ## Pilastre sur la jonction entre ce pan et le suivant (côté positif du mur), si le suivant est aussi un pan de mur plein.
 ## Un pilastre tous les deux pans le long du mur (décalage tiré de la ligne), avec quelques absences pour casser la régularité.
-static func _pilaster_at(grid: DungeonGrid, cell: Vector2i, d: Vector2i, niches: Dictionary, holes: Dictionary, seed: int, di: int) -> bool:
+static func _pilaster_at(grid: DungeonGrid, cell: Vector2i, d: Vector2i, niches: Dictionary, holes: Dictionary, seed: int, di: int, occupied: Dictionary = {}) -> bool:
 	var t := Vector2i(1, 0) if d.x == 0 else Vector2i(0, 1)
 	var nb := cell + t
 	var nch := grid.cell(nb.x, nb.y)
 	if nch == "#" or nch == "S" or nch == "D" or grid.cell(cell.x, cell.y) == "D":
+		return false
+	if occupied.has(Vector2i(cell.x + nb.x, cell.y + nb.y)):      # un portail occupe déjà cette arête
 		return false
 	if grid.cell(nb.x + d.x, nb.y + d.y) != "#" or _face_cut(nb, d, niches, holes):
 		return false
@@ -148,11 +172,21 @@ static func _walled_sides(grid: DungeonGrid, c: Vector2i, d: Vector2i) -> bool:
 static func _arch_ok(grid: DungeonGrid, c: Vector2i, d: Vector2i, special: Dictionary) -> bool:
 	return grid.cell(c.x, c.y) == "." and _walled_sides(grid, c, d) and not special.has(c) and not _near_special(special, grid, c, 1)
 
+## Arête d'arche : deux cases de sol libres, dont AU MOINS UNE est un passage droit (murs pleins de chaque côté). L'autre peut être un angle, un T ou une croix :
+## l'arche garde alors l'entrée de l'intersection (elle ne couvre que ± 2 u, les départs latéraux restent au-delà de ses montants).
+static func _arch_edge_ok(grid: DungeonGrid, c: Vector2i, nb: Vector2i, d: Vector2i, special: Dictionary) -> bool:
+	if grid.cell(nb.x, nb.y) != "." or grid.cell(c.x, c.y) != ".":
+		return false
+	for q in [c, nb]:
+		if special.has(q) or _near_special(special, grid, q, 1):
+			return false
+	return _walled_sides(grid, c, d) or _walled_sides(grid, nb, d)
+
 ## Arches : [{pos, ang}] dans l'ordre de lecture de la grille (donc stables). Deux sortes d'emplacements, jamais près d'une porte, d'un escalier,
 ## d'une niche, d'un objet, d'un monstre ou du départ (voir `_near_special`) :
 ##   1. entrées de salle : arête entre une case de couloir (murs pleins de chaque côté) et une case de salle, trois sur quatre ;
 ##   2. couloirs droits : arête entre deux cases de couloir droites, écartées d'au moins ARCH_GAP_RUN cases des autres arches, deux sur trois.
-## Les écarts rendent le motif irrégulier (aucune répétition à pas fixe) ; les angles, T et croix n'en reçoivent jamais (murs pleins de chaque côté exigés).
+## Les écarts rendent le motif irrégulier (aucune répétition à pas fixe). Une arche garde l'entrée d'un angle, d'un T ou d'une croix mais n'est jamais posée entre deux cases d'intersection.
 static func _arch_edges(level: Dictionary, grid: DungeonGrid, special: Dictionary, seed: int) -> Array:
 	var out: Array = []
 	var taken: Array = []      # milieux d'arête déjà pris, en cases
@@ -167,9 +201,41 @@ static func _arch_edges(level: Dictionary, grid: DungeonGrid, special: Dictionar
 				var nb := c + d
 				if not ridx.has(nb) or grid.cell(nb.x, nb.y) != "." or not _arch_ok(grid, c, d, special):
 					continue
-				if _h(x, y, seed ^ (di * 523 + 11)) % 4 == 0 or special.has(nb):
+				if _h(x, y, seed ^ (di * 523 + 11)) % 8 == 0 or special.has(nb):
 					continue
-				_take_arch(out, taken, c, d, ARCH_GAP_ROOM)
+				_take_arch(out, taken, c, d, ARCH_GAP_ROOM, "room")
+	for y in grid.height:
+		for x in grid.width:
+			var c := Vector2i(x, y)
+			for e in [Vector2i(1, 0), Vector2i(0, 1)]:
+				var nb: Vector2i = c + e
+				if not _arch_edge_ok(grid, c, nb, e, special):
+					continue
+				if _h(x, y, seed ^ (e.x * 311 + 4099)) % 6 == 0:
+					continue
+				_take_arch(out, taken, c, e, ARCH_GAP_RUN)
+	return out
+
+## Ajoute l'arche de l'arête (c -> c + d) si aucune autre n'est plus près que `gap` cases.
+static func _take_arch(out: Array, taken: Array, c: Vector2i, d: Vector2i, gap: float, kind: String = "run") -> void:
+	var mid := Vector2(c.x + d.x * 0.5, c.y + d.y * 0.5)
+	for t in taken:
+		if mid.distance_to(t) < gap:
+			return
+	taken.append(mid)
+	out.append({"pos": Vector3(mid.x * CELL, 0.0, mid.y * CELL), "ang": atan2(float(d.x), float(d.y)), "kind": kind,
+			"key": Vector2i(2 * c.x + d.x, 2 * c.y + d.y)})      # +Z du module = sens de marche ; clef = somme des deux cases (arête)
+
+## Nervures de plafond : arêtes de couloir droit (comme les arches), écartées d'au moins RIB_GAP cases entre elles et de RIB_ARCH_GAP cases des arches, trois sur quatre.
+const RIB_GAP := 1.9
+const RIB_ARCH_GAP := 1.4
+
+static func _rib_edges(grid: DungeonGrid, special: Dictionary, seed: int, arches: Array) -> Array:
+	var out: Array = []
+	var taken: Array = []
+	var amid: Array = []
+	for ar in arches:
+		amid.append(Vector2((ar.pos as Vector3).x / CELL, (ar.pos as Vector3).z / CELL))
 	for y in grid.height:
 		for x in grid.width:
 			var c := Vector2i(x, y)
@@ -177,19 +243,21 @@ static func _arch_edges(level: Dictionary, grid: DungeonGrid, special: Dictionar
 				var nb: Vector2i = c + e
 				if grid.cell(nb.x, nb.y) != "." or not _arch_ok(grid, c, e, special) or not _arch_ok(grid, nb, e, special):
 					continue
-				if _h(x, y, seed ^ (e.x * 311 + 4099)) % 3 == 0:
+				if _h(x, y, seed ^ (e.x * 613 + 29)) % 4 == 0:
 					continue
-				_take_arch(out, taken, c, e, ARCH_GAP_RUN)
+				var mid := Vector2(c.x + e.x * 0.5, c.y + e.y * 0.5)
+				var near := false
+				for a in amid:
+					if mid.distance_to(a) < RIB_ARCH_GAP:
+						near = true
+				for t in taken:
+					if mid.distance_to(t) < RIB_GAP:
+						near = true
+				if near:
+					continue
+				taken.append(mid)
+				out.append({"pos": Vector3(mid.x * CELL, 0.0, mid.y * CELL), "ang": atan2(float(e.x), float(e.y))})
 	return out
-
-## Ajoute l'arche de l'arête (c -> c + d) si aucune autre n'est plus près que `gap` cases.
-static func _take_arch(out: Array, taken: Array, c: Vector2i, d: Vector2i, gap: float) -> void:
-	var mid := Vector2(c.x + d.x * 0.5, c.y + d.y * 0.5)
-	for t in taken:
-		if mid.distance_to(t) < gap:
-			return
-	taken.append(mid)
-	out.append({"pos": Vector3(mid.x * CELL, 0.0, mid.y * CELL), "ang": atan2(float(d.x), float(d.y))})      # +Z du module = sens de marche
 
 ## Cases à ménager : objets, marchand, escaliers, départ, niches et départs des monstres.
 static func _special_cells(level: Dictionary, blocked: Dictionary, niches: Dictionary) -> Dictionary:
@@ -280,6 +348,8 @@ static func _parts(id: String) -> Array:
 					up = up.get_parent()
 				out.append({"mesh": _with_theme_stone(flat_normals(mi.mesh)), "xf": xf})
 			root.free()
+	elif procedural and KitGeometry.PROCEDURAL.has(id):
+		out.append({"mesh": _with_theme_stone(KitGeometry.build(id)), "xf": Transform3D.IDENTITY})
 	elif placeholders:
 		out = _placeholder_parts(id)
 	_parts_cache[id] = out
