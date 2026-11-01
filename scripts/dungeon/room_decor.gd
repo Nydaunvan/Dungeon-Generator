@@ -74,7 +74,7 @@ static func add(view: LevelView, level: Dictionary, theme: String, wall_mat: Mat
 		var hs := _h(rect.position.x, rect.position.y, seed)
 		var plan := RoomProps.plan({"rows": rows, "inside": inside, "cells": r.cells, "rect": rect, "blocked": blocked,
 			"seed": hs, "vedette": int(r.id) == vedette, "style": style})
-		_floor(root, r.cells, str(def.floor))
+		_floor(root, r.cells, str(def.floor), theme)
 		var skip = plan.vertex
 		var pil = def.pillars
 		if pil:
@@ -677,10 +677,29 @@ const FLOOR_PBR := {
 	"paille": ["terre", Vector2(1, 1), Color(1.15, 0.98, 0.6), 0.0, "paille"],
 }
 
-static func _floor_base(name: String) -> Material:
-	var key := "floorpbr|" + name
+## Thème gothic : tout revêtement de salle repose sur la dalle gothic (anthracite), jamais sur le bois ou la terre du village.
+## style -> [teinte, rugosité (0 = celle de la texture)]. Seuls les calques (filets d'or, sang, paille, damier) apportent une touche de couleur.
+const GOTHIC_FLOOR := {
+	"parquet": [Color(0.92, 0.94, 1.0), 0.0], "planches": [Color(0.92, 0.94, 1.0), 0.0], "terre": [Color(0.85, 0.88, 0.95), 0.0],
+	"dalles": [Color(1, 1, 1), 0.0], "damier": [Color(1, 1, 1), 0.4], "fissures": [Color(0.82, 0.84, 0.9), 0.0],
+	"mouille": [Color(0.72, 0.8, 0.88), 0.45], "dore": [Color(0.78, 0.78, 0.82), 0.5], "sang": [Color(0.78, 0.78, 0.82), 0.0],
+	"paille": [Color(0.92, 0.94, 1.0), 0.0],
+}
+
+static func _floor_base(name: String, theme: String = "") -> Material:
+	var key := "floorpbr|" + name + ("|gothic" if theme == "gothic" else "")
 	if _tex.has(key):
 		return _tex[key]
+	if theme == "gothic":
+		var gm := ThemeMaterials.for_theme("gothic").get("floor") as StandardMaterial3D
+		if gm != null:
+			var g: Array = GOTHIC_FLOOR.get(name, [Color(1, 1, 1), 0.0])
+			var m2 := gm.duplicate() as StandardMaterial3D
+			m2.albedo_color = g[0]
+			if float(g[1]) > 0.0:
+				m2.roughness = float(g[1])
+			_tex[key] = m2
+			return m2
 	var d: Array = FLOOR_PBR[name]
 	var src := VillageKit.mat(str(d[0]), d[1])
 	var m: StandardMaterial3D = null
@@ -801,8 +820,8 @@ static func _pnoise(x: float, y: float, period: int) -> float:
 	var d := float(_h(x1, y1, 31) % 1000) / 1000.0
 	return lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy)
 
-static func _floor(root: Node3D, cells: Array, name: String) -> void:
-	var base := _floor_base(name) if FLOOR_PBR.has(name) else null
+static func _floor(root: Node3D, cells: Array, name: String, theme: String = "") -> void:
+	var base := _floor_base(name, theme) if FLOOR_PBR.has(name) else null
 	if base == null:
 		_floor_legacy(root, cells, name)
 		return
