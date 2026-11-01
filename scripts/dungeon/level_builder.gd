@@ -46,6 +46,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		if str(it.get("type", "")) == "trap" and str(TrapRules.kind_of(it).id) == "pit":
 			pits[Vector2i(int(it.x), int(it.y))] = true
 	var nd_data := niche_data(grid, level, outdoor)
+	var kit_stairs := not outdoor and KitDecor.has_stair_frame(theme_name, level)
 	var niches: Dictionary = nd_data.niches
 	var holes: Dictionary = nd_data.holes
 	for y in grid.height:
@@ -99,7 +100,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 				elif n == "S":
 					_quad(parts["wall"], edge + Vector3(0, half, 0), Vector3.UP, Vector3(-d.x, 0, -d.y), half)
 					counts["wall"] += 1
-					_add_arch(view, torches, edge, d, rot, theme_name, grid.stairs_at(x + d.x, y + d.y))
+					_add_arch(view, torches, edge, d, rot, theme_name, grid.stairs_at(x + d.x, y + d.y), kit_stairs)
 				elif n == "D":
 					_add_door(view, edge, rot, theme_name, grid.door_at(x + d.x, y + d.y))
 
@@ -429,24 +430,68 @@ static func _lock_sprite(view: LevelView, pos: Vector3) -> Sprite3D:
 	view.add_child(sp)
 	return sp
 
+## Vide sombre de la cage d'escalier, à la forme de la baie en ogive du kit (KitGeometry.PRESETS.portal_stair : demi-largeur 1,5, naissance 0,88, rayon 3), collé au mur.
+static func _stair_void(view: LevelView, edge: Vector3, d: Vector2i, rot: float) -> void:
+	var p: Dictionary = KitGeometry.PRESETS["portal_stair"]
+	var hw: float = p.hw
+	var y0: float = p.y0
+	var r := 2.0 * hw
+	var cx := r - hw
+	var th_top := acos(clampf(cx / r, -1.0, 1.0))
+	var pts := PackedVector2Array([Vector2(-hw, 0.0), Vector2(-hw, y0)])
+	var n := 14
+	for i in range(1, n + 1):
+		var th := th_top * float(i) / float(n)
+		pts.append(Vector2(cx - r * cos(th), y0 + r * sin(th)))
+	for i in range(n - 1, -1, -1):
+		pts.append(Vector2(-pts[i + 2].x, pts[i + 2].y))
+	pts.append(Vector2(hw, 0.0))
+	var verts := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for q in pts:
+		verts.append(Vector3(q.x, q.y - CELL * 0.5, 0.0))
+	var c0 := verts.size()
+	verts.append(Vector3(0.0, 1.5 - CELL * 0.5, 0.0))
+	for i in pts.size():
+		idx.append_array([c0, i, (i + 1) % pts.size()])
+	var arr: Array = []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(0.012, 0.013, 0.02)
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mi.material_override = m
+	mi.position = edge + Vector3(-d.x * 0.02, CELL * 0.5, -d.y * 0.02)
+	mi.rotation.y = rot
+	view.add_child(mi)
+
 ## Arche d'escalier : cadre de bronze par-dessus le mur + deux torches de part et d'autre.
 static func _add_arch(view: LevelView, torches: TorchLayer, edge: Vector3, d: Vector2i, rot: float,
-		theme: String, _stair_def: Dictionary) -> void:
-	var arch := MeshInstance3D.new()
-	var q := QuadMesh.new()
-	q.size = Vector2(CELL, CELL)
-	arch.mesh = q
-	var m := StandardMaterial3D.new()
-	m.albedo_texture = ProceduralTextures.arch()
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.roughness = 1.0
-	m.metallic_specular = 0.0
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	arch.material_override = m
-	arch.position = edge + Vector3(-d.x * 0.01, CELL * 0.5, -d.y * 0.01)   # juste devant le mur
-	arch.rotation.y = rot
-	view.add_child(arch)
+		theme: String, _stair_def: Dictionary, kit_frame: bool = false) -> void:
+	if kit_frame:      # thème gothic avec kit : l'encadrement en pierre du kit remplace le cadre de bronze dessiné ; seul le vide sombre de l'escalier reste, dans la baie
+		_stair_void(view, edge, d, rot)
+	else:
+		var arch := MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(CELL, CELL)
+		arch.mesh = q
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = ProceduralTextures.arch()
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.roughness = 1.0
+		m.metallic_specular = 0.0
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		arch.material_override = m
+		arch.position = edge + Vector3(-d.x * 0.01, CELL * 0.5, -d.y * 0.01)   # juste devant le mur
+		arch.rotation.y = rot
+		view.add_child(arch)
 	# grille de fer si l'arche est verrouillée (même vantail que les portes, légèrement en retrait devant l'arche)
 	if bool(_stair_def.get("locked", false)):
 		var gate := MeshInstance3D.new()

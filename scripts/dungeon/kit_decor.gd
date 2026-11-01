@@ -66,6 +66,10 @@ static func _h(a: int, b: int, c: int) -> int:
 static func applies(theme: String, level: Dictionary) -> bool:
 	return enabled and THEMES.has(theme) and not bool(level.get("outdoor", false)) and bool(level.get("kit", true))
 
+## Le kit pose son propre encadrement d'escalier sur ce niveau : l'ancien cadre de bronze dessiné (arch_frame.png) est alors inutile et reste caché derrière la pierre.
+static func has_stair_frame(theme: String, level: Dictionary) -> bool:
+	return applies(theme, level) and (not _parts("portal_stair").is_empty() or not _parts("stair_frame").is_empty())
+
 ## Vide le cache des modèles (outils : changement de `placeholders`).
 static func reset_cache() -> void:
 	_parts_cache.clear()

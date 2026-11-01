@@ -17,7 +17,7 @@ var shots := [
 	["19_monstre_face", 10.0, 5.0, 1, 0.0, 0.0], ["20_monstre_oblique", 9.2, 5.0, 1, 20.0, 0.0], ["21_monstre_proche", 10.45, 5.0, 1, 0.0, 0.0],
 	["22_monstre_salle", 10.0, 8.7, 2, 0.0, 0.0],
 	# monstre vu de loin (halo autour de la silhouette)
-	["28_monstre_loin", 8.0, 5.0, 1, 0.0, 0.0], ["29_monstre_moyen", 9.0, 5.0, 1, 0.0, 0.0],
+	["30_escalier_proche", 4.4, 5.0, 3, 0.0, 0.0], ["28_monstre_loin", 8.0, 5.0, 1, 0.0, 0.0], ["29_monstre_moyen", 9.0, 5.0, 1, 0.0, 0.0],
 	# V4 : ogive de côté et à la jonction avec le mur, entrée de salle, sol vu de près (7e valeur : inclinaison de la caméra, degrés, négatif = vers le bas)
 	["23_arche_cote_g", 10.0, 3.7, 2, -52.0, 0.0], ["23_arche_cote_d", 10.0, 3.7, 2, 52.0, 0.0],
 	["24_arche_mur_g", 9.55, 4.0, 2, 34.0, 0.0], ["24_arche_mur_d", 10.45, 4.0, 2, -34.0, 0.0],
