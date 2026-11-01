@@ -368,6 +368,7 @@ func _apply_fx() -> void:
 	if env == null or rig == null:
 		return
 	VisualFx.apply_environment(env, _fx_theme, _fx_outdoor)
+	AtlasSpriteMaterial.apply_theme(_fx_theme)      # liseré et brume des monstres Atlas Noir propres au thème
 	rig.torch.shadow_enabled = false
 
 func _has_merchant_level() -> bool:

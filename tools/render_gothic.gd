@@ -14,9 +14,12 @@ var shots := [
 	["13_herse_mi_course", 8.3, 5.0, 3, 0.0, 2.3], ["14_porte_vue_de_cote", 9.0, 5.0, 2, 0.0, 0.0],
 	["15_escalier_oblique", 5.5, 5.25, 3, 25.0, 0.0],
 	# V3 : vues rapprochées (hauteur des yeux du joueur)
-	["16_mur_proche", 5.0, 0.75, 0, 12.0, 0.0], ["17_arche_proche", 10.0, 3.9, 2, 0.0, 0.0], ["18_torche_proche", 9.0, 5.15, 2, 0.0, 0.0],
+	["19_monstre_face", 10.0, 5.0, 1, 0.0, 0.0], ["20_monstre_oblique", 9.2, 5.0, 1, 20.0, 0.0], ["21_monstre_proche", 10.45, 5.0, 1, 0.0, 0.0],
+	["22_monstre_salle", 10.0, 8.7, 2, 0.0, 0.0], ["16_mur_proche", 5.0, 0.75, 0, 12.0, 0.0], ["17_arche_proche", 10.0, 3.9, 2, 0.0, 0.0], ["18_torche_proche", 9.0, 5.15, 2, 0.0, 0.0],
 ]
 var only: PackedStringArray = []
+var fx := true      # false = sans netteté de shader, sans liseré froid, sans ombre au sol (référence « avant »)
+var mon := ""      # id d'un monstre Atlas Noir à poser dans le couloir (ex. mon_veilleur_os) ; vide = aucun, les autres vues restent identiques
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
@@ -27,7 +30,12 @@ func _ready() -> void:
 				"kit": kit = kv[1] == "1"
 				"out": out = kv[1]
 				"only": only = kv[1].split(",")
+				"mon": mon = kv[1]
+				"fx": fx = kv[1] == "1"
 	KitDecor.enabled = kit
+	if not fx:
+		AtlasSpriteMaterial.sharpen = 0.0
+		GroundShadow.enabled = false
 	var W := 20
 	var H := 13
 	var g: Array = []
@@ -47,9 +55,13 @@ func _ready() -> void:
 	var rows: Array = []
 	for r in g:
 		rows.append("".join(r))
+	var monsters: Array = []
+	if mon != "":
+		monsters.append({"id": "m_test", "name": "Test", "icon": "@icon:" + mon, "x": 11, "y": 5, "force": 5, "dex": 5, "con": 5, "resistPhys": 0, "resistMagic": 0, "xpReward": 1, "goldReward": 1})
+		monsters.append({"id": "m_test2", "name": "Test2", "icon": "@icon:" + mon, "x": 10, "y": 10, "force": 5, "dex": 5, "con": 5, "resistPhys": 0, "resistMagic": 0, "xpReward": 1, "goldReward": 1})
 	var lv := {"id": "render_test", "name": "Essai", "theme": theme, "mapRows": rows, "startX": 1, "startY": 1,
 		"doors": [{"x": 7, "y": 5, "id": "door_a", "locked": true}], "stairs": [{"x": 3, "y": 5, "id": "st_a", "locked": false}],
-		"items": [], "monsters": [], "lightAmbient": 1.1, "lightTorch": 1.4}
+		"items": [], "monsters": monsters, "lightAmbient": 1.1, "lightTorch": 1.4}
 	var grid := DungeonGrid.new(lv)
 	var view := await LevelBuilder.build(lv, grid)
 	add_child(view)
@@ -63,6 +75,10 @@ func _ready() -> void:
 	env.ambient_light_color = Color("40342a")
 	env.ambient_light_energy = 1.1
 	VisualFx.apply_environment(env, theme, false)
+	AtlasSpriteMaterial.apply_theme(theme)
+	if not fx:
+		RenderingServer.global_shader_parameter_set("atlas_rim_k", 0.0)
+		RenderingServer.global_shader_parameter_set("atlas_mist_k", 0.0)
 	env.ambient_light_energy = 1.1 * VisualFx.light_k(theme, "ambient_k")
 	var we := WorldEnvironment.new()
 	we.environment = env
