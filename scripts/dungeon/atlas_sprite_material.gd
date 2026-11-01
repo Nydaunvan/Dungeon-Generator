@@ -14,6 +14,8 @@ extends ShaderMaterial
 static var lod_bias := -1.0
 ## Netteté ajoutée dans le shader (masque flou, limité aux zones pleines et borné par le voisinage : pas de halo). 0 = désactivée (comparaisons).
 static var sharpen := 0.5
+## Épaisseur visée du liseré blanc des sprites, en pixels d'écran à 1080 p (0 = liseré d'origine, pour les comparaisons).
+static var outline := 2.2
 
 static var _shader: Shader = null
 static var _globals := false
@@ -69,6 +71,7 @@ func _init() -> void:
 	set_shader_parameter("rim_tint_amount", 0.5)
 	set_shader_parameter("lod_bias", lod_bias)
 	set_shader_parameter("sharpen", sharpen)
+	set_shader_parameter("outline_px", outline)
 	set_shader_parameter("use_normal", false)
 
 const _CODE := "
@@ -84,6 +87,8 @@ uniform float rim_amount = 0.25;
 uniform float rim_tint_amount = 0.5;
 uniform float lod_bias = -1.0;
 uniform float sharpen = 0.5;
+uniform float outline_px = 2.2;      // épaisseur visée du liseré blanc, en pixels d'écran à 1080 p (proche de celle des portraits) ; 0 = liseré d'origine
+uniform float outline_src = 3.9;     // épaisseur du liseré dans les textures Atlas Noir, en texels
 uniform bool use_normal = false;
 global uniform vec3 atlas_rim_color;
 global uniform float atlas_rim_k;
@@ -105,6 +110,22 @@ void fragment() {
 	vec4 n2 = texture(albedo_tex, UV - vec2(o.x, 0.0), lod_bias);
 	vec4 n3 = texture(albedo_tex, UV + vec2(0.0, o.y), lod_bias);
 	vec4 n4 = texture(albedo_tex, UV - vec2(0.0, o.y), lod_bias);
+	// liseré blanc : les textures en portent un d'environ 4 texels ; sa taille à l'écran dépend de la taille du monstre. On rogne ce qui dépasse
+	// l'épaisseur visée (en pixels d'écran) : de loin il est déjà fin et reste intact, de près il est ramené à celle des portraits.
+	if (outline_px > 0.0) {
+		float tpp = 0.5 * (px.x / ts.x + px.y / ts.y);      // texels par pixel d'écran
+		float k = outline_src - outline_px * (VIEWPORT_SIZE.y / 1080.0) * tpp;
+		float whiteness = smoothstep(0.3, 0.5, min(a.r, min(a.g, a.b)));
+		if (k > 0.25 && whiteness > 0.01) {
+			vec2 kd = ts * k;
+			float cov = 0.0;
+			for (int i = 0; i < 12; i++) {      // anneau de rayon k : la part du pourtour qui sort de la silhouette dit si le pixel est dans la bande à rogner
+				float an = float(i) * 0.5235988;
+				cov += texture(albedo_tex, UV + vec2(cos(an), sin(an)) * kd, lod_bias).a;
+			}
+			a.a *= 1.0 - whiteness * smoothstep(0.02, 0.3, 1.0 - cov / 12.0);
+		}
+	}
 	float wsum = n1.a + n2.a + n3.a + n4.a;
 	vec3 blur = wsum > 0.01 ? (n1.rgb * n1.a + n2.rgb * n2.a + n3.rgb * n3.a + n4.rgb * n4.a) / wsum : a.rgb;
 	float interior = smoothstep(0.7, 1.0, min(min(n1.a, n2.a), min(n3.a, n4.a)) * a.a);

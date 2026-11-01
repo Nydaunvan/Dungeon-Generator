@@ -40,6 +40,7 @@ func _ready() -> void:
 				"mon": mon = kv[1]
 				"fx": fx = kv[1] == "1"
 				"fxmode": fxmode = kv[1]
+				"outline": AtlasSpriteMaterial.outline = float(kv[1])
 	KitDecor.enabled = kit
 	Settings.set_option("particles", 1.0)      # réglage « Particules » par défaut du jeu (le rendu d'essai ne lit pas les préférences)
 	if not fx or fxmode == "rim":
