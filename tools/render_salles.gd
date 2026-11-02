@@ -28,6 +28,7 @@ var only: PackedStringArray = []
 var lit := 0.0      # lumière d'inspection (outil seulement) : 0 = éclairage réel du jeu
 var fx := true      # false = sans netteté de shader, sans liseré froid (référence « avant »)
 var fxmode := ""    # "rim" = liseré seul, "sharp" = netteté seule (diagnostic)
+var flash := ""      # combat : école du sort (fire, ice, arcane…) dont on capture l'éclair de lumière sur le monstre ; vide = aucun
 var group := 0      # combat : nombre de monstres du groupe (0 = un seul)
 var mon := ""      # id d'un monstre Atlas Noir à poser dans le couloir (ex. mon_veilleur_os) ; vide = aucun, les autres vues restent identiques
 
@@ -41,6 +42,7 @@ func _ready() -> void:
 				"out": out = kv[1]
 				"only": only = kv[1].split(",")
 				"group": group = int(kv[1])
+				"flash": flash = kv[1]
 				"lit": lit = float(kv[1])
 				"mon": mon = kv[1]
 				"fx": fx = kv[1] == "1"
@@ -153,6 +155,11 @@ func _ready() -> void:
 			for r in view.torches._rigs:
 				if r.torch >= 0 and r.root.global_position.distance_to(cam.global_position) < 6.0:
 					print("fumée : n=", r.smoke.amount, " émet=", r.smoke.emitting, " durée=", r.smoke.lifetime, " préchauffe=", r.smoke.preprocess, " vitesse=", r.smoke.speed_scale, " pos=", r.smoke.global_position, " vis=", r.smoke.is_visible_in_tree())
+		if flash != "" and str(s[0]).begins_with("16"):
+			view.stage.flash("m_test", CombatStage.hit_color({"style": flash}))
+			await get_tree().create_timer(0.12).timeout
+			for i in 2:
+				await get_tree().process_frame
 		var img := get_viewport().get_texture().get_image()
 		img.save_png("%s/%s_%s.png" % [out, theme + ("_kit" if kit else "_nokit"), s[0]])
 	get_tree().quit()

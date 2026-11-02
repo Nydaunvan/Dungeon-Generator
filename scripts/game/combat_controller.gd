@@ -14,6 +14,7 @@ signal _instinct_done(quality: String)
 signal combat_won(summary: Dictionary)
 signal fx(type: String)
 signal fx3d(spell_id: String, ctx: Dictionary)
+var _hit_ctx: Dictionary = {}      # contexte du dernier sort lancé, consommé par le coup suivant (éclair de lumière)
 ## Coup de monstre sur un héros précis : l'effet se joue sur sa carte.
 signal fx_hit(char_id: String)
 ## Attaque normale d'un héros précis (flèche de l'archer : part de sa carte).
@@ -341,7 +342,8 @@ func _drain() -> void:
 					fx.emit(str(e.fx))
 			"fx3d":
 				Crumbs.mark("effet3d %s" % str(e.spell))
-				fx3d.emit(str(e.spell), e.get("ctx", {}))
+				_hit_ctx = e.get("ctx", {})      # école / teinte du sort : couleur de l'éclair sur le monstre touché (CombatStage.flash)
+				fx3d.emit(str(e.spell), _hit_ctx)
 			"mon_attack":
 				# l'avancée du monstre part en même temps que l'effet du coup, pas après
 				view.entities.play(str(e.id), "attack")
@@ -380,6 +382,8 @@ func _drain() -> void:
 				view.entities.play(str(e.id), "stun" if Statuses.has(hst, "stun") else "hit")
 				if view.stage != null:
 					view.stage.react(str(e.id), "stun" if Statuses.has(hst, "stun") else "hit")
+					view.stage.flash(str(e.id), CombatStage.hit_color(_hit_ctx))
+				_hit_ctx = {}
 			"mon_stun":
 				view.entities.play(str(e.id), "stun")
 				if view.stage != null:

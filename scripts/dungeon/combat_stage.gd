@@ -18,6 +18,12 @@ var _hidden: Array = []
 var _nodes: Dictionary = {}   # clé -> {node, halo, rage, aura, idx, h}
 var _cur_st: Dictionary = {}   # état (vivant) du monstre affiché : sert à tenir les effets de statut à jour
 var _aura_clock := 0.0
+var _theme := ""
+var _warm: OmniLight3D            # foyer chaud de l'arène (gothic) : vacille comme une flamme
+var _warm_base := 1.1
+var _flash: OmniLight3D           # éclair de lumière sur le monstre touché (couleur du sort)
+var _flash_tw: Tween
+var _clock := 0.0
 
 static var _halo_tex: Texture2D
 
@@ -30,6 +36,7 @@ func enter(theme: String, p: Vector2i, dir: int, def: Dictionary, st: Dictionary
 				c.hide()
 		active = true
 	mon_id = str(def.id)
+	_theme = theme
 	var sig := "%s|%d,%d|%d" % [theme, p.x, p.y, dir]
 	if sig != _sig:
 		_build_arena(theme, p, dir)
@@ -53,6 +60,10 @@ func exit() -> void:
 func _process(delta: float) -> void:
 	if not active or view == null or view.entities == null:
 		return
+	_clock += delta
+	if _warm != null and is_instance_valid(_warm):      # la flamme vacille (comme les foyers des salles : RoomLightPool), sans changer la teinte
+		var ph := _clock * 1.7
+		_warm.light_energy = _warm_base * (1.0 + (sin(ph) * 0.07 + sin(ph * 2.9 + 1.3) * 0.04) * Settings.motion_k())
 	_aura_clock += delta
 	if _aura_clock > 0.3:
 		_aura_clock = 0.0
@@ -89,6 +100,59 @@ func react(id: String, kind: String) -> void:
 		picked = keys
 	for k in picked:
 		view.entities.play_node(_nodes[k].node, kind)
+
+## Couleur de l'éclair d'un coup d'après le contexte du sort (école de magie, ou teinte choisie dans l'éditeur) ; coup ordinaire : blanc chaud.
+static func hit_color(ctx: Dictionary) -> Color:
+	var tint := str(ctx.get("fxTint", ""))
+	if tint != "" and Color.html_is_valid(tint):
+		return Color(tint)
+	match str(ctx.get("style", "")):
+		"fire": return Color("ff9a45")
+		"ice": return Color("8fd8ff")
+		"arcane": return Color("b58cff")
+		"holy": return Color("fff0b0")
+		"shadow": return Color("7a58c8")
+		"nature": return Color("8fe070")
+	return Color("ffe2c0")
+
+## Éclair de lumière sur le monstre touché (mêmes cibles que la réaction « hit ») : une seule lumière, réutilisée, qui monte en un instant
+## puis s'éteint en ~0,4 s. Gothic seulement (les autres thèmes gardent leur éclairage) ; sans effet si les mouvements sont réduits à zéro.
+func flash(id: String, col: Color, power := 1.0) -> void:
+	if not active or id != mon_id or _theme != "gothic" or _nodes.is_empty() or Settings.motion_k() <= 0.0:
+		return
+	var keys: Array = _nodes.keys()
+	keys.sort()
+	var tgt: Array = []
+	for k in keys:
+		var e: Dictionary = _nodes[k]
+		if e.halo != null and e.halo.visible:
+			tgt.append(e.node)
+	if tgt.is_empty():
+		for k in keys:
+			tgt.append(_nodes[k].node)
+	var pos := Vector3.ZERO
+	for n in tgt:
+		pos += (n as Node3D).position
+	pos /= float(tgt.size())
+	if _flash == null:
+		_flash = OmniLight3D.new()
+		_flash.shadow_enabled = false
+		_flash.omni_attenuation = 1.1
+		_flash.light_energy = 0.0
+		add_child(_flash)
+	var back := camera.global_transform.basis.z if camera != null else Vector3.BACK
+	_flash.global_position = pos + Vector3(0, 0.9, 0) + back * 1.3
+	_flash.light_color = col
+	_flash.omni_range = 5.5 + 1.5 * float(tgt.size() - 1)
+	_flash.visible = true
+	if _flash_tw != null and _flash_tw.is_valid():
+		_flash_tw.kill()
+	var peak := 3.2 * clampf(power, 0.4, 2.0) * Settings.motion_k()
+	_flash.light_energy = 0.0
+	_flash_tw = create_tween()
+	_flash_tw.tween_property(_flash, "light_energy", peak, 0.05)
+	_flash_tw.tween_property(_flash, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	_flash_tw.tween_callback(func(): _flash.visible = false)
 
 ## Mort du monstre : tous les sprites affichés s'effondrent puis disparaissent.
 func die_all() -> void:
@@ -127,6 +191,7 @@ func _free_entry(k, dying: bool = false) -> void:
 	_nodes.erase(k)       # l'effet de statut est enfant du sprite : il disparaît avec lui
 
 func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
+	_warm = null
 	if _arena != null:
 		_arena.queue_free()
 	var mats: Dictionary = ThemeMaterials.for_theme(theme)
@@ -164,20 +229,52 @@ func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
 	if theme == "gothic":      # salle de combat gothic : deux lumières seulement (comme le reste du thème, sans ombre) pour que les murs et le sol se devinent
 		var mid := Vector3((p.x + fwd.x) * CELL, 0.0, (p.y + fwd.y) * CELL)
 		var back := Vector3((p.x + fwd.x * 2) * CELL, 0.0, (p.y + fwd.y * 2) * CELL)
+		var amb := _room_ambience(mid)
 		var warm := OmniLight3D.new()      # foyer chaud au fond, derrière le monstre : détache sa silhouette
-		warm.light_color = Color("ffb468")
-		warm.light_energy = 1.1
+		warm.light_color = amb.warm_col
+		warm.light_energy = 1.1 * float(amb.warm_k)
+		_warm_base = warm.light_energy
+		_warm = warm
 		warm.omni_range = 9.0
 		warm.omni_attenuation = 1.3
 		warm.position = back + Vector3(0, 2.4, 0) - Vector3(fwd.x, 0, fwd.y) * 0.9
 		_arena.add_child(warm)
 		var cool := OmniLight3D.new()      # remplissage froid : révèle le volume de la salle
 		cool.light_color = Color("6f88bd")
-		cool.light_energy = 1.8
+		cool.light_energy = 1.8 * float(amb.cool_k)
 		cool.omni_range = 11.0
 		cool.omni_attenuation = 0.9
 		cool.position = mid + Vector3(0, 3.0, 0)
 		_arena.add_child(cool)
+
+## Ambiance de la salle où a lieu le combat : les foyers de `RoomLightPool` proches de l'arène donnent la couleur et la force du foyer chaud
+## (salle à flammes = plus chaud et plus vif ; couloir ou crypte sans foyer = plus sombre) et du remplissage froid (plus fort si la salle en a un).
+## Purement visuel, calculé une fois à la construction de l'arène ; sans salle trouvée, valeurs d'origine.
+func _room_ambience(center_local: Vector3) -> Dictionary:
+	var out := {"warm_col": Color("ffb468"), "warm_k": 1.0, "cool_k": 1.0}
+	if view == null:
+		return out
+	var pool := view.find_child("RoomLights", true, false) as RoomLightPool
+	if pool == null or pool.emitters.is_empty():
+		return out
+	var c: Vector3 = _arena.to_global(center_local)
+	var w := 0.0
+	var wc := Vector3.ZERO
+	var cool := 0.0
+	for em in pool.emitters:
+		var d: float = pool.to_global(em.p).distance_to(c)
+		var col: Color = em.col
+		if col.r > col.b:
+			var f := clampf(1.0 - d / 9.0, 0.0, 1.0)
+			w += float(em.energy) * f
+			wc += Vector3(col.r, col.g, col.b) * float(em.energy) * f
+		elif d < float(em.range):
+			cool = maxf(cool, clampf(1.0 - d / float(em.range), 0.0, 1.0))
+	if w > 0.01:
+		out.warm_col = Color(wc.x / w, wc.y / w, wc.z / w).lerp(Color("ffb468"), 0.35)
+	out.warm_k = clampf(0.55 + 0.4 * w, 0.55, 1.6)
+	out.cool_k = 0.8 + 0.25 * cool
+	return out
 
 func _wall(st: SurfaceTool, ctr: Vector3, d: Vector2i, half: float) -> void:
 	var edge := ctr + Vector3(d.x * half, 0.0, d.y * half)
