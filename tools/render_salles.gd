@@ -7,21 +7,22 @@ var kit := true
 var out := "/tmp"
 var shots := [
 	# nom, x, y (cases, fractions admises), direction (0 = -z, 1 = +x, 2 = +z, 3 = -x), lacet supplémentaire (°), 0, inclinaison (°), hauteur des yeux
-	["01_autel_face", 3.2, 5.0, 1, 0.0, 0.0, 0.0],
-	["02_autel_oblique", 3.4, 7.8, 1, -24.0, 0.0, -4.0],
-	["03_autel_proche", 3.9, 5.0, 1, 0.0, 0.0, -10.0, 1.7],
-	["04_autel_detail", 4.3, 5.0, 1, 0.0, 0.0, -22.0, 1.8],
-	["05_candelabre", 4.9, 5.0, 1, -28.0, 0.0, -6.0, 1.5],
-	["06_bibliotheque", 18.0, 5.0, 1, 0.0, 0.0, -6.0, 1.7],
-	["07_commune", 25.0, 5.0, 1, 0.0, 0.0, 0.0],
-	["08_tresor", 37.0, 5.0, 1, 0.0, 0.0, 0.0],
-	["09_armes", 13.0, 15.0, 1, 0.0, 0.0, 0.0],
-	["10_cellier", 25.0, 15.0, 1, 0.0, 0.0, 0.0],
-	["11_repaire", 37.0, 15.0, 1, 0.0, 0.0, 0.0],
-	["12_ruine", 49.0, 15.0, 1, 0.0, 0.0, 0.0],
-	["13_humide", 49.0, 5.0, 1, 0.0, 0.0, 0.0],
-	["14_marche", 61.0, 15.0, 1, 0.0, 0.0, 0.0],
-	["15_sol_proche", 2.4, 5.0, 1, 0.0, 0.0, -50.0, 1.6],
+	["01_sanctuaire", 1.9, 3.0, 1, 0.0, 0.0, -3.0, 1.7],
+	["02_autel_proche", 2.75, 3.0, 1, 0.0, 0.0, -20.0, 1.8],
+	["03_candelabres", 2.4, 3.2, 1, -20.0, 0.0, -6.0, 1.5],
+	["04_damier", 1.4, 1.0, 1, 12.0, 0.0, -14.0, 1.7],
+	["05_sol_motifs", 23.4, 3.0, 1, 0.0, 0.0, -35.0, 1.7],
+	["06_tapis_proche", 1.9, 3.0, 1, 0.0, 0.0, -50.0, 1.6],
+	["07_table_bancs", 15.2, 3.5, 1, 0.0, 0.0, -10.0, 1.7],
+	["08_grande_salle", 14.0, 5.6, 1, 28.0, 0.0, -6.0, 1.7],
+	["09_bibliotheque", 8.6, 3.0, 1, 0.0, 0.0, -4.0, 1.7],
+	["10_transition", 5.4, 3.0, 1, 0.0, 0.0, 0.0, 1.7],
+	["11_tresor", 22.6, 3.0, 1, 0.0, 0.0, -4.0, 1.7],
+	["12_cellier", 15.6, 10.5, 1, 0.0, 0.0, -4.0, 1.7],
+	["13_repaire", 21.6, 10.5, 1, 0.0, 0.0, -4.0, 1.7],
+	["14_ruine", 27.6, 10.5, 1, 0.0, 0.0, -4.0, 1.7],
+	["15_humide", 28.6, 3.0, 1, 0.0, 0.0, -4.0, 1.7],
+	["16_combat", 3.0, 3.0, 1, 0.0, 0.0, 0.0, 2.0],
 ]
 var only: PackedStringArray = []
 var lit := 0.0      # lumière d'inspection (outil seulement) : 0 = éclairage réel du jeu
@@ -47,8 +48,8 @@ func _ready() -> void:
 	Settings.set_option("particles", 1.0)      # réglage « Particules » par défaut du jeu (le rendu d'essai ne lit pas les préférences)
 	if not fx or fxmode == "rim":
 		AtlasSpriteMaterial.sharpen = 0.0
-	var W := 72
-	var H := 22
+	var W := 40
+	var H := 15
 	var g: Array = []
 	for y in H:
 		var row: Array = []
@@ -56,16 +57,15 @@ func _ready() -> void:
 			row.append("#")
 		g.append(row)
 	var styles := {}
-	var specs := [[1, 1, 10, 9, "autel"], [12, 1, 9, 9, "bibliotheque"], [23, 1, 9, 9, "commune"], [34, 1, 9, 9, "tresor"], [45, 1, 9, 9, "humide"],
-		[12, 11, 9, 9, "armes"], [23, 11, 9, 9, "cellier"], [34, 11, 9, 9, "repaire"], [45, 11, 9, 9, "ruine"], [56, 11, 9, 9, "marche"]]
+	var specs := [[1, 1, 6, 5, "autel"], [8, 1, 5, 5, "bibliotheque"], [14, 1, 7, 6, "commune"], [22, 1, 5, 5, "tresor"], [28, 1, 5, 5, "humide"],
+		[8, 8, 5, 5, "armes"], [15, 8, 5, 5, "cellier"], [21, 8, 5, 5, "repaire"], [27, 8, 5, 5, "ruine"], [33, 8, 5, 5, "marche"]]
 	for sp in specs:
 		for y in range(sp[1], sp[1] + sp[3]):
 			for x in range(sp[0], sp[0] + sp[2]):
 				g[y][x] = "."
 		styles["%d,%d" % [sp[0], sp[1]]] = sp[4]
 		if sp[0] > 1:
-			g[sp[1] + 4][sp[0] - 1] = "."
-	g[10][5] = "."
+			g[sp[1] + 2][sp[0] - 1] = "."
 	var rows: Array = []
 	for r in g:
 		rows.append("".join(r))
@@ -133,6 +133,9 @@ func _ready() -> void:
 				if not leaf_y.has(leaf):
 					leaf_y[leaf] = leaf.position.y
 				leaf.position.y = leaf_y[leaf] + (float(s[5]) if s.size() > 5 else 0.0)
+		if str(s[0]).begins_with("16"):      # salle de combat : arène scellée de 3 × 3 cases devant la caméra, monstre posé comme dans la partie
+			view.stage.camera = cam
+			view.stage.enter(theme, Vector2i(int(s[1]), int(s[2])), int(s[3]), {"id": "m_test", "name": "Test", "icon": "@icon:" + (mon if mon != "" else "mon_veilleur_os")}, {"hp": 10, "maxHp": 10}, 0)
 		for i in (160 if str(s[0]).begins_with("27") else 40):      # la fumée a besoin de temps pour s'installer
 			await get_tree().process_frame
 		if str(s[0]).begins_with("27"):

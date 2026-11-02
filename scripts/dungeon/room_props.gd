@@ -114,6 +114,9 @@ static func _take(P: Dictionary, slots: Array, n: int) -> Array:
 	return out
 
 static func _count(ctx: Dictionary, slots: Array, frac: float, cap: int) -> int:
+	if str(ctx.get("theme", "")) == "gothic" and ctx.cells.size() >= 30:      # grandes salles gothic : plus d'accessoires répartis (elles paraissaient presque vides)
+		frac *= 1.5
+		cap = int(float(cap) * 1.5)
 	return mini(cap, maxi(1, ceili(float(slots.size()) * frac * float(ctx.density))))
 
 ## Angles de la salle : cases adossées à deux murs perpendiculaires.
@@ -158,9 +161,9 @@ static func _crate(P: Dictionary, p: Vector3, s: float, yaw: float) -> void:
 static func _sack(P: Dictionary, p: Vector3, yaw: float) -> void:
 	_model(P, "sack%d" % _var(p, 3), p, yaw)
 
-static func _candle(P: Dictionary, p: Vector3, h := 0.35, kind := "warm") -> void:
+static func _candle(P: Dictionary, p: Vector3, h := 0.35, kind := "warm", size := 0.32) -> void:
 	_model(P, "candle", p, 0.0, h / 0.4)
-	_flame(P, p + Vector3(0, h + 0.07, 0), 0.32, kind)
+	_flame(P, p + Vector3(0, h + 0.07, 0), size, kind)
 
 static func _brazier(P: Dictionary, p: Vector3, kind := "warm", gold := false) -> void:
 	_model(P, "brazier_gold" if gold else "brazier_iron", p)
@@ -295,9 +298,20 @@ static func _autel(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -
 				_flame(P, vw + fp, 0.15 + 0.03 * float(_var(vw + fp, 3)))
 		else:
 			_model(P, "altar", vw)
-		for sx in [-1.05, 1.05]:
-			for sz in [-1.05, 1.05]:
-				_candelabrum(P, vw + Vector3(sx, 0.0, sz), gothic)
+		if gothic:
+			# candélabres hors de l'emprise du socle (±1,46 × ±1,2) : deux de chaque côté, jamais collés à la pierre ; lumignons votifs devant l'autel
+			for sx in [-2.2, 2.2]:
+				for sz in [-0.95, 0.95]:
+					_candelabrum(P, vw + Vector3(sx + (float(_var(vw + Vector3(sx, 0, sz), 5)) - 2.0) * 0.06, 0.0, sz), gothic)
+			for k in 4:
+				var vp := vw + Vector3(-0.9 + 0.62 * float(k) + (float(_var(vw + Vector3(k, 0, 0), 4)) - 1.5) * 0.12, 0.0, 1.75 + 0.18 * float(_var(vw + Vector3(0, 0, k), 3)))
+				var cs := (0.14 + 0.06 * float(_var(vp, 3))) / 0.4
+				_model(P, "candle", vp, 0.0, cs)
+				_flame(P, vp + Vector3(0, 0.42 * cs + 0.05, 0), 0.12 + 0.02 * float(_var(vp, 3)))
+		else:
+			for sx in [-1.05, 1.05]:
+				for sz in [-1.05, 1.05]:
+					_candelabrum(P, vw + Vector3(sx, 0.0, sz), gothic)
 	else:
 		var corners := _corners(ctx)
 		for i in mini(2, corners.size()):
@@ -344,11 +358,27 @@ static func _ruine(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -
 static func _commune(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng
 	if feature:
-		_model(P, "table_long", vw)
+		var g := str(ctx.get("theme", "")) == "gothic"
+		_model(P, "table_long_g" if g else "table_long", vw)
 		for sz in [-0.85, 0.85]:
-			_model(P, "bench", vw + Vector3(0, 0, sz))
+			_model(P, "bench_g" if g else "bench", vw + Vector3(0, 0, sz))
 		_model(P, "tableware", vw)
-		_candle(P, vw + Vector3(0.0, 0.8, 0.0), 0.3)
+		_candle(P, vw + Vector3(0.0, 0.8, 0.0), 0.3, "warm", 0.16 if g else 0.32)
+		if g and ctx.cells.size() >= 30:      # grande salle gothic : une ou deux tables de plus, de part et d'autre, tant que les quatre cases autour du sommet sont libres
+			var vx := roundi(vw.x / CELL + 0.5)
+			var vy := roundi(vw.z / CELL + 0.5)
+			for dz in [-2, 2]:
+				var ok := true
+				for q in [Vector2i(vx - 1, vy + dz - 1), Vector2i(vx, vy + dz - 1), Vector2i(vx - 1, vy + dz), Vector2i(vx, vy + dz)]:
+					if not ctx.inside.has(q) or ctx.blocked.has(q):
+						ok = false
+				if not ok:
+					continue
+				var tp := vw + Vector3(0, 0, float(dz) * CELL)
+				_model(P, "table_long_g", tp, 0.0, 0.9)
+				for sz in [-0.8, 0.8]:
+					_model(P, "bench_g", tp + Vector3(0, 0, sz), 0.0, 0.9)
+				_model(P, "tableware", tp, 0.0, 0.9)
 	var tall := _slots(ctx, true)
 	var chimney: Array = _take(P, tall, 1) if bool(ctx.vedette) else []
 	if not chimney.is_empty():

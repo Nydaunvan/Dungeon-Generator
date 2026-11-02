@@ -161,6 +161,23 @@ func _build_arena(theme: String, p: Vector2i, dir: int) -> void:
 	_arena.name = "Arena"
 	_arena.mesh = mesh
 	add_child(_arena)
+	if theme == "gothic":      # salle de combat gothic : deux lumières seulement (comme le reste du thème, sans ombre) pour que les murs et le sol se devinent
+		var mid := Vector3((p.x + fwd.x) * CELL, 0.0, (p.y + fwd.y) * CELL)
+		var back := Vector3((p.x + fwd.x * 2) * CELL, 0.0, (p.y + fwd.y * 2) * CELL)
+		var warm := OmniLight3D.new()      # foyer chaud au fond, derrière le monstre : détache sa silhouette
+		warm.light_color = Color("ffb468")
+		warm.light_energy = 1.1
+		warm.omni_range = 9.0
+		warm.omni_attenuation = 1.3
+		warm.position = back + Vector3(0, 2.4, 0) - Vector3(fwd.x, 0, fwd.y) * 0.9
+		_arena.add_child(warm)
+		var cool := OmniLight3D.new()      # remplissage froid : révèle le volume de la salle
+		cool.light_color = Color("6f88bd")
+		cool.light_energy = 1.8
+		cool.omni_range = 11.0
+		cool.omni_attenuation = 0.9
+		cool.position = mid + Vector3(0, 3.0, 0)
+		_arena.add_child(cool)
 
 func _wall(st: SurfaceTool, ctr: Vector3, d: Vector2i, half: float) -> void:
 	var edge := ctr + Vector3(d.x * half, 0.0, d.y * half)

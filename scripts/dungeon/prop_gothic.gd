@@ -343,3 +343,65 @@ static func candelabra(b: PropMeshes.B, v: int) -> void:
 		b.lathe([Vector2(0.03, yc + 0.02), Vector2(0.032, yc + hc * 0.5), Vector2(0.028 + 0.004 * PropMeshes.B.h(vi, v, 2), yc + hc), Vector2(0.0, yc + hc + 0.006)], 10, cw, Vector3(x, 0, 0), 0.0, 0.08, true)
 		b.lathe([Vector2(0.028, yc + hc * 0.6), Vector2(0.04, yc + hc * 0.55), Vector2(0.034, yc + hc * 0.3), Vector2(0.03, yc + hc * 0.3)], 6, PropMeshes.B.sh(cw, 0.92), Vector3(x + 0.0, 0, 0.0), 0.0, 0.3, true)      # coulure
 		vi += 1
+
+# ------------------------------------------------------------------ mobilier de salle commune (bois ancien)
+
+const W_A := Color("5c4a3b")           # bois vieilli, grisé
+const W_B := Color("4c3e31")
+const W_D := Color("3a2b1e")
+const W_G := Color("75664f")           # bois lessivé par l'usage (zones de passage)
+
+## Planche de bois : bloc chanfreiné ; `n` bandes longitudinales de teinte légèrement différente imitent le fil.
+static func _plank(b: PropMeshes.B, ctr: Vector3, hs: Vector3, bev: float, col: Color, seedv: int) -> void:
+	b.m = MATTE
+	bbox(b, ctr, hs, bev, col, seedv, 0.003)
+	var top := ctr.y + hs.y
+	var nb := 3
+	for i in nb:
+		var zz := ctr.z - hs.z + hs.z * 2.0 * (float(i) + 0.5) / float(nb)
+		var ln := hs.x * (0.55 + 0.4 * PropMeshes.B.h(i, seedv, 41))
+		var x0 := ctr.x + (PropMeshes.B.h(i, seedv, 42) - 0.5) * (hs.x - ln) * 2.0
+		var k := 0.8 + 0.3 * PropMeshes.B.h(i, seedv, 43)
+		b.box(Vector3(x0, top + 0.0007, zz), Vector3(ln, 0.0008, hs.z / float(nb) * 0.32), PropMeshes.B.sh(col, k))
+
+## Table à tréteaux : plateau de planches inégales, traverses d'extrémité, tréteaux à pieds et semelle, entretoise chevillée.
+static func table(b: PropMeshes.B, w: float, d: float) -> void:
+	b.m = MATTE
+	var n := 5
+	var pw := d / float(n)
+	for i in n:
+		var jz := (PropMeshes.B.h(i, 3, 9) - 0.5) * 0.006
+		var jy := (PropMeshes.B.h(i, 3, 10) - 0.5) * 0.008
+		var col := PropMeshes.B.jit(W_A if i % 2 == 0 else W_B, 0.12, i + 11)
+		if i == 0 or i == n - 1:
+			col = col.lerp(W_G, 0.25)
+		_plank(b, Vector3((PropMeshes.B.h(i, 3, 12) - 0.5) * 0.04, 0.775 + jy, -d * 0.5 + pw * (float(i) + 0.5) + jz), Vector3(w * 0.5 - 0.02, 0.04, pw * 0.5 - 0.004), 0.008, col, i + 2)
+	for sx in [-1.0, 1.0]:
+		bbox(b, Vector3(sx * (w * 0.5 - 0.07), 0.716, 0.0), Vector3(0.05, 0.03, d * 0.5 - 0.03), 0.006, W_D, 21 if sx < 0.0 else 22, 0.003)
+		var tx: float = sx * (w * 0.5 - 0.62)
+		bbox(b, Vector3(tx, 0.04, 0.0), Vector3(0.05, 0.04, d * 0.5 - 0.06), 0.012, W_D, 23 if sx < 0.0 else 24, 0.004)      # semelle
+		for sz in [-1.0, 1.0]:
+			var zc: float = sz * (d * 0.5 - 0.17)
+			b.rbox(Vector3(tx, 0.4, zc), Vector3(0.05, 0.37, 0.045), W_B, Basis(Vector3(1, 0, 0), sz * 0.07))      # pied légèrement écarté
+		bbox(b, Vector3(tx, 0.684, 0.0), Vector3(0.05, 0.03, d * 0.5 - 0.1), 0.006, W_D, 25 if sx < 0.0 else 26, 0.003)      # sommier
+	bbox(b, Vector3(0, 0.3, 0.0), Vector3(w * 0.5 - 0.62, 0.028, 0.04), 0.006, W_A, 27, 0.003)      # entretoise
+	for sx in [-1.0, 1.0]:
+		b.box(Vector3(sx * (w * 0.5 - 0.66), 0.3, 0.0), Vector3(0.014, 0.05, 0.012), W_D)      # clavette
+	for k in 3:      # rainures et balafres de couteau sur le plateau
+		var px := (PropMeshes.B.h(k, 5, 31) - 0.5) * w * 0.7
+		var pz := (PropMeshes.B.h(k, 5, 32) - 0.5) * d * 0.7
+		b.box(Vector3(px, 0.8145, pz), Vector3(0.08 + 0.06 * PropMeshes.B.h(k, 5, 33), 0.0006, 0.004), W_D)
+
+## Banc : assise épaisse sur deux semelles à jambes obliques, entretoise basse.
+static func bench(b: PropMeshes.B) -> void:
+	b.m = MATTE
+	bbox(b, Vector3(0, 0.44, 0), Vector3(1.5, 0.035, 0.15), 0.008, PropMeshes.B.jit(W_A, 0.1, 5), 31, 0.003)
+	b.box(Vector3(0.3, 0.4755, 0.02), Vector3(0.5, 0.0008, 0.03), W_G)      # zone polie par l'usage
+	b.box(Vector3(-0.55, 0.4755, -0.03), Vector3(0.35, 0.0008, 0.025), W_B)
+	for sx in [-1.0, 1.0]:
+		var x: float = sx * 1.15
+		bbox(b, Vector3(x, 0.02, 0.0), Vector3(0.06, 0.02, 0.15), 0.008, W_D, 32 if sx < 0.0 else 33, 0.003)      # semelle
+		for sz in [-1.0, 1.0]:
+			b.rbox(Vector3(x, 0.23, sz * 0.09), Vector3(0.04, 0.22, 0.03), W_B, Basis(Vector3(1, 0, 0), sz * 0.1))
+		bbox(b, Vector3(x, 0.395, 0.0), Vector3(0.05, 0.02, 0.14), 0.005, W_D, 34 if sx < 0.0 else 35, 0.002)      # sommier
+	bbox(b, Vector3(0, 0.14, 0.0), Vector3(1.15, 0.022, 0.03), 0.005, W_A, 36, 0.003)      # entretoise

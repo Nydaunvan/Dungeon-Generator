@@ -6,6 +6,7 @@
 | Autel (`altar_g`) | maillage procédural `PropGothic.altar` (scripts/dungeon/prop_gothic.gd) | **Provisoire** : volumes chanfreinés, arcatures, colonnettes, corniche, chemin d'autel, calice, livre, plateaux de bougies. À remplacer par un GLB sculpté. |
 | Candélabres (`candelabra_g0..2`) | maillage procédural `PropGothic.candelabra` | **Provisoire** : fer forgé (pieds en volute, nœuds, bras en S, bobèches à pointe, cire coulée). 3 variantes. |
 | Sol damier / filets / joints | calques 256 px (`_floor_overlay`: `damier_g`, `filets_g`, `joints`) sur la dalle PBR gothic | Intégré, définitif tant qu'aucune texture peinte n'existe. |
+| Table à tréteaux et banc (`table_long_g`, `bench_g`) | maillage procédural `PropGothic.table` / `bench` | **Provisoire** : planches chanfreinées, traverses, semelles, entretoise ; le grain du bois vient de bandes de couleur de sommet (pas de texture de bois). |
 | Tapis | texture procédurale `_rug_texture` (128 px/case en gothic) | Intégré ; flou de près : prévoir une texture tissée 1024² tuilable. |
 | Autres salles (bibliothèque, armes, cellier, ruine, commune, humide, trésor, repaire, marché) | modèles procéduraux d'origine | **Non refondus** : encore la version d'origine (bois uni, tonneaux simples…). |
 

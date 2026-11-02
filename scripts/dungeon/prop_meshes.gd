@@ -319,6 +319,8 @@ static func get_mesh(name: String) -> ArrayMesh:
 		"altar": _altar(b)
 		"altar_g": PropGothic.altar(b)
 		"candelabra_g": PropGothic.candelabra(b, v)
+		"table_long_g": PropGothic.table(b, 3.2, 0.95)
+		"bench_g": PropGothic.bench(b)
 		"candelabra": _candelabra(b)
 		"sconce": _sconce(b)
 		"rock": _rock(b, v)
@@ -352,7 +354,7 @@ static func get_mesh(name: String) -> ArrayMesh:
 	_cache[name] = mesh
 	return mesh
 
-const MODELS := ["barrel", "crate", "sack", "candle", "brazier_iron", "brazier_gold", "bookshelf", "weapon_rack", "shield_wall", "dummy", "altar", "altar_g", "candelabra", "candelabra_g", "sconce", "rock", "rubble", "column_stump", "column_fallen", "table_long", "table_small", "bench", "stool", "tableware", "fireplace", "stalagmite", "stalactite", "mushrooms", "gold_pile", "gold_hoard", "coins", "gold_bars", "vase", "bones", "skull", "wall_chains", "throne", "stall"]
+const MODELS := ["barrel", "crate", "sack", "candle", "brazier_iron", "brazier_gold", "bookshelf", "weapon_rack", "shield_wall", "dummy", "altar", "altar_g", "table_long_g", "bench_g", "candelabra", "candelabra_g", "sconce", "rock", "rubble", "column_stump", "column_fallen", "table_long", "table_small", "bench", "stool", "tableware", "fireplace", "stalagmite", "stalactite", "mushrooms", "gold_pile", "gold_hoard", "coins", "gold_bars", "vase", "bones", "skull", "wall_chains", "throne", "stall"]
 
 # ------------------------------------------------------------------ modèles
 
