@@ -28,6 +28,7 @@ var only: PackedStringArray = []
 var lit := 0.0      # lumière d'inspection (outil seulement) : 0 = éclairage réel du jeu
 var fx := true      # false = sans netteté de shader, sans liseré froid (référence « avant »)
 var fxmode := ""    # "rim" = liseré seul, "sharp" = netteté seule (diagnostic)
+var group := 0      # combat : nombre de monstres du groupe (0 = un seul)
 var mon := ""      # id d'un monstre Atlas Noir à poser dans le couloir (ex. mon_veilleur_os) ; vide = aucun, les autres vues restent identiques
 
 func _ready() -> void:
@@ -39,6 +40,7 @@ func _ready() -> void:
 				"kit": kit = kv[1] == "1"
 				"out": out = kv[1]
 				"only": only = kv[1].split(",")
+				"group": group = int(kv[1])
 				"lit": lit = float(kv[1])
 				"mon": mon = kv[1]
 				"fx": fx = kv[1] == "1"
@@ -135,7 +137,16 @@ func _ready() -> void:
 				leaf.position.y = leaf_y[leaf] + (float(s[5]) if s.size() > 5 else 0.0)
 		if str(s[0]).begins_with("16"):      # salle de combat : arène scellée de 3 × 3 cases devant la caméra, monstre posé comme dans la partie
 			view.stage.camera = cam
-			view.stage.enter(theme, Vector2i(int(s[1]), int(s[2])), int(s[3]), {"id": "m_test", "name": "Test", "icon": "@icon:" + (mon if mon != "" else "mon_veilleur_os")}, {"hp": 10, "maxHp": 10}, 0)
+			var cdef := {"id": "m_test", "name": "Test", "icon": "@icon:" + (mon if mon != "" else "mon_veilleur_os")}
+			var cst := {"hp": 10, "maxHp": 10}
+			if group > 0:
+				cdef["isGroup"] = true
+				var mem: Array = []
+				for gi in group:
+					mem.append({"alive": true})
+				cst["members"] = mem
+				cst["mirrorSlot"] = -1
+			view.stage.enter(theme, Vector2i(int(s[1]), int(s[2])), int(s[3]), cdef, cst, 1)
 		for i in (160 if str(s[0]).begins_with("27") else 40):      # la fumée a besoin de temps pour s'installer
 			await get_tree().process_frame
 		if str(s[0]).begins_with("27"):

@@ -248,8 +248,8 @@ func _refresh_monsters(p: Vector2i, dir: int, def: Dictionary, st: Dictionary, s
 			add_child(e.halo)
 		if e.halo != null:
 			e.halo.visible = targeted
-			e.halo.position = at + Vector3(0, -h * 0.12, 0) - Vector3(fwd.x, 0, fwd.y) * 0.05
-			(e.halo.mesh as QuadMesh).size = Vector2(h * 1.75, h * 1.4)
+			e.halo.position = Vector3(at.x, 0.05, at.z) + Vector3(fwd.x, 0, fwd.y) * h * 0.12      # sous les pieds
+			(e.halo.mesh as QuadMesh).size = Vector2(h * 0.5, h * 0.5)
 		# rage : halo rouge sombre qui pulse derrière le monstre (différent du halo de sélection)
 		var raged: bool = bool(st.get("enraged", false))
 		if not e.has("was"):
@@ -328,10 +328,10 @@ const DEATH_BAR_SEC := 0.4
 ## calculé sur le carré (h × 1,15) les envoyait hors de la salle dès que le groupe comptait trois membres. Ici l'écart suit la largeur VISIBLE de la pose
 ## d'attente (légère superposition des bras et des capes, le membre central passant devant), sans rien réduire, et il est plafonné pour que les bords
 ## extérieurs restent dans la salle (murs à ±6 m) et hors des panneaux qui recouvrent les côtés de la vue.
-const GROUP_HALF_ROOM := 5.2
+const GROUP_HALF_ROOM := 5.6
 static func _atlas_gap(pose_id: String, h: float, count: int) -> float:
 	var vis_w: float = h * float(_pose_envelope(pose_id).w)
-	var gap: float = vis_w * (0.92 if count == 2 else 0.84)
+	var gap: float = vis_w * (1.12 if count == 2 else 1.04)      # les silhouettes ne se chevauchent plus (c'était 0,92 / 0,84)
 	var half_span: float = float(count - 1) * 0.5
 	gap = minf(gap, (GROUP_HALF_ROOM - vis_w * 0.5) / half_span)
 	return maxf(gap, 1.2)
@@ -434,16 +434,17 @@ func _sync_auras() -> void:
 		a.position = Vector3((info.center.x - 0.5) * h, (0.5 - info.center.y) * h, 0.04)
 		a.set_looks(looks)
 
+## Marque de sélection : un fin anneau pâle posé au sol sous le monstre visé (au lieu de l'ancien grand halo bleu derrière lui).
 func _make_halo() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.mesh = QuadMesh.new()
+	var q := QuadMesh.new()
+	mi.mesh = q
+	mi.rotation.x = -PI * 0.5
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.no_depth_test = false
 	m.albedo_texture = _halo_texture()
 	m.render_priority = -1
 	mi.material_override = m
@@ -669,10 +670,10 @@ static func _rage_texture() -> Texture2D:
 static func _halo_texture() -> Texture2D:
 	if _halo_tex == null:
 		var g := Gradient.new()
-		g.offsets = PackedFloat32Array([0.0, 0.125, 0.5625, 1.0])
-		# sélection : halo léger bleu-cyan (le rouge est réservé à la rage)
-		g.colors = PackedColorArray([Color(0.45, 0.85, 1.0, 0.38), Color(0.45, 0.85, 1.0, 0.38),
-				Color(0.3, 0.7, 1.0, 0.2), Color(0.25, 0.65, 1.0, 0.0)])
+		g.offsets = PackedFloat32Array([0.0, 0.72, 0.86, 0.95, 1.0])
+		# sélection : fin anneau pâle (centre à peine teinté), repère discret sans halo ; le rouge reste réservé à la rage
+		g.colors = PackedColorArray([Color(0.75, 0.9, 1.0, 0.0), Color(0.75, 0.9, 1.0, 0.0), Color(0.8, 0.93, 1.0, 0.32),
+				Color(0.8, 0.93, 1.0, 0.0), Color(0.8, 0.93, 1.0, 0.0)])
 		var t := GradientTexture2D.new()
 		t.gradient = g
 		t.fill = GradientTexture2D.FILL_RADIAL

@@ -27,8 +27,8 @@ const THEME_LIGHT := {
 	"gothic": {"ambient_color": Color("1a2333"), "ambient_k": 0.85, "fog_color": Color("03050a"), "fog_density": 0.03,
 		"torch_range_k": 0.72, "torch_energy_k": 2.1, "torch_atten": 1.7,
 		"player_color": Color("bdc9de"), "player_range_k": 0.6, "player_energy_k": 1.2, "player_atten": 1.4,
-		# monstres Atlas Noir : liseré de lumière froid sur la silhouette (voir AtlasSpriteMaterial.apply_theme)
-		"sprite_rim_color": Color("8fb0e8"), "sprite_rim_k": 1.0},
+		# monstres Atlas Noir : lumière de contour froide sur la silhouette (voir AtlasSpriteMaterial.apply_theme) ; désactivée (0) : elle formait un halo à l'intérieur du liseré
+		"sprite_rim_color": Color("8fb0e8"), "sprite_rim_k": 0.0},
 }
 
 ## Valeur d'ambiance du thème (`default` quand le thème n'a pas d'ambiance propre).
