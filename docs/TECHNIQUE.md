@@ -656,3 +656,9 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - **Écriture** : inchangée, avec `LogPanel.ms_per_char` (20 ms, réglable) ; file d'attente, accélération puis affichage immédiat, historique d'une sauvegarde instantané, pas de retour forcé en bas quand le joueur a remonté.
 - **Outils** : `tools/check_carnet.tscn` adapté (tranches dans le rectangle, texte dans le papier clair, titre au-dessus du rubis, marges, couloir de la barre) ; `tools/shot_carnet.tscn` pour les captures.
 
+#### Carnet : lisibilité, icônes, retour en bas (2026-11-02, suite)
+
+- **Contraste** : le papier est un brun clair (moyenne `#DEB57A`) ; l'or `#936719` (contraste 2,6) et le rouge `#8D3028` (4,2) étaient trop pâles. Maintenant : or `#5F3F07` (≈ 5,3), dégâts `#74231B` (≈ 5,5), normal `#34271C` inchangé (7,5).
+- **Icônes manquantes** : les lignes du journal contiennent des jetons `@icon:identifiant` (icônes illustrées de sorts, talents, classes : `spell.get("icon")`, `cls.icon`…) qui s'affichaient en texte brut ou disparaissaient. `LogPanel._add_line` les remplace par une petite image dans la ligne (`IconResolver.texture`, hauteur 1,35 × la police, centrée) ou, sans illustration, par l'emoji de repli (`AdminUtil.icon_text_fallback`). Les emojis ordinaires (💥 😡 🎁…) restent gérés par la police.
+- **Défilement** : CHAQUE nouvel événement ramène le journal tout en bas, même si le joueur était remonté (`_follow = true`, défilement fluide interrompu) ; le suivi continue pendant que la ligne s'écrit. Cela remplace la règle précédente (« ne pas ramener en bas ») ; la molette et le glisser restent libres entre deux événements. `tools/check_carnet.tscn` vérifie le retour en bas ; `tools/shot_carnet.tscn lines=icones` montre les icônes.
+

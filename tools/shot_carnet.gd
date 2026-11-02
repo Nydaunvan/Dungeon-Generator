@@ -26,6 +26,12 @@ func _ready() -> void:
 			pass
 		"court":
 			gs.add_log("Vous entrez dans la salle.")
+		"icones":
+			gs.add_log("Mira lit le parchemin et invoque @icon:spell_bard1 Chant de guerre.", true)
+			gs.add_log("Crache-Os utilise @icon:spell_skald1 Hurlement sur Thane (12 dégâts) 😡.", true)
+			gs.add_log("Zael évolue en @icon:misc_shield Paladin.")
+			gs.add_log("XP répartie : Thane +6 💥. Le groupe récupère 5 pièces d'or.")
+			gs.add_log("Le groupe trouve @icon:sword_short et @icon:inconnu_xyz.")
 		"long":
 			for i in 60:
 				gs.add_log("Événement n°%d : le groupe avance prudemment dans le couloir et note un détail." % i)

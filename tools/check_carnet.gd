@@ -112,7 +112,7 @@ func _ready() -> void:
 		check("%s défilement : la molette a remonté dans l'historique (%.0f)" % [tag, held], held < mx - 100.0)
 		gs.add_log("Nouvel événement pendant la lecture de l'historique.")
 		await get_tree().create_timer(2.5).timeout
-		check("%s défilement : le joueur n'est pas ramené en bas (%.0f, tenu à %.0f)" % [tag, vs.value, held], absf(vs.value - held) < 3.0)
+		check("%s défilement : un nouvel événement ramène tout en bas, même après être remonté (%.0f, était à %.0f, bas %.0f)" % [tag, vs.value, held, vs.max_value - vs.page], vs.value >= vs.max_value - vs.page - 3.0 and vs.value > held + 50.0)
 		wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 		wheel.factor = 400.0      # retour en bas
 		lp._gui_input(wheel)

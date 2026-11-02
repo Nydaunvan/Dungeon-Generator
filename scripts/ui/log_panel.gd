@@ -11,8 +11,8 @@ extends Control
 signal history_pressed
 
 const INK := "#34271C"             # texte normal
-const INK_HIT := "#8D3028"         # dégâts et pièges
-const INK_GOLD := "#936719"        # XP et récompenses
+const INK_HIT := "#74231B"         # dégâts et pièges (assombri : #8D3028 manquait de contraste sur le papier)
+const INK_GOLD := "#5F3F07"        # XP et récompenses (assombri : #936719 virait au clair, contraste 2,6 contre 5,3 maintenant)
 const TITLE_COL := Color("38271B")
 const TEX := preload("res://assets/ui/journal_parchment.png")
 ## Dimensions et repères de l'image (pixels de la source, 1437 × 1094).
@@ -136,20 +136,49 @@ func _line_style(line: String, hit: bool) -> Array:
 		return [INK_GOLD, INK_GOLD, false]
 	return [INK, INK, false]
 
+var _icon_re: RegEx
+
+## Une ligne du journal : ✦, puis le texte ; chaque « @icon:identifiant » (icônes illustrées de sorts, talents, classes…) devient une petite image
+## dans la ligne (ou, sans illustration, l'emoji de repli), au lieu du texte brut.
 func _add_line(line: String, hit: bool, instant: bool) -> void:
 	var st := _line_style(line, hit)
-	var safe := line.replace("[", "[lb]")
-	var body := "[color=%s]%s[/color]" % [st[1], safe]
-	if st[2]:
-		body = "[b]%s[/b]" % body
+	if _icon_re == null:
+		_icon_re = RegEx.new()
+		_icon_re.compile("@icon:[A-Za-z0-9_\\-]+")
 	var gap := "[font_size=%d]\n[/font_size]" % SPACER_PX if text.get_total_character_count() > 0 else ""      # très léger écart entre deux événements
-	text.append_text("%s[color=%s]✦[/color]  %s\n" % [gap, st[0], body])
+	text.append_text("%s[color=%s]✦[/color]  " % [gap, st[0]])
+	var fs := text.get_theme_font_size("normal_font_size")
+	var pos := 0
+	for m in _icon_re.search_all(line):
+		_add_segment(line.substr(pos, m.get_start() - pos), st)
+		var tok := m.get_string()
+		var tex := IconResolver.texture(tok)
+		if tex != null and tex.get_height() > 0:
+			var hpx := int(float(fs) * 1.35)
+			text.add_image(tex, int(float(hpx) * float(tex.get_width()) / float(tex.get_height())), hpx, Color.WHITE, INLINE_ALIGNMENT_CENTER)
+		else:
+			_add_segment(AdminUtil.icon_text_fallback(tok), st)
+		pos = m.get_end()
+	_add_segment(line.substr(pos), st)
+	text.append_text("\n")
 	_target = text.get_total_character_count()
+	_follow = true      # chaque nouvel événement ramène le journal tout en bas, même si le joueur était remonté dans l'historique
+	_smoothing = false
 	if instant or not is_visible_in_tree() or _target - _shown > BACKLOG_INSTANT:      # panneau caché ou rafale trop longue : tout apparaît d'un coup
 		_shown = _target
 		_apply_visible()
 	else:
 		set_process(true)
+	if not instant:
+		_wake()      # suivi du bas pendant que la ligne s'écrit
+
+func _add_segment(seg: String, st: Array) -> void:
+	if seg == "":
+		return
+	var body := "[color=%s]%s[/color]" % [st[1], seg.replace("[", "[lb]")]
+	if st[2]:
+		body = "[b]%s[/b]" % body
+	text.append_text(body)
 
 func _wake() -> void:
 	_stick_frames = 4
