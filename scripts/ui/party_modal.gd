@@ -99,6 +99,9 @@ func _render() -> void:
 	_cat_row.add_child(_tab(L.t("ui.party_modal.sorts_capacites"), cat == "spells", func():
 		cat = "spells"
 		_render()))
+	_cat_row.add_child(_tab(L.t("ui.living.tab"), cat == "living", func():
+		cat = "living"
+		_render()))
 	var content := modal.content
 	for n in content.get_children():
 		n.queue_free()
@@ -107,6 +110,8 @@ func _render() -> void:
 		return
 	if cat == "stats":
 		_stats(content, c)
+	elif cat == "living":
+		_living(content, c)
 	else:
 		_spells(content, c)
 	modal.call_deferred("_fit")
@@ -339,6 +344,16 @@ func _spell_card(p: Control, sid: String, known: bool) -> void:
 	meta.add_theme_color_override("default_color", UiTheme.DIM)
 	meta.text = _meta(sp)
 	v.add_child(meta)
+	if known and LivingSkills.active(gs):
+		var lb := Button.new()
+		lb.text = L.t("ui.living.open")
+		lb.flat = true
+		lb.focus_mode = Control.FOCUS_NONE
+		lb.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		lb.add_theme_font_size_override("font_size", 12)
+		lb.add_theme_color_override("font_color", UiTheme.GOLD)
+		lb.pressed.connect(func(): LivingModal.open(modal.get_parent(), gs, char_id, sid, _render))
+		v.add_child(lb)
 	p.add_child(card)
 
 func _meta(sp: Dictionary) -> String:
@@ -415,6 +430,30 @@ func _spells(p: Control, c: Dictionary) -> void:
 		for sid in ids:
 			_spell_card(p, str(sid), known.has(sid) or (str(sid) == Characters.ultimate_id(gs.cfg, c)))
 
+
+## Onglet « Vie des compétences » : toutes les compétences du héros (sorts, talents choisis, instinct) avec leur palier d'affinité.
+func _living(p: Control, c: Dictionary) -> void:
+	if not LivingSkills.active(gs):
+		var off := Label.new()
+		off.text = L.t("ui.living.off_note")
+		off.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		off.add_theme_color_override("font_color", UiTheme.DIM)
+		p.add_child(off)
+		return
+	for sid in LivingSkills.skills_of(gs, c):
+		var prof := LivingCatalog.profile(gs.cfg, str(sid))
+		if prof.is_empty():
+			continue
+		var a := LivingSkills.affinity(gs, char_id, str(sid))
+		var evo := LivingSkills.evolved(gs, char_id, str(sid))
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.text = "%s %s — %s%s" % [str(prof.icon) if not str(prof.icon).begins_with("@icon:") else "✦", str(prof.name), L.t("ui.living.tier_%d" % LivingSkills.tier(a)),
+			(" · " + L.t("ui.living.k_%s_n" % evo)) if evo != "" else ""]
+		b.add_theme_font_size_override("font_size", 14)
+		b.pressed.connect(func(): LivingModal.open(modal.get_parent(), gs, char_id, str(sid), _render))
+		p.add_child(b)
 
 # ------------------------------------------------------------------ caractéristiques détaillées
 

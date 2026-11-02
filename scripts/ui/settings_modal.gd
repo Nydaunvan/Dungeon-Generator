@@ -260,6 +260,9 @@ func _graphics() -> void:
 	_row(L.t("ui.settings.instinct_scale"), _drop([[1.0, L.t("ui.settings.instinct_scale_1")], [1.5, L.t("ui.settings.instinct_scale_15")],
 			[2.0, L.t("ui.settings.instinct_scale_2")]], Settings.instinct_scale, func(v): Settings.set_instinct_scale(float(v))))
 	_hint(L.t("ui.settings.instinct_hint"))
+	_section(L.t("ui.settings.living_skills"))
+	_check(L.t("ui.settings.living_skills_on"), Settings.living_skills, func(v: bool): Settings.set_living_skills(v))
+	_hint(L.t("ui.settings.living_skills_hint"))
 
 func _opt(key: String, options: Array) -> OptionButton:
 	return _drop(options, Settings.opt(key), func(v):

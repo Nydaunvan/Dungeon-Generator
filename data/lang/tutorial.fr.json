@@ -22,7 +22,7 @@
  {
   "id": "spells",
   "label": "4. Sorts / Capacités",
-  "text": "[font_size=20][color=#e8b45c]4. Onglet Sorts / Capacités[/color][/font_size]\n\nCréez les [b]sorts et capacités spéciales[/b] utilisables en combat : dégâts, soin, effet de statut, animation associée. Réglez pour chacun son [b]coût en endurance[/b] et son [b]temps de recharge[/b] — plus un sort est puissant, plus il devrait coûter cher et/ou recharger lentement.\n\nActivez [b]Technique ultime[/b] sur un sort pour en faire le 7e sort d'une classe évoluée : sans endurance ni recharge, il demande une jauge pleine (réglable dans Règles du jeu › Combat), avec des effets annexes (sacrifice de PV, soin, bouclier, relève, exécution, frappes multiples, statuts)."
+  "text": "[font_size=20][color=#e8b45c]4. Onglet Sorts / Capacités[/color][/font_size]\n\nCréez les [b]sorts et capacités spéciales[/b] utilisables en combat : dégâts, soin, effet de statut, animation associée. Réglez pour chacun son [b]coût en endurance[/b] et son [b]temps de recharge[/b] — plus un sort est puissant, plus il devrait coûter cher et/ou recharger lentement.\n\nActivez [b]Technique ultime[/b] sur un sort pour en faire le 7e sort d'une classe évoluée : sans endurance ni recharge, il demande une jauge pleine (réglable dans Règles du jeu › Combat), avec des effets annexes (sacrifice de PV, soin, bouclier, relève, exécution, frappes multiples, statuts).\n\nChaque sort créé reçoit automatiquement un profil de [b]compétence vivante[/b] (tempérament et évolutions possibles) d'après son mode et son école : rien à régler, et l'identifiant du sort doit rester stable pour que les parties en cours gardent ses souvenirs."
  },
  {
   "id": "items",

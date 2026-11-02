@@ -13,6 +13,7 @@ var last_attacker_id: String = ""
 var level_states: Dictionary = {}
 var stats: Dictionary = {"monstersKilled": 0, "bossesKilled": 0, "goldEarnedTotal": 0, "xpEarnedTotal": 0, "itemsFound": 0}
 var bestiary: Dictionary = {}
+var living: Dictionary = {}         # compétences vivantes (voir LivingSkills) : affinités, traits, souvenirs, relations, lore ; {} = jamais utilisé
 var log_lines: Array[String] = []
 var full_log: Array = []            # journal complet : {type: "divider"|"entry", text, playerHit?} (4000 entrées au plus)
 var game_over: bool = false
@@ -47,7 +48,7 @@ func selected_member_idx(id: String, st: Dictionary) -> int:
 	return i
 
 const SAVE_FIELDS := ["party", "gold", "inventory", "active_char_id", "last_attacker_id", "level_states", "stats",
-	"bestiary", "log_lines", "full_log", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_seed", "run_log", "run_taint", "run_mods_chosen", "in_village", "village_prev", "selected_member"]
+	"bestiary", "log_lines", "full_log", "game_over", "won", "level_index", "px", "py", "pdir", "choice_queue", "run_number", "run_seed", "run_log", "run_taint", "run_mods_chosen", "in_village", "village_prev", "selected_member", "living"]
 
 ## Compteur par personnage pour l'écran de statistiques (actions, dégâts, soins…).
 func bump(char_id, field: String, amount = 1) -> void:
@@ -125,6 +126,10 @@ func add_log(msg: String, player_hit: bool = false) -> void:
 	if full_log.size() > 4000:
 		full_log.pop_front()
 	log_added.emit(msg, player_hit)
+
+## Manifestation des compétences vivantes dans le carnet (ligne simple, jamais bloquante).
+static func living_log(gs: GameState, msg: String) -> void:
+	gs.add_log(msg)
 
 ## Séparateur du journal complet (« Expédition n°N — titre »).
 func add_divider(text: String) -> void:

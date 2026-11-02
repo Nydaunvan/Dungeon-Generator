@@ -90,6 +90,7 @@ static func _perk_value(c: Dictionary, perk: String) -> int:
 
 ## Fin d'un combat : les capacités « une fois par combat » se rechargent.
 func end_combat_reset() -> void:
+	LivingSkills.settle(gs, "win")      # compétences vivantes : règlement du registre du combat qui vient de finir (sans effet s'il est vide)
 	for c in gs.party:
 		c.erase("lastStandUsed")
 		c.erase("instinctUsed")
@@ -511,6 +512,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		gs.add_log(L.fa(L.t("rules.combat.ultime_pas_charge"), [spell.name, int(Characters.ult_charge(caster)), int(Characters.ult_cfg(gs.cfg).max)]))
 		return false
 	var cost := 0 if (free or is_ult) else int(spell.get("staminaCost", 15))
+	cost = LivingSkills.adjust_cost(gs, caster, spell, cost)      # compétences vivantes : inchangé si l'option est coupée ou en partie classée
 	if int(caster.get("stamina", 0)) < cost:
 		gs.add_log(L.fa(L.t("rules.combat.n_a_plus_assez_endurance"), [caster.name, spell.name]))
 		return false
@@ -546,6 +548,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 		Sound.sfx("heal")
 	else:
 		Sound.sfx("spell", str(spell.get("style", "arcane")))
+	LivingSkills.begin_cast(gs, caster, spell, ally, target)
 	var bonus := int(caster.get("bonusSpellDmg", 0)) + int(floor((int(caster.level) - 1) * 0.75))
 	var power := int(caster.get("spellPower", Stats.spell_power(int(caster.get("effInt", 10)))))   # Intelligence : voir Stats.spell_power
 	var verb := L.fa(L.t("rules.combat.lance_sur"), [spell.get("icon", ""), spell.name])
@@ -570,12 +573,14 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 				_hit_monster(caster, target, dmg, magic, verb, mode == "damageGroup", ign, hit_spell, mode == "damageGroup")
 		"healSingle":
 			var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus + power, int(spell.get("healMax", 0)) + bonus + power)
+			amt = LivingSkills.mod_heal(gs, caster, spell, ally, amt)
 			var before := int(ally.hp)
 			ally["hp"] = mini(int(ally.maxHp), before + maxi(0, amt))
 			var healed := int(ally.hp) - before
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_2"), [caster.name, spell.get("icon", ""), spell.name, ally.name,
 				L.fa(L.t("rules.combat.et_soigne_pv"), healed) if healed > 0 else ""]), true)
 			_credit_heal(caster, healed)
+			LivingSkills.note_heal(gs, caster, ally, amt, healed)
 			events.append({"type": "popup", "text": "+%d" % healed, "on": "char:" + str(ally.id), "color": Color("7fd17f")})
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 			Characters.recompute(ally, gs.cfg)
@@ -584,6 +589,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			var total := 0
 			for c in gs.alive_party():
 				var amt := GameRng.range_i("combat", int(spell.get("healMin", 0)) + bonus + power, int(spell.get("healMax", 0)) + bonus + power)
+				amt = LivingSkills.mod_heal(gs, caster, spell, c, amt)
 				var before := int(c.hp)
 				c["hp"] = mini(int(c.maxHp), before + amt)
 				var healed := int(c.hp) - before
@@ -593,6 +599,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			gs.add_log(L.fa(L.t("rules.combat.lance_et_soigne_tout_le"), [caster.name, spell.get("icon", ""), spell.name,
 				", ".join(details) if not details.is_empty() else L.t("rules.combat.personne_n_avait_besoin_de")]), true)
 			_credit_heal(caster, total)
+			LivingSkills.note_heal(gs, caster, caster, total, total)
 			events.append({"type": "popup", "text": L.t("rules.combat.groupe_soigne"), "on": "party", "color": Color("7fd17f")})
 		"staminaRestoreSingle":
 			var amt := GameRng.range_i("combat", int(spell.get("staminaMin", 0)) + power, int(spell.get("staminaMax", 0)) + power)
@@ -605,6 +612,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			Statuses.apply_from_spell(gs, spell, ally, str(ally.name), str(caster.id), true)
 		"shieldSingle":
 			var amt := GameRng.range_i("combat", int(spell.get("shieldMin", 0)) + power, int(spell.get("shieldMax", 0)) + power)
+			amt = LivingSkills.mod_shield(gs, caster, spell, ally, amt)
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + maxi(0, amt)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_l_entoure"), [caster.name, spell.get("icon", ""), spell.name, ally.name, amt]), true)
 			events.append({"type": "popup", "text": "🛡️ %d" % amt, "on": "char:" + str(ally.id), "color": Color("8fc8e8")})
@@ -614,6 +622,7 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			if removed.is_empty():
 				gs.add_log(L.fa(L.t("rules.combat.lance_sur_qui_n_etait"), [caster.name, spell.get("icon", ""), spell.name, ally.name]), true)
 			else:
+				LivingSkills.note_status_applied()
 				gs.add_log(L.fa(L.t("rules.combat.lance_sur_et_dissipe"), [caster.name, spell.get("icon", ""), spell.name, ally.name, ", ".join(removed)]), true)
 			events.append({"type": "popup", "text": L.t("rules.combat.purifie"), "on": "char:" + str(ally.id), "color": Color("8fc8e8")})
 		"sleepGroup":
@@ -623,11 +632,13 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			eff_spell["statusEffect"] = "slow" if boss else "stun"
 			eff_spell["statusLook"] = "" if boss else "sleep"      # l'étourdissement de la berceuse se voit comme un sommeil (Z) pendant toute sa durée
 			eff_spell["statusDuration"] = int(spell.get("statusDuration", 3)) if boss else maxi(1, int(round(int(spell.get("statusDuration", 3)) / 2.0)))
+			eff_spell["statusDuration"] = int(eff_spell.statusDuration) + LivingSkills.status_bonus(gs, caster, spell)
 			gs.add_log(L.fa(L.t("rules.combat.lance_sur_3"), [caster.name, spell.get("icon", ""), spell.name, _mname(target)]), true)
 			var any_hit := false
 			for h in _hit_holders(target, tst, true):      # la berceuse vise tout le groupe : un jet par membre
 				if Statuses.apply_from_spell(gs, eff_spell, h, _mname(target), str(caster.id), false):
 					any_hit = true
+					LivingSkills.note_status_applied()
 			if not any_hit:
 				gs.add_log(L.fa(L.t("rules.combat.resiste_a_la_berceuse"), _mname(target)))
 			events.append({"type": "popup", "text": "💤", "color": Color("b9a0ff")})
@@ -650,6 +661,9 @@ func cast_spell(caster: Dictionary, spell_id: String, ally_id: String = "", free
 			events.append({"type": "popup", "text": "🎶 Vigueur" if not is_ult else str(spell.name), "on": "party", "color": Color("ffd88a")})
 	if is_ult:
 		_ultimate_extras(caster, spell, target)
+	LivingSkills.end_cast(gs, caster, spell, ally, target)
+	if is_ult:
+		pass
 	elif mode != "damage" and mode != "damageGroup":
 		Characters.ult_gain(gs.cfg, caster, "gainSupport")          # un sort de soutien charge aussi la jauge d'ultime
 	_mark_acted(caster, mode != "damage")
@@ -830,11 +844,13 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 	if exec_pct > 0 and not aoe and not bool(target.get("isGroup", false)) and float(st.hp) <= float(st.maxHp) * 0.25:
 		dmg = int(round(dmg * (1.0 + exec_pct / 100.0)))
 	var crit := false
-	var crit_chance := Stats.crit_total(attacker)
+	var crit_chance := Stats.crit_total(attacker) + LivingSkills.crit_bonus(gs, attacker, target)
 	if crit_chance > 0 and GameRng.f("combat") < crit_chance / 100.0:
 		dmg = int(round(dmg * (2.0 + _perk_value(attacker, "critdmg") / 100.0)))
 		crit = true
 
+	dmg = LivingSkills.mod_damage(gs, attacker, spell, target, sh, st, dmg, aoe, resist)
+	LivingSkills.note_hit(gs, attacker, spell, target, dmg, crit, elem)
 	var is_group: bool = bool(target.get("isGroup", false)) and st.has("members")
 	var holders: Array = first_h
 	_dmg_acc += dmg * holders.size()
@@ -875,6 +891,7 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		var before := int(attacker.hp)
 		attacker["hp"] = mini(int(attacker.maxHp), before + heal)
 		if int(attacker.hp) > before:
+			LivingSkills.on_lifesteal(gs, attacker, int(attacker.hp) - before)
 			gs.add_log(L.fa(L.t("rules.combat.draine_pv"), [attacker.name, int(attacker.hp) - before]), true)
 
 	for h in holders:
@@ -899,7 +916,8 @@ func _hit_monster(attacker: Dictionary, target: Dictionary, raw_dmg: int, magic:
 		for h in holders:      # le statut va sur le monstre touché, ou sur chaque membre touché (sort de zone) ; jamais sur le reste du groupe
 			if bool(h.get("alive", true)):
 				var shown := _mname(target) + (" #%d" % (_member_idx(st, h) + 1) if is_group and st.members.size() > 1 else "")
-				Statuses.apply_from_spell(gs, spell, h, shown, str(attacker.id), false)
+				if Statuses.apply_from_spell(gs, spell, h, shown, str(attacker.id), false):
+					LivingSkills.note_status_applied()
 	var bleed := _perk_value(attacker, "bleed")
 	if bleed > 0 and not aoe and not all_dead and dmg > 0 and not holders.is_empty() and bool(holders[0].get("alive", true)) and GameRng.f("combat") * 100.0 < float(bleed):
 		Statuses.give(holders[0], "poison", 3, str(attacker.id))
@@ -1002,7 +1020,7 @@ func _monster_attack_party(def: Dictionary, st: Dictionary, holder: Dictionary =
 ## `outcome` : résultat d'« Instinct de survie » ("" = pas d'instinct, "fail", "ok", "perfect").
 func _basic_hit_tail(def: Dictionary, st: Dictionary, victim: Dictionary, dmg: int, outcome: String) -> void:
 	var raw := dmg
-	dmg = _instinct_damage(victim, dmg, outcome)
+	dmg = LivingSkills.mod_incoming(gs, victim, _instinct_damage(victim, dmg, outcome))
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
 	if dmg > 0:
 		Characters.ult_gain(gs.cfg, victim, "gainTaken")        # un coup reçu charge aussi la jauge d'ultime
@@ -1027,6 +1045,7 @@ func _basic_hit_tail(def: Dictionary, st: Dictionary, victim: Dictionary, dmg: i
 	events.append({"type": "fx", "fx": "hit", "char": str(victim.id)})
 	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)
+	LivingSkills.on_party_hurt(gs, victim, dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
 	events.append({"type": "popup", "text": "-%d" % dmg, "on": "char:" + str(victim.id), "color": Color("ff5050")})
@@ -1081,7 +1100,7 @@ func _instinct_chance(quality: String, p: Dictionary) -> float:
 	var diff := difficulty()
 	var chance := float(INSTINCT_BASE.get(diff, 40.0)) + float(INSTINCT_BONUS.get(quality, 0.0))
 	chance += maxf(0.0, float(victim.get("effCon", victim.get("con", 10))) - 10.0)
-	chance += float(_perk_value(victim, "instinct"))
+	chance += float(_perk_value(victim, "instinct")) + LivingSkills.instinct_bonus(gs, victim)
 	var over := float(int(p.dmg) - int(victim.hp))
 	if over > 0.5 * float(victim.maxHp):
 		chance -= 15.0         # coup très dur : bien au-delà de ce qui restait de PV
@@ -1118,6 +1137,7 @@ func resolve_instinct(quality: String) -> void:
 			gs.add_log(L.fa(L.t("rules.combat.instinct_rate") if quality != "none" else L.t("rules.combat.instinct_pas_le_temps"), victim.name))
 			events.append({"type": "popup", "text": L.t("rules.combat.instinct_popup_rate" if quality != "none" else "rules.combat.instinct_popup_none"), "on": on, "color": Color("8fc8e8")})
 	events.append({"type": "instinct_result", "char": str(victim.id), "outcome": outcome})
+	LivingSkills.note_instinct(gs, victim, outcome)
 	(p.cont as Callable).call(outcome, int(p.dmg))
 	if outcome != "fail" and int(victim.hp) > 0:
 		Statuses.give(victim, "slow", 2, "")           # « Hébété » : ralenti pendant 2 tours, l'instinct a un prix
@@ -1195,7 +1215,7 @@ func _monster_use_ability(def: Dictionary, st: Dictionary, spell: Dictionary, po
 ## Suite d'une capacité de monstre (voir _basic_hit_tail pour `outcome`).
 func _ability_hit_tail(def: Dictionary, st: Dictionary, spell: Dictionary, victim: Dictionary, dmg: int, outcome: String) -> void:
 	var raw := dmg
-	dmg = _instinct_damage(victim, dmg, outcome)
+	dmg = LivingSkills.mod_incoming(gs, victim, _instinct_damage(victim, dmg, outcome))
 	victim["hp"] = maxi(0, int(victim.hp) - dmg)
 	if dmg > 0:
 		Characters.ult_gain(gs.cfg, victim, "gainTaken")        # un coup reçu charge aussi la jauge d'ultime
@@ -1217,6 +1237,7 @@ func _ability_hit_tail(def: Dictionary, st: Dictionary, spell: Dictionary, victi
 	events.append({"type": "fx", "fx": "hit", "char": str(victim.id)})
 	events.append({"type": "mon_attack", "id": str(def.id)})      # animation du sprite du monstre (purement visuelle)
 	gs.bump(victim.id, "damageTaken", dmg)
+	LivingSkills.on_party_hurt(gs, victim, dmg)
 	if int(victim.hp) <= 0:
 		gs.bump(victim.id, "knockdowns")
 	events.append({"type": "popup", "text": "-%d" % dmg, "on": "char:" + str(victim.id), "color": Color("ff5050")})
@@ -1254,6 +1275,7 @@ func _switch_active_if_down() -> void:
 			gs.active_char_id = str(alive[0].id)
 
 func tick_char(c: Dictionary) -> void:
+	LivingSkills.on_turn(gs, c)
 	if int(c.hp) <= 0 or (c.get("statusEffects", []) as Array).is_empty():
 		return
 	var remaining: Array = []
@@ -1359,6 +1381,7 @@ func _handle_death(def: Dictionary, st: Dictionary) -> void:
 		gold_pct += _perk_value(c, "gold")
 	var gold := int(round(int(def.get("goldReward", 0)) * group_mult * (1.0 + gold_pct / 100.0)))
 	_note_summary(def, xp, gold)
+	LivingSkills.note_kill(gs, def, xp)
 	_split_xp(st, xp)
 	var tally: int = st.members.size() if def.get("isGroup", false) and st.get("members") is Array else 1
 	for _i in tally:
@@ -1461,6 +1484,7 @@ func flee() -> Vector2i:
 	for c in gs.alive_party():
 		c["stamina"] = int(floor(int(c.get("stamina", 0)) * 0.5))
 	gs.add_log(L.t("rules.combat.le_groupe_prend_la_fuite"))
+	LivingSkills.settle(gs, "flee")
 	gauges.clear()
 	acted.clear()
 	_state.clear()

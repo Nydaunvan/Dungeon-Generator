@@ -8,7 +8,7 @@ extends RefCounted
 ## (elle modifie le dictionnaire {config, save, …} sur place et renvoie la liste des changements en clair).
 ## `tools/check_saves.tscn` rejoue ces migrations sur une sauvegarde d'ancienne version.
 
-const SCHEMA := 19
+const SCHEMA := 20
 
 ## Anciennes icônes d'éléments fournis par le jeu, remplacées : {id de sort : [ancienne icône, nouvelle icône]}.
 const SPELL_ICON_CHANGES := {"spell_bard2": ["🎶", "@icon:spell_sonicnote"]}
@@ -74,6 +74,8 @@ static func migrate(d: Dictionary, defaults: Dictionary) -> Array[String]:
 				notes.append_array(_v17_to_v18(d))
 			18:
 				notes.append_array(_v18_to_v19(d, defaults))
+			19:
+				notes.append_array(_v19_to_v20(d))
 		v += 1
 	d["schema"] = SCHEMA
 	return notes
@@ -492,6 +494,14 @@ static func _v17_to_v18(d: Dictionary) -> Array[String]:
 		n += _crown_fix(inv)
 		n += _crown_worn((sv as Dictionary).get("party", []), inv)
 	return ["couronne d'or sertie : %d objet(s) passé(s) en casque" % n] if n > 0 else []
+
+## v19 → v20 : compétences vivantes. Une ancienne sauvegarde n'a pas d'état « living » : il naît vide à la première utilisation (rien n'est inventé
+## rétroactivement, les compétences jouent exactement comme avant). Un état présent mais d'un autre format est écarté sans toucher au reste.
+static func _v19_to_v20(d: Dictionary) -> Array[String]:
+	var st = d.get("save")
+	if st is Dictionary and (st as Dictionary).has("living") and not ((st as Dictionary).living is Dictionary):
+		st["living"] = {}
+	return []
 
 ## v18 → v19 : techniques ultimes (7e sort des classes évoluées). Les 14 sorts ultimes manquants et le lien « ultimateSpellId » des classes évoluées
 ## sont ajoutés, ainsi que les réglages de la jauge (ultimateSettings). Un donjon « custom » garde ses classes et ses sorts tels quels ; un sort ou un lien

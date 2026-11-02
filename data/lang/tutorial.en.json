@@ -22,7 +22,7 @@
  {
   "id": "spells",
   "label": "4. Spells / Abilities",
-  "text": "[font_size=20][color=#e8b45c]4. Spells / Abilities tab[/color][/font_size]\n\nCreate the [b]spells and special abilities[/b] usable in combat: damage, healing, status effect, matching animation. Set each one's [b]stamina cost[/b] and [b]cooldown[/b] — the more powerful a spell, the more it should cost and/or the slower it should recharge.\n\nSwitch on [b]Ultimate technique[/b] for a spell to make it the 7th spell of an evolved class: no stamina or cooldown, it needs a full gauge (set in Game rules › Combat), with extra effects (HP sacrifice, heal, shield, raise, execution, multiple strikes, statuses)."
+  "text": "[font_size=20][color=#e8b45c]4. Spells / Abilities tab[/color][/font_size]\n\nCreate the [b]spells and special abilities[/b] usable in combat: damage, healing, status effect, matching animation. Set each one's [b]stamina cost[/b] and [b]cooldown[/b] — the more powerful a spell, the more it should cost and/or the slower it should recharge.\n\nSwitch on [b]Ultimate technique[/b] for a spell to make it the 7th spell of an evolved class: no stamina or cooldown, it needs a full gauge (set in Game rules › Combat), with extra effects (HP sacrifice, heal, shield, raise, execution, multiple strikes, statuses).\n\nEvery spell you create automatically gets a [b]living skill[/b] profile (temperament and possible evolutions) from its mode and school: nothing to set, and the spell id must stay stable so that games in progress keep its memories."
  },
  {
   "id": "items",

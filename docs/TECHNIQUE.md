@@ -662,3 +662,14 @@ Huitième thème, **hors générateur** : absent de `DungeonGenerator.THEMES` (l
 - **Icônes manquantes** : les lignes du journal contiennent des jetons `@icon:identifiant` (icônes illustrées de sorts, talents, classes : `spell.get("icon")`, `cls.icon`…) qui s'affichaient en texte brut ou disparaissaient. `LogPanel._add_line` les remplace par une petite image dans la ligne (`IconResolver.texture`, hauteur 1,35 × la police, centrée) ou, sans illustration, par l'emoji de repli (`AdminUtil.icon_text_fallback`). Les emojis ordinaires (💥 😡 🎁…) restent gérés par la police.
 - **Défilement** : CHAQUE nouvel événement ramène le journal tout en bas, même si le joueur était remonté (`_follow = true`, défilement fluide interrompu) ; le suivi continue pendant que la ligne s'écrit. Cela remplace la règle précédente (« ne pas ramener en bas ») ; la molette et le glisser restent libres entre deux événements. `tools/check_carnet.tscn` vérifie le retour en bas ; `tools/shot_carnet.tscn lines=icones` montre les icônes.
 
+
+## Compétences vivantes (branche migration/living-skills)
+
+Règles complètes, formules, tableau des évolutions et risques d'équilibrage : `docs/LIVING_SKILLS.md` ; matrice d'audit des 297 compétences : `docs/LIVING_SKILLS_MATRIX.md`.
+
+- **Fichiers** : `scripts/rules/living_catalog.gd` (profil calculé d'après les données : famille, traits de naissance, trois évolutions), `scripts/rules/living_skills.gd` (moteur), `scripts/ui/living_modal.gd` (fiche), onglet « 🕯 Vie des compétences » et bouton 🕯 des cartes de sorts dans `party_modal.gd`.
+- **État** : `GameState.living` (champ sauvegardé), `SaveMigrations` schéma 20 (`_v19_to_v20`) ; une ancienne sauvegarde se charge avec `living = {}`.
+- **Activation** : `Settings.living_skills` (Paramètres › Graphismes › Compétences vivantes, vrai par défaut) ; toujours inactif en partie classée (`run_seed != ""`). Inactif = tous les crochets de `combat.gd` rendent leur entrée inchangée.
+- **Déterminisme** : aucune consommation de `GameRng` ; variantes de texte par hachage de l'identifiant ; gains réglés en fin de combat (`end_combat_reset`, fuite).
+- **Carnet** : les manifestations sont des lignes entre guillemets (`LivingSkills.MARK`), au plus 2 par combat ; ne bloquent jamais une action.
+- **Outils** : `tools/check_living_skills.tscn` (15 contrôles), `tools/living_matrix.tscn` (régénère la matrice), `tools/shot_living.tscn` (capture de la fiche).
