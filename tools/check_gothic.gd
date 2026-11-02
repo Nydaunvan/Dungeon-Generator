@@ -320,14 +320,14 @@ func _check_atlas_test(fails: Array) -> void:
 		fails.append("donjon Atlas Noir : aucun niveau intérieur")
 
 
-## Effets des monstres Atlas Noir : liseré froid seulement dans les thèmes qui le déclarent (gothic).
+## Effets des monstres Atlas Noir : la lumière de contour froide est éteinte partout (elle formait un halo à l'intérieur du liseré) ; le réglage reste déclaré en gothic.
 func _check_sprite_fx(fails: Array) -> void:
-	if VisualFx.light_k("gothic", "sprite_rim_k", 0.0) <= 0.0:
-		fails.append("gothic doit déclarer sprite_rim_k")
+	if not VisualFx.THEME_LIGHT["gothic"].has("sprite_rim_k") or VisualFx.light_k("gothic", "sprite_rim_k", 1.0) != 0.0:
+		fails.append("gothic doit déclarer sprite_rim_k = 0 (liseré froid éteint)")
 	for th in ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]:
 		if VisualFx.light_k(th, "sprite_rim_k", 0.0) != 0.0:
 			fails.append("le thème %s ne doit pas avoir de liseré de sprite" % th)
-	print("effets des sprites : liseré réservé au gothic")
+	print("effets des sprites : liseré froid éteint")
 
 ## Fumée des torches : plus discrète, plus lente et plus sombre dans le gothic, valeurs d'origine ailleurs, et un rig réutilisé d'un thème à l'autre
 ## retrouve exactement les réglages du thème servi.
