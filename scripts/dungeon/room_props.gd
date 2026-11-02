@@ -280,6 +280,7 @@ static func _cellier(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3)
 		_barrel(P, vw + Vector3(0.3, 0, 0.7))
 
 static func _autel(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
+	var gothic := str(ctx.get("theme", "")) == "gothic"
 	var slots := _slots(ctx, true)
 	for s in _take(P, slots, _count(ctx, slots, 0.35, 5)):
 		var d: Vector2i = s.d
@@ -288,20 +289,34 @@ static func _autel(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -
 		_model(P, "sconce", o, yaw)
 		_flame(P, _at(o, yaw, Vector3(0, 0.3, 0.26)), 0.5)
 	if feature:
-		_model(P, "altar", vw)
+		if gothic:
+			_model(P, "altar_g", vw)
+			for fp in PropGothic.ALTAR_FLAMES:
+				_flame(P, vw + fp, 0.15 + 0.03 * float(_var(vw + fp, 3)))
+		else:
+			_model(P, "altar", vw)
 		for sx in [-1.05, 1.05]:
 			for sz in [-1.05, 1.05]:
-				var cp := vw + Vector3(sx, 0.0, sz)
-				_model(P, "candelabra", cp)
-				for fp in PropMeshes.CANDELABRA_FLAMES:
-					_flame(P, cp + fp + Vector3(0, 0.03, 0), 0.4)
+				_candelabrum(P, vw + Vector3(sx, 0.0, sz), gothic)
 	else:
 		var corners := _corners(ctx)
 		for i in mini(2, corners.size()):
-			var cp := _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.45)
-			_model(P, "candelabra", cp)
-			for fp in PropMeshes.CANDELABRA_FLAMES:
-				_flame(P, cp + fp + Vector3(0, 0.03, 0), 0.4)
+			_candelabrum(P, _corner(corners[i].c, corners[i].d1, corners[i].d2, 0.45), gothic)
+
+## Candélabre au sol : en gothic, fer forgé à trois variantes (silhouette, nombre et hauteur des bougies) choisies d'après la position, flammes de tailles légèrement différentes.
+static func _candelabrum(P: Dictionary, cp: Vector3, gothic: bool) -> void:
+	if not gothic:
+		_model(P, "candelabra", cp)
+		for fp in PropMeshes.CANDELABRA_FLAMES:
+			_flame(P, cp + fp + Vector3(0, 0.03, 0), 0.4)
+		return
+	var v := _var(cp, 3)
+	_model(P, "candelabra_g%d" % v, cp, float(_var(cp, 8)) * TAU / 8.0)
+	var yaw := float(_var(cp, 8)) * TAU / 8.0
+	var i := 0
+	for fp in PropGothic.flames(v):
+		_flame(P, cp + Basis(Vector3.UP, yaw) * (fp as Vector3), 0.13 + 0.03 * float((_var(cp, 5) + i) % 3))
+		i += 1
 
 static func _ruine(P: Dictionary, ctx: Dictionary, feature: bool, vw: Vector3) -> void:
 	var rng: RandomNumberGenerator = ctx.rng

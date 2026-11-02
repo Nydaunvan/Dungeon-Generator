@@ -10,6 +10,7 @@ extends RefCounted
 const MATTE := 0
 const METAL := 1
 const GLOW := 2
+const SURF_STONE := 3      # pierre PBR du thème gothic (modèles PropGothic seulement ; ailleurs : matériau MATTE)
 
 const WOOD := Color("7a5430")
 const DARK_WOOD := Color("4a3219")
@@ -33,13 +34,13 @@ static var _mats: Array = []
 ## Constructeur de maillage (primitives lissées ou facettées, couleurs de sommets, transformation courante).
 class B:
 	var st: Array = []
-	var cnt: Array = [0, 0, 0]
+	var cnt: Array = [0, 0, 0, 0]
 	var xf := Transform3D.IDENTITY
 	var m := 0
 	var ao := true
 
 	func _init() -> void:
-		for i in 3:
+		for i in 4:
 			var s := SurfaceTool.new()
 			s.begin(Mesh.PRIMITIVE_TRIANGLES)
 			st.append(s)
@@ -223,7 +224,7 @@ class B:
 
 	func commit() -> ArrayMesh:
 		var mesh := ArrayMesh.new()
-		for i in 3:
+		for i in 4:
 			if cnt[i] == 0:
 				continue
 			(st[i] as SurfaceTool).commit(mesh)
@@ -266,7 +267,31 @@ static func _mat(i: int) -> Material:
 		mg.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mg.cull_mode = BaseMaterial3D.CULL_DISABLED
 		_mats = [mm, mt, mg]
+	if i == SURF_STONE:
+		return _stone_mat()
 	return _mats[i]
+
+static var _stone: Material
+
+## Pierre des modèles gothic : le matériau PBR des murs du thème (couleur, relief, rugosité), en projection triplanaire à l'échelle de l'objet,
+## multiplié par la couleur de sommet (variation d'une pierre à l'autre). Sans jeu de textures gothic, repli sur le matériau mat ordinaire.
+static func _stone_mat() -> Material:
+	if _stone != null:
+		return _stone
+	var wall := ThemeMaterials.for_theme("gothic").get("wall") as StandardMaterial3D
+	if wall == null:
+		_mat(0)
+		_stone = _mats[0]
+		return _stone
+	var m := wall.duplicate() as StandardMaterial3D
+	m.vertex_color_use_as_albedo = true
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = false
+	m.uv1_scale = Vector3(0.55, 0.55, 0.55)
+	m.uv1_offset = Vector3.ZERO
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_stone = m
+	return _stone
 
 # ------------------------------------------------------------------ accès
 
@@ -292,6 +317,8 @@ static func get_mesh(name: String) -> ArrayMesh:
 		"shield_wall": _shield_wall(b, v)
 		"dummy": _dummy(b)
 		"altar": _altar(b)
+		"altar_g": PropGothic.altar(b)
+		"candelabra_g": PropGothic.candelabra(b, v)
 		"candelabra": _candelabra(b)
 		"sconce": _sconce(b)
 		"rock": _rock(b, v)
@@ -325,7 +352,7 @@ static func get_mesh(name: String) -> ArrayMesh:
 	_cache[name] = mesh
 	return mesh
 
-const MODELS := ["barrel", "crate", "sack", "candle", "brazier_iron", "brazier_gold", "bookshelf", "weapon_rack", "shield_wall", "dummy", "altar", "candelabra", "sconce", "rock", "rubble", "column_stump", "column_fallen", "table_long", "table_small", "bench", "stool", "tableware", "fireplace", "stalagmite", "stalactite", "mushrooms", "gold_pile", "gold_hoard", "coins", "gold_bars", "vase", "bones", "skull", "wall_chains", "throne", "stall"]
+const MODELS := ["barrel", "crate", "sack", "candle", "brazier_iron", "brazier_gold", "bookshelf", "weapon_rack", "shield_wall", "dummy", "altar", "altar_g", "candelabra", "candelabra_g", "sconce", "rock", "rubble", "column_stump", "column_fallen", "table_long", "table_small", "bench", "stool", "tableware", "fireplace", "stalagmite", "stalactite", "mushrooms", "gold_pile", "gold_hoard", "coins", "gold_bars", "vase", "bones", "skull", "wall_chains", "throne", "stall"]
 
 # ------------------------------------------------------------------ modèles
 
