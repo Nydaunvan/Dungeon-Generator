@@ -1,37 +1,57 @@
 class_name LogPanel
 extends Control
-## Carnet : journal de partie (suit GameState.log_lines) sur un parchemin dessiné dans le rectangle du panneau — rien ne le dépasse (marge d'ombre,
-## bords irréguliers et coins roulés sont calculés dedans, et le contrôle rogne son contenu). Titre « JOURNAL DES ÉVÉNEMENTS » écrit sur le papier.
+## Carnet : journal de partie (suit GameState.log_lines) sur le parchemin `assets/ui/journal_parchment.png` (fond graphique SEUL : le titre, les messages et la barre de
+## défilement sont dessinés ici). L'image est découpée en 5 × 3 tranches : les coins, le rubis et l'ornement du bas gardent leur forme (échelle uniforme),
+## seules les parties unies (bords, papier, filet) s'étirent, donc le rectangle du panneau ne change jamais. Rien ne le dépasse (le contrôle rogne son contenu).
+## Titre « JOURNAL DES ÉVÉNEMENTS » au-dessus du filet et du rubis. Cliquer sur le rubis ouvre l'historique complet.
 ## Les nouveaux événements s'écrivent caractère par caractère (RichTextLabel.visible_characters) ; l'historique complet reste dans le texte, dans l'ordre.
 ## Une file d'attente absorbe les rafales : plus il y a de retard, plus l'écriture accélère, jusqu'à tout afficher d'un coup. Purement visuel :
 ## ne touche ni à la journalisation, ni au jeu, ni aux sauvegardes.
 
 signal history_pressed
 
-const INK := "#2f2112"
-const INK_HIT := "#8a1c12"
-const INK_GOLD := "#85600f"
-const TITLE_COL := Color("3b2a15")
-const MS_PER_CHAR := 0.020         # 20 ms par caractère (15 à 25 demandés)
+const INK := "#34271C"             # texte normal
+const INK_HIT := "#8D3028"         # dégâts et pièges
+const INK_GOLD := "#936719"        # XP et récompenses
+const TITLE_COL := Color("38271B")
+const TEX := preload("res://assets/ui/journal_parchment.png")
+## Dimensions et repères de l'image (pixels de la source, 1437 × 1094).
+const SW := 1437.0
+const SH := 1094.0
+const XS := [0.0, 240.0, 650.0, 790.0, 1197.0, 1437.0]      # colonnes : coin | bord étirable | rubis | bord étirable | coin
+const YS := [0.0, 240.0, 854.0, 1094.0]                        # lignes : haut (filet et rubis) | milieu | bas (ornement)
+const FIXED_X := [true, false, true, false, true]               # colonnes à l'échelle uniforme (les autres s'étirent)
+const FIXED_Y := [true, false, true]
+const TXT_L := 168.0               # zone du texte, en pixels de la source : sous le filet et le rubis, dans le papier clair
+const TXT_R := 1212.0
+const TXT_T := 238.0
+const TXT_B := 930.0
+const BAR_X := 1262.0              # axe de la barre de défilement : marge droite du papier, entre le texte et le cadre doré
+const BAR_T := 244.0
+const BAR_B := 846.0
+const TITLE_TOP := 96.0            # le titre tient entre le cadre du haut et le sommet du rubis
+const TITLE_BASE := 142.0
+const TITLE_X0 := 262.0            # largeur disponible du titre, entre les ornements d'angle
+const TITLE_X1 := 1175.0
+const RUBY := Rect2(660.0, 146.0, 120.0, 74.0)                 # rubis et ses pointes (zone cliquable : historique)
+const MS_PER_CHAR_DEFAULT := 0.020
 const BACKLOG_FAST := 90           # au-delà de ce retard (en caractères), l'écriture accélère
 const BACKLOG_INSTANT := 520       # au-delà, tout s'affiche d'un coup
 
 var text: RichTextLabel
-var _poly := PackedVector2Array()
-var _nrm := PackedVector2Array()
-var _fibers: Array = []
-var _m := 8.0                      # marge intérieure réservée aux bords irréguliers et à l'ombre
+var ms_per_char := MS_PER_CHAR_DEFAULT      # secondes par caractère (15 à 25 ms demandés), réglable
+var _m := 0.0                      # échelle uniforme de l'image (pixels d'écran par pixel de la source)
+var _pieces: Array = []            # [source Rect2, destination Rect2] des 15 tranches
 var _title_h := 0.0
 var _title_y := 0.0                # ligne de base du titre
-var _rule_y := 0.0                 # filet décoratif sous le titre : la zone du titre s'arrête ici, le texte commence plus bas
-var _hist: Button
-var _paper: NoiseTexture2D
-var _stain: NoiseTexture2D
+var _rule_y := 0.0                 # filet décoratif de l'image : le texte commence plus bas
+var _ruby := Rect2()               # rubis (clic : historique complet)
+var _ruby_btn: Button
+var _ruby_hot := false
 var _shown := 0
 var _target := 0
 var _acc := 0.0
 var _gold_re := RegEx.new()
-var _mottle: NoiseTexture2D
 var _vs: VScrollBar                # barre du RichTextLabel : sans largeur ni dessin propre, c'est LogPanel qui dessine le curseur dans la marge
 var _goal := 0.0                   # position de défilement visée (molette fluide)
 var _smoothing := false
@@ -52,9 +72,7 @@ func setup(gs: GameState) -> void:
 	clip_contents = true
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	_gold_re.compile("(?i)\\bxp\\b|pièces? d.or|\\bgold\\b|\\bor\\b")
-	_paper = _noise_tex(0.016, 4, 3, [[0.0, Color("d8c79c")], [0.5, Color("e6d8b2")], [1.0, Color("f0e5c6")]])
-	_mottle = _noise_tex(0.011, 3, 9, [[0.0, Color(0.36, 0.24, 0.09, 0.2)], [0.45, Color(0.36, 0.24, 0.09, 0.0)], [0.7, Color(1.0, 0.97, 0.85, 0.0)], [1.0, Color(1.0, 0.97, 0.85, 0.22)]])
-	_stain = _noise_tex(0.006, 3, 5, [[0.0, Color(0.45, 0.30, 0.12, 0.0)], [0.55, Color(0.45, 0.30, 0.12, 0.0)], [1.0, Color(0.42, 0.27, 0.10, 0.34)]])
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC      # l'image (1437 px) s'affiche environ 5 fois plus petite : mipmaps
 	text = RichTextLabel.new()
 	text.bbcode_enabled = true
 	text.scroll_following = false      # suivi géré ici : il s'arrête quand le joueur remonte et reprend quand il revient en bas
@@ -86,13 +104,21 @@ func setup(gs: GameState) -> void:
 	_bar_style = StyleBoxFlat.new()
 	_bar_style.set_corner_radius_all(2)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_hist = Button.new()
-	_hist.icon = Atlas.icon("scroll", 16, Color("5a4020"), 1.7)
-	_hist.flat = true
-	_hist.focus_mode = Control.FOCUS_NONE
-	_hist.tooltip_text = L.t("ui.game_layout.historique_complet_du_journal")
-	_hist.pressed.connect(func(): history_pressed.emit())
-	add_child(_hist)
+	_ruby_btn = Button.new()      # zone cliquable transparente sur le rubis
+	_ruby_btn.flat = true
+	_ruby_btn.focus_mode = Control.FOCUS_NONE
+	_ruby_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_ruby_btn.tooltip_text = L.t("ui.game_layout.historique_complet_du_journal")
+	for n in ["normal", "hover", "pressed", "focus", "disabled"]:
+		_ruby_btn.add_theme_stylebox_override(n, StyleBoxEmpty.new())
+	_ruby_btn.pressed.connect(func(): history_pressed.emit())
+	_ruby_btn.mouse_entered.connect(func():
+		_ruby_hot = true
+		queue_redraw())
+	_ruby_btn.mouse_exited.connect(func():
+		_ruby_hot = false
+		queue_redraw())
+	add_child(_ruby_btn)
 	for l in gs.log_lines:
 		_add_line(l, false, true)
 	_shown = _target
@@ -100,23 +126,6 @@ func setup(gs: GameState) -> void:
 	gs.log_added.connect(func(line: String, hit: bool): _add_line(line, hit, false))
 	set_process(false)
 	_rebuild()
-
-static func _noise_tex(freq: float, octaves: int, seed_: int, stops: Array) -> NoiseTexture2D:
-	var n := FastNoiseLite.new()
-	n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	n.frequency = freq
-	n.fractal_octaves = octaves
-	n.seed = seed_
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array(stops.map(func(s): return s[0]))
-	g.colors = PackedColorArray(stops.map(func(s): return s[1]))
-	var t := NoiseTexture2D.new()
-	t.noise = n
-	t.width = 256
-	t.height = 256
-	t.seamless = true
-	t.color_ramp = g
-	return t
 
 # ------------------------------------------------------------------ événements et écriture progressive
 
@@ -158,8 +167,8 @@ func _process(dt: float) -> void:
 			_shown = _target
 		else:
 			_acc += dt
-			var n := int(_acc / MS_PER_CHAR)
-			_acc -= float(n) * MS_PER_CHAR
+			var n := int(_acc / ms_per_char)
+			_acc -= float(n) * ms_per_char
 			_shown = mini(_target, _shown + n * (1 + backlog / BACKLOG_FAST))      # file d'attente : retard important, écriture plus rapide
 		_apply_visible()
 		busy = _shown < _target
@@ -240,143 +249,120 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		_rebuild()
 
-## Contour irrégulier du papier (à `_m` du bord, déformé d'au plus 30 % de `_m`), normales intérieures, fibres, puis place du titre et du texte.
+## Correspondance entre un repère de la source et l'écran : les colonnes et lignes « fixes » gardent l'échelle uniforme `_m`, les autres absorbent le reste.
+func _map(src: float, edges: Array, fixed: Array, total_dst: float, k: float, sstretch: float) -> float:
+	var acc := 0.0
+	for i in fixed.size():
+		var a: float = edges[i]
+		var b: float = edges[i + 1]
+		var sc: float = k if fixed[i] else sstretch
+		if src <= b:
+			return acc + (src - a) * sc
+		acc += (b - a) * sc
+	return total_dst
+
+## Découpe l'image en 5 × 3 tranches, place le titre, le texte, la barre de défilement et la zone cliquable du rubis.
 func _rebuild() -> void:
 	var s := size
-	if s.x < 40.0 or s.y < 40.0 or text == null:
-		_poly = PackedVector2Array()
+	if s.x < 60.0 or s.y < 60.0 or text == null:
+		_pieces.clear()
 		return
-	_m = clampf(minf(s.x, s.y) * 0.05, 6.0, 14.0)
-	var a := _m * 0.3
-	var nz := FastNoiseLite.new()
-	nz.seed = 11
-	nz.frequency = 0.05
-	_poly = PackedVector2Array()
-	_nrm = PackedVector2Array()
-	var x0 := _m
-	var y0 := _m
-	var x1 := s.x - _m
-	var y1 := s.y - _m
-	for edge in [[Vector2(x0, y0), Vector2(x1, y0), Vector2(0, 1)], [Vector2(x1, y0), Vector2(x1, y1), Vector2(-1, 0)],
-			[Vector2(x1, y1), Vector2(x0, y1), Vector2(0, -1)], [Vector2(x0, y1), Vector2(x0, y0), Vector2(1, 0)]]:
-		var p0: Vector2 = edge[0]
-		var p1: Vector2 = edge[1]
-		var n: Vector2 = edge[2]
-		var steps := maxi(4, roundi(p0.distance_to(p1) / 9.0))
-		for i in steps:
-			var p := p0.lerp(p1, float(i) / float(steps))
-			_poly.append(p + n * nz.get_noise_2d(p.x, p.y) * a)
-			_nrm.append(n)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	_fibers.clear()
-	var k := _m / 8.0
-	for i in 110:
-		var c := Vector2(rng.randf_range(x0 + a + 3.0, x1 - a - 3.0), rng.randf_range(y0 + a + 3.0, y1 - a - 3.0))
-		var ang := rng.randf() * TAU
-		var d := Vector2(cos(ang), sin(ang)) * rng.randf_range(5.0, 16.0) * k
-		_fibers.append([c, c + d, rng.randf_range(0.05, 0.12)])
-	# zone du titre (fixe, hors défilement) : marge en haut, titre centré, filet décoratif, puis un vrai blanc avant le premier événement
-	var tw := s.x - 2.0 * (_m + 12.0)
-	_title_h = clampf(s.y * 0.075, 9.0, UiMetrics.rem(0.8))
+	var k := minf(s.x / SW, s.y / SH)
+	_m = k
+	var fx := 0.0      # largeur source des colonnes étirables / hauteur des lignes étirables
+	for i in FIXED_X.size():
+		if not FIXED_X[i]:
+			fx += XS[i + 1] - XS[i]
+	var fy := 0.0
+	for i in FIXED_Y.size():
+		if not FIXED_Y[i]:
+			fy += YS[i + 1] - YS[i]
+	var fixed_w := SW - fx
+	var fixed_h := SH - fy
+	var sx := (s.x - fixed_w * k) / fx
+	var sy := (s.y - fixed_h * k) / fy
+	_pieces.clear()
+	for j in 3:
+		for i in 5:
+			var src := Rect2(XS[i], YS[j], XS[i + 1] - XS[i], YS[j + 1] - YS[j])
+			var x0 := _map(XS[i], XS, FIXED_X, s.x, k, sx)
+			var x1 := _map(XS[i + 1], XS, FIXED_X, s.x, k, sx)
+			var y0 := _map(YS[j], YS, FIXED_Y, s.y, k, sy)
+			var y1 := _map(YS[j + 1], YS, FIXED_Y, s.y, k, sy)
+			# léger recouvrement des tranches voisines : pas de fil clair entre deux morceaux
+			_pieces.append([src, Rect2(x0, y0, x1 - x0 + (0.5 if i < 4 else 0.0), y1 - y0 + (0.5 if j < 2 else 0.0))])
+	var mx := func(v: float) -> float: return _map(v, XS, FIXED_X, s.x, k, sx)
+	var my := func(v: float) -> float: return _map(v, YS, FIXED_Y, s.y, k, sy)
+	# titre : tient entre le cadre du haut et le sommet du rubis, dans la largeur laissée libre entre les ornements d'angle
+	var tw: float = mx.call(TITLE_X1) - mx.call(TITLE_X0)
+	_title_y = my.call(TITLE_BASE)
+	_title_h = floorf((my.call(TITLE_BASE) - my.call(TITLE_TOP)) / 0.74)
 	var f := Atlas.title_font(true, 1)
-	while _title_h > 8.0 and f.get_string_size(_title(), HORIZONTAL_ALIGNMENT_LEFT, -1, int(_title_h)).x > tw * 0.8:
+	while _title_h > 7.0 and f.get_string_size(_title(), HORIZONTAL_ALIGNMENT_LEFT, -1, int(_title_h)).x > tw:
 		_title_h -= 1.0
-	_title_y = _m + a + maxf(s.y * 0.03, 6.0) + _title_h
-	_rule_y = _title_y + _title_h * 0.55
-	var top := _rule_y + maxf(s.y * 0.035, 7.0)
-	var xm := maxf(_m * 2.9, _m + a + 14.0)      # marge gauche : laisse la place du symbole et reste hors des coins roulés
-	var ym := _m + a + maxf(s.y * 0.04, 7.0)    # marge basse : la dernière ligne ne touche pas le bord irrégulier
-	text.position = Vector2(xm, top)
-	text.size = Vector2(maxf(10.0, s.x - 2.0 * xm), maxf(10.0, s.y - top - ym))
-	var gx := s.x - xm + (xm - _m - a - 4.0 * k) * 0.5 - 1.5      # couloir du curseur : au milieu de la marge droite
-	_gutter = Rect2(gx, top + 2.0, 3.0, maxf(10.0, s.y - top - ym - 4.0))
-	_hist.size = Vector2(22, 22)
-	_hist.position = Vector2(s.x - _m - a - 24.0, _m + a + 2.0)
-	_hist.visible = s.x > 150.0
+	_rule_y = my.call(183.0)
+	var tl: float = mx.call(TXT_L)
+	var tt: float = my.call(TXT_T)
+	text.position = Vector2(tl, tt)
+	text.size = Vector2(maxf(10.0, mx.call(TXT_R) - tl), maxf(10.0, my.call(TXT_B) - tt))
+	var bx: float = mx.call(BAR_X)
+	var bt: float = my.call(BAR_T)
+	_gutter = Rect2(bx - maxf(2.0, 20.0 * k), bt, maxf(4.0, 40.0 * k), maxf(10.0, my.call(BAR_B) - bt))
+	var r0 := Vector2(mx.call(RUBY.position.x), my.call(RUBY.position.y))
+	_ruby = Rect2(r0, Vector2(mx.call(RUBY.end.x), my.call(RUBY.end.y)) - r0)
+	_ruby_btn.position = _ruby.position
+	_ruby_btn.size = _ruby.size
 	queue_redraw()
 
 func _title() -> String:
 	return L.t("ui.atlas.journal").to_upper()
 
-func _inset(d: float) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	for i in _poly.size():
-		out.append(_poly[i] + _nrm[i] * d)
-	return out
-
-func _tex_poly(pts: PackedVector2Array, tint: Color, tex: Texture2D, scale_px: float = 300.0) -> void:
-	var cols := PackedColorArray()
-	var uvs := PackedVector2Array()
-	for p in pts:
-		cols.append(tint.lerp(tint.darkened(0.1), clampf(p.y / maxf(1.0, size.y), 0.0, 1.0)))      # papier un peu plus sombre vers le bas
-		uvs.append(p / scale_px)
-	draw_polygon(pts, cols, uvs, tex)
-
 func _draw() -> void:
-	if _poly.size() < 8:
+	if _pieces.is_empty():
 		return
-	var k := _m / 8.0
-	var off := Vector2(_m * 0.32, _m * 0.38)
-	var sh := PackedVector2Array()
-	for p in _poly:
-		sh.append(p + off)
-	draw_colored_polygon(sh, Color(0.05, 0.03, 0.01, 0.42))      # ombre portée : à l'intérieur du rectangle (déformation + décalage < marge)
-	_tex_poly(_poly, Color(0.66, 0.5, 0.3), _paper)             # bord vieilli, plus brun
-	_tex_poly(_inset(1.6 * k), Color(0.82, 0.68, 0.46), _paper)
-	var inner := _inset(3.6 * k)
-	_tex_poly(inner, Color(1, 1, 1), _paper)
-	_tex_poly(inner, Color(1, 1, 1, 0.7), _stain, 420.0)        # taches de vieillissement
-	_tex_poly(inner, Color(1, 1, 1, 0.85), _mottle, 520.0)      # nuages clairs et sombres : le centre du papier n'est plus uniforme
-	for f in _fibers:
-		draw_line(f[0], f[1], Color(0.4, 0.28, 0.12, f[2]), 1.0, true)
-	_corners(k)
-	_title_draw(k)
+	for pc in _pieces:
+		draw_texture_rect_region(TEX, pc[1], pc[0])
+	if _ruby_hot:      # le rubis s'allume au survol : on peut cliquer dessus pour ouvrir l'historique
+		var c := _ruby.get_center() + Vector2(0.0, _ruby.size.y * 0.1)
+		for i in 5:
+			draw_circle(c, _ruby.size.y * (0.55 - 0.08 * i), Color(1.0, 0.35, 0.2, 0.07))
+	_title_draw()
 	_bar_draw()
 
-## Curseur de défilement : filet bronze dans la marge droite, sans fond ni cadre, visible seulement quand le journal dépasse.
-func _bar_draw() -> void:
-	if _bar_a <= 0.01 or not _can_scroll():
-		return
-	var h := _gutter.size.y
-	var th := clampf(h * _vs.page / maxf(1.0, _vs.max_value), 16.0, h)
-	var ty := _gutter.position.y + (h - th) * (_vs.value / maxf(1.0, _max_scroll()))
-	draw_line(Vector2(_gutter.position.x + 1.5, _gutter.position.y), Vector2(_gutter.position.x + 1.5, _gutter.end.y), Color(0.35, 0.24, 0.1, 0.16 * _bar_a), 1.0)
-	_bar_style.bg_color = Color(0.42, 0.28, 0.1, 0.9 * _bar_a)
-	draw_style_box(_bar_style, Rect2(_gutter.position.x, ty, 3.0, th))
-
-func _corners(k: float) -> void:
-	var c := _m * 2.1
-	var a := _m * 0.3
-	var pts := [[Vector2(_m + a, _m + a), Vector2(1, 1)], [Vector2(size.x - _m - a, _m + a), Vector2(-1, 1)],
-			[Vector2(size.x - _m - a, size.y - _m - a), Vector2(-1, -1)], [Vector2(_m + a, size.y - _m - a), Vector2(1, -1)]]
-	for e in pts:
-		var p: Vector2 = e[0]
-		var d: Vector2 = e[1]
-		var u := Vector2(d.x, 0)
-		var v := Vector2(0, d.y)
-		var tri := PackedVector2Array([p + v * c, p + u * c, p + (u + v) * c * 0.6])
-		var shadow := PackedVector2Array([p + v * c * 1.02 + u * 2.0, p + u * c * 1.02 + v * 2.0, p + (u + v) * c * 0.62 + (u + v) * 1.5])
-		draw_colored_polygon(shadow, Color(0.3, 0.2, 0.08, 0.3))
-		draw_colored_polygon(tri, Color(0.94, 0.88, 0.7))      # pli : revers du papier, plus clair
-		draw_polyline(PackedVector2Array([p + v * c, p + (u + v) * c * 0.6, p + u * c]), Color(0.36, 0.25, 0.1, 0.55), 1.0, true)
-
-func _title_draw(k: float) -> void:
+func _title_draw() -> void:
 	var f := Atlas.title_font(true, 1)
 	var fs := int(_title_h)
 	var t := _title()
 	var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-	var y := _title_y
-	var cx := size.x * 0.5
-	draw_string(f, Vector2(cx - w * 0.5, y), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, TITLE_COL)
-	# filet à l'encre sous le titre, qui s'estompe vers les bords, avec un losange au centre
-	var ry := _rule_y
-	var half := minf(size.x * 0.5 - _m - 14.0, w * 0.5 + 40.0)
-	for i in 12:
-		var t0 := float(i) / 12.0
-		var t1 := float(i + 1) / 12.0
-		var al := 0.65 * (1.0 - t0 * 0.85)
-		draw_line(Vector2(cx - half * t1, ry), Vector2(cx - half * t0, ry), Color(0.33, 0.22, 0.1, al), 1.0, true)
-		draw_line(Vector2(cx + half * t0, ry), Vector2(cx + half * t1, ry), Color(0.33, 0.22, 0.1, al), 1.0, true)
-	var dm := 3.0 * maxf(k, 0.8)
-	draw_colored_polygon(PackedVector2Array([Vector2(cx, ry - dm), Vector2(cx + dm, ry), Vector2(cx, ry + dm), Vector2(cx - dm, ry)]), Color(0.52, 0.12, 0.08))
+	draw_string(f, Vector2(size.x * 0.5 - w * 0.5, _title_y), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, TITLE_COL)
+
+## Barre de défilement : fine pièce de bronze ancien (rail brun à filet doré, pointes en losange, curseur sculpté), dans la marge droite du papier.
+## Elle ne se dessine que si le journal dépasse, ne recouvre jamais le texte et ne dépend pas de l'image.
+func _bar_draw() -> void:
+	if _bar_a <= 0.01 or not _can_scroll():
+		return
+	var a := clampf(_bar_a + 0.25, 0.0, 1.0)
+	var cx := _gutter.get_center().x
+	var top := _gutter.position.y
+	var h := _gutter.size.y
+	var u := maxf(_m * 4.0, 0.9)      # unité : épaisseur du rail
+	draw_line(Vector2(cx, top), Vector2(cx, top + h), Color(0.22, 0.14, 0.06, 0.8 * a), u * 1.5, true)      # rail
+	draw_line(Vector2(cx - u * 0.45, top), Vector2(cx - u * 0.45, top + h), Color(0.85, 0.66, 0.3, 0.45 * a), maxf(1.0, u * 0.4), true)      # filet d'or vieilli
+	for yy in [top - u, top + h + u]:      # pointes en losange aux deux bouts du rail
+		var d := u * 2.1
+		draw_colored_polygon(PackedVector2Array([Vector2(cx, yy - d), Vector2(cx + d * 0.75, yy), Vector2(cx, yy + d), Vector2(cx - d * 0.75, yy)]), Color(0.5, 0.34, 0.13, a))
+	var th := clampf(h * _vs.page / maxf(1.0, _vs.max_value), minf(22.0, h), h)
+	var ty := top + (h - th) * (_vs.value / maxf(1.0, _max_scroll()))
+	var tw := maxf(5.0, u * 3.4)
+	var r := Rect2(cx - tw * 0.5, ty, tw, th)
+	_bar_style.set_corner_radius_all(int(maxf(2.0, tw * 0.4)))
+	_bar_style.bg_color = Color(0.5, 0.34, 0.14, a)
+	_bar_style.border_color = Color(0.17, 0.1, 0.04, a)
+	_bar_style.set_border_width_all(1)
+	draw_style_box(_bar_style, r)
+	draw_line(Vector2(r.position.x + tw * 0.28, r.position.y + 2.0), Vector2(r.position.x + tw * 0.28, r.end.y - 2.0), Color(0.93, 0.76, 0.4, 0.75 * a), maxf(1.0, tw * 0.16), true)      # reflet
+	draw_line(Vector2(r.position.x + tw * 0.76, r.position.y + 2.0), Vector2(r.position.x + tw * 0.76, r.end.y - 2.0), Color(0.24, 0.14, 0.05, 0.55 * a), maxf(1.0, tw * 0.14), true)      # ombre
+	if th >= 20.0:      # petit losange sculpté au centre du curseur
+		var c := r.get_center()
+		var d := tw * 0.42
+		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -d), c + Vector2(d * 0.7, 0), c + Vector2(0, d), c + Vector2(-d * 0.7, 0)]), Color(0.9, 0.72, 0.36, a))

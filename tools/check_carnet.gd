@@ -53,14 +53,12 @@ func _ready() -> void:
 			var rl := lay.panel_log.get_global_rect()
 			check("%s %s : panneau toujours %s" % [tag, state, str(rl)], rl.position.distance_to(want.position) < 1.0 and rl.size.distance_to(want.size) < 1.0)
 			var box := Rect2(Vector2.ZERO, lp.size)
-			var bounds := Rect2(lp._poly[0], Vector2.ZERO)
-			for p in lp._poly:
-				bounds = bounds.expand(p)
-			var off := Vector2(lp._m * 0.32, lp._m * 0.38)
-			bounds = bounds.merge(Rect2(bounds.position + off, bounds.size))      # ombre portée
-			check("%s %s : papier et ombre dans le rectangle" % [tag, state], _inside(bounds, box, 0.0))
-			check("%s %s : texte dans le papier" % [tag, state], _inside(Rect2(lp.text.position, lp.text.size), Rect2(Vector2(lp._m, lp._m), lp.size - Vector2(lp._m, lp._m) * 2.0)))
-			check("%s %s : bouton d'historique dans le rectangle" % [tag, state], not lp._hist.visible or _inside(Rect2(lp._hist.position, lp._hist.size), box))
+			var bounds := Rect2(lp._pieces[0][1].position, Vector2.ZERO)
+			for pc in lp._pieces:
+				bounds = bounds.merge(pc[1])
+			check("%s %s : parchemin entier dans le rectangle (échelle %.3f)" % [tag, state, lp._m], _inside(bounds, box, 0.6) and bounds.size.x >= box.size.x - 1.0 and bounds.size.y >= box.size.y - 1.0)
+			check("%s %s : texte dans la surface claire du papier" % [tag, state], _inside(Rect2(lp.text.position, lp.text.size), Rect2(Vector2(lp._m * 120.0, lp._m * 190.0), lp.size - Vector2(lp._m * 240.0, lp._m * 290.0))))
+			check("%s %s : zone cliquable du rubis dans le rectangle" % [tag, state], _inside(lp._ruby, box))
 			check("%s %s : titre dans la largeur (police %d)" % [tag, state, int(lp._title_h)], lp._title_h >= 8.0)
 			check("%s %s : contenu rogné (carnet et parchemin)" % [tag, state], lay.panel_log.clip_contents and lp.clip_contents and lp.text.clip_contents)
 			if state == "long":
@@ -72,9 +70,9 @@ func _ready() -> void:
 				var t := lp.text.get_parsed_text()
 				check("%s combat : ordre chronologique conservé" % tag, t.find("Épine") < t.find("s'effondre") and t.find("s'effondre") < t.find("XP") and t.find("XP") < t.find("pièces"))
 		# finition : zone du titre, marges, couloir du curseur
-		check("%s titre : le texte commence sous le filet décoratif (filet %.1f, texte %.1f)" % [tag, lp._rule_y, lp.text.position.y], lp.text.position.y >= lp._rule_y + 4.0 and lp._title_y > lp._m + lp._title_h * 0.5)
-		check("%s marges : gauche %.1f, droite %.1f, bas %.1f (papier à %.1f)" % [tag, lp.text.position.x, lp.size.x - (lp.text.position.x + lp.text.size.x), lp.size.y - lp.text.position.y - lp.text.size.y, lp._m], lp.text.position.x >= lp._m * 2.5 and lp.size.x - (lp.text.position.x + lp.text.size.x) >= lp._m * 2.5 and lp.size.y - lp.text.position.y - lp.text.size.y >= lp._m + 4.0)
-		check("%s curseur : couloir dans la marge droite, hors du texte et dans le papier" % tag, lp._gutter.position.x >= (lp.text.position.x + lp.text.size.x) and lp._gutter.end.x <= lp.size.x - lp._m - 3.0 and lp._gutter.end.y <= lp.size.y - lp._m)
+		check("%s titre : au-dessus du rubis et du filet, texte sous le filet (titre %.1f, rubis %.1f, filet %.1f, texte %.1f)" % [tag, lp._title_y, lp._ruby.position.y, lp._rule_y, lp.text.position.y], lp._title_y <= lp._ruby.position.y + 0.5 and lp._title_y < lp._rule_y and lp._title_y - lp._title_h * 0.74 >= 0.0 and lp.text.position.y >= lp._rule_y + 4.0)
+		check("%s marges : gauche %.1f, droite %.1f, bas %.1f (échelle %.3f)" % [tag, lp.text.position.x, lp.size.x - (lp.text.position.x + lp.text.size.x), lp.size.y - lp.text.position.y - lp.text.size.y, lp._m], lp.text.position.x >= lp._m * 150.0 and lp.size.x - (lp.text.position.x + lp.text.size.x) >= lp._m * 200.0 and lp.size.y - lp.text.position.y - lp.text.size.y >= lp._m * 150.0)
+		check("%s curseur : couloir dans la marge droite, hors du texte et dans le papier" % tag, lp._gutter.position.x >= (lp.text.position.x + lp.text.size.x) and lp._gutter.end.x <= lp.size.x - lp._m * 70.0 and lp._gutter.end.y <= lp.size.y - lp._m * 200.0)
 		check("%s curseur : la barre du RichTextLabel ne prend aucune largeur (%s)" % [tag, str(lp._vs.get_combined_minimum_size().x)], lp._vs.get_combined_minimum_size().x < 1.0)
 		# dix événements successifs : écriture progressive, croissante, sans perte
 		lp.text.clear()
