@@ -15,9 +15,14 @@ static var force: int = -1         # outils : 1 = toujours, 0 = jamais, -1 = rè
 static var _shader: Shader
 static var _noise: NoiseTexture3D
 
-## Ce niveau a-t-il du brouillard dans cette partie ? Jamais en extérieur ; dépend uniquement de la graine et du niveau.
-static func level_has_mist(run_seed: String, level_id: String, outdoor: bool) -> bool:
+## Ce niveau a-t-il du brouillard dans cette partie ? Jamais en extérieur. `mode` = réglage du niveau (éditeur d'administration, champ `mist`) :
+## « on » = toujours, « off » = jamais, tout autre valeur (« auto », absent) = règle normale, qui ne dépend que de la graine et du niveau.
+static func level_has_mist(run_seed: String, level_id: String, outdoor: bool, mode: String = "auto") -> bool:
 	if outdoor:
+		return false
+	if mode == "on":
+		return true
+	if mode == "off":
 		return false
 	if force >= 0:
 		return force == 1

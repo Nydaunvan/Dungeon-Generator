@@ -1832,6 +1832,14 @@ static func _cfg_panel(host: VBoxContainer, lvl: Dictionary) -> void:
 	host.add_child(Ax.cap(L.t("ui.atelier.lv_light")))
 	_light_row(host, _plain(L.t("admin.levels.lumiere_ambiante")), lvl, "lightAmbient", 0.1, 1.6, 1.1)
 	_light_row(host, _plain(L.t("admin.levels.intensite_des_torches")), lvl, "lightTorch", 0.2, 2.6, 1.4)
+	var mist_opts: Array = [["auto", _plain(L.t("admin.levels.brume_auto"))], ["on", _plain(L.t("admin.levels.brume_on"))], ["off", _plain(L.t("admin.levels.brume_off"))]]
+	host.add_child(Ax.labeled(_plain(L.t("admin.levels.brume")), Ax.select(mist_opts, str(lvl.get("mist", "auto")), func(val):
+		if str(val) == "auto":
+			lvl.erase("mist")      # réglage par défaut : rien n'est écrit dans le niveau
+		else:
+			lvl["mist"] = str(val)
+		_touch(), 40.0, 14)))
+	host.add_child(Ax.para(_plain(L.t("admin.levels.brume_aide")), 12, Ax.MUTED))
 	# départ
 	host.add_child(Ax.line())
 	host.add_child(Ax.cap(L.t("ui.atelier.lv_start_cap")))
