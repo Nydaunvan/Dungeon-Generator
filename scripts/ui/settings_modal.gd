@@ -263,6 +263,7 @@ func _graphics() -> void:
 	_section(L.t("ui.settings.living_skills"))
 	_check(L.t("ui.settings.living_skills_on"), Settings.living_skills, func(v: bool): Settings.set_living_skills(v))
 	_hint(L.t("ui.settings.living_skills_hint"))
+	_button(L.t("ui.living.intro_replay"), func(): LivingIntro.open(_m.get_parent()))
 
 func _opt(key: String, options: Array) -> OptionButton:
 	return _drop(options, Settings.opt(key), func(v):

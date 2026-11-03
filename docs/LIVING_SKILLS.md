@@ -157,3 +157,10 @@ l'éveil d'une évolution en vaut deux). Le lore reste compatible avec l'univers
 ## Détails exacts affichés aux joueurs
 
 Chaque évolution (`ui.living.k_<type>_x`) et chaque geste signature (`ui.living.sig_x_<famille>`) a un texte de valeurs exactes, affiché sur la fiche (évolutions éveillées et éveillables, geste signature, même verrouillé) et réuni dans le sujet du guide « Compétences vivantes : valeurs exactes ». Toute modification d'un coefficient dans `living_skills.gd` doit mettre ces textes à jour (FR et EN) ; `check_living_skills` vérifie leur présence.
+
+## Visibilité et explication (interface)
+
+- **Disque de sort** (`SpellDisc.set_living`) : flamme selon le palier, anneau doré par évolution éveillée, marqueur pulsant quand une évolution ou le geste signature est disponible (`SpellBar._refresh_living`). Clic droit → `living_requested` → `Interactions.open_living` (fiche `LivingModal`). Infobulle : palier, affinité, prochain palier, rappel du clic droit.
+- **Barre du haut** : bouton 🕯 (`AppHeader.add_living_button`) → fiche du héros actif, onglet « vivantes » ; pastille dorée quand une nouveauté existe.
+- **Annonces** : `LivingSkills.push_news / news / news_clear` (clé `news` dans `gs.living`, schéma inchangé) alimentées par `settle` ; la fenêtre de victoire liste les paliers franchis et évolutions éveillables avec « Voir la fiche » ; pastille sur le portrait (`PartyCard.set_news`), effacée à l'ouverture de l'onglet.
+- **Présentation guidée** `LivingIntro` (4 pages), ouverte une fois (`Settings.living_intro_seen`), rouvrable depuis la fiche (« Comment ça marche ? ») et les Paramètres. Capture : `tools/shot_visibilite.tscn`.

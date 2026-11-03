@@ -7,6 +7,8 @@ extends Control
 signal card_pressed(char_id: String)
 signal card_opened(char_id: String)
 signal chest_pressed(char_id: String)
+signal news_changed(on: bool)    ## au moins un héros a une nouveauté de compétence vivante à découvrir
+var _news_any := false
 
 var gs: GameState
 var ctrl: CombatController
@@ -119,7 +121,14 @@ func card_bottoms() -> Array:
 		out.append(Vector2(r.get_center().x, r.end.y))
 	return out
 
+func _update_news_any() -> void:
+	var any := LivingSkills.active(gs) and not LivingSkills.news(gs).is_empty()
+	if any != _news_any:
+		_news_any = any
+		news_changed.emit(any)
+
 func refresh() -> void:
+	_update_news_any()
 	for c in gs.party:
 		var cd: Dictionary = _cards[str(c.id)]
 		var lv := L.fa(L.t("ui.party_hud.nv"), int(c.level))
@@ -146,6 +155,8 @@ func refresh() -> void:
 		cd.xp.set_values(int(c.get("xp", 0)), int(c.get("xpToNext", 1)), L.fa(L.t("ui.party_hud.xp"), [int(c.get("xp", 0)), int(c.get("xpToNext", 1))]))
 		var dead: bool = int(c.hp) <= 0
 		_refresh_status(c, cd, dead)
+		var has_news := LivingSkills.active(gs) and not LivingSkills.news(gs, str(c.id)).is_empty()
+		(cd.card as PartyCard).set_news(has_news)
 		var cant_act: bool = not dead and ctrl.in_combat() and ctrl.combat != null and not ctrl.combat.can_act(c)
 		cd.panel.modulate = Color(0.45, 0.45, 0.45) if dead else (Color(0.58, 0.56, 0.54) if cant_act else Color.WHITE)
 		cd.dead.visible = dead

@@ -6,6 +6,7 @@ extends Control
 signal pressed
 signal tip_show
 signal tip_hide
+signal context                  ## clic droit : ouvrir la fiche de la compétence vivante
 
 const LONG_PRESS := 0.45
 
@@ -31,6 +32,9 @@ var highlight: bool = false
 var disabled: bool = false
 var gray: bool = false
 var badge: String = ""          ## pastille discrète : icône du statut que le sort inflige (vide = aucun)
+var lv_tier: int = 0            ## palier d'affinité (0 = étrangère : rien n'est dessiné)
+var lv_evos: int = 0            ## évolutions éveillées (anneau doré)
+var lv_alert: bool = false      ## une évolution ou un geste signature est disponible (marqueur qui pulse)
 var badge_bad: bool = true      ## statut nuisible (anneau rouge) ou bénéfique (anneau vert)
 var caption: String = ""       ## numéro de touche affiché sous le disque
 var _hover: bool = false
@@ -71,7 +75,7 @@ func flash() -> void:
 func _process(d: float) -> void:
 	_flash = maxf(0.0, _flash - d / 0.45)
 	queue_redraw()
-	if _flash <= 0.0 and not (tone == "ult" and ult_charge >= 1.0 and not ult_locked):
+	if _flash <= 0.0 and not lv_alert and not (tone == "ult" and ult_charge >= 1.0 and not ult_locked):
 		set_process(false)
 
 func _cap_font() -> int:
@@ -115,7 +119,21 @@ func set_badge(glyph: String, harmful: bool = true) -> void:
 	badge_bad = harmful
 	queue_redraw()
 
+## Indicateurs « compétence vivante » : flamme de bougie selon le palier, anneau doré si évoluée, marqueur pulsant si une action est possible.
+func set_living(tier: int, evos: int, alert: bool) -> void:
+	if tier == lv_tier and evos == lv_evos and alert == lv_alert:
+		return
+	lv_tier = tier
+	lv_evos = evos
+	lv_alert = alert
+	set_process(lv_alert or _flash > 0.0 or (tone == "ult" and ult_charge >= 1.0 and not ult_locked))
+	queue_redraw()
+
 func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_RIGHT and e.pressed and tone == "spell" and lv_tier > 0:
+		context.emit()
+		accept_event()
+		return
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
 			_down = true
@@ -357,6 +375,8 @@ func _draw() -> void:
 		var ts2 := f2.get_string_size(cd_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2)
 		draw_string(f2, Vector2(c.x - ts2.x * 0.5, c.y + (f2.get_ascent(fs2) - f2.get_descent(fs2)) * 0.5), cd_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2, Color("e8b45c", dim))
 	# pastille de statut (coin bas droit) : le sort applique un statut
+	if lv_tier > 0 and tone == "spell":
+		_draw_living(c, r, k)
 	if badge != "" and tone == "spell":
 		var bp := c + Vector2(0.72, 0.72) * r
 		var br := maxf(7.0, r * 0.38)
@@ -367,3 +387,21 @@ func _draw() -> void:
 		var bfs := int(br * 1.25)
 		var bts := bf.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs)
 		draw_string(bf, Vector2(bp.x - bts.x * 0.5, bp.y + bfs * 0.34), badge, HORIZONTAL_ALIGNMENT_LEFT, -1, bfs, Color(1, 1, 1, dim))
+
+## Flamme (taille et éclat croissants avec le palier), anneau doré des évolutions, marqueur pulsant d'action disponible.
+func _draw_living(c: Vector2, r: float, k: float) -> void:
+	var a := dim
+	if lv_evos > 0:
+		draw_arc(c, r + 1.5, 0.0, TAU, 40, Color(0.95, 0.75, 0.3, 0.9 * a), 1.6 + 0.8 * lv_evos, true)
+	var fp := c + Vector2(-0.72, -0.72) * r
+	var fr := (3.0 + 1.1 * lv_tier) * k * 0.8
+	var cols := [Color("8a7a62"), Color("d9a24a"), Color("f0b84c"), Color("ffd070"), Color("fff0b0")]
+	var col: Color = cols[clampi(lv_tier, 0, 4)]
+	draw_circle(fp, fr + 2.0 * k, Color(0.07, 0.05, 0.04, 0.85 * a), true, -1.0, true)
+	var pts := PackedVector2Array([fp + Vector2(0, -fr * 1.5), fp + Vector2(fr * 0.8, fr * 0.1), fp + Vector2(0, fr * 0.9), fp + Vector2(-fr * 0.8, fr * 0.1)])
+	draw_colored_polygon(pts, Color(col.r, col.g, col.b, a))
+	if lv_alert:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.006) if not Settings.reduced_motion else 1.0
+		var ap := c + Vector2(0.72, -0.72) * r
+		draw_circle(ap, (3.2 + 1.6 * pulse) * k, Color(1.0, 0.82, 0.35, (0.35 + 0.4 * pulse) * a), true, -1.0, true)
+		draw_circle(ap, 2.6 * k, Color(1.0, 0.9, 0.5, a), true, -1.0, true)

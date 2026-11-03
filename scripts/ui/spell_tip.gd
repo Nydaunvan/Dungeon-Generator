@@ -102,11 +102,13 @@ static func _inst_for(host: Control) -> SpellTip:
 		host.get_tree().root.add_child(_layer)
 	return _inst
 
-static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0, caster: Dictionary = {}) -> void:
+static func show_for(host: Control, spell: Dictionary, remaining_sec: int = 0, caster: Dictionary = {}, living: String = "") -> void:
 	var t := _inst_for(host)
 	var txt := "[b][color=#e8b45c]%s[/color][/b]\n%s" % [str(spell.get("name", "")), "\n".join(lines(spell, caster))]
 	if remaining_sec > 0:
 		txt += L.fa(L.t("ui.spell_tip.pret_dans_ds"), remaining_sec)
+	if living != "":
+		txt += "\n[color=#e8b45c]" + living.replace("\n", "[/color]\n[color=#e8b45c]") + "[/color]"
 	t._label.text = txt
 	t.size = Vector2.ZERO
 	t.visible = true

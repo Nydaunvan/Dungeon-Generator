@@ -54,6 +54,7 @@ var vsync := true
 var refresh_override := 0.0      # tests : fréquence d'écran simulée
 var _peak_fps := 0.0             # meilleure moyenne mesurée en jeu (cible plafonnée tant que l'écran est inconnu)
 var reduced_motion := false
+var living_intro_seen := false     ## la présentation guidée des compétences vivantes a déjà été montrée
 var living_skills := true          ## « Compétences vivantes » : les sorts et talents s'attachent et évoluent (sans effet en partie classée)
 var card_fx := true              ## effets des monstres et des soins affichés sur les cartes du groupe (couche au-dessus de l'interface)
 var gothic_test := false         ## essai : tous les étages intérieurs s'affichent avec le thème gothic (purement visuel, rien n'est modifié dans la partie)
@@ -221,6 +222,11 @@ func set_reduced_motion(v: bool) -> void:
 	reduced_motion = v
 	_commit()
 
+func set_living_intro_seen(v: bool) -> void:
+	if living_intro_seen != v:
+		living_intro_seen = v
+		_commit()
+
 func set_living_skills(v: bool) -> void:
 	living_skills = v
 	_commit()
@@ -296,6 +302,7 @@ func reset_graphics() -> void:
 	village_weather = "auto"
 	card_fx = true
 	living_skills = true
+	living_intro_seen = false
 	redetect()
 
 ## Laisse l'adaptation attendre `sec` secondes (chargement, changement de niveau…).
@@ -371,6 +378,7 @@ func _load() -> void:
 		village_weather = str(cf.get_value("game", "village_weather", "auto"))
 		card_fx = bool(cf.get_value("game", "card_fx", true))
 		living_skills = bool(cf.get_value("game", "living_skills", true))
+		living_intro_seen = bool(cf.get_value("game", "living_intro_seen", false))
 		if cf.has_section_key("diag", "perf_overlay"):
 			perf_overlay = bool(cf.get_value("diag", "perf_overlay", false))
 		else:   # ancien fichier du compteur de performances
@@ -414,6 +422,7 @@ func _save() -> void:
 	cf.set_value("game", "village_weather", village_weather)
 	cf.set_value("game", "card_fx", card_fx)
 	cf.set_value("game", "living_skills", living_skills)
+	cf.set_value("game", "living_intro_seen", living_intro_seen)
 	cf.set_value("diag", "perf_overlay", perf_overlay)
 	cf.save(CFG)
 

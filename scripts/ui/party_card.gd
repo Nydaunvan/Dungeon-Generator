@@ -36,6 +36,7 @@ var sta: TextBar
 var xp: TextBar
 var gauge: TextBar
 var dead_lbl: Label
+var _news: Panel                    # pastille dorée : une compétence vivante a progressé (clic droit pour la fiche)
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -166,6 +167,23 @@ func set_statuses(list: Array) -> void:
 		lb.add_theme_stylebox_override("normal", sb)
 		status_row.add_child(lb)
 
+func set_news(on: bool) -> void:
+	if _news == null:
+		if not on:
+			return
+		_news = Panel.new()
+		_news.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color("f0b84c")
+		sb.border_color = Color("1a1008")
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(6)
+		_news.add_theme_stylebox_override("panel", sb)
+		add_child(_news)
+		_layout()
+	_news.visible = on
+	tooltip_text = L.t("ui.living.card_news_tip") if on else ""
+
 func _pad() -> float:
 	return size.y * 0.07
 
@@ -181,6 +199,10 @@ func _layout() -> void:
 	var pr := _pic_rect()
 	pic.position = pr.position
 	pic.size = pr.size
+	if _news != null:
+		var d := clampf(size.y * 0.13, 8.0, 14.0)
+		_news.size = Vector2(d, d)
+		_news.position = Vector2(pr.end.x - d * 0.8, pr.position.y - d * 0.2)
 	var x0 := pr.end.x + 9.0 * k
 	var right := size.x - 9.0 * k
 	var bw := maxf(10.0, right - x0)

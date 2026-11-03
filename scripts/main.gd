@@ -266,6 +266,7 @@ func _ready() -> void:
 	layout.card_pressed.connect(_on_card_pressed)
 	layout.chest_pressed.connect(_on_chest_pressed)
 	layout.card_opened.connect(inter.open_sheet)
+	layout.living_opened.connect(inter.open_living)
 	_popup_layer = layout.popup_layer
 	message_label = layout.message_label
 
@@ -918,6 +919,7 @@ func _on_menu(name: String) -> void:
 	match name:
 		"Accueil": _leave_game()
 		"Guide": Dialogs.guide(_modals())
+		"Vivantes": inter.open_sheet(gs.active_char_id, "living")
 		"Quitter": Dialogs.confirm(_modals(), "", L.t("ui.app_header.quitter_confirm"), func(): get_tree().quit(), L.t("ui.app_header.quitter"))
 		"Son": SoundModal.open(_modals())
 		"Paramètres": SettingsModal.open(_modals())
@@ -1248,7 +1250,31 @@ func _show_combat_summary(s: Dictionary) -> void:
 		m.add_text(L.t("main.bilan_title"), UiTheme.GOLD, 14)
 		for h in s.heroes:
 			m.add_text(L.fa(L.t("main.bilan_hero"), [h.name, int(h.dealt), int(h.taken), int(h.heal)]), UiTheme.DIM, 13)
-	m.set_buttons([{"text": L.t("common.continuer"), "cb": func(): m.close()}])
+	var btns: Array = []
+	if LivingSkills.active(gs):
+		var news := LivingSkills.news(gs)
+		if not news.is_empty():
+			m.add_text(L.t("ui.living.news_title"), UiTheme.GOLD, 14)
+			var heroes: Array = []
+			for n in news:
+				var parts := str(n.key).split("|")
+				var who := str(gs.char_by_id(parts[0]).get("name", parts[0]))
+				var sk := str(LivingCatalog.profile(gs.cfg, parts[1]).get("name", parts[1]))
+				if str(n.kind) == "tier":
+					m.add_text(L.fa(L.t("ui.living.news_tier"), [sk, who, L.t("ui.living.tier_%d" % int(n.tier))]), UiTheme.PARCH, 13)
+				else:
+					m.add_text(L.fa(L.t("ui.living.news_evo"), [sk, who]), UiTheme.PARCH, 13)
+				if not heroes.has(parts[0]):
+					heroes.append(parts[0])
+			for hid in heroes:
+				var cid: String = hid
+				btns.append({"text": L.fa(L.t("ui.living.news_open"), str(gs.char_by_id(cid).get("name", cid))), "cb": func():
+					m.close()
+					inter.open_sheet(cid, "living")})
+			if not Settings.living_intro_seen:
+				LivingIntro.open(_modals())
+	btns.append({"text": L.t("common.continuer"), "cb": func(): m.close()})
+	m.set_buttons(btns, false, btns.size() > 2)
 
 func _on_game_over() -> void:
 	_submit_run(true)

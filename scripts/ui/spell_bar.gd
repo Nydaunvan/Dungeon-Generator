@@ -5,6 +5,7 @@ extends GridContainer
 
 signal spell_pressed(spell_id: String)
 signal attack_pressed
+signal living_requested(spell_id: String)    ## clic droit sur un sort vivant : ouvrir sa fiche
 
 const SLOTS := 6
 var gs: GameState
@@ -38,6 +39,7 @@ func setup(state: GameState, controller: CombatController) -> void:
 		b.pressed.connect(func(): _slot_pressed(idx))
 		b.tip_show.connect(func(): _show_tip(idx))
 		b.tip_hide.connect(SpellTip.hide_tip)
+		b.context.connect(func(): _living_pressed(idx))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.set_caption(Keybinds.text("slot_%d" % (i + 2)))
 		add_child(b)
@@ -80,7 +82,7 @@ func _show_tip(i: int) -> void:
 		return
 	var c := gs.char_by_id(gs.active_char_id)
 	var sid := str(_ids[i])
-	SpellTip.show_for(_slots[i], ctrl.combat.spell_def(sid), ceili(ctrl.combat.cooldown_left(c, sid)), c)
+	SpellTip.show_for(_slots[i], ctrl.combat.spell_def(sid), ceili(ctrl.combat.cooldown_left(c, sid)), c, _living_line(c, sid))
 
 func _show_ult_tip() -> void:
 	var c := gs.char_by_id(gs.active_char_id)
@@ -154,6 +156,39 @@ func _refresh() -> void:
 			b.set_badge(Statuses.icon_of({"type": se}), Statuses.is_harmful({"type": se}))
 		else:
 			b.set_badge("")
+		_refresh_living(b, c, sid)
+
+## Indicateurs de la compétence vivante sur le disque (rien pour une compétence étrangère ou hors règles).
+func _refresh_living(b: SpellDisc, c: Dictionary, sid: String) -> void:
+	var cid := str(c.get("id", ""))
+	if not LivingSkills.active(gs) or not LivingSkills.has_entry(gs, cid, sid):
+		b.set_living(0, 0, false)
+		return
+	var t := LivingSkills.tier(LivingSkills.affinity(gs, cid, sid))
+	var alert := not LivingSkills.available_branches(gs, cid, sid).is_empty() or \
+		(ctrl.in_combat() and LivingSkills.sig_ready(gs, LivingCatalog.key(cid, sid)))
+	b.set_living(t, LivingSkills.evos_of(gs, cid, sid).size(), alert)
+
+## Ligne d'infobulle : palier, affinité, prochain palier et rappel du clic droit (vide si le sort n'est pas vivant).
+func _living_line(c: Dictionary, sid: String) -> String:
+	var cid := str(c.get("id", ""))
+	if not LivingSkills.active(gs) or not LivingSkills.has_entry(gs, cid, sid):
+		return ""
+	var a := LivingSkills.affinity(gs, cid, sid)
+	var t := LivingSkills.tier(a)
+	var out := L.fa(L.t("ui.living.tip_line"), [L.t("ui.living.tier_%d" % t), int(a)])
+	if t < LivingSkills.TIER_AT.size() - 1:
+		out += L.fa(L.t("ui.living.tip_next"), [L.t("ui.living.tier_%d" % (t + 1)), int(LivingSkills.TIER_AT[t + 1])])
+	if not LivingSkills.available_branches(gs, cid, sid).is_empty():
+		out += "\n" + L.t("ui.living.tip_evo")
+	if ctrl.in_combat() and LivingSkills.sig_ready(gs, LivingCatalog.key(cid, sid)):
+		out += "\n" + L.t("ui.living.tip_sig")
+	return out + "\n" + L.t("ui.living.tip_right")
+
+func _living_pressed(i: int) -> void:
+	if i < _ids.size():
+		SpellTip.hide_tip()
+		living_requested.emit(str(_ids[i]))
 
 ## 7e disque : technique ultime de la classe évoluée. Cadenas tant que le héros est de classe de base ; sinon jauge dorée, pleine = prête.
 func _refresh_ult(c: Dictionary, dead: bool, waiting: bool, base: float) -> void:

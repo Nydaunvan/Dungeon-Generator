@@ -12,9 +12,11 @@ var cat: String = "stats"
 var _char_row: HBoxContainer
 var _cat_row: HBoxContainer
 
-static func open(host: Node, state: GameState, id: String) -> PartyModal:
+static func open(host: Node, state: GameState, id: String, tab: String = "") -> PartyModal:
 	var p := PartyModal.new()
 	p.gs = state
+	if tab != "":
+		p.cat = tab
 	p.char_id = id if not state.char_by_id(id).is_empty() else str(state.party[0].id)
 	p.modal = Modal.open(host, L.t("ui.party_modal.groupe"), 620)
 	p.modal.panel.body.add_child(p._tabs_holder())
@@ -433,6 +435,12 @@ func _spells(p: Control, c: Dictionary) -> void:
 
 ## Onglet « Vie des compétences » : toutes les compétences du héros (sorts, talents choisis, instinct) avec leur palier d'affinité.
 func _living(p: Control, c: Dictionary) -> void:
+	LivingSkills.news_clear(gs, char_id)      # la fiche est ouverte : la pastille de nouveauté s'éteint
+	var intro := Button.new()
+	intro.text = L.t("ui.living.intro_open")
+	intro.focus_mode = Control.FOCUS_NONE
+	intro.pressed.connect(func(): LivingIntro.open(modal.get_parent()))
+	p.add_child(intro)
 	if not LivingSkills.active(gs):
 		var off := Label.new()
 		off.text = L.t("ui.living.off_note")

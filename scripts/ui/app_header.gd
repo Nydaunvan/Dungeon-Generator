@@ -11,6 +11,8 @@ var nav_row: HBoxContainer
 var btn_admin: Button
 var btn_account: Button
 var btn_home: Button
+var btn_living: Button     # 🕯 « Vie des compétences » (seulement en jeu : ajouté par GameLayout)
+var _living_dot: Panel
 var save_menu: SaveMenu    # « Sauvegarde ▾ » (seulement en jeu : ajouté par GameLayout)
 var _lang: MenuButton
 var _home_mode: bool = false
@@ -276,6 +278,30 @@ func add_save_menu(m: SaveMenu) -> void:
 	nav_row.move_child(m, btn_account.get_index())
 	m.tooltip_text = L.t("ui.save_menu.sauvegarde")
 	rescale()
+
+## 🕯 Bouton « Vie des compétences » : ouvre la fiche du héros actif sur l'onglet des compétences vivantes ; une pastille dorée signale une nouveauté.
+func add_living_button(cb: Callable) -> void:
+	btn_living = _button("🕯")
+	btn_living.tooltip_text = L.t("ui.living.header_tip")
+	btn_living.pressed.connect(cb)
+	nav_row.add_child(btn_living)
+	nav_row.move_child(btn_living, 0 if not is_instance_valid(save_menu) else save_menu.get_index())
+	_living_dot = Panel.new()
+	_living_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_living_dot.custom_minimum_size = Vector2(9, 9)
+	_living_dot.size = Vector2(9, 9)
+	_living_dot.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_living_dot.position = Vector2(-11, 3)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("f0b84c")
+	sb.set_corner_radius_all(5)
+	_living_dot.add_theme_stylebox_override("panel", sb)
+	_living_dot.visible = false
+	btn_living.add_child(_living_dot)
+
+func set_living_dot(on: bool) -> void:
+	if _living_dot != null:
+		_living_dot.visible = on
 
 ## Sur l'accueil, « Accueil » est la page courante (inactif).
 func set_home_mode(on: bool) -> void:

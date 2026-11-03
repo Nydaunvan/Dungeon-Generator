@@ -899,10 +899,17 @@ func open_item_menu(idx: int) -> void:
 
 # ------------------------------------------------------------------ fiche de personnage
 
-func open_sheet(char_id: String) -> void:
+func open_sheet(char_id: String, tab: String = "") -> void:
 	if gs.char_by_id(char_id).is_empty():
 		return
-	PartyModal.open(host, gs, char_id)
+	PartyModal.open(host, gs, char_id, tab)
+
+## Fiche d'une compétence vivante du héros actif (clic droit sur son disque de sort, ou bouton de la bande du haut).
+func open_living(skill_id: String) -> void:
+	var cid := gs.active_char_id
+	if gs.char_by_id(cid).is_empty() or LivingCatalog.profile(gs.cfg, skill_id).is_empty():
+		return
+	LivingModal.open(host, gs, cid, skill_id)
 
 static func spell_effect(sp: Dictionary) -> String:
 	match str(sp.get("mode", "")):

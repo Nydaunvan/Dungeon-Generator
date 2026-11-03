@@ -92,6 +92,7 @@ func _ready() -> void:
 	_t14_lore()
 	_t15_ui_texts()
 	_t16_tiers()
+	_t17_news()
 	Settings.living_skills = saved_opt
 	print("RESULTAT compétences vivantes : %d contrôle(s), %d échec(s) -> %s" % [total, fails, "OK" if fails == 0 else "ECHEC"])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -697,6 +698,23 @@ func _t15_ui_texts() -> void:
 	host.queue_free()
 
 # 16. paliers « liée » (seconde évolution) et « fusionnelle » (geste signature, une fois par combat)
+## Nouveautés visibles (pastille, annonce de fin de combat) : ajout sans doublon, lecture par héros, effacement à l'ouverture de la fiche.
+func _t17_news() -> void:
+	var w := world("news")
+	var gs: GameState = w.gs
+	var a := str(gs.party[0].id)
+	var b := str(gs.party[1].id) if gs.party.size() > 1 else a + "x"
+	check("news : vide au départ", LivingSkills.news(gs).is_empty())
+	LivingSkills.push_news(gs, a + "|s1", "tier", 1)
+	LivingSkills.push_news(gs, a + "|s1", "tier", 2)
+	LivingSkills.push_news(gs, a + "|s1", "evo", 2)
+	LivingSkills.push_news(gs, b + "|s2", "tier", 1)
+	check("news : pas de doublon (clé + type)", LivingSkills.news(gs, a).size() == 2)
+	check("news : le palier est mis à jour", int(LivingSkills.news(gs, a)[0].tier) == 2)
+	check("news : lecture par héros", LivingSkills.news(gs, b).size() == 1 and LivingSkills.news(gs).size() == 3)
+	LivingSkills.news_clear(gs, a)
+	check("news : effacement du seul héros", LivingSkills.news(gs, a).is_empty() and LivingSkills.news(gs, b).size() == 1)
+
 func _t16_tiers() -> void:
 	var w := world("tiers")
 	var gs: GameState = w.gs

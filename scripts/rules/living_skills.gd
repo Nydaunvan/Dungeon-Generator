@@ -899,6 +899,29 @@ static func _say(gs: GameState, id: String, key: String, args: Array) -> bool:
 
 # ------------------------------------------------------------------ règlement de fin de combat
 
+## Nouveautés à montrer au joueur (palier franchi, évolution éveillable) : {key, kind: "tier"|"evo", tier}. Effacées quand la fiche du héros est ouverte.
+static func push_news(gs: GameState, key: String, kind: String, t: int) -> void:
+	var news: Array = state(gs).get_or_add("news", [])
+	for n in news:
+		if str(n.key) == key and str(n.kind) == kind:
+			n["tier"] = t
+			return
+	news.append({"key": key, "kind": kind, "tier": t})
+
+static func news(gs: GameState, char_id: String = "") -> Array:
+	var out: Array = []
+	for n in (state(gs).get("news", []) as Array):
+		if char_id == "" or str(n.key).begins_with(char_id + "|"):
+			out.append(n)
+	return out
+
+static func news_clear(gs: GameState, char_id: String) -> void:
+	var keep: Array = []
+	for n in (state(gs).get("news", []) as Array):
+		if not str(n.key).begins_with(char_id + "|"):
+			keep.append(n)
+	state(gs)["news"] = keep
+
 ## À appeler à la fin d'un combat (`outcome` : "win" ou "flee"). Convertit le registre en affinité, traits, souvenirs, relations, fragments.
 static func settle(gs: GameState, outcome: String) -> void:
 	if not active(gs):
@@ -965,8 +988,10 @@ static func settle(gs: GameState, outcome: String) -> void:
 		var prof := LivingCatalog.profile(gs.cfg, sid)
 		if after > before and after >= 1:
 			_say(gs, "tier", str(key), [prof.get("name", "")])
+			push_news(gs, str(key), "tier", after)
 		if int(sk.o) == 0 and float(sk.a) >= EVOLVE_AFF and not available_branches(gs, cid, sid).is_empty():
 			sk.o = 1
+			push_news(gs, str(key), "evo", after)
 			_say(gs, "evo", str(key), [prof.get("name", "")])
 			_fragment(gs, 1)
 	# passifs : chaque talent choisi est crédité par les événements qui lui correspondent
@@ -1001,8 +1026,10 @@ static func settle(gs: GameState, outcome: String) -> void:
 			sk2.t[tkey] = mini(60, int(sk2.t.get(tkey, 0)) + (1 if g2 >= 1.0 else 0))
 			if tier(float(sk2.a)) > b2:
 				_say(gs, "tier", key2, [str(opt.get("labelFr", ""))])
+				push_news(gs, key2, "tier", tier(float(sk2.a)))
 			if int(sk2.o) == 0 and float(sk2.a) >= EVOLVE_AFF and not available_branches(gs, str(p.id), str(t.id)).is_empty():
 				sk2.o = 1
+				push_news(gs, key2, "evo", tier(float(sk2.a)))
 				_say(gs, "evo", key2, [str(opt.get("labelFr", ""))])
 				_fragment(gs, 1)
 	# instincts : traits dérivent peu

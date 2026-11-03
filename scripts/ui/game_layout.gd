@@ -10,6 +10,7 @@ signal monster_pressed(def: Dictionary, st: Dictionary)
 signal item_quick(index: int)
 signal item_pressed(index: int)
 signal card_opened(char_id: String)
+signal living_opened(skill_id: String)    ## clic droit sur un sort : fiche de la compétence vivante du héros actif
 signal card_pressed(char_id: String)
 signal chest_pressed(char_id: String)
 signal potion_quick(idx: int)
@@ -562,11 +563,13 @@ func _build_parts() -> void:
 	spell_bar.setup(gs, ctrl)
 	spell_bar.attack_pressed.connect(func(): command.emit("attack"))
 	spell_bar.spell_pressed.connect(func(id): ctrl.cast(id))
+	spell_bar.living_requested.connect(func(id): living_opened.emit(id))
 	strip.add_child(spell_bar)
 	hud = PartyHud.new()
 	hud.setup(gs, ctrl)
 	hud.card_pressed.connect(func(id): card_pressed.emit(id))
 	hud.card_opened.connect(func(id): card_opened.emit(id))
+	hud.news_changed.connect(func(on): header.set_living_dot(on))
 	hud.chest_pressed.connect(func(id): chest_pressed.emit(id))
 
 	# panneaux latéraux
@@ -640,6 +643,7 @@ func _build_parts() -> void:
 	save_menu.export_pressed.connect(func(): menu_pressed.emit("Exporter"))
 	save_menu.import_pressed.connect(func(): menu_pressed.emit("Importer"))
 	header.add_save_menu(save_menu)
+	header.add_living_button(func(): menu_pressed.emit("Vivantes"))
 
 ## Carte repliée : il ne reste que son titre, le grimoire occupe la place libérée.
 func _apply_map_fold() -> void:
