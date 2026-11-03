@@ -216,7 +216,7 @@ func _render() -> void:
 		for r in d.relations:
 			var kp := str(r.with).split("|")
 			links.append({"name": "%s (%s)" % [LivingCatalog.profile(gs.cfg, kp[1]).get("name", kp[1]), str(gs.char_by_id(kp[0]).get("name", kp[0]))], "type": str(r.type), "level": int(r.level)})
-		modal.content.add_child(LivingViz.web(str(prof.name), links))
+		modal.content.add_child(LivingViz.web(str(prof.name), links, tex))
 	if (d.relations as Array).is_empty():
 		_text(L.t("ui.living.no_relations"), UiTheme.DIM, 13, true)
 	for r in d.relations:

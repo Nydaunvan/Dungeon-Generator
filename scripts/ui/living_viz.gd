@@ -9,12 +9,14 @@ const GOLD := Color("e8b45c")
 const PARCH := Color("f5ecd8")
 const DIM := Color("8f7f60")
 const CYAN := Color("35b8c8")
-const TYPE_COL := {"complementaire": Color("8fc8e8"), "rivale": Color("e0a070"), "protectrice": Color("7ab648"), "antagoniste": Color("c0392b"), "fusionnelle": Color("e8b45c")}
+const TYPE_COL := {"complementaire": Color("35b8c8"), "rivale": Color("d9955a"), "protectrice": Color("7ab648"), "antagoniste": Color("c0392b"), "fusionnelle": Color("e5ae52")}
 const TIER_COL := [Color("5a4a34"), Color("8f7f60"), Color("35b8c8"), Color("7ab648"), Color("e8b45c")]
 
 var kind := "timeline"
 var d: Dictionary = {}
-var _tips: Array = []      # [Rect2, texte] pour les infobulles de la grille
+var _tips: Array = []      # [Rect2, texte] pour les infobulles (grille, carte des liens)
+var _time := 0.0
+var _animated := false
 
 static func timeline(affinity: float) -> LivingViz:
 	var v := LivingViz.new()
@@ -30,12 +32,20 @@ static func tree(root_name: String, root_icon: Texture2D, desc: Dictionary) -> L
 	v.custom_minimum_size = Vector2(0, 28 + 3 * 66)
 	return v
 
-static func web(center: String, links: Array) -> LivingViz:
+static func web(center: String, links: Array, icon: Texture2D = null) -> LivingViz:
 	var v := LivingViz.new()
 	v.kind = "web"
-	v.d = {"center": center, "links": links}
-	v.custom_minimum_size = Vector2(0, 230)
+	v.d = {"center": center, "links": links, "icon": icon}
+	v.custom_minimum_size = Vector2(0, 390)
 	return v
+
+func _ready() -> void:
+	_animated = kind == "web" and not Settings.reduced_motion
+	set_process(_animated)
+
+func _process(dt: float) -> void:
+	_time += dt
+	queue_redraw()
 
 ## `rows` : [{name, dots: [{tier, evo, label}]}]
 static func grid(rows: Array) -> LivingViz:
@@ -169,33 +179,185 @@ func _draw_tree() -> void:
 		_bar(Rect2(x2, r.position.y + 39.0, half - 4.0, 8.0), float(tr) / float(LivingSkills.TRAIT_MIN), GOLD if tr_ok else BRONZE)
 		_t(Vector2(x2 + half - 4.0 - 60.0, r.position.y + 34.0), "%d / %d" % [tr, LivingSkills.TRAIT_MIN], 11, PARCH if tr_ok else DIM, false, HORIZONTAL_ALIGNMENT_RIGHT, 60.0)
 
-# ------------------------------------------------------------------ constellation
+# ------------------------------------------------------------------ carte des liens (rose des vents)
+
+## Carte d'atlas : la compétence est au centre d'une rose des vents (anneaux de portée, graduations, pointes comme sur le logo) ; chaque lien est une
+## route de carte vers un médaillon. Le style de la route dit le type de lien (plein, pointillé, double, étoilé), les losanges le niveau, et une lueur
+## la parcourt lentement (immobile avec « Mouvements réduits »).
+func _bez(p0: Vector2, c: Vector2, p2: Vector2, t: float) -> Vector2:
+	var u := 1.0 - t
+	return p0 * u * u + c * 2.0 * u * t + p2 * t * t
+
+func _route(p0: Vector2, c: Vector2, p2: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in 33:
+		out.append(_bez(p0, c, p2, float(i) / 32.0))
+	return out
+
+func _diamond_at(pos: Vector2, r: float, col: Color, filled: bool = true) -> void:
+	var pts := PackedVector2Array([pos + Vector2(0, -r), pos + Vector2(r * 0.8, 0), pos + Vector2(0, r), pos + Vector2(-r * 0.8, 0)])
+	if filled:
+		draw_colored_polygon(pts, col)
+	else:
+		var cl := pts.duplicate()
+		cl.append(pts[0])
+		draw_polyline(cl, col, 1.2, true)
 
 func _draw_web() -> void:
 	var links: Array = d.links
-	var c := Vector2(size.x * 0.5, size.y * 0.5)
-	var rx := size.x * 0.5 - 70.0
-	var ry := size.y * 0.5 - 30.0
+	var c := Vector2(size.x * 0.5, size.y * 0.5 - 10.0)
+	var rx := minf(size.x * 0.5 - 92.0, size.y * 0.5 - 92.0)      # une vraie rose des vents : cercles, pas ellipses
+	var ry := rx
 	var n := links.size()
+	var cop := Color("986A42")
+	var cop_d := Color("5a4129")
+	var ivory := Color("D8C8A4")
+	var amber := Color("E5AE52")
+	# fond : voile sombre en ellipse (le dessin se détache de la pierre) et rose des vents
+	draw_set_transform(c, 0.0, Vector2(1.0, ry / rx))
+	draw_circle(Vector2.ZERO, rx + 18.0, Color(0.03, 0.025, 0.02, 0.55))
+	for k in [0.38, 0.7, 1.0]:
+		draw_arc(Vector2.ZERO, rx * k, 0.0, TAU, 72, Color(cop_d, 0.9 if k < 1.0 else 1.0), 1.0, true)
+	for i in 72:      # graduations du cercle extérieur : plus longues tous les 90°, et tous les 30°
+		var a := TAU * float(i) / 72.0
+		var len := 9.0 if i % 18 == 0 else (6.0 if i % 6 == 0 else 3.0)
+		draw_line(Vector2(cos(a), sin(a)) * rx, Vector2(cos(a), sin(a)) * (rx - len), Color(cop, 0.85 if i % 6 == 0 else 0.5), 1.0, true)
+	for i in 8:      # huit pointes effilées, comme le compas du logo
+		var a := TAU * float(i) / 8.0 + PI * 0.25 * 0.0
+		var long := i % 2 == 0
+		var tip := Vector2(cos(a), sin(a)) * (rx * (1.12 if long else 0.78))
+		var perp := Vector2(-sin(a), cos(a)) * (5.0 if long else 3.0)
+		var base := Vector2(cos(a), sin(a)) * 24.0
+		draw_colored_polygon(PackedVector2Array([base + perp, tip, base - perp]), Color(cop, 0.32 if long else 0.2))
+		draw_line(base, tip, Color(cop, 0.55), 1.0, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_tips.clear()
+	# routes
 	for i in n:
 		var l: Dictionary = links[i]
 		var ang := -PI * 0.5 + TAU * float(i) / float(maxi(1, n))
 		var p := c + Vector2(cos(ang) * rx, sin(ang) * ry)
-		var col: Color = TYPE_COL.get(str(l.type), BRONZE)
-		draw_line(c, p, col, 1.0 + 1.5 * float(int(l.level)))
-		var rad := 7.0 + 2.0 * float(int(l.level))
-		draw_circle(p, rad + 2.0, BRONZE_D)
-		draw_circle(p, rad, col)
-		var lab := _fit(str(l.name), 11, 130.0)
-		var up := p.y < c.y - 2.0
-		_t(Vector2(p.x - 70.0, p.y + (-rad - 18.0 if up else rad + 14.0)), lab, 11, PARCH, false, HORIZONTAL_ALIGNMENT_CENTER, 140.0)
-		_t(Vector2(p.x - 70.0, p.y + (-rad - 6.0 if up else rad + 26.0)), "%s · %s" % [L.t("ui.living.rel_%s" % str(l.type)), L.t("ui.living.rel_level") % int(l.level)], 10, col, false, HORIZONTAL_ALIGNMENT_CENTER, 140.0)
-	draw_circle(c, 22.0, BRONZE_D)
-	draw_circle(c, 19.0, GOLD)
-	draw_rect(Rect2(c.x - 62.0, c.y + 24.0, 124.0, 17.0), Color(0.07, 0.05, 0.03, 0.92))      # fond sombre : le nom reste lisible là où passent les liens
-	_t(Vector2(c.x - 60.0, c.y + 37.0), _fit(str(d.center), 12, 120.0, true), 12, GOLD, true, HORIZONTAL_ALIGNMENT_CENTER, 120.0)
+		var typ := str(l.type)
+		var lvl := int(l.level)
+		var col: Color = TYPE_COL.get(typ, BRONZE)
+		var from := c + (p - c).normalized() * 26.0
+		var to := p - (p - c).normalized() * (11.0 + 2.0 * float(lvl))
+		var perp := (to - from).orthogonal().normalized() * (0.16 * from.distance_to(to)) * (1.0 if i % 2 == 0 else -1.0)
+		var ctrl := (from + to) * 0.5 + perp
+		var pts := _route(from, ctrl, to)
+		draw_polyline(pts, Color(0.02, 0.015, 0.01, 0.9), 4.0 + float(lvl), true)      # liseré sombre sous la route
+		match typ:
+			"rivale":      # pointillé : deux voix qui se répondent sans se mêler
+				for k in range(0, 32, 2):
+					draw_line(pts[k], pts[k + 1], col, 1.6 + 0.5 * float(lvl), true)
+			"antagoniste":      # double filet barré : tension, sans pénalité
+				var off := Vector2(pts[16] - pts[15]).orthogonal().normalized() * 2.2
+				draw_polyline(_shift(pts, off), col, 1.2, true)
+				draw_polyline(_shift(pts, -off), col, 1.2, true)
+				var m := pts[16]
+				draw_line(m + Vector2(-4, -4), m + Vector2(4, 4), col, 1.6, true)
+				draw_line(m + Vector2(-4, 4), m + Vector2(4, -4), col, 1.6, true)
+			"fusionnelle":      # route dorée à halo
+				draw_polyline(pts, Color(col, 0.2), 8.0, true)
+				draw_polyline(pts, col, 2.4 + 0.5 * float(lvl), true)
+			"protectrice":      # route pleine et flèche vers la compétence protégée
+				draw_polyline(pts, col, 1.8 + 0.5 * float(lvl), true)
+				var dir := (pts[32] - pts[29]).normalized()
+				var tipp := pts[32]
+				draw_colored_polygon(PackedVector2Array([tipp, tipp - dir * 9.0 + dir.orthogonal() * 4.0, tipp - dir * 9.0 - dir.orthogonal() * 4.0]), col)
+			_:
+				draw_polyline(pts, col, 1.8 + 0.5 * float(lvl), true)
+		# niveau : losanges le long de la route (vide = lien à peine tissé)
+		var pips := maxi(1, lvl)
+		for k in pips:
+			var tt := 0.5 + (float(k) - float(pips - 1) * 0.5) * 0.1
+			_diamond_at(_bez(from, ctrl, to, tt) + Vector2(0, -0.0), 3.6, col if lvl > 0 else Color(col, 0.7), lvl > 0)
+		# lueur qui parcourt la route
+		if _animated:
+			var tl := fmod(_time * 0.12 + float(i) * 0.27, 1.0)
+			var gp := _bez(from, ctrl, to, tl)
+			draw_circle(gp, 7.0, Color(col, 0.16))
+			draw_circle(gp, 2.6, Color(1.0, 0.95, 0.8, 0.95))
+		# médaillon du lien
+		var rad := 9.0 + 2.0 * float(lvl)
+		draw_circle(p, rad + 3.0, Color(0.03, 0.025, 0.02, 0.95))
+		draw_circle(p, rad, Color("17130e"))
+		draw_arc(p, rad, 0.0, TAU, 40, col, 1.6, true)
+		draw_arc(p, rad - 3.0, 0.0, TAU, 40, Color(cop_d, 0.9), 1.0, true)
+		_diamond_at(p, rad * 0.42, col)
+		# nom, à l'extérieur du médaillon (de côté pour les liens à gauche et à droite)
+		var lab := _fit(str(l.name), 12, 150.0)
+		var sub := "%s · %s" % [L.t("ui.living.rel_%s" % typ), L.t("ui.living.rel_level") % lvl]
+		var ft := UiTheme.font(UiTheme.F_TITLE)
+		if absf(cos(ang)) > 0.5:      # liens de gauche et de droite : légende à côté du médaillon, sur deux lignes au plus
+			var right := cos(ang) > 0.0
+			var x0 := p.x + rad + 8.0 if right else p.x - rad - 8.0 - 108.0
+			var al := HORIZONTAL_ALIGNMENT_LEFT if right else HORIZONTAL_ALIGNMENT_RIGHT
+			var nh := ft.get_multiline_string_size(str(l.name), al, 108.0, 11, 2).y
+			var top := p.y - (nh + 26.0) * 0.5
+			_plate(Rect2(x0 - 3.0, top - 3.0, 114.0, nh + 32.0))
+			draw_multiline_string(ft, Vector2(x0, top + 10.0), str(l.name), al, 108.0, 11, 2, ivory)
+			draw_string(_f(), Vector2(x0, top + nh + 9.0), L.t("ui.living.rel_%s" % typ), al, 108.0, 10, col)
+			draw_string(_f(), Vector2(x0, top + nh + 21.0), L.t("ui.living.rel_level") % lvl, al, 108.0, 10, col)
+		else:
+			var up := p.y < c.y - 4.0      # au-dessus du médaillon pour le lien du haut, en dessous pour celui du bas
+			var y0 := p.y - rad - 30.0 if up else p.y + rad + 8.0
+			_plate(Rect2(p.x - 78.0, y0 - 2.0, 156.0, 34.0))
+			draw_string(ft, Vector2(p.x - 75.0, y0 + 12.0), lab, HORIZONTAL_ALIGNMENT_CENTER, 150.0, 12, ivory)
+			draw_string(_f(), Vector2(p.x - 75.0, y0 + 26.0), sub, HORIZONTAL_ALIGNMENT_CENTER, 150.0, 11, col)
+		_tips.append([Rect2(p.x - rad - 4.0, p.y - rad - 4.0, rad * 2.0 + 8.0, rad * 2.0 + 8.0), "%s\n%s — %s\n%s" % [str(l.name), L.t("ui.living.rel_%s" % typ), L.t("ui.living.rel_level") % lvl, L.t("ui.living.reld_%s" % typ)]])
+	# médaillon central
+	draw_circle(c, 29.0, Color(amber, 0.12))
+	draw_circle(c, 25.0, Color(0.03, 0.025, 0.02, 0.97))
+	draw_arc(c, 25.0, 0.0, TAU, 56, amber, 1.8, true)
+	draw_arc(c, 21.0, 0.0, TAU, 56, Color(cop, 0.9), 1.0, true)
+	var ic: Texture2D = d.get("icon", null)
+	if ic != null:
+		draw_texture_rect(ic, Rect2(c.x - 13.0, c.y - 13.0, 26.0, 26.0), false)
+	else:
+		_diamond_at(c, 9.0, amber)
+	_plate(Rect2(c.x - 66.0, c.y + 29.0, 132.0, 19.0))
+	draw_string(UiTheme.font(UiTheme.F_TITLE_BOLD), Vector2(c.x - 62.0, c.y + 43.0), _fit(str(d.center), 12, 124.0, true), HORIZONTAL_ALIGNMENT_CENTER, 124.0, 12, amber)
 	if n == 0:
-		_t(Vector2(0, c.y - 40.0), L.t("ui.living.no_relations"), 12, DIM, false, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+		_t(Vector2(0, c.y - 50.0), L.t("ui.living.no_relations"), 12, DIM, false, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	_legend(links)
+
+func _shift(pts: PackedVector2Array, off: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for q in pts:
+		out.append(q + off)
+	return out
+
+func _plate(r: Rect2) -> void:
+	draw_rect(r, Color(0.03, 0.025, 0.02, 0.72))
+
+## Légende : un trait d'échantillon par type de lien présent (le style de la route dit le type).
+func _legend(links: Array) -> void:
+	var seen: Array = []
+	for l in links:
+		if not seen.has(str(l.type)):
+			seen.append(str(l.type))
+	var y := size.y - 8.0
+	var x := 6.0
+	for typ in seen:
+		var col: Color = TYPE_COL.get(typ, BRONZE)
+		var a := Vector2(x, y - 4.0)
+		var b := Vector2(x + 26.0, y - 4.0)
+		match typ:
+			"rivale":
+				draw_line(a, a + Vector2(6, 0), col, 1.8)
+				draw_line(a + Vector2(10, 0), a + Vector2(16, 0), col, 1.8)
+				draw_line(a + Vector2(20, 0), b, col, 1.8)
+			"antagoniste":
+				draw_line(a + Vector2(0, -2), b + Vector2(0, -2), col, 1.0)
+				draw_line(a + Vector2(0, 2), b + Vector2(0, 2), col, 1.0)
+			_:
+				draw_line(a, b, col, 2.4 if typ == "fusionnelle" else 1.8)
+		var txt := L.t("ui.living.rel_%s" % str(typ))
+		_t(Vector2(x + 32.0, y), txt, 10, DIM)
+		x += 36.0 + _f().get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 10.0
+		if x > size.x - 80.0:
+			break
 
 # ------------------------------------------------------------------ grille de l'équipe
 
