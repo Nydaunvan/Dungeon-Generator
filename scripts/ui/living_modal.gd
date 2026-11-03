@@ -16,7 +16,7 @@ static func open(host: Node, state: GameState, cid: String, sid: String, changed
 	m.skill_id = sid
 	m.on_change = changed
 	var prof := LivingCatalog.profile(state.cfg, sid)
-	m.modal = Modal.open(host, L.t("ui.living.title"), 560)
+	m.modal = GothicModal.open(host, L.t("ui.living.title"), 560)
 	m.modal.set_buttons([{"text": L.t("ui.living.close"), "cb": func(): m.modal.close()}])
 	if prof.is_empty():
 		m.modal.add_text("?", UiTheme.DIM)

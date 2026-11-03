@@ -58,8 +58,8 @@ func _ready() -> void:
 		get_tree().quit()
 		return
 	var lm := LivingModal.open(host, gs, str(hero.id), sid)
-	lm.modal.fit_ratio = 4.0
+	lm.modal.fit_ratio = float(a.get("fit", "4.0"))
 	lm.modal.call_deferred("_fit")
-	await get_tree().create_timer(0.8).timeout
+	await get_tree().create_timer(float(a.get("t", "0.8"))).timeout
 	get_viewport().get_texture().get_image().save_png(str(a.out) + ".png")
 	get_tree().quit()

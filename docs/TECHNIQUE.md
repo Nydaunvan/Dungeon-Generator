@@ -674,3 +674,10 @@ Règles complètes, formules, tableau des évolutions et risques d'équilibrage 
 - **Carnet** : les manifestations sont des lignes entre guillemets (`LivingSkills.MARK`), au plus 2 par combat ; ne bloquent jamais une action.
 - **Visuels** : `scripts/ui/living_viz.gd` (dessinés : frise des paliers, arbre des évolutions, constellation des liens, grille de l'équipe), purement visuels.
 - **Outils** : `tools/check_living_skills.tscn` (15 contrôles), `tools/living_matrix.tscn` (régénère la matrice), `tools/shot_living.tscn` (capture de la fiche).
+
+## Fenêtres « Gothic Atlas Noir » (`GothicModal` / `GothicPanel`)
+- Toute nouvelle fenêtre s'ouvre avec `GothicModal.open(host, titre, largeur)` : même interface que `Modal` (content, add_text, add_row, set_buttons, add_button, close, closed, esc_closes, fit_ratio). Les fenêtres existantes migrent au fil de l'eau (première : `LivingModal`).
+- `GothicPanel` : contour en lancette (ogive, dessiné par code selon la taille), pierre d'ardoise, bougies, brume, faisceaux chauds et poussières dorées, traits d'atlas qui se tracent à l'encre à l'ouverture (parallaxe souris), filet doré avec rune lumineuse, compas du logo en emblème et en filigrane tournant. Pas de vitrail coloré.
+- Shaders dans `assets/shaders/ui/` (stone, candle, mist, rays, atlas_lines ; rose et chart ne servent qu'au prototype `tools/proto_ui_gothic`). Tout est canvas_item + CPUParticles2D : compatible GL Compatibility et export Web.
+- `Settings.reduced_motion` : calques animés masqués, plus de rune, de rotation, de poussières ni de survol animé.
+- Capture : `tools/shot_living.tscn` (`fit=0.9 t=<secondes>`).
