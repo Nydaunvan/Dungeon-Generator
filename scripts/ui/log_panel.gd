@@ -18,7 +18,7 @@ const TEX := preload("res://assets/ui/journal_parchment.png")
 ## Dimensions et repères de l'image (pixels de la source, 1448 × 1086).
 const SW := 1448.0
 const SH := 1086.0
-const XS := [0.0, 240.0, 654.0, 794.0, 1208.0, 1448.0]      # colonnes : coin | bord étirable | rubis | bord étirable | coin
+const XS := [0.0, 240.0, 660.0, 800.0, 1208.0, 1448.0]      # colonnes : coin | bord étirable | rubis | bord étirable | coin
 const YS := [0.0, 240.0, 846.0, 1086.0]                        # lignes : haut (filet et rubis) | milieu | bas (ornement)
 const FIXED_X := [true, false, true, false, true]               # colonnes à l'échelle uniforme (les autres s'étirent)
 const FIXED_Y := [true, false, true]
@@ -33,7 +33,7 @@ const TITLE_TOP := 96.0            # le titre tient entre le cadre du haut et le
 const TITLE_BASE := 142.0
 const TITLE_X0 := 262.0            # largeur disponible du titre, entre les ornements d'angle
 const TITLE_X1 := 1175.0
-const RUBY := Rect2(664.0, 146.0, 120.0, 74.0)                 # rubis et ses pointes (zone cliquable : historique)
+const RUBY := Rect2(670.0, 146.0, 120.0, 74.0)                 # rubis et ses pointes (zone cliquable : historique)
 const MS_PER_CHAR_DEFAULT := 0.020
 const BACKLOG_FAST := 90           # au-delà de ce retard (en caractères), l'écriture accélère
 const BACKLOG_INSTANT := 520       # au-delà, tout s'affiche d'un coup
