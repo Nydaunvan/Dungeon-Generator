@@ -132,6 +132,38 @@ static func _scrollbars(th: Theme) -> void:
 		th.set_stylebox("grabber_highlight", bar, agrab.call(Color("f0c56a")))
 		th.set_stylebox("grabber_pressed", bar, agrab.call(Color("ffe08a")))
 
+## Thème des fenêtres gothiques : le thème partagé, avec des ascenseurs « bronze ancien » (comme ceux du carnet) pour tout ce que la fenêtre contient.
+static var _gothic: Theme = null
+static func gothic() -> Theme:
+	if _gothic == null:
+		_gothic = shared().duplicate()
+		var track := StyleBoxFlat.new()
+		track.bg_color = Color(0.22, 0.14, 0.06, 0.8)
+		track.border_color = Color(0.85, 0.66, 0.3, 0.45)
+		track.border_width_left = 1
+		track.content_margin_left = 3.0
+		track.content_margin_right = 3.0
+		track.content_margin_top = 3.0
+		track.content_margin_bottom = 3.0
+		var grab := func(c: Color) -> StyleBoxFlat:
+			var g := StyleBoxFlat.new()
+			g.bg_color = c
+			g.border_color = Color(0.17, 0.1, 0.04)
+			g.set_border_width_all(1)
+			g.set_corner_radius_all(3)
+			g.content_margin_left = 4.0
+			g.content_margin_right = 4.0
+			g.content_margin_top = 10.0
+			g.content_margin_bottom = 10.0
+			return g
+		for bar in ["VScrollBar", "HScrollBar"]:
+			_gothic.set_stylebox("scroll", bar, track)
+			_gothic.set_stylebox("scroll_focus", bar, track)
+			_gothic.set_stylebox("grabber", bar, grab.call(Color(0.5, 0.34, 0.14)))
+			_gothic.set_stylebox("grabber_highlight", bar, grab.call(Color(0.62, 0.44, 0.18)))
+			_gothic.set_stylebox("grabber_pressed", bar, grab.call(Color(0.72, 0.52, 0.22)))
+	return _gothic
+
 static func shared() -> Theme:
 	if _shared == null:
 		_shared = build()

@@ -2099,7 +2099,7 @@
   "ui.settings.fps_cap_hint": "A lower limit saves battery and reduces heat.",
   "ui.settings.display_web_note": "In the browser, the window and sync are handled by the browser itself.",
   "ui.settings.reduced_motion": "Reduced motion",
-  "ui.settings.reduced_motion_hint": "Softens the flicker of flames and lights.",
+  "ui.settings.reduced_motion_hint": "Softens the flicker of flames and lights, and turns off the animated window effects (mist, dust, rune).",
   "ui.settings.diag_machine": "This machine",
   "ui.settings.diag_gpu": "Graphics card",
   "ui.settings.diag_renderer": "Renderer",
@@ -3996,7 +3996,8 @@
   "ui.living.tcap_1": "Temperament shows.",
   "ui.living.tcap_2": "Evolutions unlock.",
   "ui.living.tcap_3": "Long friendship (honorary).",
-  "ui.living.tcap_4": "Fusion (honorary)."
+  "ui.living.tcap_4": "Fusion (honorary).",
+  "ui.gothic.help_tip": "How does this window work?"
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

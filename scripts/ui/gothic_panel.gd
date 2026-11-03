@@ -20,6 +20,8 @@ var _lines_mat: ShaderMaterial
 var _stone_mat: ShaderMaterial
 var _watermark: TextureRect
 var _dust: CPUParticles2D
+var _help: Button
+var _overlay: Control      # calque libre au-dessus du contenu (le conteneur étire ses enfants directs, pas ceux-ci)
 var _t := 0.0
 var _rune_t := 0.0
 var _animated := true
@@ -85,11 +87,14 @@ func _init(title: String = "") -> void:
 	v.add_theme_constant_override("separation", 6)
 	margin.add_child(v)
 	var emblem := TextureRect.new()
-	emblem.texture = logo_compass()
+	emblem.texture = load(LOGO)       # logo entier (compas et titre), petit ; additif : le fond noir de l'image s'efface
 	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	emblem.custom_minimum_size = Vector2(0, 84)
+	emblem.custom_minimum_size = Vector2(0, 72)
 	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var em := CanvasItemMaterial.new()
+	em.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	emblem.material = em
 	v.add_child(emblem)
 	title_label = Label.new()
 	title_label.text = title
@@ -114,7 +119,38 @@ func _init(title: String = "") -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 6)
 	v.add_child(body)
+	_overlay = Control.new()
+	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_overlay)
 	set_process(_animated)
+
+## Petit « ? » doré dans l'arc, à droite : ouvre l'explication de la fenêtre dans le guide.
+func add_help_button(tip: String, cb: Callable) -> void:
+	var b := Button.new()
+	b.text = "?"
+	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = tip
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.custom_minimum_size = Vector2(30, 30)
+	for k in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color("0a0806", 0.9) if k == "normal" else Color("1b1610")
+		sb.border_color = BRONZE if k == "normal" else Color("e5ae52")
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(15)
+		b.add_theme_stylebox_override(k, sb)
+	b.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE_BOLD))
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_color_override("font_color", Color("ffd88a"))
+	b.add_theme_color_override("font_hover_color", Color("fff0c8"))
+	b.pressed.connect(cb)
+	_overlay.add_child(b)
+	_help = b
+	_place_help()
+
+func _place_help() -> void:
+	if _help != null:
+		_help.position = Vector2(size.x - 56.0, arch * 0.5 + 8.0)
 
 func _layer(shader: String, params: Dictionary, animated: bool = false) -> Control:
 	var c := Control.new()
@@ -178,6 +214,7 @@ func _notification(what: int) -> void:
 	if _dust != null:
 		_dust.position = size * Vector2(0.5, 0.55)
 		_dust.emission_rect_extents = Vector2(size.x * 0.42, size.y * 0.38)
+	_place_help()
 	_border.queue_redraw()
 
 func _draw_border() -> void:

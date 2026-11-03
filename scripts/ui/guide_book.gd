@@ -5,7 +5,7 @@ extends Node
 ## Les textes viennent de data/lang/help.<langue>.json (un sujet = un fichier de texte BBCode) ; les chapitres regroupent les sujets.
 
 const CHAPTERS := [
-	{"key": "ui.guide.ch1", "ids": ["demarrage", "accueil", "deplacement", "commandes"]},
+	{"key": "ui.guide.ch1", "ids": ["demarrage", "accueil", "fenetres", "deplacement", "commandes"]},
 	{"key": "ui.guide.ch2", "ids": ["combat", "vitesse", "stats", "sorts", "vivantes", "statuts"]},
 	{"key": "ui.guide.ch3", "ids": ["equipement", "progression", "formules"]},
 	{"key": "ui.guide.ch4", "ids": ["boutique", "village", "monstres", "bestiaire", "fontaines", "pieges"]},
