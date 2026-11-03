@@ -28,6 +28,10 @@ func _ready() -> void:
 	var prof := LivingCatalog.profile(cfg, sid)
 	sk.t[str(prof.branches[0].trait)] = 46
 	sk.t["ins"] = 40
+	if str(a.case) == "fusion":      # palier « fusionnelle » : deux évolutions éveillées et le geste signature
+		sk.a = 85.0
+		sk.e = str(prof.branches[0].kind)
+		sk["e2"] = str(prof.branches[1].kind)
 	sk.m = [["first_kill", "g2", 1], ["narrow", "veilleur1", 2], ["env", "crypte", 1]]
 	var other := LivingCatalog.key(str(gs.party[1].id), sid)
 	LivingSkills.state(gs).rel[LivingSkills._pair(key, other)] = {"v": 8}
@@ -43,7 +47,7 @@ func _ready() -> void:
 		for hs in LivingSkills.skills_of(gs, h):
 			LivingSkills._sk(gs, LivingCatalog.key(str(h.id), str(hs))).a = float((n * 17) % 95)
 			n += 1
-	LivingSkills._sk(gs, key).a = 38.0
+	LivingSkills._sk(gs, key).a = 85.0 if str(a.case) == "fusion" else 38.0
 	LivingSkills._sk(gs, LivingCatalog.key(str(gs.party[1].id), sid)).e = "temerite"
 	for i in 3:
 		var o2 := LivingCatalog.key(str(gs.party[(i + 1) % gs.party.size()].id), str(cfg.spells[i * 7 + 3].id))
@@ -61,5 +65,8 @@ func _ready() -> void:
 	lm.modal.fit_ratio = float(a.get("fit", "4.0"))
 	lm.modal.call_deferred("_fit")
 	await get_tree().create_timer(float(a.get("t", "0.8"))).timeout
+	if a.has("scroll"):      # défilement du corps de la fenêtre (scroll=max pour le bas)
+		lm.modal._scroll.scroll_vertical = 100000 if str(a.scroll) == "max" else int(a.scroll)
+		await get_tree().create_timer(0.3).timeout
 	get_viewport().get_texture().get_image().save_png(str(a.out) + ".png")
 	get_tree().quit()

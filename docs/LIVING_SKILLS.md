@@ -53,7 +53,7 @@ nouveauté = 1 si l'adversaire principal a été vu < 2 fois parmi les 6 dernier
 gain  = clamp(brut × poids × nouveauté, 0 ; 6)        (fuite : au plus 1)
 ```
 
-Paliers : 0 étrangère, 10 familière, 25 attachée, 50 liée, 80 fusionnelle. Une compétence délaissée depuis plus de 12 combats perd 0,5 tous les 3 combats.
+Paliers : 0 étrangère, 10 familière (tempérament visible), 25 attachée (première évolution), 50 liée (seconde évolution), 80 fusionnelle (geste signature). Une compétence délaissée depuis plus de 12 combats perd 0,5 tous les 3 combats.
 Un sauvetage ne compte que si le compagnon est encore debout à la fin.
 
 ## 5. Souvenirs
@@ -63,7 +63,7 @@ est oublié. Les souvenirs nourrissent la fiche et le texte du carnet.
 
 ## 6. Évolutions (28 types, trois proposées par compétence)
 
-Disponible si : affinité ≥ 25 **et** le trait associé à la branche ≥ 40, branche non éveillée. Les trois branches d'une compétence sont choisies par hachage de son
+Disponible si : affinité ≥ 25 **et** le trait associé à la branche ≥ 40, branche non éveillée. Une compétence porte au plus **deux** évolutions : la première dès l'affinité 25, la seconde dès **50** (palier « liée », `LINK_AFF`), sur une autre branche ; leurs effets se cumulent, sous le plafond `MULT_CAP`. État : `e` et `e2` dans `gs.living.sk` (`e2` absent des anciennes sauvegardes : lu comme vide, aucun changement de schéma). Les trois branches d'une compétence sont choisies par hachage de son
 identifiant parmi celles de sa famille (l'orientation d'un talent suit son effet principal). Aucune n'est un simple pourcentage : chacune a un avantage et un prix.
 
 | Famille | Évolution | Effet | Prix |
@@ -98,6 +98,22 @@ identifiant parmi celles de sa famille (l'orientation d'un talent suit son effet
 | | Écho | un réflexe réussi charge la jauge d'ultime | — |
 
 Toutes les multiplications de dégâts de ce système sont limitées à **×1,8** (`MULT_CAP`).
+
+### Geste signature (palier « fusionnelle », affinité ≥ 80)
+
+Une fois par combat et par compétence (`SIG_TIER`, drapeau `sig|clé` du registre, remis à zéro au règlement du combat), un geste propre à la famille, annoncé par une ligne « … » du carnet (`ui.living.sig_log_<famille>`) :
+
+| Famille | Geste |
+|---|---|
+| offense / technique | le coup passe la résistance (jusqu'à ×1,6) ; ×1,15 sans résistance |
+| soin | le compagnon le plus blessé reçoit la moitié du soin ; soin de groupe : voile de 8 % PV max sur chacun |
+| defense | la moitié du bouclier couvre aussi le reste du groupe |
+| controle | sommeil +1 tour ; une délivrance laisse 2 tours de Vigueur à l'allié |
+| soutien | +8 d'endurance à tout le groupe |
+| passif (talent) | sous 40 % de PV : 8 % PV max rendus au porteur |
+| instinct | le premier réflexe parfait du combat charge l'ultime |
+
+Le geste n'est dépensé que s'il a eu un effet. Inactif en partie classée ou option coupée, comme tout le système.
 
 ## 7. Relations et accords
 

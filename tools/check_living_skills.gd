@@ -91,6 +91,7 @@ func _ready() -> void:
 	_t13_clean_disable()
 	_t14_lore()
 	_t15_ui_texts()
+	_t16_tiers()
 	Settings.living_skills = saved_opt
 	print("RESULTAT compétences vivantes : %d contrôle(s), %d échec(s) -> %s" % [total, fails, "OK" if fails == 0 else "ECHEC"])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -693,4 +694,110 @@ func _t15_ui_texts() -> void:
 		check("15. nom de trait " + k, L.t(k) != k)
 	for i in 5:
 		check("15. nom de palier %d" % i, L.t("ui.living.tier_%d" % i) != "ui.living.tier_%d" % i)
+	host.queue_free()
+
+# 16. paliers « liée » (seconde évolution) et « fusionnelle » (geste signature, une fois par combat)
+func _t16_tiers() -> void:
+	var w := world("tiers")
+	var gs: GameState = w.gs
+	var pick := _first_spell(w, ["damage"])
+	var caster: Dictionary = pick[0]
+	var sid := str(pick[1].id)
+	var cid := str(caster.id)
+	var prof := LivingCatalog.profile(gs.cfg, sid)
+	var key := LivingCatalog.key(cid, sid)
+	var sk := LivingSkills._sk(gs, key)
+	for b in prof.branches:
+		sk.t[str(b.trait)] = 55
+	sk.a = 30.0
+	var k1 := str(prof.branches[0].kind)
+	var k2 := str(prof.branches[1].kind)
+	check("16. attachée : première évolution éveillable", LivingSkills.evolve(gs, cid, sid, k1) == "")
+	check("16. attachée seulement : pas de seconde évolution", LivingSkills.available_branches(gs, cid, sid).is_empty())
+	check("16. seconde évolution refusée avant « liée »", LivingSkills.evolve(gs, cid, sid, k2) != "" and LivingSkills.evos_of(gs, cid, sid).size() == 1)
+	sk.a = 50.0
+	var av := LivingSkills.available_branches(gs, cid, sid)
+	check("16. liée : les autres branches sont éveillables, pas la première", av.has(k2) and not av.has(k1))
+	check("16. seconde évolution acceptée", LivingSkills.evolve(gs, cid, sid, k2) == "" and LivingSkills.evos_of(gs, cid, sid) == [k1, k2])
+	check("16. au plus deux évolutions", LivingSkills.available_branches(gs, cid, sid).is_empty() and LivingSkills.evolve(gs, cid, sid, str(prof.branches[2].kind)) != "")
+	check("16. la description donne les deux évolutions", str(LivingSkills.describe(gs, cid, sid).evolved2) == k2)
+	# les deux évolutions se cumulent (dans le plafond)
+	var dmg_for := func(evs: Array) -> int:
+		var w2 := world("tiers2")
+		var g2: GameState = w2.gs
+		var p2 := _first_spell(w2, ["damage"])
+		var k := LivingCatalog.key(str(p2[0].id), str(p2[1].id))
+		var s2 := LivingSkills._sk(g2, k)
+		s2.e = evs[0] if evs.size() > 0 else ""
+		s2["e2"] = evs[1] if evs.size() > 1 else ""
+		LivingSkills.adjust_cost(g2, p2[0], p2[1], 1)
+		LivingSkills.begin_cast(g2, p2[0], p2[1], {}, w2.mon)
+		var holder: Dictionary = w2.st
+		holder["hp"] = 1000.0
+		holder["maxHp"] = 5000.0
+		var r := LivingSkills.mod_damage(g2, p2[0], p2[1], w2.mon, holder, w2.st, 100, false, 0)
+		LivingSkills.ctx = {}
+		return r
+	var only_a: int = dmg_for.call(["acharnement"])
+	var both: int = dmg_for.call(["acharnement", "temerite"])
+	check("16. deux évolutions : effets cumulés (%d > %d)" % [both, only_a], both > only_a and both <= int(100.0 * LivingSkills.MULT_CAP))
+	# geste signature : attaque
+	var loss := func(aff: float, twice: bool) -> Array:
+		var w3 := world("tiers3")
+		var g3: GameState = w3.gs
+		var p3 := _first_spell(w3, ["damage"])
+		LivingSkills._sk(g3, LivingCatalog.key(str(p3[0].id), str(p3[1].id))).a = aff
+		var out: Array = []
+		for i in (2 if twice else 1):
+			w3.st["hp"] = 5000.0
+			GameRng.begin(Seeds.from_text("tiers-cast"))
+			_cast(w3, p3[0], str(p3[1].id))
+			out.append(5000.0 - float(w3.st.hp))
+		out.append(LivingSkills.sig_ready(g3, LivingCatalog.key(str(p3[0].id), str(p3[1].id))))
+		out.append(g3.log_lines.slice(-6).any(func(l): return str(l).begins_with(LivingSkills.MARK)))
+		return out
+	var base: Array = loss.call(60.0, true)
+	var fused: Array = loss.call(85.0, true)
+	check("16. fusionnelle : le premier lancer est plus fort que sans geste (%s vs %s)" % [str(fused[0]), str(base[0])], float(fused[0]) > float(base[0]))
+	check("16. fusionnelle : le second lancer du même combat retombe au niveau normal", absf(float(fused[1]) - float(base[1])) < 0.01)
+	check("16. le geste est dépensé et annoncé dans le carnet", fused[2] == false and fused[3] == true and base[2] == false)
+	# le geste revient au combat suivant
+	var w4 := world("tiers4")
+	var g4: GameState = w4.gs
+	var p4 := _first_spell(w4, ["damage"])
+	var k4 := LivingCatalog.key(str(p4[0].id), str(p4[1].id))
+	LivingSkills._sk(g4, k4).a = 85.0
+	check("16. geste prêt", LivingSkills.sig_ready(g4, k4))
+	_cast(w4, p4[0], str(p4[1].id))
+	check("16. geste dépensé", not LivingSkills.sig_ready(g4, k4))
+	LivingSkills.settle(g4, "win")
+	check("16. geste de nouveau prêt au combat suivant", LivingSkills.sig_ready(g4, k4))
+	# soin : le compagnon le plus blessé reçoit aussi une part
+	var heal_gain := func(aff: float) -> int:
+		var w5 := world("tiers5")
+		var g5: GameState = w5.gs
+		var p5 := _first_spell(w5, ["healSingle"])
+		if p5.is_empty():
+			return -1
+		LivingSkills._sk(g5, LivingCatalog.key(str(p5[0].id), str(p5[1].id))).a = aff
+		var tgt: Dictionary = g5.party[0]
+		var other: Dictionary = g5.party[1] if str(g5.party[1].id) != str(tgt.id) else g5.party[2]
+		tgt["hp"] = int(tgt.maxHp) / 2
+		other["hp"] = int(other.maxHp) / 4
+		var before := int(other.hp)
+		GameRng.begin(Seeds.from_text("tiers-heal"))
+		_cast(w5, p5[0], str(p5[1].id), str(tgt.id))
+		return int(other.hp) - before
+	var hb: int = heal_gain.call(60.0)
+	var hf: int = heal_gain.call(85.0)
+	if hb >= 0:
+		check("16. soin fusionnel : le compagnon le plus blessé en profite (%d > %d)" % [hf, hb], hf > hb)
+	# textes et fiche
+	for fam in ["offense", "technique", "soin", "defense", "controle", "soutien", "passif", "instinct"]:
+		check("16. texte du geste " + fam, L.t("ui.living.sig_d_" + fam) != "ui.living.sig_d_" + fam and L.t("ui.living.sig_log_" + fam).count("%s") == 2)
+	var host := Control.new()
+	add_child(host)
+	var lm := LivingModal.open(host, gs, cid, sid)
+	check("16. fiche avec deux évolutions et geste signature", lm.modal != null and lm.modal.content.get_child_count() > 5)
+	lm.modal.close()
 	host.queue_free()

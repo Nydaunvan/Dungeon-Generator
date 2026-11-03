@@ -120,7 +120,12 @@ func _draw_tree() -> void:
 	var bx := rw + 46.0
 	var bw := w - bx
 	var h := size.y
+	var evs: Array = []
+	for k in [str(desc.evolved), str(desc.get("evolved2", ""))]:
+		if k != "":
+			evs.append(k)
 	var evolved := str(desc.evolved)
+	var need_aff := LivingSkills.EVOLVE_AFF if evs.is_empty() else LivingSkills.LINK_AFF      # 1re évolution : « attachée » ; seconde : « liée »
 	# racine
 	var rr := Rect2(rx, h * 0.5 - 40.0, rw, 80.0)
 	draw_rect(rr, Color(0.1, 0.07, 0.04, 0.9))
@@ -136,11 +141,11 @@ func _draw_tree() -> void:
 		var by := 6.0 + i * 66.0
 		var r := Rect2(bx, by, bw, 58.0)
 		var kindk := str(b.kind)
-		var chosen := evolved == kindk
-		var other := evolved != "" and not chosen
+		var chosen := evs.has(kindk)
+		var other := evs.size() >= 2 and not chosen
 		var ready := (desc.available as Array).has(kindk)
 		var tr := int((desc.traits as Dictionary).get(str(b.trait), 0))
-		var aff_ok := float(desc.affinity) >= LivingSkills.EVOLVE_AFF
+		var aff_ok := float(desc.affinity) >= need_aff
 		var tr_ok := tr >= LivingSkills.TRAIT_MIN
 		var edge := GOLD if (chosen or ready) else (Color("4a3c28") if other else BRONZE)
 		# connecteur
@@ -157,8 +162,8 @@ func _draw_tree() -> void:
 		_t(Vector2(r.end.x - 130.0, r.position.y + 18.0), state, 12, tcol, false, HORIZONTAL_ALIGNMENT_RIGHT, 120.0)
 		var half := (bw - 30.0) * 0.5
 		_t(Vector2(r.position.x + 10.0, r.position.y + 34.0), L.t("ui.living.viz_aff"), 11, DIM)
-		_bar(Rect2(r.position.x + 10.0, r.position.y + 39.0, half - 4.0, 8.0), float(desc.affinity) / LivingSkills.EVOLVE_AFF, CYAN if aff_ok else BRONZE)
-		_t(Vector2(r.position.x + 10.0 + half - 4.0 - 60.0, r.position.y + 34.0), "%d / %d" % [mini(int(desc.affinity), 99), int(LivingSkills.EVOLVE_AFF)], 11, PARCH if aff_ok else DIM, false, HORIZONTAL_ALIGNMENT_RIGHT, 60.0)
+		_bar(Rect2(r.position.x + 10.0, r.position.y + 39.0, half - 4.0, 8.0), minf(1.0, float(desc.affinity) / need_aff), CYAN if aff_ok else BRONZE)
+		_t(Vector2(r.position.x + 10.0 + half - 4.0 - 60.0, r.position.y + 34.0), "%d / %d" % [mini(int(desc.affinity), 99), int(need_aff)], 11, PARCH if aff_ok else DIM, false, HORIZONTAL_ALIGNMENT_RIGHT, 60.0)
 		var x2 := r.position.x + 20.0 + half
 		_t(Vector2(x2, r.position.y + 34.0), L.t("ui.living.trait_%s" % str(b.trait)), 11, DIM)
 		_bar(Rect2(x2, r.position.y + 39.0, half - 4.0, 8.0), float(tr) / float(LivingSkills.TRAIT_MIN), GOLD if tr_ok else BRONZE)

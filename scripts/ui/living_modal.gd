@@ -166,14 +166,22 @@ func _render() -> void:
 	# évolutions
 	_title(L.t("ui.living.evolutions"))
 	modal.content.add_child(LivingViz.tree(str(prof.name), tex, d))
-	if str(d.evolved) != "":
-		_text("✦ " + L.fa(L.t("ui.living.evo_current"), L.t("ui.living.k_%s_n" % str(d.evolved))), UiTheme.GOLD, 14)
-		_text(L.t("ui.living.k_%s_d" % str(d.evolved)), UiTheme.PARCH, 13)
-	else:
-		if (d.available as Array).is_empty():
+	var awake: Array = []
+	for k in [str(d.evolved), str(d.get("evolved2", ""))]:
+		if k != "":
+			awake.append(k)
+	for k in awake:
+		_text("✦ " + L.fa(L.t("ui.living.evo_current"), L.t("ui.living.k_%s_n" % k)), UiTheme.GOLD, 14)
+		_text(L.t("ui.living.k_%s_d" % k), UiTheme.PARCH, 13)
+	if awake.size() == 1 and (d.available as Array).is_empty():
+		_text(L.t("ui.living.evo_second_hint"), UiTheme.DIM, 13, true)      # la seconde évolution attend le palier « liée » (50) et un autre tempérament marqué
+	if awake.size() < 2:
+		if (d.available as Array).is_empty() and awake.is_empty():
 			_text(L.t("ui.living.evo_none"), UiTheme.DIM, 13, true)
 		for br in prof.branches:
 			var kind := str(br.kind)
+			if awake.has(kind):
+				continue
 			var open_: bool = (d.available as Array).has(kind)
 			_text(("✦ " if open_ else "· ") + L.t("ui.living.k_%s_n" % kind) + "  (" + L.t("ui.living.trait_%s" % str(br.trait)) + ")", UiTheme.GOLD if open_ else UiTheme.DIM, 14)
 			_text(L.t("ui.living.k_%s_d" % kind), UiTheme.PARCH if open_ else UiTheme.DIM, 13)
@@ -187,6 +195,14 @@ func _render() -> void:
 						_render(), not on)
 		if not (d.available as Array).is_empty():
 			_text(L.t("ui.living.evo_warn"), Color("e0a070"), 12, true)
+	# geste signature (palier « fusionnelle »)
+	_title(L.t("ui.living.sig_title"))
+	if int(d.tier) >= LivingSkills.SIG_TIER:
+		_text("✦ " + L.t("ui.living.sig_d_%s" % str(prof.family)), UiTheme.GOLD, 13)
+		_text(L.t("ui.living.sig_once"), UiTheme.DIM, 12, true)
+	else:
+		_text(L.t("ui.living.sig_locked"), UiTheme.DIM, 13, true)
+		_text(L.t("ui.living.sig_d_%s" % str(prof.family)), UiTheme.DIM, 12, true)
 	# liens
 	_title(L.t("ui.living.relations"))
 	if not (d.relations as Array).is_empty():

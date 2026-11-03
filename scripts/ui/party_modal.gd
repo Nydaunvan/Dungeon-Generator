@@ -466,12 +466,15 @@ func _living(p: Control, c: Dictionary) -> void:
 		if prof.is_empty():
 			continue
 		var a := LivingSkills.affinity(gs, char_id, str(sid))
-		var evo := LivingSkills.evolved(gs, char_id, str(sid))
+		var evo_names: Array = []
+		for ek in LivingSkills.evos_of(gs, char_id, str(sid)):
+			evo_names.append(L.t("ui.living.k_%s_n" % ek))
+		var evo := " + ".join(PackedStringArray(evo_names))
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.text = "%s %s — %s%s" % [str(prof.icon) if not str(prof.icon).begins_with("@icon:") else "✦", str(prof.name), L.t("ui.living.tier_%d" % LivingSkills.tier(a)),
-			(" · " + L.t("ui.living.k_%s_n" % evo)) if evo != "" else ""]
+			(" · " + evo) if evo != "" else ""]
 		b.add_theme_font_size_override("font_size", 14)
 		b.pressed.connect(func(): LivingModal.open(modal.get_parent(), gs, char_id, str(sid), _render))
 		p.add_child(b)

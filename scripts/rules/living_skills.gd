@@ -23,6 +23,8 @@ const WINDOW := 3                                   # un sort « répond » à l
 const SAY_MAX := 2                                  # manifestations par combat
 const MARK := "« "                                  # une manifestation du carnet est une ligne entre guillemets (le carnet ajoute déjà son propre ✦)
 const SAY_GAP := 5                                  # sorts minimum entre deux manifestations
+const SIG_TIER := 4                                 # palier « fusionnelle » : geste signature, une fois par combat
+const LINK_AFF := 50.0                              # affinité (palier « liée ») pour éveiller une seconde évolution
 const MULT_CAP := 1.8                               # plafond du produit des multiplicateurs de dégâts de ce système
 const DECAY_AFTER := 12                             # combats sans usage avant que l'affinité s'étiole
 const MOOD_INS := 45                                # instabilité à partir de laquelle une compétence s'agite quand son porteur est blessé
@@ -65,7 +67,7 @@ static func state(gs: GameState) -> Dictionary:
 static func _sk(gs: GameState, key: String) -> Dictionary:
 	var sks: Dictionary = state(gs).sk
 	if not sks.has(key):
-		sks[key] = {"a": 0.0, "t": {}, "m": [], "e": "", "o": 0, "u": 0, "c": 0, "rp": [], "k": {}}
+		sks[key] = {"a": 0.0, "t": {}, "m": [], "e": "", "e2": "", "o": 0, "u": 0, "c": 0, "rp": [], "k": {}}
 	return sks[key]
 
 static func has_entry(gs: GameState, char_id: String, skill_id: String) -> bool:
@@ -85,6 +87,31 @@ static func tier(a: float) -> int:
 static func evolved(gs: GameState, char_id: String, skill_id: String) -> String:
 	var s: Dictionary = state(gs).sk.get(LivingCatalog.key(char_id, skill_id), {})
 	return str(s.get("e", ""))
+
+## Évolutions éveillées d'une compétence : la première (dès « attachée »), et la seconde (dès « liée »).
+static func evos_of(gs: GameState, char_id: String, skill_id: String) -> Array:
+	var s: Dictionary = state(gs).sk.get(LivingCatalog.key(char_id, skill_id), {})
+	var out: Array = []
+	for k in ["e", "e2"]:
+		if str(s.get(k, "")) != "":
+			out.append(str(s.get(k, "")))
+	return out
+
+static func has_evo(gs: GameState, char_id: String, skill_id: String, kind: String) -> bool:
+	return evos_of(gs, char_id, skill_id).has(kind)
+
+## Geste signature (palier « fusionnelle ») : disponible une fois par combat pour une compétence d'affinité ≥ 80, selon sa famille.
+static func sig_ready(gs: GameState, key: String) -> bool:
+	return tier(float(_sk(gs, key).a)) >= SIG_TIER and not _led(gs).flags.has("sig|" + key)
+
+## Dépense le geste signature : une ligne du carnet entre guillemets (famille : offense, technique, soin, defense, controle, soutien, passif, instinct).
+static func _sig_spend(gs: GameState, key: String, who: String) -> void:
+	_led(gs).flags["sig|" + key] = true
+	var sid := key.split("|")[1]
+	var prof := LivingCatalog.profile(gs.cfg, sid)
+	if prof.is_empty():
+		return
+	GameState.living_log(gs, MARK + L.fa(L.t("ui.living.sig_log_%s" % str(prof.family)), [str(prof.name), who]) + " »")
 
 ## Traits d'une compétence pour un héros : naissance (profil) + dérive vécue, bornés à 0-100.
 static func traits(gs: GameState, char_id: String, skill_id: String) -> Dictionary:
@@ -168,9 +195,7 @@ static func evo_of(gs: GameState, char_id: String, skill_id: String) -> String:
 static func passive_kinds(gs: GameState, c: Dictionary) -> Array:
 	var out: Array = []
 	for t in c.get("talents", []):
-		var e := evolved(gs, str(c.id), str(t.id))
-		if e != "":
-			out.append(e)
+		out.append_array(evos_of(gs, str(c.id), str(t.id)))
 	return out
 
 # ------------------------------------------------------------------ hooks de combat
@@ -183,9 +208,9 @@ static func adjust_cost(gs: GameState, caster: Dictionary, spell: Dictionary, ba
 		return base
 	var cid := str(caster.id)
 	var sid := str(spell.id)
-	var evo := evolved(gs, cid, sid)
+	var evos := evos_of(gs, cid, sid)
 	var mult := 1.0
-	if evo == "precision" or evo == "domination":
+	if evos.has("precision") or evos.has("domination"):
 		mult += 0.1
 	var mood := _mood(gs, caster, sid)
 	if mood:
@@ -216,9 +241,10 @@ static func begin_cast(gs: GameState, caster: Dictionary, spell: Dictionary, all
 	var led := _led(gs)
 	led.n = int(led.n) + 1
 	var evo := evolved(gs, cid, sid)
+	var evos := evos_of(gs, cid, sid)
 	var combo := _find_combo(gs, key, spell, ally)
 	var mood: bool = bool(ctx.get("mood", false)) and ctx.get("key", "") == key
-	ctx = {"key": key, "char": cid, "spell": spell, "evo": evo, "mood": mood, "combo": combo, "ally": str(ally.get("id", "")), "n": int(led.n),
+	ctx = {"key": key, "char": cid, "spell": spell, "evo": evo, "evos": evos, "sig": sig_ready(gs, key), "mood": mood, "combo": combo, "ally": str(ally.get("id", "")), "n": int(led.n),
 		"target": str(target.get("id", "")), "fam": LivingCatalog.family_of_spell(spell), "mult": 1.0, "healed_low": false, "kill": false}
 	var ls := _lsk(gs, key)
 	ls.c = int(ls.c) + 1
@@ -283,34 +309,39 @@ static func mod_damage(gs: GameState, attacker: Dictionary, spell: Dictionary, t
 	var is_boss := bool(target.get("isBoss", false))
 	var is_group := bool(target.get("isGroup", false))
 	var statused: bool = not (holder.get("statusEffects", []) as Array).is_empty()
-	match str(ctx.evo):
-		"acharnement":
-			if mon_hp <= 0.5:
-				m *= 1.25
-		"precision":
-			if not aoe and resist > 0:
-				m *= 1.0 + minf(0.6, float(resist) * 0.4 / maxf(1.0, 100.0 - float(resist)))
-		"tactique":
-			m *= 1.3 if statused else 0.9
-		"brutes":
-			m *= 1.25 if (is_boss or is_group) else 0.9
-		"temerite":
-			if _hp_frac(attacker) > 0.3:
-				m *= 1.35
-		"prudence":
-			m *= 0.85
-		"vengeance":
-			m *= 1.3 if _party_low(gs, str(attacker.id)) else 0.95
-		"balayage":
-			var alive := 1
-			if st.has("members"):
-				alive = 0
-				for mem in st.members:
-					if bool(mem.alive):
-						alive += 1
-			m *= 1.0 + 0.12 * float(maxi(0, alive - 1)) if alive > 1 else 0.92
+	for ev in ctx.evos:
+		match ev:
+			"acharnement":
+				if mon_hp <= 0.5:
+					m *= 1.25
+			"precision":
+				if not aoe and resist > 0:
+					m *= 1.0 + minf(0.6, float(resist) * 0.4 / maxf(1.0, 100.0 - float(resist)))
+			"tactique":
+				m *= 1.3 if statused else 0.9
+			"brutes":
+				m *= 1.25 if (is_boss or is_group) else 0.9
+			"temerite":
+				if _hp_frac(attacker) > 0.3:
+					m *= 1.35
+			"prudence":
+				m *= 0.85
+			"vengeance":
+				m *= 1.3 if _party_low(gs, str(attacker.id)) else 0.95
+			"balayage":
+				var alive := 1
+				if st.has("members"):
+					alive = 0
+					for mem in st.members:
+						if bool(mem.alive):
+							alive += 1
+				m *= 1.0 + 0.12 * float(maxi(0, alive - 1)) if alive > 1 else 0.92
 	if bool(ctx.mood):
 		m *= 1.2
+	# geste signature (fusionnelle) : le coup passe la résistance (jusqu'à ×1,6) ; sans résistance, un coup un peu plus juste (×1,15)
+	if bool(ctx.get("sig", false)) and ["offense", "technique"].has(str(ctx.get("fam", ""))):
+		m *= minf(1.6, 100.0 / maxf(40.0, 100.0 - float(resist))) if resist > 0 else 1.15
+		ctx["sig_used"] = true
 	# combo
 	var cmb: Dictionary = ctx.get("combo", {})
 	if not cmb.is_empty():
@@ -417,20 +448,22 @@ static func mod_heal(gs: GameState, caster: Dictionary, spell: Dictionary, ally:
 		return amt
 	var m := 1.0
 	var frac := _hp_frac(ally)
-	match str(ctx.evo):
-		"compassion":
-			m *= 1.4 if frac < 0.35 else (0.8 if frac >= 0.7 else 1.0)
-		"sacrifice":
-			if _hp_frac(caster) >= 0.25:
-				m *= 1.3
-				ctx["recoil"] = maxf(float(ctx.get("recoil", 0.0)), 0.05)
-		"attachee":
-			m *= 1.25 if _bond_with(gs, str(ctx.key)) == str(ally.get("id", "")) else 0.9
+	for ev in ctx.evos:
+		match ev:
+			"compassion":
+				m *= 1.4 if frac < 0.35 else (0.8 if frac >= 0.7 else 1.0)
+			"sacrifice":
+				if _hp_frac(caster) >= 0.25:
+					m *= 1.3
+					ctx["recoil"] = maxf(float(ctx.get("recoil", 0.0)), 0.05)
+			"attachee":
+				m *= 1.25 if _bond_with(gs, str(ctx.key)) == str(ally.get("id", "")) else 0.9
 	if bool(ctx.mood):
 		m *= 1.2
 	if frac < 0.35:
 		ctx["healed_low"] = true
 		(_led(gs).saved as Dictionary)[str(ally.id)] = str(ctx.key)
+	ctx["heal_amt"] = maxi(int(ctx.get("heal_amt", 0)), int(round(float(amt) * m)))
 	return int(round(float(amt) * m))
 
 ## Après un soin : registre, surplus converti en bouclier (préventive).
@@ -443,7 +476,7 @@ static func note_heal(gs: GameState, caster: Dictionary, ally: Dictionary, amt: 
 		ls.low = int(ls.low) + 1
 	if str(ally.id) == str(caster.id):
 		ls.self = int(ls.self) + 1
-	if str(ctx.evo) == "preventive" and amt > healed:
+	if (ctx.evos as Array).has("preventive") and amt > healed:
 		var sh := mini(int(round(float(ally.maxHp) * 0.15)), amt - healed)
 		if sh > 0:
 			ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + sh
@@ -455,12 +488,13 @@ static func mod_shield(gs: GameState, caster: Dictionary, spell: Dictionary, all
 		return amt
 	var m := 1.0
 	var frac := _hp_frac(ally)
-	match str(ctx.evo):
-		"gardienne":
-			m *= 1.25
-			ctx["guard"] = true
-		"reactive":
-			m *= 1.6 if frac < 0.5 else 0.85
+	for ev in ctx.evos:
+		match ev:
+			"gardienne":
+				m *= 1.25
+				ctx["guard"] = true
+			"reactive":
+				m *= 1.6 if frac < 0.5 else 0.85
 	if bool(ctx.mood):
 		m *= 1.2
 	if frac < 0.35:
@@ -476,63 +510,64 @@ static func end_cast(gs: GameState, caster: Dictionary, spell: Dictionary, ally:
 	var key := str(ctx.key)
 	var led := _led(gs)
 	var mode := str(spell.get("mode", ""))
-	var evo := str(ctx.evo)
 	var ls := _lsk(gs, key)
 	# effets secondaires
-	match evo:
-		"temerite":
-			if mode == "damage" or mode == "damageGroup":
-				_strain(gs, caster, 0.04)
-		"prudence":
-			if mode == "damage" or mode == "damageGroup":
-				var cap := int(round(float(caster.maxHp) * 0.3))
-				caster["shieldAmount"] = mini(cap, int(caster.get("shieldAmount", 0)) + int(round(float(caster.maxHp) * 0.12)))
-		"sacrifice":
-			if float(ctx.get("recoil", 0.0)) > 0.0:
-				_strain(gs, caster, float(ctx.recoil))
-		"gardienne":
-			if bool(ctx.get("guard", false)) and not ally.is_empty() and str(ally.id) != str(caster.id):
-				caster["shieldAmount"] = int(caster.get("shieldAmount", 0)) + int(round(float(ctx.get("shield_amt", 0)) * 0.4))
-		"rempart":
-			if mode == "shieldSingle" and not ally.is_empty():
-				var other: Dictionary = {}
-				var lo := 2.0
-				for p in gs.party:
-					if int(p.hp) > 0 and str(p.id) != str(ally.id) and str(p.id) != str(caster.id) and _hp_frac(p) < lo:
-						lo = _hp_frac(p)
-						other = p
-				if not other.is_empty():
-					other["shieldAmount"] = int(other.get("shieldAmount", 0)) + int(round(float(ctx.get("shield_amt", 0)) * 0.35))
-		"domination", "patience":
-			if mode == "dispelSingle" and not ally.is_empty() and bool(ctx.get("applied", false)):
-				Statuses.give(ally, "vigor", 2 if evo == "domination" else 1, str(caster.id))      # l'allié délivré garde une brève Vigueur
-				Characters.recompute(ally, gs.cfg)
-			if evo == "patience" and not spell.get("ultimate", false):
-				var cds: Dictionary = caster.get("spellCooldowns", {})
-				var ready := int(cds.get(str(spell.id), 0))
-				var extra := int(float(spell.get("cooldownSec", 6)) * 250.0)      # prix de la patience : recharge allongée d'un quart
-				cds[str(spell.id)] = ready + extra
-				caster["spellCooldowns"] = cds
-		"veille":
-			if mode == "dispelSingle" and not ally.is_empty():
-				ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + int(round(float(ally.maxHp) * 0.08))
-		"relais":
-			if mode == "partyUtility":      # relais : les recharges raccourcies le sont de moitié de plus
-				var cut := int(float(spell.get("cooldownReductionSec", 0)) * 500.0)
-				if cut > 0:
-					for p in gs.alive_party():
-						var cds: Dictionary = p.get("spellCooldowns", {})
-						for sid in cds.keys():
-							cds[sid] = maxi(GameClock.ms, int(cds[sid]) - cut)
-			elif mode == "staminaRestoreSingle" and not ally.is_empty():
-				ally["stamina"] = mini(int(ally.get("maxStamina", 100)), int(ally.get("stamina", 0)) + 4)
-		"memoire":
-			var mid := str(target.get("id", ""))
-			if mid != "" and _seen_count(gs, mid) >= 3:
-				caster["stamina"] = mini(int(caster.get("maxStamina", 100)), int(caster.get("stamina", 0)) + 8)
-		"ruse":
-			if bool(ctx.get("applied", false)):
-				caster["stamina"] = mini(int(caster.get("maxStamina", 100)), int(caster.get("stamina", 0)) + 5)
+	for evo in ctx.evos:
+		match evo:
+			"temerite":
+				if mode == "damage" or mode == "damageGroup":
+					_strain(gs, caster, 0.04)
+			"prudence":
+				if mode == "damage" or mode == "damageGroup":
+					var cap := int(round(float(caster.maxHp) * 0.3))
+					caster["shieldAmount"] = mini(cap, int(caster.get("shieldAmount", 0)) + int(round(float(caster.maxHp) * 0.12)))
+			"sacrifice":
+				if float(ctx.get("recoil", 0.0)) > 0.0:
+					_strain(gs, caster, float(ctx.recoil))
+			"gardienne":
+				if bool(ctx.get("guard", false)) and not ally.is_empty() and str(ally.id) != str(caster.id):
+					caster["shieldAmount"] = int(caster.get("shieldAmount", 0)) + int(round(float(ctx.get("shield_amt", 0)) * 0.4))
+			"rempart":
+				if mode == "shieldSingle" and not ally.is_empty():
+					var other: Dictionary = {}
+					var lo := 2.0
+					for p in gs.party:
+						if int(p.hp) > 0 and str(p.id) != str(ally.id) and str(p.id) != str(caster.id) and _hp_frac(p) < lo:
+							lo = _hp_frac(p)
+							other = p
+					if not other.is_empty():
+						other["shieldAmount"] = int(other.get("shieldAmount", 0)) + int(round(float(ctx.get("shield_amt", 0)) * 0.35))
+			"domination", "patience":
+				if mode == "dispelSingle" and not ally.is_empty() and bool(ctx.get("applied", false)):
+					Statuses.give(ally, "vigor", 2 if evo == "domination" else 1, str(caster.id))      # l'allié délivré garde une brève Vigueur
+					Characters.recompute(ally, gs.cfg)
+				if evo == "patience" and not spell.get("ultimate", false):
+					var cds: Dictionary = caster.get("spellCooldowns", {})
+					var ready := int(cds.get(str(spell.id), 0))
+					var extra := int(float(spell.get("cooldownSec", 6)) * 250.0)      # prix de la patience : recharge allongée d'un quart
+					cds[str(spell.id)] = ready + extra
+					caster["spellCooldowns"] = cds
+			"veille":
+				if mode == "dispelSingle" and not ally.is_empty():
+					ally["shieldAmount"] = int(ally.get("shieldAmount", 0)) + int(round(float(ally.maxHp) * 0.08))
+			"relais":
+				if mode == "partyUtility":      # relais : les recharges raccourcies le sont de moitié de plus
+					var cut := int(float(spell.get("cooldownReductionSec", 0)) * 500.0)
+					if cut > 0:
+						for p in gs.alive_party():
+							var cds: Dictionary = p.get("spellCooldowns", {})
+							for sid in cds.keys():
+								cds[sid] = maxi(GameClock.ms, int(cds[sid]) - cut)
+				elif mode == "staminaRestoreSingle" and not ally.is_empty():
+					ally["stamina"] = mini(int(ally.get("maxStamina", 100)), int(ally.get("stamina", 0)) + 4)
+			"memoire":
+				var mid := str(target.get("id", ""))
+				if mid != "" and _seen_count(gs, mid) >= 3:
+					caster["stamina"] = mini(int(caster.get("maxStamina", 100)), int(caster.get("stamina", 0)) + 8)
+			"ruse":
+				if bool(ctx.get("applied", false)):
+					caster["stamina"] = mini(int(caster.get("maxStamina", 100)), int(caster.get("stamina", 0)) + 5)
+	_sig_end_cast(gs, caster, spell, ally, key)
 	var cmb: Dictionary = ctx.get("combo", {})
 	if not cmb.is_empty():
 		var cd: Dictionary = COMBOS[str(cmb.id)]
@@ -569,12 +604,67 @@ static func end_cast(gs: GameState, caster: Dictionary, spell: Dictionary, ally:
 		ls.party = int(ls.party) + 1
 	ctx = {}
 
+## Geste signature d'une compétence fusionnelle (affinité ≥ 80), une fois par combat, propre à sa famille. Aucun n'est un simple pourcentage de dégâts :
+## offense/technique (dans mod_damage) : le coup passe la résistance ; soin : le compagnon le plus blessé reçoit aussi la moitié du soin (un soin de groupe
+## pose un voile de 8 % PV max sur chacun) ; défense : la moitié du bouclier couvre aussi le reste du groupe ; contrôle : un tour de plus (sommeil) ou 2 tours de
+## Vigueur à l'allié délivré ; soutien : +8 d'endurance à tout le groupe.
+static func _sig_end_cast(gs: GameState, caster: Dictionary, spell: Dictionary, ally: Dictionary, key: String) -> void:
+	if not bool(ctx.get("sig", false)):
+		return
+	var fam := str(ctx.get("fam", ""))
+	var mode := str(spell.get("mode", ""))
+	var who := str(ally.get("name", caster.name)) if not ally.is_empty() else str(caster.name)
+	var spent := false
+	match fam:
+		"offense", "technique":
+			spent = bool(ctx.get("sig_used", false))
+		"soin":
+			if mode == "healParty":
+				for p in gs.alive_party():
+					p["shieldAmount"] = int(p.get("shieldAmount", 0)) + int(round(float(p.maxHp) * 0.08))
+				spent = true
+			elif mode == "healSingle" and not ally.is_empty():
+				var other: Dictionary = {}
+				var lo := 1.0
+				for p in gs.party:
+					if int(p.hp) > 0 and str(p.id) != str(ally.id) and _hp_frac(p) < lo:
+						lo = _hp_frac(p)
+						other = p
+				if not other.is_empty() and int(ctx.get("heal_amt", 0)) > 1:
+					var h := maxi(1, int(round(float(ctx.heal_amt) * 0.5)))
+					other["hp"] = mini(int(other.maxHp), int(other.hp) + h)
+					who = str(other.name)
+					spent = true
+		"defense":
+			if int(ctx.get("shield_amt", 0)) > 1:
+				for p in gs.alive_party():
+					if str(p.id) != str(ally.get("id", "")):
+						p["shieldAmount"] = int(p.get("shieldAmount", 0)) + int(round(float(ctx.shield_amt) * 0.5))
+				spent = true
+		"controle":
+			if mode == "dispelSingle" and not ally.is_empty() and bool(ctx.get("applied", false)):
+				Statuses.give(ally, "vigor", 2, str(caster.id))
+				Characters.recompute(ally, gs.cfg)
+				spent = true
+			elif mode == "sleepGroup" and bool(ctx.get("sig_used", false)) and bool(ctx.get("applied", false)):
+				spent = true
+		"soutien":
+			for p in gs.alive_party():
+				p["stamina"] = mini(int(p.get("maxStamina", 100)), int(p.get("stamina", 0)) + 8)
+			spent = true
+	if spent:
+		_sig_spend(gs, key, who)
+
 ## Tours d'effet supplémentaires d'un sort de contrôle (sommeil) : Domination et Patience allongent d'un tour.
 static func status_bonus(gs: GameState, caster: Dictionary, spell: Dictionary) -> int:
 	if not active(gs):
 		return 0
-	var evo := evolved(gs, str(caster.id), str(spell.id))
-	return 1 if evo == "domination" or evo == "patience" else 0
+	var evos := evos_of(gs, str(caster.id), str(spell.id))
+	var n := 1 if evos.has("domination") or evos.has("patience") else 0
+	if not ctx.is_empty() and str(ctx.get("char", "")) == str(caster.id) and bool(ctx.get("sig", false)) and str(ctx.get("fam", "")) == "controle":
+		ctx["sig_used"] = true      # geste signature du contrôle : un tour de plus
+		n += 1
+	return n
 
 ## Un sort de statut a posé son effet (utilisé par ruse, patience et le registre).
 static func note_status_applied() -> void:
@@ -615,7 +705,18 @@ static func mod_incoming(gs: GameState, victim: Dictionary, dmg: int) -> int:
 
 ## Début du tour d'un héros : « second souffle » (passif éveillé), une fois par combat.
 static func on_turn(gs: GameState, c: Dictionary) -> void:
-	if not active(gs) or int(c.hp) <= 0 or _hp_frac(c) >= 0.25 or not passive_kinds(gs, c).has("p_souffle"):
+	if not active(gs) or int(c.hp) <= 0:
+		return
+	# geste signature d'un talent fusionnel : une fois par combat, un souffle de vie sous 40 % de PV (8 % PV max)
+	if _hp_frac(c) < 0.4:
+		for t in c.get("talents", []):
+			var tk := LivingCatalog.key(str(c.id), str(t.id))
+			if sig_ready(gs, tk):
+				var h := maxi(1, int(round(float(c.maxHp) * 0.08)))
+				c["hp"] = mini(int(c.maxHp), int(c.hp) + h)
+				_sig_spend(gs, tk, str(c.name))
+				break
+	if _hp_frac(c) >= 0.25 or not passive_kinds(gs, c).has("p_souffle"):
 		return
 	var flags: Dictionary = _led(gs).flags
 	var fk := "souffle|" + str(c.id)
@@ -655,7 +756,10 @@ static func note_instinct(gs: GameState, victim: Dictionary, outcome: String) ->
 	if outcome == "ok" or outcome == "perfect":
 		ls.c = int(ls.c) + 1
 		ls.dmg = int(ls.dmg) + (2 if outcome == "perfect" else 1)
-	if (outcome == "ok" or outcome == "perfect") and evolved(gs, str(victim.id), sid) == "i_echo":
+	if outcome == "perfect" and sig_ready(gs, key):      # geste signature de l'instinct fusionnel : le premier réflexe parfait du combat charge l'ultime
+		Characters.ult_gain(gs.cfg, victim, "gainTaken")
+		_sig_spend(gs, key, str(victim.name))
+	if (outcome == "ok" or outcome == "perfect") and has_evo(gs, str(victim.id), sid, "i_echo"):
 		Characters.ult_gain(gs.cfg, victim, "gainTaken")
 
 ## Instinct « veille » éveillé : +6 points de chance de réussite.
@@ -664,7 +768,7 @@ static func instinct_bonus(gs: GameState, victim: Dictionary) -> float:
 		return 0.0
 	var cls := Characters.class_def(gs.cfg, str(victim.get("classId", "")))
 	var fam := str(cls.get("evolvesFrom", cls.get("name", "")))
-	return 6.0 if evolved(gs, str(victim.id), LivingCatalog.instinct_id(fam)) == "i_vigil" else 0.0
+	return 6.0 if has_evo(gs, str(victim.id), LivingCatalog.instinct_id(fam), "i_vigil") else 0.0
 
 # ------------------------------------------------------------------ souvenirs
 
@@ -995,12 +1099,15 @@ static func _drift(gs: GameState, key: String, skill_id: String, ls: Dictionary,
 static func available_branches(gs: GameState, char_id: String, skill_id: String) -> Array:
 	var out: Array = []
 	var s: Dictionary = state(gs).sk.get(LivingCatalog.key(char_id, skill_id), {})
-	if str(s.get("e", "")) != "" or float(s.get("a", 0.0)) < EVOLVE_AFF:
+	var a := float(s.get("a", 0.0))
+	var have := evos_of(gs, char_id, skill_id)
+	# premier emplacement dès « attachée » (25), second dès « liée » (50) ; au plus deux évolutions
+	if have.size() >= 2 or a < (EVOLVE_AFF if have.is_empty() else LINK_AFF):
 		return out
 	var prof := LivingCatalog.profile(gs.cfg, skill_id)
 	var tr := traits(gs, char_id, skill_id)
 	for b in prof.get("branches", []):
-		if int(tr.get(str(b.trait), 0)) >= TRAIT_MIN:
+		if int(tr.get(str(b.trait), 0)) >= TRAIT_MIN and not have.has(str(b.kind)):
 			out.append(str(b.kind))
 	return out
 
@@ -1011,7 +1118,10 @@ static func evolve(gs: GameState, char_id: String, skill_id: String, kind: Strin
 	if not available_branches(gs, char_id, skill_id).has(kind):
 		return L.t("ui.living.err_not_available")
 	var sk := _sk(gs, LivingCatalog.key(char_id, skill_id))
-	sk.e = kind
+	if str(sk.get("e", "")) == "":
+		sk.e = kind
+	else:
+		sk["e2"] = kind
 	var c := gs.char_by_id(char_id)
 	var prof := LivingCatalog.profile(gs.cfg, skill_id)
 	gs.add_log(L.fa(L.t("ui.living.log_evolve"), [c.get("name", ""), prof.get("name", ""), L.t("ui.living.k_%s_n" % kind)]))
@@ -1059,7 +1169,7 @@ static func describe(gs: GameState, char_id: String, skill_id: String) -> Dictio
 	var prof := LivingCatalog.profile(gs.cfg, skill_id)
 	var a := float(s.get("a", 0.0))
 	return {"key": key, "profile": prof, "affinity": a, "tier": tier(a), "traits": traits(gs, char_id, skill_id), "dominant": dominant(gs, char_id, skill_id),
-		"memories": (s.get("m", []) as Array).duplicate(true), "evolved": str(s.get("e", "")), "available": available_branches(gs, char_id, skill_id),
+		"memories": (s.get("m", []) as Array).duplicate(true), "evolved": str(s.get("e", "")), "evolved2": str(s.get("e2", "")), "available": available_branches(gs, char_id, skill_id),
 		"relations": relations_of(gs, key), "mood": int(traits(gs, char_id, skill_id).get("ins", 0)) >= MOOD_INS, "uses": int(s.get("c", 0))}
 
 ## Nom lisible d'un monstre (cherché dans tous les niveaux), à défaut son identifiant.
