@@ -173,6 +173,9 @@ func _render() -> void:
 	for k in awake:
 		_text("✦ " + L.fa(L.t("ui.living.evo_current"), L.t("ui.living.k_%s_n" % k)), UiTheme.GOLD, 14)
 		_text(L.t("ui.living.k_%s_d" % k), UiTheme.PARCH, 13)
+		_text(L.fa(L.t("ui.living.detail"), L.t("ui.living.k_%s_x" % k)), UiTheme.GOLD, 12, true)
+	if not awake.is_empty():
+		_text(L.t("ui.living.cap_note"), UiTheme.DIM, 12, true)
 	if awake.size() == 1 and (d.available as Array).is_empty():
 		_text(L.t("ui.living.evo_second_hint"), UiTheme.DIM, 13, true)      # la seconde évolution attend le palier « liée » (50) et un autre tempérament marqué
 	if awake.size() < 2:
@@ -185,6 +188,7 @@ func _render() -> void:
 			var open_: bool = (d.available as Array).has(kind)
 			_text(("✦ " if open_ else "· ") + L.t("ui.living.k_%s_n" % kind) + "  (" + L.t("ui.living.trait_%s" % str(br.trait)) + ")", UiTheme.GOLD if open_ else UiTheme.DIM, 14)
 			_text(L.t("ui.living.k_%s_d" % kind), UiTheme.PARCH if open_ else UiTheme.DIM, 13)
+			_text(L.fa(L.t("ui.living.detail"), L.t("ui.living.k_%s_x" % kind)), UiTheme.DIM, 12, true)
 			if open_:
 				modal.add_button(L.t("ui.living.evo_choose") + " : " + L.t("ui.living.k_%s_n" % kind), func():
 					var err := LivingSkills.evolve(gs, char_id, skill_id, kind)
@@ -199,10 +203,12 @@ func _render() -> void:
 	_title(L.t("ui.living.sig_title"))
 	if int(d.tier) >= LivingSkills.SIG_TIER:
 		_text("✦ " + L.t("ui.living.sig_d_%s" % str(prof.family)), UiTheme.GOLD, 13)
+		_text(L.fa(L.t("ui.living.detail"), L.t("ui.living.sig_x_%s" % str(prof.family))), UiTheme.GOLD, 12, true)
 		_text(L.t("ui.living.sig_once"), UiTheme.DIM, 12, true)
 	else:
 		_text(L.t("ui.living.sig_locked"), UiTheme.DIM, 13, true)
 		_text(L.t("ui.living.sig_d_%s" % str(prof.family)), UiTheme.DIM, 12, true)
+		_text(L.fa(L.t("ui.living.detail"), L.t("ui.living.sig_x_%s" % str(prof.family))), UiTheme.DIM, 12, true)
 	# liens
 	_title(L.t("ui.living.relations"))
 	if not (d.relations as Array).is_empty():

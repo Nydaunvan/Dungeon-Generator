@@ -152,3 +152,8 @@ l'éveil d'une évolution en vaut deux). Le lore reste compatible avec l'univers
 - Témérité + humeur + accord + adversaire apprécié peut approcher le plafond ×1,8 ; le plafond protège, mais un sort offensif très poussé reste plus rentable qu'un soin poussé.
 - Les relations n'existent que pour les couples d'écoles prévus par `COMBOS` : une classe sans école compatible (ex. Guerrier seul) en profite moins hors accords inter-héros.
 - Valeurs à ajuster après essais en jeu : `AFF_CAP_COMBAT`, `REL_AT`, `EVOLVE_AFF`, `TRAIT_MIN`, `MULT_CAP`.
+
+
+## Détails exacts affichés aux joueurs
+
+Chaque évolution (`ui.living.k_<type>_x`) et chaque geste signature (`ui.living.sig_x_<famille>`) a un texte de valeurs exactes, affiché sur la fiche (évolutions éveillées et éveillables, geste signature, même verrouillé) et réuni dans le sujet du guide « Compétences vivantes : valeurs exactes ». Toute modification d'un coefficient dans `living_skills.gd` doit mettre ces textes à jour (FR et EN) ; `check_living_skills` vérifie leur présence.

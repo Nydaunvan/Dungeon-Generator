@@ -795,6 +795,10 @@ func _t16_tiers() -> void:
 	# textes et fiche
 	for fam in ["offense", "technique", "soin", "defense", "controle", "soutien", "passif", "instinct"]:
 		check("16. texte du geste " + fam, L.t("ui.living.sig_d_" + fam) != "ui.living.sig_d_" + fam and L.t("ui.living.sig_log_" + fam).count("%s") == 2)
+	for kind in LivingCatalog.KINDS.keys():
+		check("16. détail exact de l'évolution " + str(kind), L.t("ui.living.k_%s_x" % kind) != "ui.living.k_%s_x" % kind)
+	for fam in ["offense", "technique", "soin", "defense", "controle", "soutien", "passif", "instinct"]:
+		check("16. détail exact du geste " + fam, L.t("ui.living.sig_x_" + fam) != "ui.living.sig_x_" + fam)
 	var host := Control.new()
 	add_child(host)
 	var lm := LivingModal.open(host, gs, cid, sid)
