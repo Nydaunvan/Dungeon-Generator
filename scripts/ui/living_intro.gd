@@ -67,7 +67,11 @@ func _render() -> void:
 ## Partie d'exemple, jetable : un sort offensif du premier héros avec une affinité, un tempérament et une évolution plausibles.
 func _make_demo(aff: float, evolved: int) -> Dictionary:
 	var cfg: Dictionary = (Data.original_config as Dictionary).duplicate(true)
-	var gs := GameState.create(cfg)
+	# NE PAS utiliser GameState.create : il remet à zéro l'horloge de jeu, le hasard et le journal de la vraie partie (recharges de sorts figées).
+	var gs := GameState.new()
+	gs.cfg = cfg
+	for t in cfg.get("party", []):
+		gs.party.append(Characters.create(t, cfg))
 	var hero: Dictionary = gs.party[0]
 	var sp: Dictionary = {}
 	for x in (cfg.spells as Array):

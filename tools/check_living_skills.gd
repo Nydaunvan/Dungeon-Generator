@@ -713,6 +713,9 @@ func _t17_news() -> void:
 	check("news : le palier est mis à jour", int(LivingSkills.news(gs, a)[0].tier) == 2)
 	check("news : lecture par héros", LivingSkills.news(gs, b).size() == 1 and LivingSkills.news(gs).size() == 3)
 	LivingSkills.news_clear(gs, a)
+	GameClock.ms = 7000
+	var dm := LivingIntro.new()._make_demo(55.0, 1)
+	check("présentation : l'exemple ne touche pas à l'horloge de jeu (recharges)", GameClock.ms == 7000 and not dm.is_empty())
 	check("news : effacement du seul héros", LivingSkills.news(gs, a).is_empty() and LivingSkills.news(gs, b).size() == 1)
 
 func _t16_tiers() -> void:
