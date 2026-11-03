@@ -31,12 +31,35 @@ func _ready() -> void:
 	sk.m = [["first_kill", "g2", 1], ["narrow", "veilleur1", 2], ["env", "crypte", 1]]
 	var other := LivingCatalog.key(str(gs.party[1].id), sid)
 	LivingSkills.state(gs).rel[LivingSkills._pair(key, other)] = {"v": 8}
+	LivingSkills._sk(gs, LivingCatalog.key(str(gs.party[0].id), str(hero.spellsKnown[1] if hero.has("spellsKnown") and hero.spellsKnown.size() > 1 else sid))).a = 12.0
 	LivingSkills._fragment(gs, 6)
 	gs.gold = 200
 	var host := Control.new()
 	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(host)
-	LivingModal.open(host, gs, str(hero.id), sid)
+	# équipe : quelques paliers variés et une évolution éveillée pour la grille
+	var n := 0
+	for h in gs.party:
+		for hs in LivingSkills.skills_of(gs, h):
+			LivingSkills._sk(gs, LivingCatalog.key(str(h.id), str(hs))).a = float((n * 17) % 95)
+			n += 1
+	LivingSkills._sk(gs, key).a = 38.0
+	LivingSkills._sk(gs, LivingCatalog.key(str(gs.party[1].id), sid)).e = "temerite"
+	for i in 3:
+		var o2 := LivingCatalog.key(str(gs.party[(i + 1) % gs.party.size()].id), str(cfg.spells[i * 7 + 3].id))
+		LivingSkills.state(gs).rel[LivingSkills._pair(key, o2)] = {"v": [3, 8, 15][i]}
+	if str(a.case) == "equipe":
+		var pm := PartyModal.open(host, gs, str(hero.id))
+		pm.cat = "living"
+		pm._render()
+		pm.modal.fit_ratio = 4.0
+		await get_tree().create_timer(0.8).timeout
+		get_viewport().get_texture().get_image().save_png(str(a.out) + ".png")
+		get_tree().quit()
+		return
+	var lm := LivingModal.open(host, gs, str(hero.id), sid)
+	lm.modal.fit_ratio = 4.0
+	lm.modal.call_deferred("_fit")
 	await get_tree().create_timer(0.8).timeout
 	get_viewport().get_texture().get_image().save_png(str(a.out) + ".png")
 	get_tree().quit()

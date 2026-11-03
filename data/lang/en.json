@@ -3981,7 +3981,22 @@
   "ui.living.lore_5": "The last fragment says nothing new: it says \"thank you\", as one says to those who have carried something heavy.",
   "ui.living.lore_label": "Fragments gathered",
   "ui.living.tab": "🕯 Skill life",
-  "ui.settings.living_skills_on": "Enable living skills"
+  "ui.settings.living_skills_on": "Enable living skills",
+  "ui.living.viz_progress": "Progression",
+  "ui.living.viz_tree": "Evolution tree",
+  "ui.living.viz_web": "Web of bonds",
+  "ui.living.viz_team": "Team grid",
+  "ui.living.viz_team_hint": "One dot per skill; colour shows the affinity tier, a golden ring marks an awakened evolution. Hover a dot for its name.",
+  "ui.living.viz_aff": "Affinity",
+  "ui.living.viz_ready": "Can awaken",
+  "ui.living.viz_awake": "Awakened",
+  "ui.living.viz_locked": "Not yet",
+  "ui.living.viz_other": "Not chosen",
+  "ui.living.tcap_0": "Budding bond.",
+  "ui.living.tcap_1": "Temperament shows.",
+  "ui.living.tcap_2": "Evolutions unlock.",
+  "ui.living.tcap_3": "Long friendship (honorary).",
+  "ui.living.tcap_4": "Fusion (honorary)."
  },
  "content": {
   "content.ce_donjon_sert_de_b": "Start a game with the Original Dungeon?",

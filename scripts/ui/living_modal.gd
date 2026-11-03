@@ -136,6 +136,7 @@ func _render() -> void:
 	# affinité
 	_title(L.fa(L.t("ui.living.affinity"), str(c.get("name", ""))))
 	_bar(L.t("ui.living.tier_%d" % int(d.tier)), float(d.affinity), 100.0, UiTheme.STA_CYAN, "%d" % int(d.affinity), true)
+	modal.content.add_child(LivingViz.timeline(float(d.affinity)))
 	# tempérament
 	_title(L.t("ui.living.temperament"))
 	var tr_: Dictionary = d.traits
@@ -163,6 +164,7 @@ func _render() -> void:
 		_text("• " + LivingSkills.memory_text(gs, m), UiTheme.PARCH, 13)
 	# évolutions
 	_title(L.t("ui.living.evolutions"))
+	modal.content.add_child(LivingViz.tree(str(prof.name), tex, d))
 	if str(d.evolved) != "":
 		_text("✦ " + L.fa(L.t("ui.living.evo_current"), L.t("ui.living.k_%s_n" % str(d.evolved))), UiTheme.GOLD, 14)
 		_text(L.t("ui.living.k_%s_d" % str(d.evolved)), UiTheme.PARCH, 13)
@@ -186,6 +188,12 @@ func _render() -> void:
 			_text(L.t("ui.living.evo_warn"), Color("e0a070"), 12, true)
 	# liens
 	_title(L.t("ui.living.relations"))
+	if not (d.relations as Array).is_empty():
+		var links: Array = []
+		for r in d.relations:
+			var kp := str(r.with).split("|")
+			links.append({"name": "%s (%s)" % [LivingCatalog.profile(gs.cfg, kp[1]).get("name", kp[1]), str(gs.char_by_id(kp[0]).get("name", kp[0]))], "type": str(r.type), "level": int(r.level)})
+		modal.content.add_child(LivingViz.web(str(prof.name), links))
 	if (d.relations as Array).is_empty():
 		_text(L.t("ui.living.no_relations"), UiTheme.DIM, 13, true)
 	for r in d.relations:

@@ -440,6 +440,27 @@ func _living(p: Control, c: Dictionary) -> void:
 		off.add_theme_color_override("font_color", UiTheme.DIM)
 		p.add_child(off)
 		return
+	var rows: Array = []
+	for hero in gs.party:
+		var dots: Array = []
+		for hs in LivingSkills.skills_of(gs, hero):
+			var hp := LivingCatalog.profile(gs.cfg, str(hs))
+			if hp.is_empty():
+				continue
+			dots.append({"tier": LivingSkills.tier(LivingSkills.affinity(gs, str(hero.id), str(hs))), "evo": LivingSkills.evolved(gs, str(hero.id), str(hs)), "label": str(hp.name)})
+		rows.append({"name": str(hero.name), "dots": dots})
+	var gt := Label.new()
+	gt.text = L.t("ui.living.viz_team")
+	gt.add_theme_font_override("font", UiTheme.font(UiTheme.F_TITLE))
+	gt.add_theme_color_override("font_color", UiTheme.GOLD)
+	p.add_child(gt)
+	p.add_child(LivingViz.grid(rows))
+	var gh := Label.new()
+	gh.text = L.t("ui.living.viz_team_hint")
+	gh.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gh.add_theme_font_size_override("font_size", 12)
+	gh.add_theme_color_override("font_color", UiTheme.DIM)
+	p.add_child(gh)
 	for sid in LivingSkills.skills_of(gs, c):
 		var prof := LivingCatalog.profile(gs.cfg, str(sid))
 		if prof.is_empty():

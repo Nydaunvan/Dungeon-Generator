@@ -672,4 +672,5 @@ Règles complètes, formules, tableau des évolutions et risques d'équilibrage 
 - **Activation** : `Settings.living_skills` (Paramètres › Graphismes › Compétences vivantes, vrai par défaut) ; toujours inactif en partie classée (`run_seed != ""`). Inactif = tous les crochets de `combat.gd` rendent leur entrée inchangée.
 - **Déterminisme** : aucune consommation de `GameRng` ; variantes de texte par hachage de l'identifiant ; gains réglés en fin de combat (`end_combat_reset`, fuite).
 - **Carnet** : les manifestations sont des lignes entre guillemets (`LivingSkills.MARK`), au plus 2 par combat ; ne bloquent jamais une action.
+- **Visuels** : `scripts/ui/living_viz.gd` (dessinés : frise des paliers, arbre des évolutions, constellation des liens, grille de l'équipe), purement visuels.
 - **Outils** : `tools/check_living_skills.tscn` (15 contrôles), `tools/living_matrix.tscn` (régénère la matrice), `tools/shot_living.tscn` (capture de la fiche).
