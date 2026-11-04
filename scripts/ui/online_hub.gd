@@ -60,8 +60,7 @@ var _play_btn: Button = null     ## bouton de lancement du mode affiché (touche
 var _rules_open := false         ## « Règles du mode » déplié ou non (garde son état d'un mode à l'autre)
 var _rules_panel: Control = null
 var _list: VBoxContainer = null  ## liste des modes (écran moyen), reconstruite quand les minuteurs arrivent
-var _banner: OnlineArt.ModeBanner = null   ## bannière des cinq modes (grand écran), reconstruite quand les minuteurs arrivent
-var _parch := false              ## la fiche du mode est posée sur le parchemin : textes à l'encre, tuiles et ruban Atlas Noir
+var _parch := false              ## grand écran : fiche du mode centrée sous l'arche (tuiles en plaques de bronze, ruban rouge de lancement)
 var _prefetching := false
 
 ## `on_launch` : appelé quand le joueur lance une partie libre (la fenêtre est alors fermée) ; `tab` : onglet affiché d'abord.
@@ -108,6 +107,8 @@ func _signed() -> bool:
 # ------------------------------------------------------------------ structure
 
 func _build() -> void:
+	if not _narrow():
+		_modal.set_art_backdrop(OnlineArt.T_HALL)      # salle d'arche peinte (fresque de boussole, bougies, cercle rouge)
 	var c := _modal.content
 	c.add_theme_constant_override("separation", 8)
 	_strip_box = _modal.player_box as VBoxContainer
@@ -374,30 +375,42 @@ func _show_play() -> void:
 	var wide := not _narrow() and _width >= 820.0
 	var box := HubKit.vbox(5 if wide else 10)
 	_rules_panel = null
-	_banner = null
 	_parch = wide
 	if wide:
-		# Maquette Atlas Noir : bannière de velours à gauche (les cinq modes), fiche du mode sur le parchemin à droite.
-		_list = null
+		# Maquette « salle d'arche » : liste des modes à gauche sur la fresque, fiche du mode centrée sous l'arche à droite.
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
+		row.add_theme_constant_override("separation", 34)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_body.add_child(row)
-		_banner = OnlineArt.ModeBanner.new()
-		row.add_child(_banner)
+		var lm := MarginContainer.new()
+		lm.add_theme_constant_override("margin_left", 28)
+		lm.add_theme_constant_override("margin_top", 6)
+		lm.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		row.add_child(lm)
+		_list = VBoxContainer.new()
+		_list.add_theme_constant_override("separation", 6)
+		_list.custom_minimum_size.x = clampf(_width * 0.3, 320.0, 400.0)
+		lm.add_child(_list)
 		_fill_list()
-		var stage := OnlineArt.ParchmentStage.new()
-		row.add_child(stage)
 		var scroll := ScrollContainer.new()
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		scroll.custom_minimum_size = Vector2(clampf(_width * 0.47, 520.0, 620.0), 0)
+		scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		stage.inner.add_child(scroll)
+		row.add_child(scroll)
+		var pad := MarginContainer.new()
+		pad.add_theme_constant_override("margin_top", 22)
+		pad.add_theme_constant_override("margin_left", 36)
+		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(pad)
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		scroll.add_child(box)
-		stage.add_child(OnlineArt.Props.new())
+		pad.add_child(box)
+		var tail := Control.new()
+		tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(tail)
 	else:
 		_list = null
 		var spacer := Control.new()
@@ -412,31 +425,25 @@ func _show_play() -> void:
 	_prefetch_timers()
 
 func _fill_list() -> void:
-	if _banner != null and is_instance_valid(_banner):
-		for ch in _banner.get_children():
-			_banner.remove_child(ch)
-			ch.queue_free()
-		_banner.rows.clear()
-		for m in PLAY_MODES:
-			_banner.add_row(_mode_row(m))
-		return
 	if _list == null or not is_instance_valid(_list):
 		return
 	for ch in _list.get_children():
 		_list.remove_child(ch)
 		ch.queue_free()
 	for m in PLAY_MODES:
-		_list.add_child(_tile(m))
+		_list.add_child(_tile(m) if not _parch else _mode_row(m))
 
-## Plaque d'un mode sur la bannière (grand écran).
-func _mode_row(m: String) -> OnlineArt.ModeRow:
-	var r := OnlineArt.ModeRow.new()
+## Plaque d'un mode dans la liste de gauche (grand écran).
+func _mode_row(m: String) -> OnlineArt.ModeLine:
+	var r := OnlineArt.ModeLine.new()
+	r.custom_minimum_size = Vector2(0, 84)
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.selected = m == _mode
 	r.danger = m == "hardcore"
 	r.title = L.t(MODE_NAME[m])
 	r.tag = L.t(MODE_TAG[m])
 	r.status = _tile_status(m)
-	r.glyph = GameIcons.tex(MODE_GLYPH[m], 64, Color("ff9a7a") if (m == "hardcore" and m != _mode) else Color("fff1d0"), 1.8)
+	r.glyph = GameIcons.tex(MODE_GLYPH[m], 64, Color("ff9a7a") if m == "hardcore" else Color("fff1d0"), 1.8)
 	r.pressed.connect(func():
 		_mode = m
 		_show("play"))
@@ -461,7 +468,7 @@ func _prefetch_timers() -> void:
 		if _alive() and r2.ok and r2.data is Dictionary:
 			_weekly = (r2.data as Dictionary).get("current", r2.data) if (r2.data as Dictionary).has("current") else r2.data
 	_prefetching = false
-	if _alive() and mine == _gen:
+	if _alive() and mine == _gen and _list != null and is_instance_valid(_list):
 		_fill_list()
 
 ## Texte à droite d'une ligne de la liste : temps restant du défi (jour, semaine, mois).
@@ -594,29 +601,40 @@ func _mode_head(box: VBoxContainer, text: String, desc: String) -> void:
 	kt.text = L.t(MODE_KICK[_mode]).to_upper()
 	kt.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_BODY_BOLD if _parch else UiTheme.F_BODY, 5))
 	kt.add_theme_font_size_override("font_size", 12 if _narrow() else 14)
-	kt.add_theme_color_override("font_color", OnlineArt.INK_RED if _parch else GameWidgets.GOLD)
-	box.add_child(kt)
-	var size_t := (34 if text.length() > 14 else 38) if _narrow() else (34 if (_width < 1100.0 or text.length() > 14) else 44)
+	kt.add_theme_color_override("font_color", GameWidgets.GOLD)
+	if _parch:
+		# « — LIBRE — » : mot centré entre deux filets dorés
+		var kr := HBoxContainer.new()
+		kr.alignment = BoxContainer.ALIGNMENT_CENTER
+		kr.add_theme_constant_override("separation", 12)
+		for side in [0, 1]:
+			if side == 1:
+				kr.add_child(kt)
+			var ln := ColorRect.new()
+			ln.color = Color(0.94, 0.77, 0.36, 0.55)
+			ln.custom_minimum_size = Vector2(54, 1)
+			ln.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			kr.add_child(ln)
+		box.add_child(kr)
+	else:
+		box.add_child(kt)
+	var size_t := (34 if text.length() > 14 else 38) if _narrow() else (40 if (_width < 1100.0 or text.length() > 14) else 48)
 	var t := Label.new()
 	t.text = text.to_upper()
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.custom_minimum_size.x = 10
 	t.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_TITLE_BOLD, 3))
 	t.add_theme_font_size_override("font_size", size_t)
+	t.add_theme_color_override("font_color", Color("f3d89a") if _parch else GameWidgets.CREAM)
+	t.add_theme_color_override("font_shadow_color", Color(1.0, 0.59, 0.24, 0.32))
+	t.add_theme_constant_override("shadow_offset_x", 0)
+	t.add_theme_constant_override("shadow_offset_y", 3)
+	t.add_theme_constant_override("shadow_outline_size", 12)
+	t.add_theme_constant_override("line_spacing", -6)
 	if _parch:
-		t.add_theme_color_override("font_color", OnlineArt.INK)
-		t.add_theme_constant_override("line_spacing", -6)
-	else:
-		t.add_theme_color_override("font_color", GameWidgets.CREAM)
-		t.add_theme_color_override("font_shadow_color", Color(1.0, 0.59, 0.24, 0.32))
-		t.add_theme_constant_override("shadow_offset_x", 0)
-		t.add_theme_constant_override("shadow_offset_y", 4)
-		t.add_theme_constant_override("shadow_outline_size", 16)
-		t.add_theme_constant_override("line_spacing", -6)
+		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(t)
-	if _parch:
-		box.add_child(OnlineArt.divider(260.0))
-	var d := HubKit.label(desc, OnlineArt.INK_SOFT if _parch else Color("e8dcc0"), 16 if _narrow() else (15 if _parch else 20), false, true)
+	var d := HubKit.label(desc, Color("e8dcc0"), 16 if _narrow() else (17 if _parch else 20), false, true)
 	if _parch:
 		d.custom_minimum_size.x = 10
 		d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -663,22 +681,19 @@ func _info_tiles(box: VBoxContainer, m: String) -> void:
 ## Rangée de lancement : grand bouton bronze + liens « Règles du mode » et « Voir le classement ».
 func _cta_row(box: VBoxContainer, mode: String, text: String, cb: Callable) -> Button:
 	if _parch:
-		# parchemin : ruban rouge de lancement, puis les deux liens à l'encre sous le ruban
-		var col := HubKit.vbox(8)
+		# ruban rouge de lancement sur toute la largeur de la fiche, puis les deux liens dorés centrés dessous
+		var col := HubKit.vbox(10)
 		var rb := OnlineArt.cta(text, cb)
 		col.add_child(rb)
 		var lk := HBoxContainer.new()
-		lk.add_theme_constant_override("separation", 14)
-		lk.add_child(OnlineArt.ink_link(L.t("ui.hub.link_rules"), func():
+		lk.alignment = BoxContainer.ALIGNMENT_CENTER
+		lk.add_theme_constant_override("separation", 22)
+		lk.add_child(GameWidgets.link(L.t("ui.hub.link_rules"), func():
 			_rules_open = not _rules_open
 			if _rules_panel != null and is_instance_valid(_rules_panel):
 				_rules_panel.visible = _rules_open))
 		if mode != "daily":
-			var sep := Label.new()
-			sep.text = "|"
-			sep.add_theme_color_override("font_color", OnlineArt.INK_SOFT)
-			lk.add_child(sep)
-			lk.add_child(OnlineArt.ink_link(L.t("ui.hub.link_board"), func():
+			lk.add_child(GameWidgets.link(L.t("ui.hub.link_board"), func():
 				_src = mode
 				_show("boards")))
 		col.add_child(lk)
@@ -730,7 +745,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 					_modal.close()
 					_on_launch.call())
 			else:
-				box.add_child(HubKit.label(L.t("ui.hub.free_home"), OnlineArt.INK_SOFT if _parch else UiTheme.DIM, 13, false, true))
+				box.add_child(HubKit.label(L.t("ui.hub.free_home"), UiTheme.DIM, 13, false, true))
 			_facts(box, [
 				["bars", L.t("ui.hub.f_board"), L.t("ui.hub.free_board")],
 				["stop", L.t("ui.hub.f_quit"), L.t("ui.hub.free_quit")],
@@ -750,7 +765,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 					_show("play"), 14, 12, 7))
 			_info_tiles(box, "ranked")
 			_cta(box, "ranked")
-			box.add_child(HubKit.label(L.t("ui.hub.ranked_dungeon"), OnlineArt.INK_SOFT if _parch else UiTheme.DIM, 12))
+			box.add_child(HubKit.label(L.t("ui.hub.ranked_dungeon"), UiTheme.DIM, 12))
 			_facts(box, [
 				["scale", L.t("ui.hub.f_fair"), L.t("ui.hub.ranked_fair")],
 				["bars", L.t("ui.hub.f_board"), L.t("ui.hub.ranked_board")],
@@ -795,7 +810,7 @@ func _fill_mode(box: VBoxContainer) -> void:
 		"hardcore":
 			var key := _month_key()
 			_mode_head(box, L.t("ui.hub.mode_hardcore"), L.t("ui.hub.hc_desc"))
-			box.add_child(HubKit.label(key.substr(5) + "/" + key.substr(0, 4), OnlineArt.INK_RED if _parch else HubKit.FIRE, 18, true, false))
+			box.add_child(HubKit.label(key.substr(5) + "/" + key.substr(0, 4), HubKit.FIRE, 18, true, false))
 			_info_tiles(box, "hardcore")
 			_cta(box, "hardcore")
 			_facts(box, [
@@ -978,7 +993,7 @@ func _month_key() -> String:
 
 ## Bas de fiche : état (essai du jour, partie en attente…) et bouton de lancement.
 func _cta(box: VBoxContainer, mode: String) -> void:
-	var status := HubKit.label("", OnlineArt.INK_SOFT if _parch else UiTheme.DIM, 13, true, true, HORIZONTAL_ALIGNMENT_LEFT)
+	var status := HubKit.label("", UiTheme.DIM, 13, true, true, HORIZONTAL_ALIGNMENT_LEFT)
 	status.name = "CtaStatus"
 	if not _online():
 		status.text = L.t("ui.challenges.not_configured")
@@ -986,7 +1001,7 @@ func _cta(box: VBoxContainer, mode: String) -> void:
 		return
 	if not _signed():
 		status.text = L.t("ui.hub.need_account")
-		status.add_theme_color_override("font_color", OnlineArt.INK_RED if _parch else HubKit.WARN)
+		status.add_theme_color_override("font_color", HubKit.WARN)
 		box.add_child(status)
 		box.add_child(HubKit.button(L.t("ui.hub.sign_in"), func(): AccountModal.open(_host), true, 46))
 		return
@@ -1015,7 +1030,7 @@ func _update_cta() -> void:
 		var used := _used_today()
 		b.disabled = used
 		status.text = L.t("ui.hub.hc_used") if used else L.t("ui.hub.hc_available")
-		status.add_theme_color_override("font_color", (OnlineArt.INK_RED if used else Color("2e5a22")) if _parch else (HubKit.WARN if used else HubKit.GOOD))
+		status.add_theme_color_override("font_color", HubKit.WARN if used else HubKit.GOOD)
 	else:
 		var pending := 0
 		if _runs_ok:

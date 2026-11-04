@@ -30,6 +30,9 @@ var _body_scroll: ScrollContainer
 var _hint_left: HBoxContainer
 var _hint_right: HBoxContainer
 var _torches: Array = []
+var _back: Control
+var _left_veil: Control
+var _art: TextureRect
 var _t := 0.0
 var _embers: Embers
 var _back_cb: Callable = Callable()
@@ -55,6 +58,7 @@ func _build() -> void:
 	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(back)
+	_back = back
 	for side in [0.07, 0.93]:
 		var g := TextureRect.new()
 		g.texture = _glow_texture()
@@ -80,7 +84,8 @@ func _build() -> void:
 	# vignette + voiles de lisibilité (maquette B : ellipse sombre, voile à gauche, haut et bas assombris)
 	add_child(_veil(_vignette_texture(), Control.PRESET_FULL_RECT, 0.0))
 	if not narrow:
-		add_child(_veil(_linear_texture([Color(0.024, 0.016, 0.008, 0.88), Color(0.024, 0.016, 0.008, 0.55), Color(0.024, 0.016, 0.008, 0.1), Color(0.024, 0.016, 0.008, 0.0)], [0.0, 0.36, 0.62, 1.0], true), Control.PRESET_FULL_RECT, 0.0))
+		_left_veil = _veil(_linear_texture([Color(0.024, 0.016, 0.008, 0.88), Color(0.024, 0.016, 0.008, 0.55), Color(0.024, 0.016, 0.008, 0.1), Color(0.024, 0.016, 0.008, 0.0)], [0.0, 0.36, 0.62, 1.0], true), Control.PRESET_FULL_RECT, 0.0)
+		add_child(_left_veil)
 	add_child(_veil(_linear_texture([Color(0.02, 0.012, 0.008, 0.93), Color(0.02, 0.012, 0.008, 0.0)], [0.0, 1.0], false), Control.PRESET_TOP_WIDE, 130.0 if not narrow else 110.0))
 	add_child(_veil(_linear_texture([Color(0.02, 0.012, 0.008, 0.0), Color(0.02, 0.012, 0.008, 0.9 if not narrow else 0.88), Color(0.02, 0.012, 0.008, 0.96)], [0.0, 0.4, 1.0], false), Control.PRESET_BOTTOM_WIDE, 110.0 if not narrow else 420.0))
 
@@ -173,6 +178,25 @@ func _build() -> void:
 var _body_margin: MarginContainer
 
 ## Marge de gauche du corps (0 : la liste des modes touche le bord de l'écran, comme sur la maquette).
+## Remplace le couloir peint par une image plein cadre (cadrée en « cover ») : torches et voile de gauche s'effacent, la vignette reste.
+func set_art_backdrop(tex: Texture2D) -> void:
+	if _art == null:
+		_art = TextureRect.new()
+		_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		add_child(_art)
+		move_child(_art, 1)
+	_art.texture = tex
+	if _back != null:
+		_back.visible = false
+	for g in _torches:
+		g.visible = false
+	if _left_veil != null:
+		_left_veil.visible = false
+
 func set_body_inset(left: int) -> void:
 	_body_margin.add_theme_constant_override("margin_left", left)
 
