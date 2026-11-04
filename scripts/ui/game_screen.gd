@@ -179,23 +179,51 @@ var _body_margin: MarginContainer
 
 ## Marge de gauche du corps (0 : la liste des modes touche le bord de l'écran, comme sur la maquette).
 ## Remplace le couloir peint par une image plein cadre (cadrée en « cover ») : torches et voile de gauche s'effacent, la vignette reste.
+const ART_TOP := 52.0     ## l'image commence sous la barre du haut : onglets et titre restent dans le noir, hors de la dentelle de l'arche
+
 func set_art_backdrop(tex: Texture2D) -> void:
 	if _art == null:
 		_art = TextureRect.new()
 		_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_art.stretch_mode = TextureRect.STRETCH_SCALE
 		_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 		add_child(_art)
 		move_child(_art, 1)
+		resized.connect(_layout_art)
+		# bandeau noir sous la barre du haut : plein jusqu'à l'image, puis fondu
+		var band := _veil(_linear_texture([Color(0.02, 0.012, 0.008, 1.0), Color(0.02, 0.012, 0.008, 1.0), Color(0.02, 0.012, 0.008, 0.0)], [0.0, ART_TOP / (ART_TOP + 70.0), 1.0], false), Control.PRESET_TOP_WIDE, ART_TOP + 70.0)
+		add_child(band)
+		move_child(band, 2)
 	_art.texture = tex
+	_layout_art()
 	if _back != null:
 		_back.visible = false
 	for g in _torches:
 		g.visible = false
 	if _left_veil != null:
 		_left_veil.visible = false
+
+## Image « cover » calée sous la barre du haut, centrée en largeur (le bas déborde si besoin : le sol et les bougies restent visibles).
+func _art_scale() -> float:
+	var t := _art.texture
+	return maxf(size.x / t.get_width(), (size.y - ART_TOP) / t.get_height())
+
+func _layout_art() -> void:
+	if _art == null or _art.texture == null or size.x < 2.0:
+		return
+	var s := _art_scale()
+	var w := _art.texture.get_width() * s
+	var h := _art.texture.get_height() * s
+	_art.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_art.position = Vector2((size.x - w) * 0.5, ART_TOP)
+	_art.size = Vector2(w, h)
+
+## Abscisse (repère global) d'un point de l'image de fond, donné en fraction de sa largeur : sert à centrer une fiche sous l'arche.
+func art_x(frac: float) -> float:
+	if _art == null or _art.texture == null:
+		return global_position.x + size.x * frac
+	return global_position.x + (size.x - _art.texture.get_width() * _art_scale()) * 0.5 + frac * _art.texture.get_width() * _art_scale()
 
 func set_body_inset(left: int) -> void:
 	_body_margin.add_theme_constant_override("margin_left", left)

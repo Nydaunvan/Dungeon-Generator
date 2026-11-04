@@ -5,6 +5,8 @@ extends RefCounted
 ##  Classements, Récompenses, Mes parties, Amis. Les icônes sont dessinées (GameIcons), plus d'emojis.
 ## Rien ne défile en usage normal : chaque onglet tient à l'écran (les lignes des classements s'adaptent à la hauteur disponible).
 
+## Axe de l'arche dans hall.jpg (fraction de la largeur : centre du rubis).
+const ARCH_AXIS := 0.588
 const TABS := [["play", "ui.hub.tab_play", "swords"], ["boards", "ui.hub.tab_boards", "bars"], ["rewards", "ui.hub.tab_rewards", "medal"], ["runs", "ui.hub.tab_runs", "scroll"], ["friends", "ui.hub.tab_friends", "friends"]]
 const MODES := ["free", "ranked", "weekly", "hardcore"]
 ## Ce que mesure le classement de certaines règles du Défi de la semaine (les autres comptent des niveaux).
@@ -379,7 +381,7 @@ func _show_play() -> void:
 	if wide:
 		# Maquette « salle d'arche » : liste des modes à gauche sur la fresque, fiche du mode centrée sous l'arche à droite.
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 74)
+		row.add_theme_constant_override("separation", 0)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_body.add_child(row)
@@ -396,18 +398,30 @@ func _show_play() -> void:
 		var scroll := ScrollContainer.new()
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-		scroll.custom_minimum_size = Vector2(clampf(_width * 0.42, 470.0, 560.0), 0)
-		scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		var col_w := clampf(_width * 0.42, 470.0, 560.0)
+		scroll.custom_minimum_size = Vector2(col_w, 0)
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		# scène libre : la fiche est centrée sur l'axe de l'arche (la rubis de l'image), quelle que soit la taille de la fenêtre
+		var stage := Control.new()
+		stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		row.add_child(stage)
 		var sc_row := HBoxContainer.new()
 		sc_row.add_theme_constant_override("separation", 2)
-		sc_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		sc_row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		row.add_child(sc_row)
+		stage.add_child(sc_row)
 		sc_row.add_child(scroll)
 		sc_row.add_child(GothicScrollBar.attach(scroll))      # ascenseur bronze du carnet (la barre native est masquée)
+		var center_col := func():
+			if not is_instance_valid(stage) or not _alive():
+				return
+			var w := col_w + 18.0
+			sc_row.size = Vector2(w, stage.size.y)
+			sc_row.position = Vector2(_modal.art_x(ARCH_AXIS) - stage.global_position.x - w * 0.5, 0.0)
+		stage.resized.connect(center_col)
+		stage.item_rect_changed.connect(center_col)
+		center_col.call_deferred()
 		var pad := MarginContainer.new()
-		pad.add_theme_constant_override("margin_top", 14)
+		pad.add_theme_constant_override("margin_top", 40)
 		pad.add_theme_constant_override("margin_left", 6)
 		pad.add_theme_constant_override("margin_right", 6)
 		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -415,9 +429,6 @@ func _show_play() -> void:
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		pad.add_child(box)
-		var tail := Control.new()
-		tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(tail)
 	else:
 		_list = null
 		var spacer := Control.new()
