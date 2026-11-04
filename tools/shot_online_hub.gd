@@ -32,27 +32,9 @@ func _ready() -> void:
 	_shot(pre + "_play_daily.png")
 	h._mode = "hardcore"
 	h._rules_open = true
-	h._rules_for = "hardcore"
 	h._show("play")
 	await get_tree().create_timer(0.8).timeout
 	_shot(pre + "_play_hardcore_rules.png")
-	# défis avec données (règle du jour / de la semaine simulées) : vérifie que la fiche tient dans l'arche sans ascenseur
-	var rule := {"icon": "🌑", "label_fr": "Nuit noire", "label_en": "Dark night", "desc_fr": "La vision est réduite de moitié : avance prudemment et garde tes torches pour les couloirs étroits.", "desc_en": "Vision is halved."}
-	var ends := Time.get_datetime_string_from_unix_time(int(Time.get_unix_time_from_system()) + 3 * 86400) + "Z"
-	h._daily = {"rule": rule, "ends_at": ends}
-	h._weekly = {"rule": rule, "ends_at": ends, "period": "2026W45", "next": rule}
-	for m in ["daily", "weekly"]:
-		h._mode = m
-		h._rules_open = false
-		h._show("play")
-		await get_tree().create_timer(0.8).timeout
-		_shot("%s_play_%s_data.png" % [pre, m])
-	h._mode = "weekly"
-	h._rules_open = true
-	h._rules_for = "weekly"
-	h._show("play")
-	await get_tree().create_timer(0.8).timeout
-	_shot(pre + "_play_weekly_rules.png")
 	h._mode = "ranked"
 	h._rules_open = false
 	h._show("play")
