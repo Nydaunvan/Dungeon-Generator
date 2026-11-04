@@ -59,6 +59,7 @@ var _notice_box: VBoxContainer
 var _glass: PanelContainer
 var _glass_style: StyleBox
 var _play_btn: Button = null     ## bouton de lancement du mode affiché (touche Entrée)
+var _rules_for := ""             ## grand écran : mode dont les règles sont affichées (changer de mode referme les règles)
 var _rules_open := false         ## « Règles du mode » déplié ou non (garde son état d'un mode à l'autre)
 var _rules_panel: Control = null
 var _list: VBoxContainer = null  ## liste des modes (écran moyen), reconstruite quand les minuteurs arrivent
@@ -378,6 +379,8 @@ func _show_play() -> void:
 	var box := HubKit.vbox(4 if wide else 10)
 	_rules_panel = null
 	_parch = wide
+	if wide and _rules_open and _rules_for != _mode:
+		_rules_open = false
 	if wide:
 		# Maquette « salle d'arche » : liste des modes à gauche sur la fresque, fiche du mode centrée sous l'arche à droite.
 		var row := HBoxContainer.new()
@@ -421,7 +424,7 @@ func _show_play() -> void:
 		stage.item_rect_changed.connect(center_col)
 		center_col.call_deferred()
 		var pad := MarginContainer.new()
-		pad.add_theme_constant_override("margin_top", 40)
+		pad.add_theme_constant_override("margin_top", 34)
 		pad.add_theme_constant_override("margin_left", 6)
 		pad.add_theme_constant_override("margin_right", 6)
 		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -436,6 +439,19 @@ func _show_play() -> void:
 		_body.add_child(spacer)
 		_body.add_child(box)
 	_fill_mode(box)
+	if wide and _rules_open and _rules_panel != null:
+		# « Règles du mode » : la fiche cède la place aux règles (titre conservé), pour que tout tienne dans l'arche sans ascenseur
+		for ch in box.get_children():
+			if ch != _rules_panel:
+				(ch as CanvasItem).visible = false
+		_rules_panel.visible = true
+		(box.get_parent() as MarginContainer).add_theme_constant_override("margin_top", 6)
+		var back := GameWidgets.link(L.t("ui.screen.back"), func():
+			_rules_open = false
+			_show("play"))
+		back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		box.add_child(back)
+		box.move_child(back, 0)
 	if wide:
 		_center_tree(box)
 	if not wide:
@@ -710,9 +726,9 @@ func _cta_row(box: VBoxContainer, mode: String, text: String, cb: Callable) -> B
 		lk.alignment = BoxContainer.ALIGNMENT_CENTER
 		lk.add_theme_constant_override("separation", 22)
 		lk.add_child(GameWidgets.link(L.t("ui.hub.link_rules"), func():
-			_rules_open = not _rules_open
-			if _rules_panel != null and is_instance_valid(_rules_panel):
-				_rules_panel.visible = _rules_open))
+			_rules_open = true
+			_rules_for = _mode
+			_show("play")))
 		if mode != "daily":
 			lk.add_child(GameWidgets.link(L.t("ui.hub.link_board"), func():
 				_src = mode
@@ -745,11 +761,11 @@ func _cta_row(box: VBoxContainer, mode: String, text: String, cb: Callable) -> B
 
 ## Règles et détails du mode : panneau de verre replié, que le lien « Règles du mode » déplie (état conservé d'un mode à l'autre).
 func _facts(box: VBoxContainer, rows: Array, columns: int) -> void:
-	var panel := GameScreen.glass(16, 6)
+	var panel := GameScreen.glass(7 if _parch else 16, 6)
 	panel.visible = _rules_open
 	var inner := HubKit.vbox(8)
 	panel.add_child(inner)
-	HubKit.facts(inner, rows, columns)
+	HubKit.facts(inner, rows, columns, 12 if _parch else 13, 4 if _parch else 8)
 	box.add_child(panel)
 	_rules_panel = panel
 
@@ -770,7 +786,7 @@ func _center_tree(n: Node) -> void:
 func _fill_mode(box: VBoxContainer) -> void:
 	if _parch and _mode == "free":
 		box.add_theme_constant_override("separation", 10)      # peu de contenu : la fiche respire
-	var cols := 1 if (_narrow() or _width < 1100.0) else 2
+	var cols := 1 if (_narrow() or (_width < 1100.0 and not _parch)) else 2
 	match _mode:
 		"free":
 			_mode_head(box, L.t("ui.hub.mode_free"), L.t("ui.hub.free_desc"))

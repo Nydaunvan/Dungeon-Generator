@@ -117,11 +117,11 @@ static func progress(value: float, lo: float, hi: float, height: float = 10.0) -
 	return bar
 
 ## Fiche « icône · titre · texte » en grille (1 ou 2 colonnes).
-static func facts(parent: Control, rows: Array, columns: int) -> void:
+static func facts(parent: Control, rows: Array, columns: int, size: int = 13, vsep: int = 8) -> void:
 	var g := GridContainer.new()
 	g.columns = columns
 	g.add_theme_constant_override("h_separation", 14)
-	g.add_theme_constant_override("v_separation", 8)
+	g.add_theme_constant_override("v_separation", vsep)
 	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(g)
 	for r in rows:
@@ -138,8 +138,8 @@ static func facts(parent: Control, rows: Array, columns: int) -> void:
 		ic.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		h.add_child(ic)
 		var v := vbox(0)
-		v.add_child(label(str(r[1]), UiTheme.GOLD, 13, true))
-		var tx := label(str(r[2]), UiTheme.PARCH, 13)
+		v.add_child(label(str(r[1]), UiTheme.GOLD, size, true))
+		var tx := label(str(r[2]), UiTheme.PARCH, size)
 		if r.size() > 3 and r[3] is Color:
 			tx.add_theme_color_override("font_color", r[3])
 		v.add_child(tx)
