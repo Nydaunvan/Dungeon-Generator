@@ -373,13 +373,13 @@ func _show_play() -> void:
 	# et une barre lumineuse), fiche du mode à droite directement sur le décor (accroche, titre géant, description, trois tuiles, bouton
 	# de lancement, liens). Mobile / écran moyen : fiche en bas de l'écran, rangée d'affiches « Autres modes » dessous.
 	var wide := not _narrow() and _width >= 820.0
-	var box := HubKit.vbox(5 if wide else 10)
+	var box := HubKit.vbox(4 if wide else 10)
 	_rules_panel = null
 	_parch = wide
 	if wide:
 		# Maquette « salle d'arche » : liste des modes à gauche sur la fresque, fiche du mode centrée sous l'arche à droite.
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 34)
+		row.add_theme_constant_override("separation", 74)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_body.add_child(row)
@@ -396,13 +396,20 @@ func _show_play() -> void:
 		var scroll := ScrollContainer.new()
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-		scroll.custom_minimum_size = Vector2(clampf(_width * 0.47, 520.0, 620.0), 0)
+		scroll.custom_minimum_size = Vector2(clampf(_width * 0.42, 470.0, 560.0), 0)
 		scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		row.add_child(scroll)
+		var sc_row := HBoxContainer.new()
+		sc_row.add_theme_constant_override("separation", 2)
+		sc_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		sc_row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		row.add_child(sc_row)
+		sc_row.add_child(scroll)
+		sc_row.add_child(GothicScrollBar.attach(scroll))      # ascenseur bronze du carnet (la barre native est masquée)
 		var pad := MarginContainer.new()
-		pad.add_theme_constant_override("margin_top", 22)
-		pad.add_theme_constant_override("margin_left", 36)
+		pad.add_theme_constant_override("margin_top", 14)
+		pad.add_theme_constant_override("margin_left", 6)
+		pad.add_theme_constant_override("margin_right", 6)
 		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scroll.add_child(pad)
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -418,6 +425,8 @@ func _show_play() -> void:
 		_body.add_child(spacer)
 		_body.add_child(box)
 	_fill_mode(box)
+	if wide:
+		_center_tree(box)
 	if not wide:
 		_body.add_child(_poster_row())
 	if (_mode == "hardcore" or _mode == "ranked" or _mode == "weekly" or _mode == "daily") and _signed() and not _runs_ok:
@@ -600,7 +609,7 @@ func _mode_head(box: VBoxContainer, text: String, desc: String) -> void:
 	var kt := Label.new()
 	kt.text = L.t(MODE_KICK[_mode]).to_upper()
 	kt.add_theme_font_override("font", GameWidgets.spaced(UiTheme.F_BODY_BOLD if _parch else UiTheme.F_BODY, 5))
-	kt.add_theme_font_size_override("font_size", 12 if _narrow() else 14)
+	kt.add_theme_font_size_override("font_size", 12 if (_narrow() or _parch) else 14)
 	kt.add_theme_color_override("font_color", GameWidgets.GOLD)
 	if _parch:
 		# « — LIBRE — » : mot centré entre deux filets dorés
@@ -618,7 +627,7 @@ func _mode_head(box: VBoxContainer, text: String, desc: String) -> void:
 		box.add_child(kr)
 	else:
 		box.add_child(kt)
-	var size_t := (34 if text.length() > 14 else 38) if _narrow() else (40 if (_width < 1100.0 or text.length() > 14) else 48)
+	var size_t := (34 if text.length() > 14 else 38) if _narrow() else ((30 if text.length() > 14 else 36) if _parch else (40 if (_width < 1100.0 or text.length() > 14) else 48))
 	var t := Label.new()
 	t.text = text.to_upper()
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -634,10 +643,11 @@ func _mode_head(box: VBoxContainer, text: String, desc: String) -> void:
 	if _parch:
 		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(t)
-	var d := HubKit.label(desc, Color("e8dcc0"), 16 if _narrow() else (17 if _parch else 20), false, true)
+	var d := HubKit.label(desc, Color("e8dcc0"), 16 if _narrow() else (14 if _parch else 20), false, true)
 	if _parch:
 		d.custom_minimum_size.x = 10
 		d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	elif not _narrow():
 		d.custom_minimum_size.x = minf(560.0, _width * 0.45)
 		d.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -660,7 +670,7 @@ func _info_tiles(box: VBoxContainer, m: String) -> void:
 		var strong: bool = i == 2
 		var tile: PanelContainer = OnlineArt.tile(L.t(spec[0]), L.t(spec[1]) if spec[1] != "" else "…", strong) if _parch else GameWidgets.info_tile(L.t(spec[0]), L.t(spec[1]) if spec[1] != "" else "…", strong, _narrow())
 		if strong and not _narrow():
-			tile.custom_minimum_size.x = 230 if _parch else 260
+			tile.custom_minimum_size.x = 190 if _parch else 260
 		row.add_child(tile)
 		if spec[1] == "":
 			var lbl := tile.get_meta("value") as Label
@@ -682,7 +692,7 @@ func _info_tiles(box: VBoxContainer, m: String) -> void:
 func _cta_row(box: VBoxContainer, mode: String, text: String, cb: Callable) -> Button:
 	if _parch:
 		# ruban rouge de lancement sur toute la largeur de la fiche, puis les deux liens dorés centrés dessous
-		var col := HubKit.vbox(10)
+		var col := HubKit.vbox(6)
 		var rb := OnlineArt.cta(text, cb)
 		col.add_child(rb)
 		var lk := HBoxContainer.new()
@@ -732,9 +742,23 @@ func _facts(box: VBoxContainer, rows: Array, columns: int) -> void:
 	box.add_child(panel)
 	_rules_panel = panel
 
+## Fiche sous l'arche : tout texte (hors panneau des règles) est centré et réduit pour que l'ensemble tienne dans l'arche.
+func _center_tree(n: Node) -> void:
+	if not _parch or n == null or not is_instance_valid(n) or n == _rules_panel:
+		return
+	if n is Label:
+		var l := n as Label
+		if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_LEFT:
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var fs := l.get_theme_font_size("font_size")
+		if fs > 13 and fs < 30:
+			l.add_theme_font_size_override("font_size", maxi(12, fs - 2))
+	for c in n.get_children():
+		_center_tree(c)
+
 func _fill_mode(box: VBoxContainer) -> void:
 	if _parch and _mode == "free":
-		box.add_theme_constant_override("separation", 14)      # peu de contenu : la fiche respire
+		box.add_theme_constant_override("separation", 10)      # peu de contenu : la fiche respire
 	var cols := 1 if (_narrow() or _width < 1100.0) else 2
 	match _mode:
 		"free":
@@ -756,13 +780,14 @@ func _fill_mode(box: VBoxContainer) -> void:
 		"ranked":
 			_mode_head(box, L.t("ui.hub.mode_ranked"), L.t("ui.hub.ranked_desc"))
 			var chips := HFlowContainer.new()
+			chips.alignment = FlowContainer.ALIGNMENT_CENTER
 			chips.add_theme_constant_override("h_separation", 6)
 			chips.add_theme_constant_override("v_separation", 6)
 			box.add_child(chips)
 			for d in RankedRun.DIFFICULTIES:
 				chips.add_child(HubKit.toggle("%s · XP %s" % [L.t(ChallengesModal.DIFF_KEYS[d]), XP_MULT[d]], d == _diff, func():
 					_diff = d
-					_show("play"), 14, 12, 7))
+					_show("play"), 12 if _parch else 14, 12, 7))
 			_info_tiles(box, "ranked")
 			_cta(box, "ranked")
 			box.add_child(HubKit.label(L.t("ui.hub.ranked_dungeon"), UiTheme.DIM, 12))
@@ -858,6 +883,7 @@ func _load_daily(card: Control, mine: int) -> void:
 	tm.timeout.connect(_tick_weekly.bind(mine))
 	v.add_child(tm)
 	_tick_weekly(mine)
+	_center_tree(card)
 	if _signed():
 		var st: Dictionary = await RankedRun.daily_status()
 		if mine != _gen or not _alive() or not st.ok or not (st.data is Dictionary):
@@ -865,6 +891,7 @@ func _load_daily(card: Control, mine: int) -> void:
 		var done := bool(st.data.get("done", false))
 		var line := (L.t("ui.hub.daily_done") if done else L.t("ui.hub.daily_todo")) + "   ·   " + L.fa(L.t("ui.hub.daily_total"), int(st.data.get("total", 0)))
 		v.add_child(HubKit.label(line, HubKit.GOOD if done else UiTheme.PARCH, 13))
+	_center_tree(card)
 	_modal.call_deferred("_fit")
 
 ## Lit (une fois) la règle de la semaine et remplit sa carte.
@@ -918,6 +945,7 @@ func _load_weekly(card: Control, mine: int) -> void:
 	tm.timeout.connect(_tick_weekly.bind(mine))
 	v.add_child(tm)
 	_tick_weekly(mine)
+	_center_tree(card)
 	if _signed():
 		_load_streak(v, mine)
 	_modal.call_deferred("_fit")
@@ -939,7 +967,9 @@ func _load_streak(v: VBoxContainer, mine: int) -> void:
 	if nxt > 0:
 		line += "   ·   " + L.fa(L.t("ui.hub.streak_next"), [nxt, nxt - n])
 	line += "   ·   " + (L.t("ui.hub.streak_done") if played else L.t("ui.hub.streak_todo"))
-	v.add_child(HubKit.label(line, HubKit.GOOD if played else UiTheme.PARCH, 13))
+	var sl := HubKit.label(line, HubKit.GOOD if played else UiTheme.PARCH, 13)
+	v.add_child(sl)
+	_center_tree(sl)
 	_modal.call_deferred("_fit")
 
 ## Temps restant avant une date ISO (UTC) : « 3 jours », « 5 heures »…
@@ -993,7 +1023,7 @@ func _month_key() -> String:
 
 ## Bas de fiche : état (essai du jour, partie en attente…) et bouton de lancement.
 func _cta(box: VBoxContainer, mode: String) -> void:
-	var status := HubKit.label("", UiTheme.DIM, 13, true, true, HORIZONTAL_ALIGNMENT_LEFT)
+	var status := HubKit.label("", UiTheme.DIM, 12 if _parch else 13, true, true, HORIZONTAL_ALIGNMENT_CENTER if _parch else HORIZONTAL_ALIGNMENT_LEFT)
 	status.name = "CtaStatus"
 	if not _online():
 		status.text = L.t("ui.challenges.not_configured")
