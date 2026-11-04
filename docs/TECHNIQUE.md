@@ -683,3 +683,7 @@ Règles complètes, formules, tableau des évolutions et risques d'équilibrage 
 - Shaders dans `assets/shaders/ui/` (stone, candle, mist, rays, atlas_lines ; rose et chart ne servent qu'au prototype `tools/proto_ui_gothic`). Tout est canvas_item + CPUParticles2D : compatible GL Compatibility et export Web.
 - `Settings.reduced_motion` : calques animés masqués, plus de rune, de rotation, de poussières ni de survol animé.
 - Capture : `tools/shot_living.tscn` (`fit=0.9 t=<secondes>`).
+
+## Écran du mode en ligne — habillage Atlas Noir (onglet Jouer, grand écran)
+
+`scripts/ui/online_art.gd` (`OnlineArt`) habille `OnlineHub` d'après la maquette : bannière de velours des cinq modes (`ModeBanner` + `ModeRow`, le mode choisi s'allume dans un ruban rouge), fiche du mode sur le parchemin (`ParchmentStage`, neuf tranches à coins conservés, boussole et rouleau en `Props`), tuiles en plaques de bronze (`tile`), bouton de lancement en ruban rouge à médaillon (`cta`), liens à l'encre, filet lumineux (`divider`). Les autres onglets (Classements, Récompenses, Mes parties, Amis) reposent dans un cadre de bronze à rivets (`frame_style`). Le médaillon du joueur remplace l'anneau d'XP (`GameWidgets.Ring.art`). Images : `assets/ui/online/` (mipmaps activés). Sur mobile / écran étroit, l'ancienne mise en page est conservée. Capture : `tools/shot_online_hub.tscn`.

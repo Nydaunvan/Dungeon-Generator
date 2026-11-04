@@ -24,6 +24,7 @@ class Ring extends Control:
 	var value := 0.0
 	var text := ""
 	var icon: Texture2D
+	var art: Texture2D              ## médaillon de bronze (écran en ligne) : remplace l'anneau dessiné
 
 	func _init(px: float = 72.0) -> void:
 		custom_minimum_size = Vector2(px, px)
@@ -36,6 +37,18 @@ class Ring extends Control:
 		queue_redraw()
 
 	func _draw() -> void:
+		if art != null:
+			draw_texture_rect(art, Rect2(Vector2.ZERO, size), false)
+			var c0 := size / 2.0
+			if icon != null:
+				var q0 := size.x * 0.42
+				draw_texture_rect(icon, Rect2(c0 - Vector2(q0, q0) / 2.0, Vector2(q0, q0)), false)
+			elif text != "":
+				var f0 := UiTheme.font(UiTheme.F_TITLE_BOLD)
+				var fs0 := int(size.x * 0.4)
+				var sz0 := f0.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs0)
+				draw_string(f0, Vector2(c0.x - sz0.x / 2.0, c0.y + (f0.get_ascent(fs0) - f0.get_descent(fs0)) / 2.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs0, CREAM)
+			return
 		var c := size / 2.0
 		var w := maxf(3.0, size.x * 0.07)
 		var r := minf(size.x, size.y) * 0.5 - w
