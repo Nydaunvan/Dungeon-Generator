@@ -151,7 +151,8 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 	else:
 		_add_columns(view, grid, theme.get("wall"))
 		RoomDecor.add(view, level, theme_name, theme.get("wall"))
-		await KitDecor.add(view, level, grid, theme_name, niches, holes, sliced)      # modules d'architecture (thème gothic uniquement, désactivable)
+		await KitDecor.add(view, level, grid, theme_name, niches, holes, sliced)      # modules d'architecture (thèmes gothic et lava v2, désactivable)
+		LavaFx.add(view, level, grid, theme_name, niches, holes)      # magma décorative, lumières et braises (lava v2 seulement)
 	_vary = false
 	return view
 

@@ -212,7 +212,7 @@ static func _portal(g: Dictionary, p: Dictionary) -> void:
 	for i in lx.size():
 		var l: Array = lx[i]
 		_tone(g, Vector3(float(i), 3.9, 2.0))
-		_block(g, Vector3(l[0], head, -float(l[2])), Vector3(l[1], TOP, float(l[2])), 3, 0.02, PackedStringArray(["+y"]))
+		_block(g, Vector3(l[0], head + 0.03, -float(l[2])), Vector3(l[1], TOP, float(l[2])), 3, 0.02, PackedStringArray(["+y"]))
 	if p.plaque:      # plaque gravée sous le linteau : fer noirci, trois barres en relief (symbole de forgeron)
 		var ir: Dictionary = g.ir
 		for z in [-1.0, 1.0]:
