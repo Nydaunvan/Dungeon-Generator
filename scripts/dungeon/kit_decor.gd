@@ -18,7 +18,15 @@ extends RefCounted
 const CELL := LevelBuilder.CELL
 const HALF := CELL * 0.5
 const GLB_DIR := "res://assets/kit/gothic/"
-const THEMES := ["gothic"]
+const THEMES := ["gothic", "lava"]      # lava : seulement avec la v2 (Settings.lava_v2), modules d'assets/kit/lava/ ou générés par KitGeometryLava
+## Thème en cours de pose (fixé par add() / has_stair_frame()) : dossier des GLB, cache, pierre et géométrie procédurale en dépendent.
+static var _theme := "gothic"
+
+static func glb_dir(theme: String) -> String:
+	return GLB_DIR if theme == "gothic" else "res://assets/kit/%s/" % theme
+
+static func _proc_ids() -> Array:
+	return KitGeometryLava.PROCEDURAL if _theme == "lava" else KitGeometry.PROCEDURAL
 ## Modules : id -> description (la taille est celle attendue du modèle, en unités du jeu : 1 case = 4).
 const MODULES := {
 	"pilaster": {"size": Vector3(0.9, 4.0, 0.45), "note": "pilastre mural gothique, sur la jonction de deux pans, un tous les 2 pans"},
@@ -64,11 +72,16 @@ static func _h(a: int, b: int, c: int) -> int:
 
 ## Le kit s'applique à ce niveau : thème prévu, intérieur, pas de refus du niveau (`kit: false`).
 static func applies(theme: String, level: Dictionary) -> bool:
+	if theme == "lava" and not ThemeMaterials.lava2_on(theme):
+		return false
 	return enabled and THEMES.has(theme) and not bool(level.get("outdoor", false)) and bool(level.get("kit", true))
 
 ## Le kit pose son propre encadrement d'escalier sur ce niveau : l'ancien cadre de bronze dessiné (arch_frame.png) est alors inutile et reste caché derrière la pierre.
 static func has_stair_frame(theme: String, level: Dictionary) -> bool:
-	return applies(theme, level) and (not _parts("portal_stair").is_empty() or not _parts("stair_frame").is_empty())
+	if not applies(theme, level):
+		return false
+	_theme = theme
+	return (not _parts("portal_stair").is_empty() or not _parts("stair_frame").is_empty())
 
 ## Vide le cache des modèles (outils : changement de `placeholders`).
 static func reset_cache() -> void:
@@ -80,6 +93,7 @@ static func add(view: LevelView, level: Dictionary, grid: DungeonGrid, theme: St
 	last_stats = {}
 	if not applies(theme, level):
 		return
+	_theme = theme
 	var avail := {}
 	for id in MODULES:
 		if not _parts(id).is_empty():
@@ -97,7 +111,7 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 	var seed := str(level.get("id", "")).hash()
 	var blocked := RoomDecor._blocked_cells(level)
 	var special := _special_cells(level, blocked, niches)
-	var arch_id := "arch" if (avail.has("arch") and v3_ids().has("arch")) else ("ogive" if avail.has("ogive") else "arch")
+	var arch_id := "arch" if (avail.has("arch") and (_theme != "gothic" or v3_ids().has("arch"))) else ("ogive" if avail.has("ogive") else "arch")
 	var door_id := "portal_door" if avail.has("portal_door") else "door_frame"
 	var stair_id := "portal_stair" if avail.has("portal_stair") else "stair_frame"
 	var arches: Array = _arch_edges(level, grid, special, seed) if (avail.has(arch_id) or avail.has("portal_room")) else []
@@ -344,10 +358,11 @@ static func _build(view: LevelView, items: Array) -> void:
 
 ## Maillages d'un module : [{mesh, xf}] (xf = position du maillage dans le modèle). Vide si le GLB n'existe pas (et hors mode `placeholders`).
 static func _parts(id: String) -> Array:
-	if _parts_cache.has(id):
-		return _parts_cache[id]
+	var ck := _theme + "|" + id
+	if _parts_cache.has(ck):
+		return _parts_cache[ck]
 	var out: Array = []
-	var path := GLB_DIR + id + ".glb"
+	var path := glb_dir(_theme) + id + ".glb"
 	if ResourceLoader.exists(path):
 		var ps := load(path) as PackedScene
 		if ps != null:
@@ -363,11 +378,12 @@ static func _parts(id: String) -> Array:
 					up = up.get_parent()
 				out.append({"mesh": _with_theme_stone(flat_normals(mi.mesh), _stone_scale(id)), "xf": xf})
 			root.free()
-	elif procedural and KitGeometry.PROCEDURAL.has(id):
-		out.append({"mesh": _with_theme_stone(KitGeometry.build(id), _stone_scale(id)), "xf": Transform3D.IDENTITY})
+	elif procedural and _proc_ids().has(id):
+		var pm: Mesh = KitGeometryLava.build(id) if _theme == "lava" else KitGeometry.build(id)
+		out.append({"mesh": _with_theme_stone(pm, _stone_scale(id)), "xf": Transform3D.IDENTITY})
 	elif placeholders:
 		out = _placeholder_parts(id)
-	_parts_cache[id] = out
+	_parts_cache[ck] = out
 	return out
 
 ## Les GLB livrés ne contiennent que les positions (ni normales ni UV) : sans normales l'éclairage et la projection triplanaire sont faux (toutes les faces
@@ -412,7 +428,7 @@ static func _stone_scale(id: String) -> float:
 	return 0.25 if BIG_STONE.has(id) else 0.5
 
 static func _with_theme_stone(mesh: Mesh, scale: float = 0.5) -> Mesh:
-	var wall := ThemeMaterials.for_theme("gothic").get("wall") as StandardMaterial3D
+	var wall := ThemeMaterials.for_theme(_theme).get("wall") as StandardMaterial3D
 	if wall == null or wall.albedo_texture == null or mesh.get_surface_count() == 0:
 		return mesh
 	var m2 := mesh.duplicate() as Mesh
