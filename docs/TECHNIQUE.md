@@ -698,3 +698,22 @@ Réglage de la config (`data/default_config.json`, 60 % par défaut ; 100 % = an
 - **Textures PBR terre / glace / ruines** : `tools/gen_theme_textures.py` (procédural, graines fixes, réutilise `tools/gen_gothic_textures.py`) produit `dirt_hd|lite`, `ice_hd|lite`, `ruins_hd|lite` (wall / floor / ceil : albédo, normale, ORM), une tuile de 4 u = une case. `ThemeMaterials.PBR_PROCEDURAL` les branche (repli sur les anciennes images si les fichiers manquent). La glace est assombrie par `albedo_color`. Les dossiers `*_lite` sont exclus des exports exécutables (`export_presets.cfg`).
 - Pas de modules d'architecture 3D (pilastres, arches…) pour ces thèmes : ils demandent des modèles GLB (voir `KitDecor`, thème « gothic » seulement).
 - Contrôles : `tools/check_gothic.tscn` ; captures comparées : `tools/render_gothic.tscn -- theme=<thème> kit=0 only=01,07 out=<dossier>`.
+
+
+## Thème lave v2 — « Les Forges du monde brisé »
+
+Identifiant `lava` conservé (anciennes sauvegardes intactes). Réglage `Settings.lava_v2` (défaut oui, option « Forges du monde brisé » dans les réglages) : coupé, le thème retrouve exactement l'ancien rendu ; la génération, les graines, le rejeu, les collisions, portes, escaliers, coffres, monstres, combats et sauvegardes ne dépendent jamais de ce réglage (tout est visuel).
+
+**Fichiers**
+- `tools/gen_theme_textures.py lava2` → `assets/themes/lava2_hd/` (2048) et `lava2_lite/` (1024) : `wall` (basalte fracturé), `floor` (dalles volcaniques), `ceil` (roche sous pression), chacun albedo / normal / ORM. Chargés par `ThemeMaterials` (préfixe `lava2`, `_lite` si `Settings.texture_hd()` est faux).
+- `scripts/core/visual_fx.gd` : `THEME_LIGHT["lava2"]` (ambiance sombre brun-rouge peu saturée, torche du groupe neutre pour ne pas tout teinter d'orange, torches murales chaudes courtes).
+- `scripts/dungeon/kit_decor.gd` : kit désormais par thème (`_theme`, cache `thème|module`, dossier `assets/kit/<thème>/`) ; `lava` y est actif seulement avec la v2.
+- `scripts/dungeon/kit_geometry_lava.gd` : modules procéduraux (portails trapézoïdaux, piliers hexagonaux groupés, corniche à corbeaux, plinthe, console de torche, plaque de forge). Remplaçables par des GLB (`assets/kit/lava/LISEZMOI.md`).
+- `scripts/dungeon/lava_fx.gd` + `assets/shaders/magma.gdshader` : magma décorative (fissures de sol et canaux au pied des murs, failles verticales rares, lumières localisées, braises, fumée). Trois états (presque refroidie / active / très incandescente), matériaux partagés, animation uniquement sur `TIME` (aucun effet sur le jeu ni le rejeu).
+- Placement : déterministe, uniquement la grille et l'identifiant du niveau (jamais `GameRng`) ; jamais sur une case spéciale (objets, monstres, départ, portes, escaliers, niches) ni à moins d'une case d'elles. Aucun nœud de collision.
+
+**Paramètres** (`lava_fx.gd`) : `MAX_LIGHTS` 10 (lumières sans ombre, atténuées par la distance, 0 si « Torches avec lumière » = 0), `LIGHT_GAP` 9 u, `MAX_EMBERS` 18, `MAX_SMOKE` 8, braises et fumée selon `Settings.particles` (0 = aucune), densité des fissures plus forte dans les salles de 12 cases et plus. Kit : un MultiMesh par module et par bloc de 8×8 cases.
+
+**Outils** : `tools/render_lava.tscn` (`-- theme=lava lava=1|0 kit=1|0 only=01,07,40 out=dossier`, mêmes vues que `render_gothic` plus des vues dirigées vers la magma ; `lava=0` = ancien rendu pour l'avant/après), `tools/check_lava.tscn`.
+
+**Limites** : captures en rendu GL Compatibility (pas Forward+, donc ni SSAO ni reflets d'écran ni brume volumétrique). Effet de distorsion thermique non implémenté (lecture d'écran, coûteuse). Ambiance sonore : aucune ressource audio dédiée, la synthèse existante (`sound.gd`, thème « lava ») est conservée.
