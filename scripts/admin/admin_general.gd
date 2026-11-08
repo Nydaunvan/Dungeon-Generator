@@ -317,7 +317,10 @@ static func _p_progress(host: Control, admin: Node) -> void:
 	_s(c, L.t("admin.general.maitre_des_talents_cout_de"), "talentMasterBaseCost", 0, 1000, 5, 80, " " + L.t("ui.atelier.gold_unit"))
 	var l := Ax.card(cols[1], L.t("admin.general.objets_legendaires"), L.t("admin.general.applique_aux_donjons_generes"))
 	_s(l, L.t("admin.general.chance_sur_le_butin_de"), "legendaryChancePct", 0, 100, 1, 25, " %")
-	_anchors(page, admin, [[L.t("admin.general.progression_au_niveau"), g], [L.t("admin.general.repartition_de_l_experience"), x], [L.t("ui.atelier.card_costs"), c], [L.t("admin.general.objets_legendaires"), l]])
+	var lr := Ax.card(cols[0], L.t("admin.general.taux_de_butin"), L.t("admin.general.taux_de_butin_aide"))
+	_s(lr, L.t("admin.general.taux_de_butin_curseur"), "lootRatePct", 0, 200, 5, 60, " %")
+	_note(lr, L.t("admin.general.taux_de_butin_note"))
+	_anchors(page, admin, [[L.t("admin.general.progression_au_niveau"), g], [L.t("admin.general.repartition_de_l_experience"), x], [L.t("ui.atelier.card_costs"), c], [L.t("admin.general.taux_de_butin"), lr], [L.t("admin.general.objets_legendaires"), l]])
 
 # ------------------------------------------------------------------ Exploration
 

@@ -56,6 +56,7 @@ var difficulty: String
 var run_bonus: int = 0
 var diff_mult: float = 1.0
 var lvl_i: int = 0   # index du niveau en cours de génération
+var loot_rate: float = 0.6      # taux de butin par partie (réglage `lootRatePct`, 100 % = 1.0) : équipement au sol, coffres, butin des monstres
 var _legend_pity: float = 0.0   # points de chance de légendaire gagnés par les gardiens sans légendaire
 
 func _init(config: Dictionary, diff: String, run: int, mods: Array) -> void:
@@ -63,6 +64,13 @@ func _init(config: Dictionary, diff: String, run: int, mods: Array) -> void:
 	difficulty = diff
 	mod = combine_mods(mods)
 	run_bonus = maxi(0, run - 1)
+	loot_rate = loot_rate_of(config)
+
+## Taux de butin (0 à 2) du réglage `lootRatePct` de la config (60 % par défaut : moins d'objets, la montée en puissance reste lente).
+static func loot_rate_of(config: Dictionary) -> float:
+	return clampf(float(config.get("lootRatePct", DEFAULT_LOOT_RATE_PCT)) / 100.0, 0.0, 2.0)
+
+const DEFAULT_LOOT_RATE_PCT := 60
 
 # ------------------------------------------------------------------ utilitaires
 
@@ -787,17 +795,17 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 			var r: Dictionary = take.call()
 			if not r.is_empty():
 				items.append({"id": "pot_sta_gen_%d_%d" % [i, lr], "name": L.t("common.potion_endurance"), "icon": "@icon:potion_endurance", "x": r.x, "y": r.y, "type": "potion", "staminaRestore": 18 + sta_tier * 9 + run_bonus * 3})
-		if randf() < minf(1.0, 0.85 * item_mult):
+		if randf() < minf(1.0, 0.85 * item_mult * loot_rate):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
 				items.append(make_weapon("wp_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.arme_trouvee"), r.x, r.y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2))
 				equip_here = true
-		if randf() < minf(1.0, 0.75 * item_mult):
+		if randf() < minf(1.0, 0.75 * item_mult * loot_rate):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
 				items.append(make_armor("ar_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.equipement_trouve"), r.x, r.y))
 				equip_here = true
-		if randf() < 0.65:
+		if randf() < minf(1.0, 0.65 * loot_rate):
 			var r: Dictionary = take.call()
 			if not r.is_empty():
 				items.append(make_jewelry("jw_gen_%d_%d" % [i, lr], L.t("rules.dungeon_generator.bijou_trouve"), r.x, r.y))
@@ -836,7 +844,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 		used[_key(r.x, r.y)] = true
 		items.append({"id": "trap_gen_%d_%d" % [i, ti], "name": tk.name, "icon": tk.icon, "x": r.x, "y": r.y, "type": "trap", "trapKind": tk.kind, "permanent": tk.permanent,
 			"trapDmgMin": 2 + int(i * 0.8) + int(run_bonus * 0.5), "trapDmgMax": 5 + int(i * 1.2) + run_bonus})
-	if not equip_here:
+	if not equip_here and (loot_rate >= 1.0 or randf() < loot_rate):
 		var r: Dictionary = take.call()
 		if not r.is_empty():
 			match choice(["weapon", "armor", "jewelry"]):
@@ -878,7 +886,7 @@ func _one_level(i: int, num_levels: int, mw: int, mh: int, ids: Array, prev_leve
 
 	# butin porté par les monstres (caché jusqu'à leur mort)
 	var lootable := monsters.filter(func(m): return not m.get("isBoss", false))
-	var loot_count := int(round(lootable.size() * 0.45 * diff_mult))
+	var loot_count := int(round(lootable.size() * 0.45 * diff_mult * loot_rate))
 	for li in loot_count:
 		if lootable.is_empty():
 			break
@@ -959,6 +967,8 @@ func _make_chest(i: int, ci: int, grid: Array, x: int, y: int, run_bonus: int, h
 	for k in n:
 		var cid := "chest_%d_%d_%d" % [i, ci, k]
 		var roll := randf()
+		if roll < 0.7 and loot_rate < 1.0 and randf() >= loot_rate:
+			roll = 0.8            # taux de butin < 100 % : cet équipement devient une potion de soin
 		if roll < 0.25:
 			contents.append(make_weapon(cid, L.t("rules.dungeon_generator.arme_trouvee"), x, y, 2 + i + run_bonus, 3 + i * 2 + run_bonus * 2, 1.1, "chest"))
 		elif roll < 0.5:

@@ -37,6 +37,7 @@
   "dmgPctMax": 30
  },
  "legendaryChancePct": 25,
+ "lootRatePct": 60,
  "monsterRageChancePct": 25,
  "monsterStatusChancePct": 60,
  "bossStatus": true,
