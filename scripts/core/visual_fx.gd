@@ -45,7 +45,10 @@ const THEME_LIGHT := {
 		"torch_range_k": 0.75, "torch_energy_k": 1.5, "torch_atten": 1.6,
 		"player_color": Color("ffb272"), "player_range_k": 0.75, "player_energy_k": 1.1, "player_atten": 1.4},
 	# lave v2 « Forges du monde brisé » : ambiance très sombre, rouge-brun sans saturation ; le magma et les braseros éclairent localement, la torche du groupe reste sobre
-	"lava2": {"ambient_color": Color("2a2628"), "ambient_k": 0.95, "fog_color": Color("0b0403"), "fog_density": 0.036,
+	# brouillard : anthracite à peine chaud (jamais orange : l'orange vient du magma et des torches) ; vol_k : part de la lumière des sources qui se diffuse dans la brume volumétrique,
+	# vol_albedo : couleur de cette brume, mist_k : densité du volume de brume (Forward+)
+	"lava2": {"ambient_color": Color("2a2628"), "ambient_k": 0.95, "fog_color": Color("151211"), "fog_density": 0.028,
+		"vol_k": 0.25, "vol_albedo": Color(0.30, 0.285, 0.28), "mist_k": 0.45,
 		"torch_range_k": 0.8, "torch_energy_k": 1.7, "torch_atten": 1.7,
 		"player_color": Color("f2e0cf"), "player_range_k": 0.75, "player_energy_k": 1.1, "player_atten": 1.5},
 	"temple": {"ambient_color": Color("2c2716"), "ambient_k": 0.95, "fog_color": Color("070502"), "fog_density": 0.032,

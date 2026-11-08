@@ -37,6 +37,8 @@ func _ready() -> void:
 				"theme": theme = kv[1]
 				"kit": kit = kv[1] == "1"
 				"lava": lava = kv[1] == "1"
+				"kind": LavaFx.force_kind = kv[1]
+				"nofx": LavaFx.effects = kv[1] != "1"
 				"out": out = kv[1]
 				"only": only = kv[1].split(",")
 				"mon": mon = kv[1]
@@ -119,30 +121,18 @@ func _ready() -> void:
 	if lava and theme == "lava":
 		var nd := LevelBuilder.niche_data(grid, lv, false)
 		var pl: Dictionary = LavaFx.plan(lv, grid, nd.niches, nd.holes)
-		print("magma : ", LavaFx.last_stats)
-		var k := 0
-		for f in pl.floor:
-			if k >= 3:
-				break
-			var d: Vector2i = f.d
-			var p: Vector3 = f.pos
-			# caméra à 1,2 case de la fissure, dans l'axe du couloir, orientée vers elle
-			var cx := p.x / 4.0 - d.x * 0.5 + (-d.x * 1.2 if d.x != 0 else 0.0)
-			var cy := p.z / 4.0 - d.y * 0.5 + (-d.y * 1.2 if d.y != 0 else 0.0)
-			shots.append(["4%d_magma_sol" % k, cx, cy, (1 if d.x > 0 else 3) if d.x != 0 else (2 if d.y > 0 else 0), 0.0, 0.0, -25.0])
-			k += 1
-		k = 0
-		for wl in pl.wall:
-			if k >= 2:
-				break
-			var d: Vector2i = wl.d
-			var p: Vector3 = wl.pos
-			var cx := p.x / 4.0 - d.x * 0.5
-			var cy := p.z / 4.0 - d.y * 0.5
-			var cam_cx := cx - d.x * 0.5
-			var cam_cy := cy - d.y * 0.5
-			shots.append(["5%d_faille" % k, cam_cx - d.x * 0.6, cam_cy - d.y * 0.6, (1 if d.x > 0 else 3) if d.x != 0 else (2 if d.y > 0 else 0), 0.0, 0.0, 0.0])
-			k += 1
+		print("magma : ", pl.items.map(func(i): return "%s@%d,%d" % [i.kind, i.x, i.y]))
+		var seen := {}
+		for it in pl.items:
+			var kd: String = it.kind
+			if int(seen.get(kd, 0)) >= 2:
+				continue
+			seen[kd] = int(seen.get(kd, 0)) + 1
+			var d: Vector2i = it.d
+			var dir := (1 if d.x > 0 else 3) if d.x != 0 else (2 if d.y > 0 else 0)
+			var tilt := -38.0 if kd == "frac_sol" else (-30.0 if kd == "canal" else 0.0)
+			shots.append(["4%d_%s" % [seen[kd], kd], float(it.x) - d.x * 0.30, float(it.y) - d.y * 0.30, dir, 0.0, 0.0, tilt])
+			shots.append(["6%d_%s_proche" % [seen[kd], kd], float(it.x) + d.x * 0.26, float(it.y) + d.y * 0.26, dir, 0.0, 0.0, tilt * 0.8])
 	for s in shots:
 		if not only.is_empty() and not only.has(str(s[0]).substr(0, 2)):
 			continue

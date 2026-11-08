@@ -28,6 +28,7 @@ static func level_has_mist(run_seed: String, level_id: String, outdoor: bool, mo
 		return force == 1
 	return absi(("%s|mist|%s" % [run_seed, level_id]).hash()) % 100 < SHARE
 
+var theme := ""                    ## thème du niveau : couleur et densité de la brume (lave v2 : anthracite, jamais orange)
 var grid: DungeonGrid
 var env: Environment
 var volume: FogVolume
@@ -71,7 +72,7 @@ func _build_volume() -> void:
 	env.set_meta("mist_owner", get_instance_id())
 	env.volumetric_fog_enabled = true
 	env.volumetric_fog_density = 0.0                         # seul le volume de brume ci-dessous épaissit l'air
-	env.volumetric_fog_albedo = Color(0.62, 0.66, 0.72)
+	env.volumetric_fog_albedo = VisualFx.light_color(theme, "vol_albedo", Color(0.62, 0.66, 0.72))
 	env.volumetric_fog_emission = Color(0.0, 0.0, 0.0)
 	env.volumetric_fog_anisotropy = 0.35                     # la lumière traverse la brume vers l'avant : halos autour des torches
 	env.volumetric_fog_length = 40.0
@@ -89,6 +90,7 @@ func _build_volume() -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = _get_shader()
 	mat.set_shader_parameter("noise", _get_noise())
+	mat.set_shader_parameter("tint", VisualFx.light_color(theme, "vol_albedo", Color(0.62, 0.66, 0.72)))
 	_mat = mat
 	volume.material = mat
 	add_child(volume)
@@ -99,9 +101,9 @@ func _process(delta: float) -> void:
 	var want := 1.0 if (combat_probe.is_valid() and bool(combat_probe.call())) else 0.0
 	_clear = move_toward(_clear, want, delta * CLEAR_SPEED)
 	if _mat != null:
-		_mat.set_shader_parameter("density", 0.9 * lerpf(1.0, COMBAT_VOLUME, _clear))
+		_mat.set_shader_parameter("density", 0.9 * VisualFx.light_k(theme, "mist_k") * lerpf(1.0, COMBAT_VOLUME, _clear))
 	if env != null:
-		env.fog_density = BASE_DENSITY * (1.25 + 0.2 * sin(_t * 0.23)) * lerpf(1.0, COMBAT_GENERAL, _clear)      # le brouillard général épaissit et s'éclaircit
+		env.fog_density = (VisualFx.light_k(theme, "fog_density", BASE_DENSITY) if ThemeMaterials.lava2_on(theme) else BASE_DENSITY) * (1.25 + 0.2 * sin(_t * 0.23)) * lerpf(1.0, COMBAT_GENERAL, _clear)      # le brouillard général épaissit et s'éclaircit
 
 static func _get_noise() -> NoiseTexture3D:
 	if _noise == null:

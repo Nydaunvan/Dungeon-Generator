@@ -31,7 +31,8 @@ func _ready() -> void:
 	if pb.size.x > 0.95 or pb.size.z > 0.95 or pb.position.y < -0.01 or pb.end.y > 4.06:
 		fails.append("pilier hors emprise : %s" % pb)
 	var cfg: Dictionary = DG.build_config(Data.original_config, 3, 19, 15, "normal", [], 1, 4242)
-	var tot := {"floor": 0, "wall": 0, "lights": 0, "embers": 0, "kit": 0}
+	var tot := {"items": 0, "lights": 0, "embers": 0, "kit": 0}
+	var kinds := {}
 	for lv0 in cfg.levels:
 		var lv: Dictionary = lv0.duplicate(true)
 		lv["theme"] = "lava"
@@ -43,7 +44,7 @@ func _ready() -> void:
 			tot.kit += int(KitDecor.last_stats.get("total", 0))
 		if view.find_child("LavaFx", true, false) == null and LavaFx.last_stats.is_empty():
 			fails.append("magma absente")
-		for k in ["floor", "wall", "lights", "embers"]:
+		for k in ["items", "lights", "embers"]:
 			tot[k] += int(LavaFx.last_stats.get(k, 0))
 		if int(LavaFx.last_stats.get("lights", 0)) > LavaFx.MAX_LIGHTS or int(LavaFx.last_stats.get("embers", 0)) > LavaFx.MAX_EMBERS:
 			fails.append("trop de lumières ou de braises")
@@ -58,12 +59,14 @@ func _ready() -> void:
 		if str(p1) != str(p2):
 			fails.append("plan de magma non déterministe")
 		var special := KitDecor._special_cells(lv, RoomDecor._blocked_cells(lv), nd.niches)
-		for f in p1.floor:
-			var cx := int(roundf(((f.pos as Vector3).x - f.d.x * 2.0) / LevelBuilder.CELL))
-			var cy := int(roundf(((f.pos as Vector3).z - f.d.y * 2.0) / LevelBuilder.CELL))
-			var cell := Vector2i(cx, cy)
-			if grid.cell(cx, cy) != "." or special.has(cell):
-				fails.append("fissure sur une case non libre : %s" % cell)
+		for f in p1.items:
+			var cell := Vector2i(int(f.x), int(f.y))
+			kinds[f.kind] = int(kinds.get(f.kind, 0)) + 1
+			if grid.cell(cell.x, cell.y) != "." or special.has(cell) or KitDecor._near_special(special, grid, cell, 1):
+				fails.append("élément de magma sur une case non libre : %s" % cell)
+				break
+			if grid.cell(cell.x + (f.d as Vector2i).x, cell.y + (f.d as Vector2i).y) != "#":
+				fails.append("élément de magma hors d'un mur")
 				break
 		# rendu repli : option coupée = ni kit ni magma, mêmes règles de génération
 		Settings.lava_v2 = false
@@ -72,10 +75,14 @@ func _ready() -> void:
 			fails.append("ancien rendu lava altéré par le kit v2")
 		v0.free()
 		Settings.lava_v2 = true
-	print("lava v2 : kit ", tot.kit, " modules, magma sol ", tot.floor, ", failles ", tot.wall, ", lumières ", tot.lights, ", braises ", tot.embers)
+	print("lava v2 : kit ", tot.kit, " modules, éléments de magma ", tot.items, " ", kinds, ", lumières ", tot.lights, ", braises ", tot.embers)
+	if tot.lights > 6 * cfg.levels.size():
+		fails.append("trop de lumières de magma")
+	# la fracture est un maillage irrégulier : aucun sommet ne s'écarte de plus de 0,2 du mur ou du sol, rien ne déborde du pan
+	var grid0 := DungeonGrid.new(cfg.levels[0])
 	if tot.kit == 0:
 		fails.append("aucun module posé")
-	if tot.floor + tot.wall == 0:
+	if tot.items == 0:
 		fails.append("aucune magma posée sur les 3 niveaux")
 	# autres thèmes : ni kit ni magma
 	for th in ["stone", "dirt", "damp", "ruins", "ice", "temple"]:

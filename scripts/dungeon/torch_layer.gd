@@ -378,6 +378,7 @@ func _assign(r: TorchFx, ti: int) -> void:
 	r.light.light_color = t.light_color
 	r.light.omni_range = LIGHT_RANGE * VisualFx.light_k(str(t.theme), "torch_range_k")      # thèmes à ambiance propre : pools de lumière plus courts et plus contrastés
 	r.light.omni_attenuation = VisualFx.light_k(str(t.theme), "torch_atten", 1.3)
+	r.light.light_volumetric_fog_energy = VisualFx.light_k(str(t.theme), "vol_k")      # lave v2 : la brume volumétrique ne se teinte pas d'orange
 	r.light.light_energy = 0.0
 	r.light.shadow_enabled = false
 	r.theme = str(t.theme)
