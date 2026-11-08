@@ -172,6 +172,8 @@ func add_torch(pos: Vector3, rot: float, theme: String) -> void:
 	var basis := Basis(Vector3.UP, rot)       # +Z local = vers l'intérieur de la salle
 	var flame_col := _hex(int(c.get("flame", 0xffb050)))
 	var glow_col := _hex(int(c.get("glow", 0xffb060)))
+	if theme == "lava" and Settings.lava_v2:      # lave v2 : la lumière des torches reste un orange chaud et doux (le rouge saturé teintait toute la scène)
+		glow_col = Color(1.0, 0.62, 0.32)
 	var base := pos + basis * FLAME_BASE_LOCAL   # pied de la flamme = braise de la torche
 	_torches.append({
 		"pos": pos,

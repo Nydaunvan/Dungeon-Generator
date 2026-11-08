@@ -15,6 +15,7 @@ const PALETTES := {
 	"ruins": [0x5a4a46, 0x9a8a6a, 0x2a2220],
 	"ice": [0x3a6a9a, 0xdff2ff, 0x1d3a58],
 	"lava": [0x6a1a0a, 0xff8a2a, 0x2e0803],
+	"lava2": [0x262322, 0x6a5a4a, 0x0d0b0b],      # lave v2 : étoffe cendre et galon de bronze terni (le rouge vient du magma, pas des tapis)
 	"temple": [0x4a2a6a, 0xd8b84a, 0x24133a],
 	"gothic": [0x2a2e38, 0x8a7650, 0x0e1016],      # étoffe ardoise, galon de bronze ancien
 }
@@ -37,6 +38,8 @@ static func _col(v: int) -> Color:
 static func _pal(key: String) -> Array:
 	if key.begins_with("style:"):
 		return STYLE_PAL.get(key.substr(6), PALETTES["stone"])
+	if key == "lava" and Settings.lava_v2:
+		return PALETTES["lava2"]
 	return PALETTES.get(key, PALETTES["stone"])
 
 static func _pal_key(theme: String, style: String) -> String:

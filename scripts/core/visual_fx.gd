@@ -49,7 +49,7 @@ const THEME_LIGHT := {
 	# vol_albedo : couleur de cette brume, mist_k : densité du volume de brume (Forward+)
 	"lava2": {"ambient_color": Color("2a2628"), "ambient_k": 0.95, "fog_color": Color("151211"), "fog_density": 0.028,
 		"vol_k": 0.25, "vol_albedo": Color(0.30, 0.285, 0.28), "mist_k": 0.45,
-		"torch_range_k": 0.8, "torch_energy_k": 1.7, "torch_atten": 1.7,
+		"torch_range_k": 0.78, "torch_energy_k": 1.45, "torch_atten": 1.8,
 		"player_color": Color("f2e0cf"), "player_range_k": 0.75, "player_energy_k": 1.1, "player_atten": 1.5},
 	"temple": {"ambient_color": Color("2c2716"), "ambient_k": 0.95, "fog_color": Color("070502"), "fog_density": 0.032,
 		"torch_range_k": 0.82, "torch_energy_k": 1.7, "torch_atten": 1.5,
