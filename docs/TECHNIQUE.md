@@ -691,3 +691,10 @@ Règles complètes, formules, tableau des évolutions et risques d'équilibrage 
 ## Taux de butin par partie (`lootRatePct`)
 
 Réglage de la config (`data/default_config.json`, 60 % par défaut ; 100 % = ancien rythme, 0 à 200 %), lu par `DungeonGenerator.loot_rate_of` et appliqué dans la génération : probabilité de l'arme, de l'armure et du bijou au sol (× taux), équipement garanti par niveau (tiré avec la probabilité du taux), nombre de monstres porteurs de butin (× taux) et contenu des coffres (un équipement devient une potion de soin avec la probabilité 1 − taux). Inchangés : potions au sol, clés, parchemins, butin garanti des gardiens. À 100 %, aucun tirage supplémentaire n'a lieu (les graines rejouent comme avant). Atelier : Règles du jeu › Progression › « Taux de butin ». Contrôle : `tools/check_loot_rate.tscn`.
+
+## Qualité graphique des autres thèmes (ambiance et textures PBR)
+
+- **Ambiance par thème** : `VisualFx.THEME_LIGHT` définit maintenant, pour pierre, terre, humide, ruines, glace, lave et temple, la couleur ambiante, le brouillard, la portée / l'énergie / l'atténuation des torches murales et la torche du groupe (même méthode que le gothic, en moins marqué : pools de lumière plus courts et plus contrastés, ambiante teintée). Le gothic reste le plus sombre. Les couleurs de flamme restent celles de `CANDELABRA_THEME`.
+- **Textures PBR terre / glace / ruines** : `tools/gen_theme_textures.py` (procédural, graines fixes, réutilise `tools/gen_gothic_textures.py`) produit `dirt_hd|lite`, `ice_hd|lite`, `ruins_hd|lite` (wall / floor / ceil : albédo, normale, ORM), une tuile de 4 u = une case. `ThemeMaterials.PBR_PROCEDURAL` les branche (repli sur les anciennes images si les fichiers manquent). La glace est assombrie par `albedo_color`. Les dossiers `*_lite` sont exclus des exports exécutables (`export_presets.cfg`).
+- Pas de modules d'architecture 3D (pilastres, arches…) pour ces thèmes : ils demandent des modèles GLB (voir `KitDecor`, thème « gothic » seulement).
+- Contrôles : `tools/check_gothic.tscn` ; captures comparées : `tools/render_gothic.tscn -- theme=<thème> kit=0 only=01,07 out=<dossier>`.

@@ -24,6 +24,29 @@ const WET_THEMES := {"damp": 0.42, "ice": 0.30, "lava": 0.55, "gothic": 0.52}
 ## ambient_color / fog_* : lumière ambiante et brouillard ; ambient_k : facteur sur l'énergie ambiante du niveau ;
 ## torch_* : portée, énergie et atténuation des torches murales éclairées ; player_* : torche du groupe.
 const THEME_LIGHT := {
+	# thèmes classiques : même méthode que le gothic (ambiance sombre et teintée, torches à pools de lumière courts et contrastés), en moins marqué ;
+	# la torche du groupe et les torches murales gardent la couleur chaude de chaque thème (CANDELABRA_THEME)
+	"stone": {"ambient_color": Color("2b2620"), "ambient_k": 0.92, "fog_color": Color("050403"), "fog_density": 0.033,
+		"torch_range_k": 0.86, "torch_energy_k": 1.6, "torch_atten": 1.5,
+		"player_color": Color("ffc27c"), "player_range_k": 0.8, "player_energy_k": 1.1, "player_atten": 1.35},
+	"dirt": {"ambient_color": Color("2e2015"), "ambient_k": 0.9, "fog_color": Color("070302"), "fog_density": 0.036,
+		"torch_range_k": 0.8, "torch_energy_k": 1.7, "torch_atten": 1.6,
+		"player_color": Color("ffb36a"), "player_range_k": 0.78, "player_energy_k": 1.15, "player_atten": 1.4},
+	"damp": {"ambient_color": Color("172629"), "ambient_k": 0.9, "fog_color": Color("020708"), "fog_density": 0.036,
+		"torch_range_k": 0.78, "torch_energy_k": 1.8, "torch_atten": 1.6,
+		"player_color": Color("d4e8da"), "player_range_k": 0.72, "player_energy_k": 1.15, "player_atten": 1.4},
+	"ruins": {"ambient_color": Color("242832"), "ambient_k": 0.9, "fog_color": Color("04050a"), "fog_density": 0.032,
+		"torch_range_k": 0.8, "torch_energy_k": 1.8, "torch_atten": 1.6,
+		"player_color": Color("e8dcc6"), "player_range_k": 0.75, "player_energy_k": 1.15, "player_atten": 1.4},
+	"ice": {"ambient_color": Color("172740"), "ambient_k": 0.8, "fog_color": Color("04080f"), "fog_density": 0.03,
+		"torch_range_k": 0.78, "torch_energy_k": 1.7, "torch_atten": 1.5,
+		"player_color": Color("d0e4ff"), "player_range_k": 0.75, "player_energy_k": 1.15, "player_atten": 1.4},
+	"lava": {"ambient_color": Color("2d1511"), "ambient_k": 0.85, "fog_color": Color("0a0302"), "fog_density": 0.04,
+		"torch_range_k": 0.75, "torch_energy_k": 1.5, "torch_atten": 1.6,
+		"player_color": Color("ffb272"), "player_range_k": 0.75, "player_energy_k": 1.1, "player_atten": 1.4},
+	"temple": {"ambient_color": Color("2c2716"), "ambient_k": 0.95, "fog_color": Color("070502"), "fog_density": 0.032,
+		"torch_range_k": 0.82, "torch_energy_k": 1.7, "torch_atten": 1.5,
+		"player_color": Color("ffd694"), "player_range_k": 0.78, "player_energy_k": 1.15, "player_atten": 1.4},
 	"gothic": {"ambient_color": Color("1a2333"), "ambient_k": 0.85, "fog_color": Color("03050a"), "fog_density": 0.03,
 		"torch_range_k": 0.72, "torch_energy_k": 2.1, "torch_atten": 1.7,
 		"player_color": Color("bdc9de"), "player_range_k": 0.6, "player_energy_k": 1.2, "player_atten": 1.4,

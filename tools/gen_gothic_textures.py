@@ -64,9 +64,9 @@ def course_edges(rng, total, lo, hi, mix=None):
     return np.concatenate([[0.0], np.cumsum(sizes)[:-1]]), sizes
 
 
-def masonry(n, rng, wx, wy):
-    """Appareil de grosses pierres irrégulières. Renvoie (distance au bord, id de bloc, u, v dans le bloc)."""
-    ppu = n / 4.0
+def masonry(n, rng, wx, wy, scale=1.0):
+    """Appareil de grosses pierres irrégulières (scale < 1 : pierres plus petites). Renvoie (distance au bord, id de bloc, u, v dans le bloc)."""
+    ppu = n / 4.0 * scale
     yy = (np.arange(n)[:, None] + wy) % n
     xx = (np.arange(n)[None, :] + wx) % n
     yy = np.broadcast_to(yy, (n, n)).astype(np.float32)

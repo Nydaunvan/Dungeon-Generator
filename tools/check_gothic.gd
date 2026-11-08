@@ -16,25 +16,19 @@ func _ready() -> void:
 		print("ATTENTION : textures gothic_hd/lite absentes, matériaux provisoires")
 	if ThemeMaterials.for_theme("stone").get("wall") == mats.get("wall"):
 		fails.append("gothic partage le matériau de mur de stone")
-	# ambiance
-	if VisualFx.light_k("stone", "ambient_k") != 1.0 or VisualFx.light_k("ice", "torch_range_k") != 1.0:
-		fails.append("l'ambiance gothic déborde sur les autres thèmes")
+	# ambiance : chaque thème a la sienne (même méthode que le gothic, moins marquée) ; le gothic reste le plus sombre et le plus bleuté
 	if VisualFx.light_k("gothic", "torch_range_k") >= 1.0:
 		fails.append("portée des torches gothic non limitée")
-	for th in ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]:      # autres thèmes : valeurs d'origine de la torche du groupe (couleur ffb060, atténuation 1)
-		if VisualFx.light_color(th, "player_color", Color("ffb060")) != Color("ffb060") or VisualFx.light_k(th, "player_atten", 1.0) != 1.0 \
-				or VisualFx.light_k(th, "player_range_k") != 1.0 or VisualFx.light_k(th, "player_energy_k") != 1.0 or VisualFx.light_k(th, "torch_energy_k") != 1.0:
-			fails.append("l'éclairage de %s a changé" % th)
+	for th in ["stone", "dirt", "damp", "ruins", "ice", "lava", "temple"]:
+		if VisualFx.light_k(th, "ambient_k", 1.0) > 1.0 or VisualFx.light_k(th, "torch_range_k", 1.0) >= 1.0 or VisualFx.light_k(th, "torch_energy_k", 1.0) <= 1.0:
+			fails.append("ambiance de %s non conforme (ambiante <= 1, torches plus courtes et plus fortes)" % th)
+		if VisualFx.light_k(th, "ambient_k", 1.0) < VisualFx.light_k("gothic", "ambient_k") - 0.1:
+			fails.append("%s plus sombre que le gothic" % th)
 	var env := Environment.new()
 	VisualFx.apply_environment(env, "gothic", false)
 	var amb := env.ambient_light_color
 	if amb.b <= amb.r:
 		fails.append("ambiance gothic non bleutée")
-	var env2 := Environment.new()
-	var amb_before := env2.ambient_light_color
-	VisualFx.apply_environment(env2, "stone", false)
-	if env2.ambient_light_color != amb_before:
-		fails.append("l'ambiance de stone a changé")
 	# modèles livrés : encombrement dans le cahier des charges, ouverture libre des arches et encadrements, origine au sol
 	var glb_count := 0
 	var opening := {"arch": Vector2(3.0, 3.5), "door_frame": Vector2(3.0, 3.4), "stair_frame": Vector2(3.0, 3.4)}

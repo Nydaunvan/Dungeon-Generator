@@ -4,6 +4,8 @@ extends RefCounted
 ## Thèmes PNG (damp, lava, temple) : rendu net (pixel-art) ; thèmes JPEG : rendu lissé, répété 3x3.
 
 const PIXEL_THEMES := ["damp", "lava", "temple"]
+## Thèmes à jeu de textures PBR complet (wall / floor / ceil dans <thème>_hd et <thème>_lite), une tuile de 4 u = une case.
+const PBR_PROCEDURAL := ["dirt", "ice", "ruins"]
 ## Mur et sol « pierre » en vrai matériau 3D (couleur + normales + occlusion/rugosité) : deux jeux de textures dans le projet,
 ## 2048 px pour l'exécutable Windows (stone_hd) et 1024 px pour le Web et le mobile (stone_lite).
 ## Chaque export ne garde que son jeu (filtres d'exclusion dans export_presets.cfg) ; dans l'éditeur on choisit selon la plateforme.
@@ -50,6 +52,14 @@ static func for_theme(theme: String) -> Dictionary:
 	else:
 		for part in ["wall", "floor", "ceil"]:
 			mats[part] = _make(theme, part, pixel)
+	if PBR_PROCEDURAL.has(theme):      # terre, glace, ruines : jeux complets (couleur, normales, rugosité) générés par tools/gen_theme_textures.py
+		for part in ["wall", "floor", "ceil"]:
+			var pm := _stone_pbr(part, 1.0, theme)
+			if pm != null:
+				pm.vertex_color_use_as_albedo = true      # variation de teinte par pan (LevelBuilder._vary) : casse la répétition de la texture
+				if theme == "ice":      # glace plus sombre : les torches y dessinent des pools de lumière au lieu d'un bloc bleu uniformément éclairé
+					pm.albedo_color = Color(0.62, 0.68, 0.78) if part != "ceil" else Color(0.7, 0.74, 0.82)
+				mats[part] = pm
 	if theme == "damp":
 		mats["wall"].uv1_scale = Vector3(2, 2, 1)
 		var dwall := _stone_pbr("wall", DAMP_WALL_REPEAT, "damp")
