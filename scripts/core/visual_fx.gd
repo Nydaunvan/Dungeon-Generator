@@ -44,6 +44,10 @@ const THEME_LIGHT := {
 	"lava": {"ambient_color": Color("2d1511"), "ambient_k": 0.85, "fog_color": Color("0a0302"), "fog_density": 0.04,
 		"torch_range_k": 0.75, "torch_energy_k": 1.5, "torch_atten": 1.6,
 		"player_color": Color("ffb272"), "player_range_k": 0.75, "player_energy_k": 1.1, "player_atten": 1.4},
+	# lave v2 « Forges du monde brisé » : ambiance très sombre, rouge-brun sans saturation ; le magma et les braseros éclairent localement, la torche du groupe reste sobre
+	"lava2": {"ambient_color": Color("2a2628"), "ambient_k": 0.95, "fog_color": Color("0b0403"), "fog_density": 0.036,
+		"torch_range_k": 0.8, "torch_energy_k": 1.7, "torch_atten": 1.7,
+		"player_color": Color("f2e0cf"), "player_range_k": 0.75, "player_energy_k": 1.1, "player_atten": 1.5},
 	"temple": {"ambient_color": Color("2c2716"), "ambient_k": 0.95, "fog_color": Color("070502"), "fog_density": 0.032,
 		"torch_range_k": 0.82, "torch_energy_k": 1.7, "torch_atten": 1.5,
 		"player_color": Color("ffd694"), "player_range_k": 0.78, "player_energy_k": 1.15, "player_atten": 1.4},
@@ -54,14 +58,20 @@ const THEME_LIGHT := {
 		"sprite_rim_color": Color("8fb0e8"), "sprite_rim_k": 0.0},
 }
 
+## Réglages d'ambiance du thème (la lave en version « Forges du monde brisé » a les siens, clef « lava2 »).
+static func _tl(theme: String) -> Dictionary:
+	if theme == "lava" and Settings.lava_v2:
+		return THEME_LIGHT.get("lava2", THEME_LIGHT.get("lava", {}))
+	return THEME_LIGHT.get(theme, {})
+
 ## Valeur d'ambiance du thème (`default` quand le thème n'a pas d'ambiance propre).
 static func light_k(theme: String, key: String, default: float = 1.0) -> float:
-	var tl: Dictionary = THEME_LIGHT.get(theme, {})
+	var tl: Dictionary = _tl(theme)
 	return float(tl.get(key, default))
 
 ## Couleur d'ambiance du thème (`default` quand le thème n'a pas d'ambiance propre).
 static func light_color(theme: String, key: String, default: Color) -> Color:
-	var tl: Dictionary = THEME_LIGHT.get(theme, {})
+	var tl: Dictionary = _tl(theme)
 	return tl.get(key, default)
 
 static var _luts: Dictionary = {}
@@ -79,7 +89,7 @@ static func is_forward() -> bool:
 static func apply_environment(env: Environment, theme: String, outdoor: bool) -> void:
 	if env == null:
 		return
-	var tl: Dictionary = THEME_LIGHT.get(theme, {})
+	var tl: Dictionary = _tl(theme)
 	if not tl.is_empty() and not outdoor:      # ambiance propre au thème : gris bleuté très sombre, brouillard discret
 		env.ambient_light_color = tl.ambient_color
 		env.fog_light_color = tl.fog_color

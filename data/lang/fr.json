@@ -3079,6 +3079,8 @@
   "ui.shop_modal.scr_base": "Base du sort : %d – %d, plus la puissance du lanceur (Intelligence ÷ 3 − 1, équipement, niveau). Résultat selon le héros qui lit :",
   "ui.settings.gothic_test": "Thème Gothique Atlas Noir (essai)",
   "ui.settings.gothic_test_hint": "Affiche tous les étages intérieurs avec le thème gothique (pierre anthracite, torches localisées, arches et piliers). Purement visuel : la partie et la sauvegarde ne changent pas. Prend effet au prochain chargement d'un étage (changez d'étage ou rechargez la partie).",
+  "ui.settings.lava_v2": "Thème Lave : Forges du monde brisé",
+  "ui.settings.lava_v2_hint": "Forteresse volcanique : murs et sols de basalte noir, portails et piliers hexagonaux, lumière chaude localisée. Décochez pour revenir à l'ancien rendu du thème Lave. Purement visuel : la partie et la sauvegarde ne changent pas. Prend effet au prochain chargement d'un étage.",
   "ui.settings.monster_anim": "Animations des monstres",
   "ui.settings.monster_anim_hint": "Les monstres respirent au repos et réagissent en combat (touché, attaque, étourdissement, mort). L'option « Mouvements réduits » coupe la respiration.",
   "ui.settings.card_fx": "Effets sur les cartes (essai)",

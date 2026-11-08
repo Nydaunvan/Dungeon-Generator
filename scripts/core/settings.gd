@@ -57,6 +57,7 @@ var reduced_motion := false
 var living_intro_seen := false     ## la présentation guidée des compétences vivantes a déjà été montrée
 var living_skills := true          ## « Compétences vivantes » : les sorts et talents s'attachent et évoluent (sans effet en partie classée)
 var card_fx := true              ## effets des monstres et des soins affichés sur les cartes du groupe (couche au-dessus de l'interface)
+var lava_v2 := true             ## thème lave : « Les Forges du monde brisé » (basalte, kit volcanique, ambiance propre) ; false = ancien rendu, pour comparer (purement visuel)
 var gothic_test := false         ## essai : tous les étages intérieurs s'affichent avec le thème gothic (purement visuel, rien n'est modifié dans la partie)
 var monster_anim := true         ## animations des monstres (respiration au repos, réactions en combat)
 var instinct_scale := 1.0        ## « Instinct de survie » : durée de la fenêtre de réaction ×1 / ×1,5 / ×2 (sans effet en partie classée)
@@ -251,6 +252,10 @@ func set_village_weather(v: String) -> void:
 	village_weather = v if ["auto", "clear", "rain"].has(v) else "auto"
 	_save()
 
+func set_lava_v2(v: bool) -> void:
+	lava_v2 = v
+	_save()
+
 func set_gothic_test(v: bool) -> void:
 	gothic_test = v
 	_save()
@@ -296,6 +301,7 @@ func reset_graphics() -> void:
 	reduced_motion = false
 	monster_anim = true
 	gothic_test = false
+	lava_v2 = true
 	instinct_scale = 1.0
 	instinct_mode = "on"
 	village_time = "auto"
@@ -372,6 +378,7 @@ func _load() -> void:
 		reduced_motion = bool(cf.get_value("access", "reduced_motion", false))
 		monster_anim = bool(cf.get_value("game", "monster_anim", true))
 		gothic_test = bool(cf.get_value("game", "gothic_test", false))
+		lava_v2 = bool(cf.get_value("game", "lava_v2", true))
 		instinct_scale = clampf(float(cf.get_value("game", "instinct_scale", 1.0)), 1.0, 2.0)
 		instinct_mode = str(cf.get_value("game", "instinct_mode", "on"))
 		village_time = str(cf.get_value("game", "village_time", "auto"))
@@ -416,6 +423,7 @@ func _save() -> void:
 	cf.set_value("access", "reduced_motion", reduced_motion)
 	cf.set_value("game", "monster_anim", monster_anim)
 	cf.set_value("game", "gothic_test", gothic_test)
+	cf.set_value("game", "lava_v2", lava_v2)
 	cf.set_value("game", "instinct_scale", instinct_scale)
 	cf.set_value("game", "instinct_mode", instinct_mode)
 	cf.set_value("game", "village_time", village_time)

@@ -36,13 +36,18 @@ static var gothic_placeholder := false
 static var _gray: Dictionary = {}
 static var _cache: Dictionary = {}
 
+## Thème lave en version « Forges du monde brisé » (option des réglages, jeu de textures lava2 présent).
+static func lava2_on(theme: String) -> bool:
+	return theme == "lava" and Settings.lava_v2 and _stone_dir("lava2") != ""
+
 static func for_theme(theme: String) -> Dictionary:
 	if theme != "gothic" and not ResourceLoader.exists("res://assets/themes/%s_wall.jpg" % theme) \
 			and not ResourceLoader.exists("res://assets/themes/%s_wall.png" % theme):
 		theme = "stone"
 	var reflect: bool = VisualFx.is_forward() and bool(Settings.opt("fx_reflect")) and VisualFx.WET_THEMES.has(theme)
 	var relief: bool = VisualFx.is_forward() and bool(Settings.opt("fx_parallax"))
-	var key := "%s|%d|%d|%d" % [theme, 1 if Settings.texture_hd() else 0, 1 if reflect else 0, 1 if relief else 0]   # un jeu de matériaux par réglage de textures et d'effets
+	var lava2 := theme == "lava" and Settings.lava_v2 and _stone_dir("lava2") != ""      # lave : « Forges du monde brisé » (basalte) ; sinon ancien rendu
+	var key := "%s|%d|%d|%d|%d" % [theme, 1 if Settings.texture_hd() else 0, 1 if reflect else 0, 1 if relief else 0, 1 if lava2 else 0]   # un jeu de matériaux par réglage de textures et d'effets
 	if _cache.has(key):
 		return _cache[key]
 	var pixel := PIXEL_THEMES.has(theme)
@@ -77,7 +82,13 @@ static func for_theme(theme: String) -> Dictionary:
 		var tfloor := _stone_pbr("floor", TEMPLE_FLOOR_REPEAT, "temple")
 		if tfloor != null:
 			mats["floor"] = tfloor
-	if theme == "lava":
+	if lava2:
+		for part in ["wall", "floor", "ceil"]:
+			var lm := _stone_pbr(part, 1.0, "lava2")
+			if lm != null:
+				lm.vertex_color_use_as_albedo = true      # variation de teinte par pan (LevelBuilder._vary)
+				mats[part] = lm
+	elif theme == "lava":
 		var lwall := _stone_pbr("wall", LAVA_WALL_REPEAT, "lava")
 		if lwall != null:
 			mats["wall"] = lwall

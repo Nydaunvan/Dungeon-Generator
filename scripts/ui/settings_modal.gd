@@ -245,6 +245,8 @@ func _graphics() -> void:
 	_hint(L.t("ui.settings.monster_anim_hint"))
 	_check(L.t("ui.settings.gothic_test"), Settings.gothic_test, func(v: bool): Settings.set_gothic_test(v))
 	_hint(L.t("ui.settings.gothic_test_hint"))
+	_check(L.t("ui.settings.lava_v2"), Settings.lava_v2, func(v: bool): Settings.set_lava_v2(v))
+	_hint(L.t("ui.settings.lava_v2_hint"))
 	_check(L.t("ui.settings.card_fx"), Settings.card_fx, func(v: bool): Settings.set_card_fx(v))
 	_hint(L.t("ui.settings.card_fx_hint"))
 	_section(L.t("ui.settings.village_title"))

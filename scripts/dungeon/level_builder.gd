@@ -32,7 +32,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 	view.torches = torches
 
 	var outdoor := bool(level.get("outdoor", false))
-	_vary = theme_name == "gothic" and not outdoor
+	_vary = (theme_name == "gothic" or ThemeMaterials.lava2_on(theme_name)) and not outdoor
 	_vary_k = 1.0
 	var path_cells: Array = level.get("pathCells", [])
 	var plaza_cells: Array = level.get("plazaCells", [])

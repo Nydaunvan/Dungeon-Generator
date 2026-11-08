@@ -35,6 +35,12 @@ SPECS = {
         "floor": {"st": ("voronoi", 4, 0.46), "joint": 2.0, "bevel": 20.0, "relief": 0.35, "tilt": 0.07, "base": (0.400, 0.545, 0.680), "tone": 0.09, "strength": 7.0, "jc": (0.70, 0.82, 0.92), "rough": 0.20},
         "ceil": {"st": ("voronoi", 4, 0.47), "joint": 3.0, "bevel": 40.0, "relief": 0.85, "tilt": 0.14, "base": (0.230, 0.320, 0.425), "tone": 0.12, "strength": 17.0, "jc": (0.46, 0.58, 0.70), "rough": 0.48},
     },
+    # « Les Forges du monde brisé » (thème lave v2) : basalte noir, obsidienne, cendre chaude ; le magma n'est pas dans ces textures (voir LavaKit / ThemeMaterials)
+    "lava2": {
+        "wall": {"st": ("masonry", 1.5), "joint": 10.0, "bevel": 58.0, "relief": 1.15, "tilt": 0.14, "base": (0.300, 0.312, 0.335), "tone": 0.16, "strength": 17.0, "jc": (0.085, 0.050, 0.048), "rough": 0.84},
+        "floor": {"st": ("voronoi", 4, 0.36), "joint": 5.5, "bevel": 30.0, "relief": 0.6, "tilt": 0.07, "base": (0.245, 0.252, 0.272), "tone": 0.13, "strength": 11.0, "jc": (0.095, 0.058, 0.052), "rough": 0.70},
+        "ceil": {"st": ("voronoi", 3, 0.42), "joint": 9.0, "bevel": 60.0, "relief": 1.25, "tilt": 0.20, "base": (0.175, 0.180, 0.195), "tone": 0.15, "strength": 26.0, "jc": (0.062, 0.036, 0.034), "rough": 0.90},
+    },
 }
 
 
@@ -132,6 +138,26 @@ def build(theme, part, seed):
             scr = smooth(fbm(n, 1.0, seed + 19, lo=30, hi=300, ax=14.0), 1.2, 2.6)
             col = col * (1 - 0.3 * scr[..., None]) + white[None, None, :] * (0.3 * scr[..., None])
             rough = rough + 0.25 * scr
+    if theme == "lava2":
+        # zones vitrifiées (obsidienne : noires, brillantes), fractures minérales claires et fines, cendre chaude et traces de chauffe au pied des joints
+        glass = smooth(pool, 0.6, 1.7) * smooth(mid, -0.4, 1.0)
+        crack_n = fbm(n, 1.1, seed + 18, lo=8, hi=100)
+        mineral = np.clip(1.0 - np.abs(crack_n) * 16.0, 0.0, 1.0) ** 3
+        along = np.clip(gaussian_filter(joint, 14, mode="wrap") * 3.0, 0.0, 1.0)
+        ash = np.clip(smooth(broad, -0.1, 1.6) * (0.35 + 0.65 * smooth(pool, -0.2, 1.4)) * (0.5 + 0.5 * along), 0.0, 1.0)
+        if part == "floor":
+            ash = np.clip(ash * 1.2, 0.0, 1.0)
+        heat = np.array([0.330, 0.215, 0.165])
+        col = col * (1 - 0.26 * ash[..., None]) + heat[None, None, :] * (0.26 * ash[..., None])
+        col = col * (1 - 0.30 * glass[..., None])
+        col = col * (1 - 0.30 * mineral[..., None]) + np.array([0.40, 0.36, 0.33])[None, None, :] * (0.30 * mineral[..., None])
+        rough = rough * (1 - 0.75 * glass) + 0.22 * 0.75 * glass + 0.12 * ash
+        if part == "floor":                         # dalles polies par le passage : lisses au centre des dalles, rudes aux bords
+            worn = smooth(pool, 0.2, 1.6) * (1 - edge_band)
+            rough = rough - 0.30 * worn
+        rough = rough - 0.08 * mineral
+        h = h - 0.012 * mineral
+        ao = np.clip(ao * (1.0 - 0.10 * mineral), 0.3, 1.0)
     rough = np.clip(rough, 0.12, 1.0)
     return col.clip(0, 1).astype(np.float32), h.astype(np.float32), ao.astype(np.float32), rough.astype(np.float32), sp["strength"]
 
@@ -155,7 +181,7 @@ def main():
     if args and os.path.isdir(args[0]):
         out = args.pop(0)
     themes = args or list(SPECS)
-    for ti, theme in enumerate(["ruins", "dirt", "ice"]):
+    for ti, theme in enumerate(["ruins", "dirt", "ice", "lava2"]):
         if theme not in themes:
             continue
         for i, part in enumerate(["wall", "floor", "ceil"]):
