@@ -2,7 +2,7 @@ shader_type spatial;
 render_mode cull_disabled, depth_draw_opaque, specular_disabled;
 // Magma des Forges du monde brisé : dense et visqueuse. Le contour est porté par la GÉOMÉTRIE (rubans irréguliers), jamais par un masque rectangulaire :
 // aucun discard. Animation lente, sur TIME seulement (jamais d'effet sur le jeu).
-// COLOR.r = position en travers du ruban (-1..1 : 0 au cœur, ±1 au bord refroidi), COLOR.g = abscisse réduite ; UV en mètres (x le long, y en travers).
+// COLOR.r = position en travers du ruban, codée 0..1 (0,5 au cœur, 0 ou 1 au bord refroidi), COLOR.g = abscisse réduite ; UV en mètres (x le long, y en travers).
 // state : 0 presque refroidie, 1 active, 2 très chaude.
 uniform float state = 1.0;
 uniform float speed = 0.028;
@@ -40,13 +40,13 @@ void vertex() {
 
 void fragment() {
 	float t = TIME * speed;
-	float across = abs(COLOR.r);
+	float across = abs(COLOR.r * 2.0 - 1.0);      // COLOR.r codé 0..1 (les couleurs de sommet ne portent pas de négatifs)
 	// bruit en coordonnées monde (centimétrique) : le grain est isotrope même sur un ruban de 10 cm de large, sur un mur comme sur le sol
 	vec2 q = vec2(wp.x * 0.8 + wp.z * 0.6 + wp.y * 0.3, wp.y * 0.9 + wp.z * 0.5 - wp.x * 0.4) * 5.0;
 	vec2 warp = vec2(fbm(q * 0.35 + vec2(t, 0.0)), fbm(q * 0.35 + vec2(3.1, -t))) - 0.5;      // déformation lente : écoulement visqueux
 	float plates = fbm(q * 0.9 + warp * 1.4 + vec2(t * 0.7, t * 0.15));                    // plaques de croûte
 	float fine = fbm(q * 2.4 + warp * 0.9);
-	float core = 1.0 - pow(across, 1.6);                                                    // 1 au centre, 0 au bord
+	float core = pow(1.0 - across, 1.9);                                                    // 1 au centre, 0 au bord
 	float pn = clamp((plates - 0.30) / 0.36, 0.0, 1.0);                                      // bruit normalisé 0..1
 	float crust = smoothstep(0.68, 0.90, pn + (across - 0.4) * 0.35);                       // plaques de croûte noire qui flottent sur le cœur
 	float k = state < 0.5 ? 0.38 : (state < 1.5 ? 0.68 : 0.95);

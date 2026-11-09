@@ -19,7 +19,7 @@ const LIGHT_GAP := 12.0         # écart minimal entre deux lumières de magma (
 const MAX_EMBERS := 14
 const MAX_SMOKE := 6
 const SPACING := 2              # écart minimal entre deux éléments (cases, distance de Tchebychev)
-const LIP_N := 0.05             # hauteur des lèvres de croûte au-dessus du mur ou du sol
+const LIP_N := 0.008            # les fractures sont à ras de la pierre : un jour dans la roche, pas un tube posé dessus
 const WALL_OFF := 0.03          # le ruban de mur est posé à 3 cm devant le plan du mur (jamais de Z-fighting, jamais flottant : la lèvre et le cœur épousent le mur)
 ## Dernier niveau posé : {"items": n, "frac_mur": n, ..., "lights": n, "embers": n, "smoke": n} (tests, mesures).
 static var last_stats: Dictionary = {}
@@ -58,6 +58,17 @@ static func material(s: int) -> ShaderMaterial:
 		m.set_shader_parameter("state", float(_mats.size()))
 		_mats.append(m)
 	return _mats[clampi(s, 0, 2)]
+
+static var _halo_mat: ShaderMaterial
+
+## Lueur diffuse des fissures (additive, sans écriture de profondeur).
+static func halo_material(_s: int = 1) -> ShaderMaterial:
+	if _halo_mat == null:
+		var sh := Shader.new()
+		sh.code = "shader_type spatial;\nrender_mode unshaded, blend_add, depth_draw_never, cull_disabled;\nuniform vec3 tint : source_color = vec3(1.0, 0.30, 0.06);\nuniform float strength = 0.55;\nvoid fragment() {\n\tfloat a = 1.0 - abs(COLOR.r * 2.0 - 1.0);\n\ta = a * a * a;\n\tALBEDO = tint * a * strength;\n}\n"
+		_halo_mat = ShaderMaterial.new()
+		_halo_mat.shader = sh
+	return _halo_mat
 
 ## Pierre refroidie des lèvres : celle des murs du thème, plus sombre.
 static func lip_material() -> StandardMaterial3D:
@@ -127,13 +138,15 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 				var r := (hh >> 9) % 100
 				var kind := ""
 				if big or opens.size() > 2:
-					kind = "canal" if r < 35 else ("frac_sol" if r < 60 else ("frac_mur" if r < 90 else "suintement"))
+					kind = "canal" if r < 30 else ("frac_sol" if r < 55 else "frac_mur")
 				elif dead_end or corner:
-					kind = "frac_mur" if r < 45 else ("suintement" if r < 65 else ("canal" if r < 82 else "frac_sol"))
+					kind = "frac_mur" if r < 65 else ("canal" if r < 82 else "frac_sol")
 				else:
-					kind = "frac_sol" if r < 45 else ("frac_mur" if r < 85 else ("suintement" if r < 93 else "canal"))
+					kind = "frac_sol" if r < 45 else ("frac_mur" if r < 93 else "canal")
 				if force_kind != "":
 					kind = force_kind
+				if kind == "suintement" and force_kind == "":
+					kind = "frac_mur"
 				var shift := 0.0
 				if (kind == "frac_mur" or kind == "suintement" or kind == "canal") and (not odd or orn):
 					shift = 0.95 if (hh >> 20) % 2 == 0 else -0.95      # torche ou ornement au centre du pan : l'élément est décalé de ce côté, jamais dessus
@@ -235,7 +248,7 @@ static func _tri(g: Dictionary, a: Vector3, b: Vector3, c: Vector3, na: Vector3,
 
 ## Ruban irrégulier le long d'un chemin 2D `pts` (u, a) : demi-largeur du cœur `w[i]` (0 aux pointes), lèvres de croûte `lipw[i]` de chaque côté.
 ## Cœur : 5 colonnes en cuvette (COLOR.r = position -1..1 en travers, pour le shader), lèvres : bandes relevées en pente douce vers l'extérieur.
-static func _ribbon(groups: Dictionary, it: Dictionary, wall: bool, pts: Array, w: Array, lipw: Array, state: int, uv0: float, n0: float = 0.0, lips: bool = true) -> void:
+static func _ribbon(groups: Dictionary, it: Dictionary, wall: bool, pts: Array, w: Array, lipw: Array, state: int, uv0: float, n0: float = 0.0, lips: bool = true, key: String = "") -> void:
 	var cnt := pts.size()
 	if cnt < 2:
 		return
@@ -253,7 +266,7 @@ static func _ribbon(groups: Dictionary, it: Dictionary, wall: bool, pts: Array, 
 		if i > 0:
 			lens.append(float(lens[i - 1]) + (pts[i] as Vector2).distance_to(pts[i - 1]))
 	var cols := [-1.0, -0.5, 0.0, 0.5, 1.0]
-	var gc: Dictionary = _group(groups, "s%d" % state, it)
+	var gc: Dictionary = _group(groups, key if key != "" else "s%d" % state, it)
 	var gl: Dictionary = _group(groups, "lip", it)
 	var hh := int(it.hh)
 	for i in cnt - 1:
@@ -263,8 +276,8 @@ static func _ribbon(groups: Dictionary, it: Dictionary, wall: bool, pts: Array, 
 				var ii: int = pr[0]
 				var cc: float = pr[1]
 				var p2: Vector2 = pts[ii] + (nrm[ii] as Vector2) * float(w[ii]) * float(cc)
-				var hgt := base + LIP_N * 0.55 - 0.03 * (1.0 - float(cc) * float(cc))      # cuvette : le centre est plus bas que les bords
-				q.append({"p": _pos(it, wall, p2.x, p2.y, hgt), "c": Color(float(cc), float(lens[ii]) / maxf(float(lens[cnt - 1]), 0.01), 0.0, 1.0),
+				var hgt := base + 0.004 - 0.003 * (1.0 - float(cc) * float(cc))
+				q.append({"p": _pos(it, wall, p2.x, p2.y, hgt), "c": Color(float(cc) * 0.5 + 0.5, float(lens[ii]) / maxf(float(lens[cnt - 1]), 0.01), 0.0, 1.0),
 					"uv": Vector2(uv0 + float(lens[ii]), float(cc) * float(w[ii]))})
 			var o: Vector3 = out
 			if (w[i] as float) > 0.003 or (w[i + 1] as float) > 0.003:
@@ -280,7 +293,7 @@ static func _ribbon(groups: Dictionary, it: Dictionary, wall: bool, pts: Array, 
 				var outer: Vector2 = pts[ii] + n2 * (float(w[ii]) + float(lipw[ii])) * float(s)
 				var sh := 0.55 + 0.4 * _f(hh, 40 + ii * 3 + (0 if s < 0.0 else 1))      # croûte inégale, plus ou moins claire
 				var tilt := (_tv(it, wall, n2 * float(s)) * 0.8 + out).normalized()      # pente vers l'extérieur : la lèvre accroche la lumière
-				qq.append({"pi": _pos(it, wall, inner.x, inner.y, base + LIP_N), "po": _pos(it, wall, outer.x, outer.y, base + 0.012), "col": Color(sh, sh, sh, 1.0), "nn": tilt})
+				qq.append({"pi": _pos(it, wall, inner.x, inner.y, base + LIP_N), "po": _pos(it, wall, outer.x, outer.y, base + 0.003), "col": Color(sh, sh, sh, 1.0), "nn": tilt})
 			var a0: Dictionary = qq[0]
 			var b0: Dictionary = qq[1]
 			_tri(gl, a0.pi, b0.pi, b0.po, a0.nn, b0.nn, b0.nn, a0.col, b0.col, b0.col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
@@ -308,8 +321,20 @@ static func _fracture(hh: int, k0: int, u0: float, a0: float, u1: float, a1: flo
 		var core := smoothstep(0.10, 0.28, s) * (1.0 - smoothstep(0.72, 0.90, s))      # pointes effilées
 		var var_w := 0.55 + 0.45 * (0.5 + 0.5 * sin(s * 11.0 + ph * 1.7)) * (0.6 + 0.4 * _f(hh, k0 + 3 + i % 5))      # largeur de cœur variable
 		w.append(wmax * core * var_w)
-		lipw.append(0.022 + 0.42 * wmax * core * var_w + 0.025 * sin(s * 9.0 + ph2) * 0.5 + 0.02 * (1.0 - absf(s - 0.5) * 2.0))
+		lipw.append(0.010 + 0.30 * wmax * core * var_w + 0.025 * sin(s * 9.0 + ph2) * 0.5 + 0.02 * (1.0 - absf(s - 0.5) * 2.0))
 	return {"pts": pts, "w": w, "lipw": lipw}
+
+## Lueur diffuse autour d'une fissure (la lumière qui bave sur la pierre) : ruban large et très doux, additif, effilé comme la fissure.
+static func _halo(groups: Dictionary, it: Dictionary, wall: bool, pts: Array, w: Array, st: int) -> void:
+	if st < 1:
+		return
+	var hw: Array = []
+	var hl: Array = []
+	for i in w.size():
+		var tp := clampf(float(w[i]) / 0.012, 0.0, 1.0)
+		hw.append((0.07 + float(w[i]) * 3.5) * tp)
+		hl.append(0.0)
+	_ribbon(groups, it, wall, pts, hw, hl, st, 0.0, -0.002, false, "halo")
 
 static func _build_item(groups: Dictionary, parts: Array, it: Dictionary) -> void:
 	var hh := int(it.hh)
@@ -320,25 +345,27 @@ static func _build_item(groups: Dictionary, parts: Array, it: Dictionary) -> voi
 			var ut := (_f(hh, 2) - 0.5) * (1.2 if absf(float(it.shift)) < 0.1 else 0.3)
 			var len_ := 1.5 + _f(hh, 3) * 1.1
 			var top := 2.65 + _f(hh, 4) * 0.35
-			var f := _fracture(hh, 10, ut, top, ut + (_f(hh, 6) - 0.5) * 0.9, top - len_, 0.07 + 0.05 * _f(hh, 7), 0.22)
-			_ribbon(groups, it, true, f.pts, f.w, f.lipw, st, uv0)
+			var f := _fracture(hh, 10, ut, top, ut + (_f(hh, 6) - 0.5) * 0.9, top - len_, 0.022 + 0.022 * _f(hh, 7), 0.20)
+			_halo(groups, it, true, f.pts, f.w, st)
+			_ribbon(groups, it, true, f.pts, f.w, f.lipw, st, uv0, 0.0, false)
 			if _f(hh, 8) < 0.55:      # branche secondaire née du tracé principal
 				var si := 9 + int(_f(hh, 9) * 5.0)
 				var p0: Vector2 = f.pts[si]
 				var sg := -1.0 if _f(hh, 11) < 0.5 else 1.0
-				var f2 := _fracture(hh, 30, p0.x, p0.y, p0.x + sg * (0.45 + 0.3 * _f(hh, 12)), p0.y - 0.5 - 0.4 * _f(hh, 13), 0.035, 0.08, 12)
-				_ribbon(groups, it, true, f2.pts, f2.w, f2.lipw, st, uv0 + 17.0, 0.004)
+				var f2 := _fracture(hh, 30, p0.x, p0.y, p0.x + sg * (0.45 + 0.3 * _f(hh, 12)), p0.y - 0.5 - 0.4 * _f(hh, 13), 0.012, 0.08, 12)
+				_ribbon(groups, it, true, f2.pts, f2.w, f2.lipw, st, uv0 + 17.0, 0.004, false)
 		"frac_sol":
 			var len2 := 2.3 + _f(hh, 3) * 2.4
 			var uc := (_f(hh, 2) - 0.5) * 0.6
 			var v0 := 0.55 + _f(hh, 4) * 0.7
-			var f3 := _fracture(hh, 10, uc - len2 * 0.5, v0, uc + len2 * 0.5, v0 + (_f(hh, 6) - 0.5) * 0.8, 0.10 + 0.08 * _f(hh, 7), 0.2)
-			_ribbon(groups, it, false, f3.pts, f3.w, f3.lipw, st, uv0)
+			var f3 := _fracture(hh, 10, uc - len2 * 0.5, v0, uc + len2 * 0.5, v0 + (_f(hh, 6) - 0.5) * 0.8, 0.030 + 0.030 * _f(hh, 7), 0.2)
+			_halo(groups, it, false, f3.pts, f3.w, st)
+			_ribbon(groups, it, false, f3.pts, f3.w, f3.lipw, st, uv0, 0.0, false)
 			if _f(hh, 8) < 0.5:
 				var si2 := 8 + int(_f(hh, 9) * 6.0)
 				var q0: Vector2 = f3.pts[si2]
-				var f4 := _fracture(hh, 30, q0.x, q0.y, q0.x + (_f(hh, 12) - 0.5) * 0.5, q0.y + 0.5 + 0.4 * _f(hh, 13), 0.05, 0.07, 12)
-				_ribbon(groups, it, false, f4.pts, f4.w, f4.lipw, st, uv0 + 17.0, 0.004)
+				var f4 := _fracture(hh, 30, q0.x, q0.y, q0.x + (_f(hh, 12) - 0.5) * 0.5, q0.y + 0.5 + 0.4 * _f(hh, 13), 0.014, 0.07, 12)
+				_ribbon(groups, it, false, f4.pts, f4.w, f4.lipw, st, uv0 + 17.0, 0.004, false)
 		"suintement":
 			# fracture haute (source identifiable) puis langue qui descend, s'épaissit, et s'accumule en ménisque sur la plinthe
 			var ut2 := (_f(hh, 2) - 0.5) * (0.8 if absf(float(it.shift)) < 0.1 else 0.2)
@@ -461,7 +488,7 @@ static func add(view: LevelView, level: Dictionary, grid: DungeonGrid, theme: St
 		mi.name = "Magma_" + str(k).replace("|", "_")
 		mi.mesh = m
 		var key: String = g.key
-		mi.material_override = lip_material() if key == "lip" else material(int(key.substr(1)))
+		mi.material_override = lip_material() if key == "lip" else (halo_material() if key == "halo" else material(int(key.substr(1))))
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.visibility_range_end = 60.0
 		root.add_child(mi)
