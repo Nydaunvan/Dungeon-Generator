@@ -17,6 +17,8 @@ const SHADER := "res://assets/shaders/magma.gdshader"
 const MAX_LIGHTS := 6
 const LIGHT_GAP := 12.0         # écart minimal entre deux lumières de magma (unités)
 const MAX_EMBERS := 14
+const MAX_BREACH_LIGHTS := 8
+const MAX_BREACH_EMBERS := 6
 const MAX_SMOKE := 6
 const SPACING := 2              # écart minimal entre deux éléments (cases, distance de Tchebychev)
 const LIP_N := 0.008            # les fractures sont à ras de la pierre : un jour dans la roche, pas un tube posé dessus
@@ -58,6 +60,20 @@ static func material(s: int) -> ShaderMaterial:
 		m.set_shader_parameter("state", float(_mats.size()))
 		_mats.append(m)
 	return _mats[clampi(s, 0, 2)]
+
+static var _slab_mat: ShaderMaterial
+
+## Nappe de lave pleine (fond des brèches, fond de fosse) : même shader, sans bord refroidi, très chaude.
+static func slab_material() -> ShaderMaterial:
+	if _slab_mat == null:
+		if _shader == null:
+			_shader = load(SHADER) as Shader
+		_slab_mat = ShaderMaterial.new()
+		_slab_mat.shader = _shader
+		_slab_mat.set_shader_parameter("state", 2.0)
+		_slab_mat.set_shader_parameter("slab", 1.0)
+		_slab_mat.set_shader_parameter("energy", 1.25)
+	return _slab_mat
 
 static var _halo_mat: ShaderMaterial
 
@@ -127,7 +143,7 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 				# cohérence du lieu : impasse (mur du fond) > angle > salle > couloir droit, jamais au hasard au milieu d'un mur intact
 				var dead_end: bool = opens.size() == 1 and (opens[0] as Vector2i) == -d
 				var corner: bool = opens.size() == 2 and (opens[0] as Vector2i).x != (opens[1] as Vector2i).x and (opens[0] as Vector2i).y != (opens[1] as Vector2i).y
-				var denom: int = 2 if dead_end else (6 if corner else (7 if big else (22 if opens.size() == 2 else 16)))
+				var denom: int = 4 if dead_end else (12 if corner else (14 if big else (40 if opens.size() == 2 else 30)))      # canaux de forge : rares, la lave se voit surtout par les brèches
 				if force_kind != "":
 					denom = 3
 				if (hh >> 4) % denom != 0:
@@ -137,12 +153,7 @@ static func plan(level: Dictionary, grid: DungeonGrid, niches: Dictionary, holes
 				var orn: bool = _h(x, y, seed ^ (di * 131 + 7)) % 4 == 0      # ce pan porte (peut-être) un ornement du kit
 				var r := (hh >> 9) % 100
 				var kind := ""
-				if big or opens.size() > 2:
-					kind = "canal" if r < 30 else ("frac_sol" if r < 55 else "frac_mur")
-				elif dead_end or corner:
-					kind = "frac_mur" if r < 65 else ("canal" if r < 82 else "frac_sol")
-				else:
-					kind = "frac_sol" if r < 45 else ("frac_mur" if r < 93 else "canal")
+				kind = "canal"      # plus de fissures « posées » sur la pierre : la lave se voit par les brèches (LavaBreach), les canaux de forge restent rares
 				if force_kind != "":
 					kind = force_kind
 				if kind == "suintement" and force_kind == "":
@@ -505,7 +516,37 @@ static func add(view: LevelView, level: Dictionary, grid: DungeonGrid, theme: St
 	var nl := 0
 	var ne := 0
 	var ns := 0
+	var breaches: Dictionary = LavaBreach.select(grid, level, niches) if LavaBreach.applies(level) else {}
+	var blights: Array = []
+	var bpos: Array = []
+	var bkeys: Array = breaches.keys()
+	bkeys.sort()
+	for k in bkeys:      # lueur des brèches : au plus MAX_BREACH_LIGHTS, écartées les unes des autres
+		var bp := LavaBreach.anchor(breaches[k])
+		var far := true
+		for q in bpos:
+			if (q as Vector3).distance_to(bp) < 9.0:
+				far = false
+				break
+		if far and blights.size() < MAX_BREACH_LIGHTS:
+			blights.append(bp)
+			bpos.append(bp)
 	if effects and Settings.torch_lights() > 0:
+		for bp in blights:
+			var bl := OmniLight3D.new()
+			bl.position = bp
+			bl.light_color = Color(1.0, 0.42, 0.14)
+			bl.light_energy = 1.1
+			bl.omni_range = 5.0
+			bl.omni_attenuation = 1.6
+			bl.shadow_enabled = false
+			bl.light_specular = 0.15
+			bl.light_volumetric_fog_energy = 0.1
+			bl.distance_fade_enabled = true
+			bl.distance_fade_begin = 14.0
+			bl.distance_fade_length = 8.0
+			root.add_child(bl)
+			nl += 1
 		for l in pl.lights:
 			var ol := OmniLight3D.new()
 			ol.position = l.pos
@@ -528,7 +569,15 @@ static func add(view: LevelView, level: Dictionary, grid: DungeonGrid, theme: St
 		for s in pl.smoke:
 			root.add_child(_smoke(s.pos))
 			ns += 1
-	last_stats = {"items": pl.items.size(), "lights": nl, "embers": ne, "smoke": ns}
+	if effects and float(Settings.opt("particles")) > 0.05:
+		for k in bkeys:      # quelques braises au-dessus de chaque brèche (au plus MAX_BREACH_EMBERS), portées par le sens d'écoulement
+			if ne >= MAX_EMBERS + MAX_BREACH_EMBERS:
+				break
+			if (LavaBreach._h(int(breaches[k].hh), 3, 5) % 3) != 0:
+				continue
+			root.add_child(_embers(LavaBreach.anchor(breaches[k]) + Vector3(0, -0.3, 0), 1))
+			ne += 1
+	last_stats = {"items": pl.items.size(), "lights": nl, "embers": ne, "smoke": ns, "breaches": breaches.size()}
 	last_stats.merge(kinds)
 
 static func _soft_texture() -> Texture2D:
@@ -567,7 +616,7 @@ static func _embers(pos: Vector3, state: int) -> CPUParticles3D:
 	p.emission_sphere_radius = 0.4
 	p.direction = Vector3.UP
 	p.spread = 25.0
-	p.gravity = Vector3(0.04, 0.18, 0.0)
+	p.gravity = Vector3(0.11, 0.18, 0.08)      # dérive dans le sens d'écoulement global de la lave (0,8 ; 0 ; 0,6)
 	p.initial_velocity_min = 0.2
 	p.initial_velocity_max = 0.6
 	p.scale_amount_min = 0.5

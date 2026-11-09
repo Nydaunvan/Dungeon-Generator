@@ -49,6 +49,7 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 	var kit_stairs := not outdoor and KitDecor.has_stair_frame(theme_name, level)
 	var niches: Dictionary = nd_data.niches
 	var holes: Dictionary = nd_data.holes
+	var breaches: Dictionary = nd_data.get("breaches", {})
 	for y in grid.height:
 		if sliced:
 			await Loader.slice()
@@ -59,10 +60,10 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 			var c := Vector3(x * CELL, 0.0, y * CELL)
 			var ck := Vector2i(x / CHUNK, y / CHUNK)
 			if not chunks.has(ck):
-				var np := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new(), "plaza": SurfaceTool.new()}
+				var np := {"wall": SurfaceTool.new(), "floor": SurfaceTool.new(), "ceil": SurfaceTool.new(), "path": SurfaceTool.new(), "plaza": SurfaceTool.new(), "magma": SurfaceTool.new()}
 				for kk in np:
 					np[kk].begin(Mesh.PRIMITIVE_TRIANGLES)
-				chunks[ck] = {"parts": np, "counts": {"wall": 0, "floor": 0, "ceil": 0, "path": 0, "plaza": 0}}
+				chunks[ck] = {"parts": np, "counts": {"wall": 0, "floor": 0, "ceil": 0, "path": 0, "plaza": 0, "magma": 0}}
 			parts = chunks[ck].parts
 			counts = chunks[ck].counts
 			var pit := pits.has(Vector2i(x, y))     # fosse : le sol de la case est percé d'un trou (voir TrapPit)
@@ -89,7 +90,9 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 					pass      # village : ni mur ni plafond, les maisons, barrières et arbres sont posés par VillageKit
 				elif n == "#":
 					var hk := "%d,%d,%d,%d" % [x, y, d.x, d.y]
-					if holes.has(hk):
+					if breaches.has(hk):
+						LavaBreach.build(parts, counts, breaches[hk])
+					elif holes.has(hk):
 						var hv: Vector3 = holes[hk]
 						_wall_with_hole(parts, counts, c, d, hv.x, hv.y, hv.z)
 					else:
@@ -108,13 +111,15 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 		var cparts: Dictionary = chunks[ck].parts
 		var ccounts: Dictionary = chunks[ck].counts
 		var mesh := ArrayMesh.new()
-		for k in ["wall", "floor", "ceil", "path", "plaza"]:
+		for k in ["wall", "floor", "ceil", "path", "plaza", "magma"]:
 			if ccounts[k] == 0:
 				continue
 			if sliced:
 				await Loader.slice()
 			var mat: Material = theme.get(k)
-			if outdoor and k == "floor":
+			if k == "magma":
+				mat = LavaFx.slab_material()
+			elif outdoor and k == "floor":
 				mat = Outdoor.grass()
 			elif outdoor and k == "wall":
 				mat = VillageKit.wall() if VillageKit.wall() != null else mat
@@ -122,7 +127,9 @@ static func build(level: Dictionary, grid: DungeonGrid, sliced: bool = false) ->
 				mat = Outdoor.path()
 			elif k == "plaza":
 				mat = VillageKit.plaza() if VillageKit.plaza() != null else Outdoor.path()
-			if k != "path" or mat is StandardMaterial3D and (mat as StandardMaterial3D).normal_enabled:
+			if k == "magma":
+				pass      # nappe de lave : shader sans carte de normales
+			elif k != "path" or mat is StandardMaterial3D and (mat as StandardMaterial3D).normal_enabled:
 				cparts[k].generate_tangents()   # nécessaires aux cartes de normales (mur, sol, plafond)
 			cparts[k].commit(mesh)
 			mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
@@ -163,6 +170,15 @@ static func _gate_wall(grid: DungeonGrid, x: int, y: int) -> bool:
 	return (y == 1 or y == grid.height - 2) and absi(x - grid.width / 2) <= 2
 
 static func niche_data(grid: DungeonGrid, level: Dictionary, outdoor: bool) -> Dictionary:
+	var nd := _niche_base(grid, level, outdoor)
+	if not outdoor and LavaBreach.applies(level):
+		var br := LavaBreach.select(grid, level, nd.niches)
+		nd["breaches"] = br
+		for k in br:
+			nd.holes[k] = Vector3(0.0, 0.0, 0.0)      # même contrat que les creux : ni modules du kit, ni piège mural, ni élément de magma sur ce pan
+	return nd
+
+static func _niche_base(grid: DungeonGrid, level: Dictionary, outdoor: bool) -> Dictionary:
 	var half := CELL * 0.5
 	var niches := {}      # Vector2i(case) -> {d: direction du mur évidé, w: demi-largeur, h: hauteur}
 	if not outdoor:

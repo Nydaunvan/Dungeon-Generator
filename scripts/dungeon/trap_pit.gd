@@ -36,10 +36,22 @@ static func make(theme: String = "stone") -> MeshInstance3D:
 	pl.visible = false
 	mi.add_child(pl)
 	# faible lueur froide au fond : sans elle, l'ombre du bord noie la fosse et on ne voit plus ni les parois ni les pieux
+	var hot := theme == "lava" and ThemeMaterials.lava2_on(theme)      # Forges du monde brisé : le fond de la fosse est un bain de lave
+	if hot:
+		var lv := MeshInstance3D.new()
+		lv.name = "Lava"
+		var qm := QuadMesh.new()
+		qm.size = Vector2(HALF * 2.0 - 0.04, HALF * 2.0 - 0.04)
+		qm.orientation = PlaneMesh.FACE_Y
+		lv.mesh = qm
+		lv.material_override = LavaFx.slab_material()
+		lv.position = Vector3(0, -DEPTH + 0.34, 0)      # sous la pointe des pieux : ils sortent de la lave
+		lv.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.add_child(lv)
 	var l := OmniLight3D.new()
 	l.name = "Depth"
-	l.light_color = Color(0.75, 0.8, 0.95)
-	l.light_energy = 0.9
+	l.light_color = Color(1.0, 0.45, 0.16) if hot else Color(0.75, 0.8, 0.95)
+	l.light_energy = 1.6 if hot else 0.9
 	l.omni_range = 3.4
 	l.light_specular = 0.0
 	l.shadow_enabled = false

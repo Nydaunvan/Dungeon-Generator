@@ -185,6 +185,10 @@ static func _blocked_cells(level: Dictionary) -> Dictionary:
 	for st in level.get("stairs", []):
 		out[Vector2i(int(st.get("x", -1)), int(st.get("y", -1)))] = true
 	out[Vector2i(int(level.get("startX", -1)), int(level.get("startY", -1)))] = true
+	if LavaBreach.applies(level):      # brèches de lave (thème lava v2) : aucun accessoire devant l'ouverture
+		var g := DungeonGrid.new(level)
+		for c in LavaBreach.cells(g, level, LevelBuilder._niche_base(g, level, false).niches):
+			out[c] = true
 	return out
 
 ## Modèle PropMeshes : matériaux (mat / métal / lueur) partagés et déjà portés par le maillage.

@@ -27,6 +27,7 @@ var shots := [
 var only: PackedStringArray = []
 var fx := true      # false = sans netteté de shader, sans liseré froid (référence « avant »)
 var fxmode := ""    # "rim" = liseré seul, "sharp" = netteté seule (diagnostic)
+var pit := false      # pose une fosse (piège) dans le couloir du nord pour voir le bain de lave
 var mon := ""      # id d'un monstre Atlas Noir à poser dans le couloir (ex. mon_veilleur_os) ; vide = aucun, les autres vues restent identiques
 
 func _ready() -> void:
@@ -38,6 +39,7 @@ func _ready() -> void:
 				"kit": kit = kv[1] == "1"
 				"lava": lava = kv[1] == "1"
 				"kind": LavaFx.force_kind = kv[1]
+				"pit": pit = kv[1] == "1"
 				"nofx": LavaFx.effects = kv[1] != "1"
 				"out": out = kv[1]
 				"only": only = kv[1].split(",")
@@ -77,7 +79,7 @@ func _ready() -> void:
 		monsters.append({"id": "m_test2", "name": "Test2", "icon": "@icon:" + mon, "x": 10, "y": 10, "force": 5, "dex": 5, "con": 5, "resistPhys": 0, "resistMagic": 0, "xpReward": 1, "goldReward": 1})
 	var lv := {"id": "render_test", "name": "Essai", "theme": theme, "mapRows": rows, "startX": 1, "startY": 1,
 		"doors": [{"x": 7, "y": 5, "id": "door_a", "locked": true}], "stairs": [{"x": 3, "y": 5, "id": "st_a", "locked": false}],
-		"items": [], "monsters": monsters, "lightAmbient": 1.1, "lightTorch": 1.4}
+		"items": ([{"id": "t_pit", "type": "trap", "trapKind": "pit", "x": 6, "y": 1, "startHidden": false}] if pit else []), "monsters": monsters, "lightAmbient": 1.1, "lightTorch": 1.4}
 	var grid := DungeonGrid.new(lv)
 	var view := await LevelBuilder.build(lv, grid)
 	add_child(view)
@@ -133,6 +135,24 @@ func _ready() -> void:
 			var tilt := -38.0 if kd == "frac_sol" else (-30.0 if kd == "canal" else 0.0)
 			shots.append(["4%d_%s" % [seen[kd], kd], float(it.x) - d.x * 0.30, float(it.y) - d.y * 0.30, dir, 0.0, 0.0, tilt])
 			shots.append(["6%d_%s_proche" % [seen[kd], kd], float(it.x) + d.x * 0.26, float(it.y) + d.y * 0.26, dir, 0.0, 0.0, tilt * 0.8])
+	if lava and theme == "lava":
+		var nd2 := LevelBuilder.niche_data(grid, lv, false)
+		var bk: Array = (nd2.get("breaches", {}) as Dictionary).keys()
+		bk.sort()
+		print("brèches : ", bk)
+		var nb := 0
+		for k in bk:
+			if nb >= 4:
+				break
+			nb += 1
+			var bs: Dictionary = nd2.breaches[k]
+			var bd: Vector2i = bs.d
+			var bdir := (1 if bd.x > 0 else 3) if bd.x != 0 else (2 if bd.y > 0 else 0)
+			shots.append(["7%d_breche" % nb, float(bs.x) - bd.x * 0.2, float(bs.y) - bd.y * 0.2, bdir, 0.0, 0.0, 0.0])
+			shots.append(["8%d_breche_proche" % nb, float(bs.x) + bd.x * 0.3, float(bs.y) + bd.y * 0.3, bdir, 0.0, 0.0, -8.0])
+	if pit:
+		shots.append(["90_fosse", 5.0, 1.0, 1, 0.0, 0.0, -28.0])
+		shots.append(["91_fosse_proche", 5.6, 1.0, 1, 0.0, 0.0, -50.0])
 	for s in shots:
 		if not only.is_empty() and not only.has(str(s[0]).substr(0, 2)):
 			continue

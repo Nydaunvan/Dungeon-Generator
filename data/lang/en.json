@@ -3080,7 +3080,7 @@
   "ui.settings.gothic_test": "Atlas Noir Gothic theme (test)",
   "ui.settings.gothic_test_hint": "Shows every indoor floor with the gothic theme (anthracite stone, local torches, arches and pillars). Purely visual: the game and the save do not change. Takes effect the next time a floor loads (change floor or reload the game).",
   "ui.settings.lava_v2": "Lava theme: Broken World Forges",
-  "ui.settings.lava_v2_hint": "Volcanic fortress: black basalt walls and floors, portals and hexagonal pillars, local warm light. Untick to return to the previous Lava theme look. Purely visual: the game and the save do not change. Takes effect the next time a floor loads.",
+  "ui.settings.lava_v2_hint": "Volcanic fortress: black basalt walls and floors, portals and hexagonal pillars, breaches in the walls showing lava flowing behind the stone (always in the same direction), lava-filled pits, local warm light. Untick to return to the previous Lava theme look. Purely visual: the game and the save do not change. Takes effect the next time a floor loads.",
   "ui.settings.monster_anim": "Monster animations",
   "ui.settings.monster_anim_hint": "Monsters breathe while idle and react in combat (hit, attack, stun, death). « Reduced motion » turns the breathing off.",
   "ui.settings.card_fx": "Effects on party cards (trial)",

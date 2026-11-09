@@ -1,6 +1,17 @@
 extends Node
 ## Thème lava v2 (Les Forges du monde brisé) : matériaux, ambiance, kit volcanique (cotes des passages, plan déterministe, jamais sur un mur / départ / objet,
 ## désactivable), magma décorative (jamais sur une case spéciale, limites de lumières et d'effets, aucun nœud de collision), ancien rendu intact quand l'option est coupée.
+## Nombre de surfaces « magma » (nappe de lave) du niveau construit.
+func view_mesh_count_magma(lv: Dictionary, grid: DungeonGrid) -> int:
+	var v := await LevelBuilder.build(lv, grid)
+	var n := 0
+	for mi in v.find_children("LevelMesh_*", "MeshInstance3D", false, false):
+		for i in (mi as MeshInstance3D).mesh.get_surface_count():
+			if (mi as MeshInstance3D).mesh.surface_get_material(i) == LavaFx.slab_material():
+				n += 1
+	v.free()
+	return n
+
 func _ready() -> void:
 	await get_tree().create_timer(1.0).timeout
 	var DG = DungeonGenerator
@@ -31,7 +42,7 @@ func _ready() -> void:
 	if pb.size.x > 0.95 or pb.size.z > 0.95 or pb.position.y < -0.01 or pb.end.y > 4.06:
 		fails.append("pilier hors emprise : %s" % pb)
 	var cfg: Dictionary = DG.build_config(Data.original_config, 3, 19, 15, "normal", [], 1, 4242)
-	var tot := {"items": 0, "lights": 0, "embers": 0, "kit": 0}
+	var tot := {"items": 0, "lights": 0, "embers": 0, "kit": 0, "breaches": 0}
 	var kinds := {}
 	for lv0 in cfg.levels:
 		var lv: Dictionary = lv0.duplicate(true)
@@ -44,9 +55,9 @@ func _ready() -> void:
 			tot.kit += int(KitDecor.last_stats.get("total", 0))
 		if view.find_child("LavaFx", true, false) == null and LavaFx.last_stats.is_empty():
 			fails.append("magma absente")
-		for k in ["items", "lights", "embers"]:
+		for k in ["items", "lights", "embers", "breaches"]:
 			tot[k] += int(LavaFx.last_stats.get(k, 0))
-		if int(LavaFx.last_stats.get("lights", 0)) > LavaFx.MAX_LIGHTS or int(LavaFx.last_stats.get("embers", 0)) > LavaFx.MAX_EMBERS:
+		if int(LavaFx.last_stats.get("lights", 0)) > LavaFx.MAX_LIGHTS + LavaFx.MAX_BREACH_LIGHTS or int(LavaFx.last_stats.get("embers", 0)) > LavaFx.MAX_EMBERS + LavaFx.MAX_BREACH_EMBERS:
 			fails.append("trop de lumières ou de braises")
 		var fx := view.find_child("LavaFx", true, false)
 		if fx != null:
@@ -68,6 +79,25 @@ func _ready() -> void:
 			if grid.cell(cell.x + (f.d as Vector2i).x, cell.y + (f.d as Vector2i).y) != "#":
 				fails.append("élément de magma hors d'un mur")
 				break
+		# brèches : déterministes, sur un mur plein épais d'au moins deux cases, jamais sur une case spéciale ni un pan évidé, nappe de lave présente
+		var b1: Dictionary = LavaBreach.select(grid, lv, nd.niches, true)
+		var b2: Dictionary = LavaBreach.select(grid, lv, nd.niches, true)
+		if str(b1) != str(b2):
+			fails.append("brèches non déterministes")
+		for bk in b1:
+			var bs: Dictionary = b1[bk]
+			var bd: Vector2i = bs.d
+			var bc := Vector2i(int(bs.x), int(bs.y))
+			if grid.cell(bc.x, bc.y) != "." or LavaBreach._excluded(lv, nd.niches).has(bc) or grid.cell(bc.x + bd.x, bc.y + bd.y) != "#" or grid.cell(bc.x + bd.x * 2, bc.y + bd.y * 2) != "#":
+				fails.append("brèche mal placée : %s" % bc)
+				break
+			if absf(float(bs.s)) > 1.0 or float(bs.depth) > 1.7:
+				fails.append("brèche hors du pan ou trop profonde : %s" % bc)
+				break
+		if b1.size() > 0:
+			var lvl_nodes: int = await view_mesh_count_magma(lv, grid)
+			if lvl_nodes == 0:
+				fails.append("brèches sans nappe de lave")
 		# rendu repli : option coupée = ni kit ni magma, mêmes règles de génération
 		Settings.lava_v2 = false
 		var v0 := await LevelBuilder.build(lv, grid)
@@ -76,14 +106,14 @@ func _ready() -> void:
 		v0.free()
 		Settings.lava_v2 = true
 	print("lava v2 : kit ", tot.kit, " modules, éléments de magma ", tot.items, " ", kinds, ", lumières ", tot.lights, ", braises ", tot.embers)
-	if tot.lights > 6 * cfg.levels.size():
+	if tot.breaches == 0:
+		fails.append("aucune brèche sur les 3 niveaux")
+	if tot.lights > (6 + LavaFx.MAX_BREACH_LIGHTS) * cfg.levels.size():
 		fails.append("trop de lumières de magma")
 	# la fracture est un maillage irrégulier : aucun sommet ne s'écarte de plus de 0,2 du mur ou du sol, rien ne déborde du pan
 	var grid0 := DungeonGrid.new(cfg.levels[0])
 	if tot.kit == 0:
 		fails.append("aucun module posé")
-	if tot.items == 0:
-		fails.append("aucune magma posée sur les 3 niveaux")
 	# autres thèmes : ni kit ni magma
 	for th in ["stone", "dirt", "damp", "ruins", "ice", "temple"]:
 		var lv: Dictionary = cfg.levels[0].duplicate(true)
